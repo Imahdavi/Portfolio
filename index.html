@@ -697,8 +697,9 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
     function onUp() {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
-       snapLbl.classList.remove('show');
-       if (activeKey) saveProject(activeKey);
+      snapLbl.classList.remove('show');
+      if (activeKey) saveProject(activeKey);
+    }
 
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
