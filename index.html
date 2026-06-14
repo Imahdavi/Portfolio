@@ -24,11 +24,9 @@
       justify-content: center;
     }
 
-    /* ── Scrollbar — overlay, no layout shift ── */
-    ::-webkit-scrollbar       { width: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 999px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.28); }
+    /* ── Scrollbar — hidden, scroll with mouse/touch still works ── */
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    * { scrollbar-width: none; }
 
     /* ── App shell ── */
     #app {
@@ -846,6 +844,17 @@ function showView(toId, anim) {
     sg.classList.add('run');
   });
   current = toId;
+
+  // persist state in URL hash
+  if (toId === 'view-project' && activeKey) {
+    history.replaceState(null, '', '#project/' + activeKey);
+  } else if (toId === 'view-home') {
+    history.replaceState(null, '', '#home');
+  } else if (toId === 'view-work') {
+    history.replaceState(null, '', '#work');
+  } else if (toId === 'view-about') {
+    history.replaceState(null, '', '#about');
+  }
 }
 
 function goView(viewId, btn) {
@@ -878,6 +887,8 @@ function openProject(key) {
 }
 
 function closeProject() {
+  // stop all videos before leaving
+  document.querySelectorAll('#view-project video').forEach(v => { v.pause(); v.muted = true; });
   const navBtn = document.getElementById(NAV_MAP[prevMain] || 'nb-home');
   setNavActive(navBtn);
   showView(prevMain, 'enter-l');
@@ -1279,7 +1290,20 @@ document.addEventListener('click', () => {
 document.addEventListener('DOMContentLoaded', async () => {
   if (localStorage.getItem('portfolio_admin') === 'true') document.body.classList.add('is-admin');
   await Promise.all([loadSettings(), loadProjects()]);
-  document.querySelectorAll('#view-home .sg').forEach(sg => sg.classList.add('run'));
+
+  // restore view from URL hash
+  const hash = location.hash;
+  if (hash.startsWith('#project/')) {
+    const key = hash.slice('#project/'.length);
+    if (PROJECTS[key]) { openProject(key); }
+    else document.querySelectorAll('#view-home .sg').forEach(sg => sg.classList.add('run'));
+  } else if (hash === '#work') {
+    goView('view-work', document.getElementById('nb-work'));
+  } else if (hash === '#about') {
+    goView('view-about', document.getElementById('nb-about'));
+  } else {
+    document.querySelectorAll('#view-home .sg').forEach(sg => sg.classList.add('run'));
+  }
 });
 </script>
 </body>
