@@ -187,19 +187,22 @@
     /* ─────────────────── DETAIL PAGE ─────────────────── */
     .detail-bar {
       display:flex; align-items:center; gap:10px;
-      margin-bottom:4px;
+      margin-bottom:4px; position:relative;
     }
     .back-btn {
-      width:32px; height:32px; display:flex; align-items:center; justify-content:center;
-      cursor:pointer; background:none; border:none; color:#1a1a1a; flex-shrink:0;
-      transition:transform .15s;
+      width:40px; height:40px; display:flex; align-items:center; justify-content:center;
+      cursor:pointer; background:rgba(255,255,255,0.72); border:1.5px solid rgba(0,0,0,0.13);
+      border-radius:50%; color:#666; flex-shrink:0;
+      transition:background .18s, border-color .18s, transform .15s, box-shadow .18s;
+      box-shadow:0 1px 4px rgba(0,0,0,0.07);
+      backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
     }
-    .back-btn:hover  { transform:translateX(-4px); }
+    .back-btn:hover  { background:rgba(245,245,245,0.9); border-color:rgba(0,0,0,0.22); transform:translateX(-2px); box-shadow:0 2px 8px rgba(0,0,0,0.11); }
     .back-btn:active { transform:scale(.88); }
-    .back-btn svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
+    .back-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
 
-    .d-title    { font-size:24px; font-weight:700; flex:1; }
-    .d-subtitle { font-size:13px; color:#888; margin-bottom:20px; padding-left:42px; }
+    .d-title    { font-size:24px; font-weight:700; position:absolute; left:50%; transform:translateX(-50%); white-space:nowrap; pointer-events:none; }
+    .d-subtitle { font-size:13px; color:#888; margin-bottom:20px; text-align:center; padding-left:0; }
 
     /* Edit toggle — hidden until admin session active */
     .edit-toggle { display:none !important; }
