@@ -764,8 +764,8 @@ async function loadSettings() {
       });
     }
 
-    // render dynamic sections
-    if (s.sections && s.sections.length) renderHomeSections(s.sections);
+    // render dynamic sections (fall back to defaults if Supabase is empty)
+    renderHomeSections((s.sections && s.sections.length) ? s.sections : DEFAULT_SECTIONS);
 
     // render work experience
     if (s.experience && s.experience.length) renderWorkExp(s.experience);
@@ -831,6 +831,23 @@ async function loadProjects() {
     });
   } catch(e) { console.warn('Supabase load failed, using defaults'); }
 }
+
+/* ─── Default sections (shown when Supabase has no sections saved) ── */
+const DEFAULT_SECTIONS = [
+  { title: 'Works', cards: [
+    { key: 'lina',   name: 'Lina',        sub: 'Lina Industrial Group',    thumb: '' },
+    { key: 'tosan',  name: 'Tosan',       sub: 'Tosan Tools 2024–2025',    thumb: '' },
+    { key: 'vam30',  name: 'Vam30',       sub: 'Vam30 2022–2024',          thumb: '' },
+  ]},
+  { title: 'Projects', cards: [
+    { key: 'logo',   name: 'Logo Motion', sub: 'Intro and Brand Logo Motion', thumb: '' },
+    { key: 'social', name: 'Social Media',sub: 'Instagram Content',           thumb: '' },
+    { key: 'ui',     name: 'Ui Design',   sub: 'Interaction, Web, App',       thumb: '' },
+    { key: 'edit',   name: 'Edit',        sub: 'Vlog, Music video, Edit',     thumb: '' },
+    { key: 'web',    name: 'Web',         sub: 'Banner, Header',              thumb: '' },
+    { key: 'other',  name: 'Other',       sub: ':D',                          thumb: '' },
+  ]},
+];
 
 /* ─── Project data ─────────────────────────────────────── */
 const PROJECTS = {
