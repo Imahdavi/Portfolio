@@ -65,12 +65,17 @@
     /* ── Stagger ── */
     @keyframes cardUp { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:none } }
     .sg > * { opacity:0 }
-    .sg.run > *:nth-child(1) { animation: cardUp .35s .04s ease forwards }
-    .sg.run > *:nth-child(2) { animation: cardUp .35s .09s ease forwards }
-    .sg.run > *:nth-child(3) { animation: cardUp .35s .14s ease forwards }
-    .sg.run > *:nth-child(4) { animation: cardUp .35s .19s ease forwards }
-    .sg.run > *:nth-child(5) { animation: cardUp .35s .24s ease forwards }
-    .sg.run > *:nth-child(6) { animation: cardUp .35s .29s ease forwards }
+    .sg.run > * { animation: cardUp .35s ease forwards; animation-delay: .30s }
+    .sg.run > *:nth-child(1)  { animation-delay: .04s }
+    .sg.run > *:nth-child(2)  { animation-delay: .09s }
+    .sg.run > *:nth-child(3)  { animation-delay: .14s }
+    .sg.run > *:nth-child(4)  { animation-delay: .19s }
+    .sg.run > *:nth-child(5)  { animation-delay: .24s }
+    .sg.run > *:nth-child(6)  { animation-delay: .29s }
+    .sg.run > *:nth-child(7)  { animation-delay: .34s }
+    .sg.run > *:nth-child(8)  { animation-delay: .38s }
+    .sg.run > *:nth-child(9)  { animation-delay: .41s }
+    .sg.run > *:nth-child(10) { animation-delay: .44s }
 
     /* ─────────────────── PROFILE ─────────────────── */
     @keyframes profileIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:none } }
@@ -808,7 +813,11 @@ function renderHomeSections(sections) {
     });
     container.appendChild(grid);
   });
-  requestAnimationFrame(() => container.querySelectorAll('.sg').forEach(sg => sg.classList.add('run')));
+  requestAnimationFrame(() => container.querySelectorAll('.sg').forEach(sg => {
+    sg.classList.remove('run');
+    void sg.offsetWidth;
+    sg.classList.add('run');
+  }));
 }
 
 async function loadProjects() {
