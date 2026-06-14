@@ -125,6 +125,32 @@
 
     .add-card-btn { background: none; border: 1px dashed #2a2a2a; border-radius: 8px; color: #666; cursor: pointer; font-family: inherit; font-size: 12.5px; padding: 8px; width: 100%; text-align: center; transition: all .15s; margin-top: 6px; }
     .add-card-btn:hover { border-color: #555; color: #aaa; background: #151515; }
+
+    /* ── Board media manager ── */
+    .board-selector { display:flex; align-items:center; gap:12px; margin-bottom:24px; }
+    .board-selector select { flex:1; }
+    .board-selector .block-count { font-size:12px; color:#555; white-space:nowrap; }
+
+    .media-block { display:flex; align-items:center; gap:12px; padding:12px 14px; background:#111; border:1px solid #222; border-radius:10px; margin-bottom:8px; }
+    .media-type { font-size:10px; font-weight:700; letter-spacing:.06em; padding:3px 8px; border-radius:5px; flex-shrink:0; text-transform:uppercase; }
+    .media-type.video { background:#1a2d4a; color:#6ab0ff; }
+    .media-type.image { background:#1a3a2a; color:#6aff9e; }
+    .media-type.text  { background:#2a2a1a; color:#d4c870; }
+    .media-url { flex:1; font-size:12px; color:#777; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:monospace; }
+    .media-url.is-text { font-family:inherit; color:#aaa; }
+    .media-del { background:none; border:none; color:#444; cursor:pointer; font-size:18px; padding:4px 6px; flex-shrink:0; line-height:1; border-radius:6px; transition:background .15s,color .15s; }
+    .media-del:hover { background:#2a1515; color:#ff6b6b; }
+
+    .add-media-box { background:#1a1a1a; border:1px solid #252525; border-radius:12px; padding:20px; margin-top:16px; }
+    .add-media-box .section-title { margin-bottom:14px; }
+    .add-row { display:flex; gap:10px; margin-bottom:10px; }
+    .add-row input { flex:1; }
+    .add-row .btn { flex-shrink:0; }
+    .upload-btn { position:relative; overflow:hidden; }
+    .upload-btn input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; }
+    .upload-progress { font-size:12px; color:#6ab0ff; margin-top:8px; min-height:18px; }
+
+    .empty-board { text-align:center; padding:32px; color:#444; font-size:13px; }
   </style>
 </head>
 <body>
@@ -161,6 +187,10 @@
     <button class="nav-item" onclick="showTab('experience', this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
       Work Experience
+    </button>
+    <button class="nav-item" onclick="showTab('boards', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="5" rx="1"/><rect x="13" y="13" width="8" height="5" rx="1"/></svg>
+      Boards Media
     </button>
     <button class="nav-item" onclick="showTab('security', this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
@@ -247,6 +277,39 @@
       <div class="save-bar">
         <button class="btn btn-primary" onclick="save()">Save Changes</button>
         <span class="save-status" id="save-status-exp"></span>
+      </div>
+    </div>
+
+    <!-- ══ Boards Media ══ -->
+    <div class="tab" id="tab-boards">
+      <h2 class="tab-title">Boards Media</h2>
+      <p class="tab-desc">Select a board to view, add, or remove its media blocks (images and videos).</p>
+
+      <div class="section">
+        <div class="board-selector">
+          <select id="board-select" onchange="selectBoard(this.value)">
+            <option value="">— Select a board —</option>
+          </select>
+          <span class="block-count" id="block-count"></span>
+        </div>
+        <div id="board-blocks-list"></div>
+      </div>
+
+      <div class="add-media-box" id="add-media-box" style="display:none">
+        <div class="section-title">Add Media via URL</div>
+        <div class="add-row">
+          <input type="url" id="media-url-input" placeholder="https://... (image or video URL)"/>
+          <button class="btn btn-ghost" onclick="addBoardBlockByUrl()">Add</button>
+        </div>
+
+        <div class="section-title" style="margin-top:16px">Upload File</div>
+        <div class="add-row">
+          <button class="btn btn-ghost upload-btn">
+            Choose file(s)
+            <input type="file" id="board-file-input" multiple accept="image/*,video/*" onchange="uploadBoardFiles(this)"/>
+          </button>
+        </div>
+        <div class="upload-progress" id="upload-progress"></div>
       </div>
     </div>
 
@@ -350,6 +413,10 @@ function populateAll() {
 
   // Work Experience
   buildExpList(settings.experience || DEFAULT_EXP);
+
+  // Boards
+  populateBoardSelect();
+  loadBoardsData();
 }
 
 /* ── Font grid builder ── */
@@ -582,6 +649,172 @@ async function save() {
     setTimeout(() => allStatus.forEach(s => s.textContent = ''), 3000);
   } catch(e) {
     allStatus.forEach(s => { s.textContent = 'Error saving'; s.className = 'save-status err'; });
+  }
+}
+
+/* ══════════════════════════════════════════
+   Boards Media Manager
+   ══════════════════════════════════════════ */
+let boardsData     = {};   // key → { name, sub, blocks[] }
+let activeBoardKey = null;
+
+function uid() {
+  return Math.random().toString(36).slice(2, 9);
+}
+
+function populateBoardSelect() {
+  const sel = document.getElementById('board-select');
+  // keep first placeholder option
+  while (sel.options.length > 1) sel.remove(1);
+  const sections = settings.sections || [];
+  sections.forEach(sec => {
+    (sec.cards || []).forEach(card => {
+      if (!card.key) return;
+      const opt = document.createElement('option');
+      opt.value       = card.key;
+      opt.textContent = (sec.title ? sec.title + ' › ' : '') + (card.name || card.key);
+      sel.appendChild(opt);
+    });
+  });
+}
+
+async function loadBoardsData() {
+  try {
+    const res  = await fetch(`${SB_URL}/rest/v1/portfolio_projects?select=key,data`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+    });
+    const rows = await res.json();
+    boardsData = {};
+    rows.forEach(r => { boardsData[r.key] = r.data || { name: '', sub: '', blocks: [] }; });
+  } catch(e) {
+    console.warn('Failed to load boards data:', e);
+  }
+}
+
+function selectBoard(key) {
+  activeBoardKey = key || null;
+  document.getElementById('add-media-box').style.display = key ? '' : 'none';
+  document.getElementById('upload-progress').textContent = '';
+  document.getElementById('media-url-input').value = '';
+  renderBoardBlocks();
+}
+
+function renderBoardBlocks() {
+  const container = document.getElementById('board-blocks-list');
+  const countEl   = document.getElementById('block-count');
+  if (!activeBoardKey) {
+    container.innerHTML = '';
+    countEl.textContent = '';
+    return;
+  }
+
+  const proj   = boardsData[activeBoardKey] || { blocks: [] };
+  const blocks = (proj.blocks || []).filter(b => b.type === 'image' || b.type === 'video');
+
+  countEl.textContent = blocks.length + ' media block' + (blocks.length !== 1 ? 's' : '');
+
+  if (!blocks.length) {
+    container.innerHTML = '<div class="empty-board">No media blocks yet — add one below.</div>';
+    return;
+  }
+
+  container.innerHTML = '';
+  blocks.forEach(b => {
+    const row = document.createElement('div');
+    row.className = 'media-block';
+    row.innerHTML = `
+      <span class="media-type ${b.type}">${b.type}</span>
+      <span class="media-url">${b.content || '—'}</span>
+      <button class="media-del" title="Delete" onclick="deleteBoardBlock('${b.id}')">✕</button>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function deleteBoardBlock(id) {
+  if (!activeBoardKey) return;
+  const proj = boardsData[activeBoardKey];
+  if (!proj) return;
+  proj.blocks = (proj.blocks || []).filter(b => b.id !== id);
+  renderBoardBlocks();
+  saveBoardBlocks(activeBoardKey);
+}
+
+function addBoardBlockByUrl() {
+  if (!activeBoardKey) return;
+  const input = document.getElementById('media-url-input');
+  const url   = (input.value || '').trim();
+  if (!url) return;
+
+  const ext  = url.split('?')[0].split('.').pop().toLowerCase();
+  const type = ['mp4','webm','mov','avi','mkv'].includes(ext) ? 'video' : 'image';
+
+  const proj = boardsData[activeBoardKey] || { blocks: [] };
+  if (!proj.blocks) proj.blocks = [];
+  proj.blocks.push({ id: uid(), type, content: url });
+  boardsData[activeBoardKey] = proj;
+
+  input.value = '';
+  renderBoardBlocks();
+  saveBoardBlocks(activeBoardKey);
+}
+
+async function uploadBoardFiles(input) {
+  if (!activeBoardKey) return;
+  const files    = [...input.files];
+  const progress = document.getElementById('upload-progress');
+  if (!files.length) return;
+
+  const proj = boardsData[activeBoardKey] || { blocks: [] };
+  if (!proj.blocks) proj.blocks = [];
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    progress.textContent = `Uploading ${i + 1} / ${files.length}: ${file.name}…`;
+
+    const ext  = file.name.split('.').pop().toLowerCase();
+    const path = `uploads/${Date.now()}_${uid()}.${ext}`;
+    const type = file.type.startsWith('video/') ? 'video' : 'image';
+
+    try {
+      const up = await fetch(`${SB_URL}/storage/v1/object/Portfolio/${path}`, {
+        method:  'POST',
+        headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': file.type, 'x-upsert': 'true' },
+        body:    file
+      });
+      if (!up.ok) throw new Error('Upload failed: ' + up.status);
+      const url = `${SB_URL}/storage/v1/object/public/Portfolio/${path}`;
+      proj.blocks.push({ id: uid(), type, content: url });
+    } catch(e) {
+      progress.textContent = `Error uploading ${file.name}: ${e.message}`;
+      return;
+    }
+  }
+
+  boardsData[activeBoardKey] = proj;
+  input.value = '';
+  progress.textContent = '';
+  renderBoardBlocks();
+  saveBoardBlocks(activeBoardKey);
+}
+
+async function saveBoardBlocks(key) {
+  const proj  = boardsData[key];
+  if (!proj)   return;
+  const progress = document.getElementById('upload-progress');
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/portfolio_projects`, {
+      method:  'POST',
+      headers: {
+        'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`,
+        'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ key, data: proj, updated_at: new Date().toISOString() })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (progress && !progress.textContent) progress.textContent = '';
+  } catch(e) {
+    console.error('Save board failed:', e);
   }
 }
 
