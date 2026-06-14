@@ -24,9 +24,9 @@
       justify-content: center;
     }
 
-    /* ── Scrollbar — hidden, scroll with mouse/touch still works ── */
-    ::-webkit-scrollbar { width: 0; height: 0; }
-    * { scrollbar-width: none; }
+    /* ── Scrollbar — completely hidden ── */
+    ::-webkit-scrollbar { display: none; }
+    * { scrollbar-width: none; -ms-overflow-style: none; }
 
     /* ── App shell ── */
     #app {
@@ -43,7 +43,7 @@
     .view {
       position: absolute;
       inset: 0;
-      overflow-y: overlay;
+      overflow-y: auto;
       overflow-x: hidden;
       padding: 48px 22px 112px;
       background: #fff;
@@ -850,10 +850,10 @@ function showView(toId, anim) {
     history.replaceState(null, '', '#project/' + activeKey);
   } else if (toId === 'view-home') {
     history.replaceState(null, '', '#home');
-  } else if (toId === 'view-work') {
-    history.replaceState(null, '', '#work');
-  } else if (toId === 'view-about') {
-    history.replaceState(null, '', '#about');
+  } else if (toId === 'view-exp') {
+    history.replaceState(null, '', '#exp');
+  } else if (toId === 'view-soon') {
+    history.replaceState(null, '', '#soon');
   }
 }
 
@@ -1297,10 +1297,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const key = hash.slice('#project/'.length);
     if (PROJECTS[key]) { openProject(key); }
     else document.querySelectorAll('#view-home .sg').forEach(sg => sg.classList.add('run'));
-  } else if (hash === '#work') {
-    goView('view-work', document.getElementById('nb-work'));
-  } else if (hash === '#about') {
-    goView('view-about', document.getElementById('nb-about'));
+  } else if (hash === '#exp') {
+    goView('view-exp', document.getElementById('nb-exp'));
+  } else if (hash === '#soon') {
+    goView('view-soon', document.getElementById('nb-soon'));
   } else {
     document.querySelectorAll('#view-home .sg').forEach(sg => sg.classList.add('run'));
   }
