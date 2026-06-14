@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/project/:key", "destination": "/index.html" },
+    { "source": "/exp", "destination": "/index.html" },
+    { "source": "/soon", "destination": "/index.html" }
+  ]
+}

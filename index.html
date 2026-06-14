@@ -25,19 +25,21 @@
     }
 
     /* ── Scrollbar — completely hidden ── */
-    ::-webkit-scrollbar { display: none; }
+    ::-webkit-scrollbar { display: none; width: 0 !important; }
     * { scrollbar-width: none; -ms-overflow-style: none; }
+    .view::-webkit-scrollbar { display: none; }
+    .view { scrollbar-width: none; -ms-overflow-style: none; }
 
     /* ── App shell ── */
     #app {
       position: relative;
       width: 100%;
-      max-width: 430px;
+      max-width: 540px;
       height: 100dvh;
       overflow: hidden;
       transition: max-width .35s ease;
     }
-    #app:has(#view-project.active) { max-width: 924px; }
+    #app:has(#view-project.active) { max-width: 960px; }
 
     /* ─────────────────── VIEWS ─────────────────── */
     .view {
@@ -757,11 +759,26 @@ async function loadSettings() {
       });
     }
 
-    // project & works card names
-    // render dynamic sections (works, projects, custom)
+    // render dynamic sections
     if (s.sections && s.sections.length) renderHomeSections(s.sections);
 
+    // render work experience
+    if (s.experience && s.experience.length) renderWorkExp(s.experience);
+
   } catch(e) { console.warn('Settings load failed:', e); }
+}
+
+/* ─── Render work experience dynamically ──────────────── */
+function renderWorkExp(items) {
+  const container = document.getElementById('sg-exp');
+  if (!container) return;
+  container.innerHTML = '';
+  items.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'exp-item';
+    el.innerHTML = `<div class="exp-co">${item.company||''}</div><div class="exp-role">${item.role||''}</div><div class="exp-date">${item.from||''} — ${item.to||''}</div>`;
+    container.appendChild(el);
+  });
 }
 
 /* ─── Render home sections dynamically ────────────────── */
@@ -827,6 +844,7 @@ const NAV_MAP    = { 'view-home':'nb-home', 'view-exp':'nb-exp', 'view-soon':'nb
 let current     = 'view-home';
 let prevMain    = 'view-home';
 let editMode    = false;
+let _restoringState = false;
 
 function showView(toId, anim) {
   if (toId === current) return;
@@ -837,7 +855,6 @@ function showView(toId, anim) {
   to.scrollTop = 0;
   setTimeout(() => to.classList.remove(anim), 350);
 
-  // re-run stagger on the new view
   to.querySelectorAll('.sg').forEach(sg => {
     sg.classList.remove('run');
     void sg.offsetWidth;
@@ -845,17 +862,38 @@ function showView(toId, anim) {
   });
   current = toId;
 
-  // persist state in URL hash
-  if (toId === 'view-project' && activeKey) {
-    history.replaceState(null, '', '#project/' + activeKey);
-  } else if (toId === 'view-home') {
-    history.replaceState(null, '', '#home');
-  } else if (toId === 'view-exp') {
-    history.replaceState(null, '', '#exp');
-  } else if (toId === 'view-soon') {
-    history.replaceState(null, '', '#soon');
+  // persist state in URL path (skip when we're already restoring from popstate)
+  if (!_restoringState) {
+    if (toId === 'view-project' && activeKey) {
+      history.pushState({ view: 'project', key: activeKey }, '', '/project/' + activeKey);
+    } else if (toId === 'view-home') {
+      history.pushState({ view: 'home' }, '', '/');
+    } else if (toId === 'view-exp') {
+      history.pushState({ view: 'exp' }, '', '/exp');
+    } else if (toId === 'view-soon') {
+      history.pushState({ view: 'soon' }, '', '/soon');
+    }
   }
 }
+
+// browser back/forward
+window.addEventListener('popstate', () => {
+  _restoringState = true;
+  const path = location.pathname;
+  if (path.startsWith('/project/')) {
+    const key = path.slice('/project/'.length);
+    if (PROJECTS[key]) openProject(key);
+    else { setNavActive(document.getElementById('nb-home')); showView('view-home','enter-l'); }
+  } else if (path === '/exp') {
+    goView('view-exp', document.getElementById('nb-exp'));
+  } else if (path === '/soon') {
+    goView('view-soon', document.getElementById('nb-soon'));
+  } else {
+    setNavActive(document.getElementById('nb-home'));
+    showView('view-home', 'enter-l');
+  }
+  _restoringState = false;
+});
 
 function goView(viewId, btn) {
   const fromIdx = MAIN_VIEWS.indexOf(current);
@@ -1291,19 +1329,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (localStorage.getItem('portfolio_admin') === 'true') document.body.classList.add('is-admin');
   await Promise.all([loadSettings(), loadProjects()]);
 
-  // restore view from URL hash
-  const hash = location.hash;
-  if (hash.startsWith('#project/')) {
-    const key = hash.slice('#project/'.length);
-    if (PROJECTS[key]) { openProject(key); }
+  // restore view from URL path
+  _restoringState = true;
+  const path = location.pathname;
+  if (path.startsWith('/project/')) {
+    const key = path.slice('/project/'.length);
+    if (PROJECTS[key]) openProject(key);
     else document.querySelectorAll('#view-home .sg').forEach(sg => sg.classList.add('run'));
-  } else if (hash === '#exp') {
+  } else if (path === '/exp') {
     goView('view-exp', document.getElementById('nb-exp'));
-  } else if (hash === '#soon') {
+  } else if (path === '/soon') {
     goView('view-soon', document.getElementById('nb-soon'));
   } else {
     document.querySelectorAll('#view-home .sg').forEach(sg => sg.classList.add('run'));
   }
+  _restoringState = false;
 });
 </script>
 </body>
