@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin — Portfolio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link id="preview-font-link" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #0f0f0f; color: #e8e8e8; height: 100vh; display: flex; align-items: center; justify-content: center; }
+
+    /* ── Gate ── */
+    #gate { width: 100%; max-width: 360px; padding: 20px; }
+    .gate-box { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 16px; padding: 36px 32px; text-align: center; }
+    .gate-box h2 { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+    .gate-box p  { color: #777; font-size: 13px; margin-bottom: 28px; }
+    .gate-error  { color: #ff6b6b; font-size: 12px; margin-top: 10px; min-height: 16px; }
+
+    /* ── Admin shell ── */
+    #admin { display: none; width: 100vw; height: 100vh; flex-direction: row; }
+    #admin.visible { display: flex; }
+
+    aside {
+      width: 220px; flex-shrink: 0; background: #141414; border-right: 1px solid #222;
+      display: flex; flex-direction: column; padding: 24px 16px;
+    }
+    aside h1 { font-size: 14px; font-weight: 600; color: #fff; padding: 0 8px; margin-bottom: 24px; letter-spacing: .03em; }
+    aside h1 span { color: #666; font-weight: 400; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+      border-radius: 9px; cursor: pointer; font-size: 13.5px; color: #aaa;
+      border: none; background: none; width: 100%; text-align: left; transition: background .15s, color .15s;
+    }
+    .nav-item:hover { background: #1e1e1e; color: #fff; }
+    .nav-item.active { background: #fff; color: #111; font-weight: 500; }
+    .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .nav-spacer { flex: 1; }
+    .nav-link { font-size: 12px; color: #555; padding: 8px 12px; text-decoration: none; display: block; }
+    .nav-link:hover { color: #999; }
+
+    main {
+      flex: 1; overflow-y: auto; padding: 40px 48px;
+      background: #0f0f0f;
+    }
+
+    .tab { display: none; max-width: 720px; }
+    .tab.active { display: block; }
+
+    h2.tab-title { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+    p.tab-desc   { font-size: 13px; color: #666; margin-bottom: 32px; }
+
+    /* ── Cards / sections ── */
+    .section { background: #1a1a1a; border: 1px solid #252525; border-radius: 14px; padding: 24px; margin-bottom: 20px; }
+    .section-title { font-size: 12px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 18px; }
+
+    /* ── Form elements ── */
+    .field { margin-bottom: 16px; }
+    .field:last-child { margin-bottom: 0; }
+    label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; font-weight: 500; }
+    input[type="text"], input[type="password"], input[type="email"], textarea, select {
+      width: 100%; background: #111; border: 1px solid #2a2a2a; border-radius: 9px;
+      color: #e8e8e8; font-family: 'Inter', sans-serif; font-size: 13.5px;
+      padding: 10px 13px; outline: none; transition: border-color .15s;
+    }
+    input:focus, textarea:focus, select:focus { border-color: #555; }
+    textarea { resize: vertical; min-height: 80px; }
+    select { cursor: pointer; }
+    select option { background: #1a1a1a; }
+
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+    /* ── Buttons ── */
+    .btn { padding: 10px 20px; border-radius: 9px; font-size: 13.5px; font-weight: 500; cursor: pointer; border: none; font-family: 'Inter', sans-serif; transition: opacity .15s; }
+    .btn:hover { opacity: .85; }
+    .btn-primary { background: #fff; color: #111; }
+    .btn-danger  { background: #2a1515; color: #ff6b6b; border: 1px solid #3a2020; }
+    .btn-ghost   { background: transparent; color: #888; border: 1px solid #2a2a2a; }
+
+    .save-bar { position: sticky; bottom: 0; background: #0f0f0f; border-top: 1px solid #1e1e1e; padding: 16px 0; margin-top: 32px; display: flex; gap: 12px; align-items: center; }
+    .save-status { font-size: 12px; color: #666; }
+    .save-status.ok  { color: #4caf7d; }
+    .save-status.err { color: #ff6b6b; }
+
+    /* ── Font picker ── */
+    .font-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+    .font-card {
+      padding: 14px; border-radius: 10px; border: 2px solid #252525; cursor: pointer;
+      transition: border-color .15s, background .15s; background: #111;
+    }
+    .font-card:hover { border-color: #444; }
+    .font-card.selected { border-color: #fff; background: #1a1a1a; }
+    .font-card .font-name { font-size: 11px; color: #777; margin-bottom: 6px; }
+    .font-card .font-preview { font-size: 20px; line-height: 1.2; color: #e8e8e8; }
+
+    /* ── Card list (works/projects) ── */
+    .card-item {
+      background: #111; border: 1px solid #252525; border-radius: 10px;
+      padding: 16px; margin-bottom: 10px; display: grid;
+      grid-template-columns: 1fr 1fr; gap: 12px;
+    }
+    .card-item .field { margin-bottom: 0; }
+
+    /* ── Password change ── */
+    .danger-zone { border-color: #3a2020; }
+    .danger-zone .section-title { color: #994444; }
+
+    /* ── Section builder ── */
+    .sec-block { background: #1a1a1a; border: 1px solid #252525; border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+    .sec-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .sec-header input { flex: 1; font-size: 15px; font-weight: 600; background: transparent; border: none; border-bottom: 1px solid #333; border-radius: 0; padding: 4px 0; color: #fff; }
+    .sec-header input:focus { border-bottom-color: #666; outline: none; }
+    .sec-actions { display: flex; gap: 6px; }
+    .icon-btn { background: none; border: 1px solid #2a2a2a; border-radius: 7px; color: #888; cursor: pointer; padding: 5px 8px; font-size: 13px; transition: all .15s; }
+    .icon-btn:hover { background: #252525; color: #fff; border-color: #444; }
+    .icon-btn.danger:hover { background: #2a1515; color: #ff6b6b; border-color: #3a2020; }
+
+    .card-row { display: grid; grid-template-columns: 28px 1fr 1fr 1fr 80px; gap: 8px; align-items: center; background: #111; border: 1px solid #222; border-radius: 9px; padding: 10px 12px; margin-bottom: 6px; }
+    .card-row .drag-handle { color: #444; cursor: grab; font-size: 16px; text-align: center; user-select: none; }
+    .card-row input { background: #0d0d0d; border: 1px solid #222; border-radius: 7px; color: #e8e8e8; font-family: inherit; font-size: 12.5px; padding: 6px 9px; outline: none; width: 100%; }
+    .card-row input:focus { border-color: #444; }
+    .card-row-actions { display: flex; gap: 4px; justify-content: flex-end; }
+
+    .add-card-btn { background: none; border: 1px dashed #2a2a2a; border-radius: 8px; color: #666; cursor: pointer; font-family: inherit; font-size: 12.5px; padding: 8px; width: 100%; text-align: center; transition: all .15s; margin-top: 6px; }
+    .add-card-btn:hover { border-color: #555; color: #aaa; background: #151515; }
+  </style>
+</head>
+<body>
+
+<!-- ══ Password Gate ══ -->
+<div id="gate">
+  <div class="gate-box">
+    <h2>Admin Panel</h2>
+    <p>Portfolio management</p>
+    <div class="field">
+      <input type="password" id="pass-input" placeholder="Password" onkeydown="if(event.key==='Enter')unlock()"/>
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="unlock()">Enter</button>
+    <div class="gate-error" id="gate-err"></div>
+  </div>
+</div>
+
+<!-- ══ Admin ══ -->
+<div id="admin">
+  <aside>
+    <h1>Admin <span>Panel</span></h1>
+    <button class="nav-item active" onclick="showTab('profile', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      Profile
+    </button>
+    <button class="nav-item" onclick="showTab('style', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+      Style & Fonts
+    </button>
+    <button class="nav-item" onclick="showTab('sections', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Sections & Cards
+    </button>
+    <button class="nav-item" onclick="showTab('security', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      Security
+    </button>
+    <div class="nav-spacer"></div>
+    <a class="nav-link" href="index.html" target="_blank">← View site</a>
+    <a class="nav-link" href="#" onclick="localStorage.removeItem('portfolio_admin');window.location.reload();" style="color:#ff6b6b">Logout</a>
+  </aside>
+
+  <main>
+
+    <!-- ══ Profile ══ -->
+    <div class="tab active" id="tab-profile">
+      <h2 class="tab-title">Profile</h2>
+      <p class="tab-desc">Your name, title, and contact links shown on the homepage.</p>
+
+      <div class="section">
+        <div class="section-title">Basic Info</div>
+        <div class="row-2">
+          <div class="field"><label>Full Name</label><input type="text" id="p-name" placeholder="Alireza Mahdavi"/></div>
+          <div class="field"><label>Age</label><input type="text" id="p-age" placeholder="25"/></div>
+        </div>
+        <div class="field"><label>Title / Role</label><input type="text" id="p-title" placeholder="Visual & Motion Designer"/></div>
+        <div class="field"><label>Profile Photo URL</label><input type="text" id="p-photo" placeholder="https://..."/></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Social Links</div>
+        <div class="row-2">
+          <div class="field"><label>LinkedIn username</label><input type="text" id="l-linkedin" placeholder="imahdavi"/></div>
+          <div class="field"><label>Instagram username</label><input type="text" id="l-instagram" placeholder="imahdvi"/></div>
+          <div class="field"><label>Email</label><input type="text" id="l-email" placeholder="you@gmail.com"/></div>
+          <div class="field"><label>Telegram username</label><input type="text" id="l-telegram" placeholder="username"/></div>
+          <div class="field"><label>X (Twitter) username</label><input type="text" id="l-twitter" placeholder="imahdvi"/></div>
+        </div>
+      </div>
+
+      <div class="save-bar">
+        <button class="btn btn-primary" onclick="save()">Save Changes</button>
+        <span class="save-status" id="save-status"></span>
+      </div>
+    </div>
+
+    <!-- ══ Style & Fonts ══ -->
+    <div class="tab" id="tab-style">
+      <h2 class="tab-title">Style & Fonts</h2>
+      <p class="tab-desc">Choose fonts for the body text and headings. Changes apply site-wide.</p>
+
+      <div class="section">
+        <div class="section-title">Body Font</div>
+        <div class="font-grid" id="body-font-grid"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Heading / Name Font</div>
+        <div class="font-grid" id="heading-font-grid"></div>
+      </div>
+
+      <div class="save-bar">
+        <button class="btn btn-primary" onclick="save()">Save Changes</button>
+        <span class="save-status" id="save-status-style"></span>
+      </div>
+    </div>
+
+    <!-- ══ Sections & Cards ══ -->
+    <div class="tab" id="tab-sections">
+      <h2 class="tab-title">Sections & Cards</h2>
+      <p class="tab-desc">Add, rename, or reorder sections and cards. Cards appear on the homepage in the order shown here.</p>
+      <div id="sections-list"></div>
+      <button class="btn btn-ghost" style="margin-top:16px" onclick="addSection()">+ Add Section</button>
+      <div class="save-bar">
+        <button class="btn btn-primary" onclick="save()">Save Changes</button>
+        <span class="save-status" id="save-status-sections"></span>
+      </div>
+    </div>
+
+    <!-- ══ Security ══ -->
+    <div class="tab" id="tab-security">
+      <h2 class="tab-title">Security</h2>
+      <p class="tab-desc">Change the admin panel password.</p>
+      <div class="section danger-zone">
+        <div class="section-title">Change Password</div>
+        <div class="field"><label>Current Password</label><input type="password" id="sec-current"/></div>
+        <div class="row-2">
+          <div class="field"><label>New Password</label><input type="password" id="sec-new"/></div>
+          <div class="field"><label>Confirm New Password</label><input type="password" id="sec-confirm"/></div>
+        </div>
+        <div style="margin-top:16px">
+          <button class="btn btn-danger" onclick="changePassword()">Update Password</button>
+          <span class="save-status" id="save-status-sec" style="margin-left:12px"></span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const SB_URL = 'https://jbdirevxdgcffpaeizcd.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiZGlyZXZ4ZGdjZmZwYWVpemNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NzAwNjgsImV4cCI6MjA5NjU0NjA2OH0._09c4ViKGJvDQXDUGOFEmVWyCg9scPMb6VBGV7DJvoI';
+function slugify(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || ('sec-'+Date.now()); }
+
+const BODY_FONTS = [
+  'Inter', 'DM Sans', 'Plus Jakarta Sans', 'Outfit',
+  'Poppins', 'Space Grotesk', 'Nunito', 'Figtree'
+];
+const HEADING_FONTS = [
+  'Caveat', 'Dancing Script', 'Pacifico', 'Satisfy',
+  'Righteous', 'Lobster', 'Permanent Marker', 'Kalam'
+];
+
+let settings = {};
+let sessionPassword = '';
+
+/* ── Auth ── */
+async function unlock() {
+  const pass = document.getElementById('pass-input').value;
+  const err  = document.getElementById('gate-err');
+  if (!pass) { err.textContent = 'Enter a password.'; return; }
+
+  try {
+    const res  = await fetch(`${SB_URL}/rest/v1/portfolio_settings?id=eq.1&select=data`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+    });
+    const rows = await res.json();
+    if (!rows[0]) { err.textContent = 'Connection error.'; return; }
+    const stored = rows[0].data.admin_password || 'admin1234';
+    if (pass !== stored) { err.textContent = 'Wrong password.'; return; }
+
+    sessionPassword = pass;
+    settings = rows[0].data;
+    localStorage.setItem('portfolio_admin', 'true');
+    document.getElementById('gate').style.display = 'none';
+    document.body.style.alignItems = 'unset';
+    document.body.style.justifyContent = 'unset';
+    document.getElementById('admin').classList.add('visible');
+    populateAll();
+  } catch(e) { err.textContent = 'Connection failed.'; }
+}
+
+/* ── Tab switching ── */
+function showTab(id, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+/* ── Populate all fields ── */
+function populateAll() {
+  const p = settings.profile || {};
+  const l = settings.links   || {};
+  const f = settings.fonts   || {};
+
+  // Profile
+  document.getElementById('p-name').value  = p.name  || '';
+  document.getElementById('p-title').value = p.title || '';
+  document.getElementById('p-age').value   = p.age   || '';
+  document.getElementById('p-photo').value = p.photo_url || '';
+
+  // Links
+  document.getElementById('l-linkedin').value  = l.linkedin  || '';
+  document.getElementById('l-instagram').value = l.instagram || '';
+  document.getElementById('l-email').value     = l.email     || '';
+  document.getElementById('l-telegram').value  = l.telegram  || '';
+  document.getElementById('l-twitter').value   = l.twitter   || '';
+
+  // Fonts
+  buildFontGrid('body-font-grid',    BODY_FONTS,    f.body    || 'Inter',  'body');
+  buildFontGrid('heading-font-grid', HEADING_FONTS, f.heading || 'Caveat', 'heading');
+
+  // Sections
+  buildSectionsList(settings.sections || []);
+}
+
+/* ── Font grid builder ── */
+function buildFontGrid(containerId, fonts, current, type) {
+  const grid = document.getElementById(containerId);
+  grid.innerHTML = '';
+  fonts.forEach(font => {
+    const card = document.createElement('div');
+    card.className = 'font-card' + (font === current ? ' selected' : '');
+    card.innerHTML = `<div class="font-name">${font}</div><div class="font-preview" style="font-family:'${font}',sans-serif">Aa Bb 123</div>`;
+    card.onclick = () => {
+      grid.querySelectorAll('.font-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      previewFont(type, font);
+    };
+    grid.appendChild(card);
+    // load the font for preview
+    loadGoogleFont(font);
+  });
+}
+
+function loadGoogleFont(font) {
+  const id = 'gf-' + font.replace(/\s/g, '-');
+  if (document.getElementById(id)) return;
+  const link = document.createElement('link');
+  link.id = id; link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(font)}:wght@400;700&display=swap`;
+  document.head.appendChild(link);
+}
+
+function previewFont(type, font) {
+  if (type === 'body') {
+    document.body.style.fontFamily = `'${font}', sans-serif`;
+  }
+}
+
+function getSelectedFont(gridId) {
+  const sel = document.querySelector('#' + gridId + ' .font-card.selected');
+  return sel ? sel.querySelector('.font-name').textContent : null;
+}
+
+/* ── Sections builder ── */
+function buildSectionsList(sections) {
+  if (!settings.sections) settings.sections = sections;
+  const container = document.getElementById('sections-list');
+  container.innerHTML = '';
+  (settings.sections || []).forEach((sec, si) => {
+    container.appendChild(makeSectionEl(sec, si));
+  });
+}
+
+function makeSectionEl(sec, si) {
+  const block = document.createElement('div');
+  block.className = 'sec-block';
+  block.dataset.si = si;
+
+  // header: title input + move up/down + delete section
+  block.innerHTML = `
+    <div class="sec-header">
+      <input type="text" value="${sec.title || ''}" placeholder="Section title" oninput="settings.sections[${si}].title=this.value"/>
+      <div class="sec-actions">
+        <button class="icon-btn" title="Move up"   onclick="moveSection(${si},-1)">↑</button>
+        <button class="icon-btn" title="Move down" onclick="moveSection(${si}, 1)">↓</button>
+        <button class="icon-btn danger" title="Delete section" onclick="deleteSection(${si})">✕</button>
+      </div>
+    </div>
+    <div class="cards-container" id="cards-${si}"></div>
+    <button class="add-card-btn" onclick="addCard(${si})">+ Add card</button>
+  `;
+
+  const cardsContainer = block.querySelector(`#cards-${si}`);
+  (sec.cards || []).forEach((card, ci) => {
+    cardsContainer.appendChild(makeCardRow(card, si, ci));
+  });
+
+  return block;
+}
+
+function makeCardRow(card, si, ci) {
+  const row = document.createElement('div');
+  row.className = 'card-row';
+  row.innerHTML = `
+    <span class="drag-handle" title="Reorder">⠿</span>
+    <input type="text" value="${card.name||''}"  placeholder="Name"      oninput="settings.sections[${si}].cards[${ci}].name=this.value"/>
+    <input type="text" value="${card.sub||''}"   placeholder="Subtitle"  oninput="settings.sections[${si}].cards[${ci}].sub=this.value"/>
+    <input type="text" value="${card.thumb||''}" placeholder="Thumb URL" oninput="settings.sections[${si}].cards[${ci}].thumb=this.value"/>
+    <div class="card-row-actions">
+      <button class="icon-btn" title="Move up"   onclick="moveCard(${si},${ci},-1)">↑</button>
+      <button class="icon-btn" title="Move down" onclick="moveCard(${si},${ci}, 1)">↓</button>
+      <button class="icon-btn danger" title="Delete" onclick="deleteCard(${si},${ci})">✕</button>
+    </div>
+  `;
+  return row;
+}
+
+function addSection() {
+  if (!settings.sections) settings.sections = [];
+  settings.sections.push({ id: 'section-' + Date.now(), title: 'New Section', cards: [] });
+  buildSectionsList(settings.sections);
+}
+
+function deleteSection(si) {
+  if (!confirm('Delete this section and all its cards?')) return;
+  settings.sections.splice(si, 1);
+  buildSectionsList(settings.sections);
+}
+
+function moveSection(si, dir) {
+  const arr = settings.sections;
+  const ni = si + dir;
+  if (ni < 0 || ni >= arr.length) return;
+  [arr[si], arr[ni]] = [arr[ni], arr[si]];
+  buildSectionsList(arr);
+}
+
+function addCard(si) {
+  const sec = settings.sections[si];
+  if (!sec.cards) sec.cards = [];
+  sec.cards.push({ key: slugify(sec.title) + '-' + Date.now(), name: '', sub: '', thumb: '' });
+  buildSectionsList(settings.sections);
+}
+
+function deleteCard(si, ci) {
+  settings.sections[si].cards.splice(ci, 1);
+  buildSectionsList(settings.sections);
+}
+
+function moveCard(si, ci, dir) {
+  const cards = settings.sections[si].cards;
+  const ni = ci + dir;
+  if (ni < 0 || ni >= cards.length) return;
+  [cards[ci], cards[ni]] = [cards[ni], cards[ci]];
+  buildSectionsList(settings.sections);
+}
+
+/* ── Save ── */
+async function save() {
+  const profile = {
+    name:      document.getElementById('p-name').value,
+    title:     document.getElementById('p-title').value,
+    age:       document.getElementById('p-age').value,
+    photo_url: document.getElementById('p-photo').value,
+  };
+  const links = {
+    linkedin:  document.getElementById('l-linkedin').value,
+    instagram: document.getElementById('l-instagram').value,
+    email:     document.getElementById('l-email').value,
+    telegram:  document.getElementById('l-telegram').value,
+    twitter:   document.getElementById('l-twitter').value,
+  };
+  const fonts = {
+    body:    getSelectedFont('body-font-grid')    || settings.fonts?.body    || 'Inter',
+    heading: getSelectedFont('heading-font-grid') || settings.fonts?.heading || 'Caveat',
+  };
+
+  settings = { ...settings, profile, links, fonts, sections: settings.sections || [] };
+
+  const allStatus = document.querySelectorAll('.save-status');
+  allStatus.forEach(s => { s.textContent = 'Saving…'; s.className = 'save-status'; });
+
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/portfolio_settings?id=eq.1`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ data: settings, updated_at: new Date().toISOString() })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    allStatus.forEach(s => { s.textContent = 'Saved ✓'; s.className = 'save-status ok'; });
+    setTimeout(() => allStatus.forEach(s => s.textContent = ''), 3000);
+  } catch(e) {
+    allStatus.forEach(s => { s.textContent = 'Error saving'; s.className = 'save-status err'; });
+  }
+}
+
+/* ── Change password ── */
+async function changePassword() {
+  const cur     = document.getElementById('sec-current').value;
+  const nw      = document.getElementById('sec-new').value;
+  const confirm = document.getElementById('sec-confirm').value;
+  const status  = document.getElementById('save-status-sec');
+
+  if (cur !== sessionPassword)  { status.textContent = 'Current password is wrong.'; status.className = 'save-status err'; return; }
+  if (!nw)                       { status.textContent = 'New password cannot be empty.'; status.className = 'save-status err'; return; }
+  if (nw !== confirm)            { status.textContent = 'Passwords do not match.'; status.className = 'save-status err'; return; }
+
+  settings.admin_password = nw;
+  sessionPassword = nw;
+  await save();
+  document.getElementById('sec-current').value = '';
+  document.getElementById('sec-new').value     = '';
+  document.getElementById('sec-confirm').value = '';
+  status.textContent = 'Password updated ✓';
+  status.className = 'save-status ok';
+  setTimeout(() => status.textContent = '', 3000);
+}
+</script>
+</body>
+</html>
