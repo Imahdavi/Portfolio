@@ -677,9 +677,13 @@ function migrateBlockLayout(block) {
   if (block._colStart === undefined) {
     const oldCols = block._cols || 3;
     const oldCol  = block._col;
-    block._cols     = oldCols * 2;                       // 1→2, 2→4, 3→6
-    block._colStart = oldCol ? (oldCol - 1) * 2 + 1 : 1; // col2→3, col3→5
+    block._cols     = oldCols * 2;
+    block._colStart = oldCol ? (oldCol - 1) * 2 + 1 : 1;
     delete block._col;
+  }
+  // Migrate pixel-based freeH to aspect ratio using saved width
+  if (block._freeH && !block._freeAspect && block._freeW) {
+    block._freeAspect = +(block._freeW / block._freeH).toFixed(4);
   }
 }
 
@@ -719,7 +723,10 @@ function applyPreset(mw, block, preset) {
     mw.dataset.aspect = 'free';
     if (inner) {
       inner.style.width = '100%';
-      if (block._freeH) {
+      if (block._freeAspect) {
+        inner.style.aspectRatio = String(block._freeAspect);
+        inner.style.height = 'auto';
+      } else if (block._freeH) {
         inner.style.aspectRatio = 'unset';
         inner.style.height = block._freeH + 'px';
       } else {
@@ -832,7 +839,8 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
       el.style.height = h + 'px';
       el.style.width  = '100%';
       block._freeH = h;
-      delete block._freeW;
+      block._freeW = mw.offsetWidth || 1;
+      block._freeAspect = +(block._freeW / h).toFixed(4);
       setBlockRowSpan(wrap);
     }
 
