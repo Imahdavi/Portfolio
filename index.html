@@ -321,6 +321,13 @@
     .edit-on .media-inner .resize-corner { display:flex; }
     .resize-corner svg { width:16px; height:16px; pointer-events:none; }
 
+    /* Column-width preview ghost shown during freehand resize */
+    .resize-preview {
+      position:absolute; top:0; left:0; bottom:0; display:none;
+      background:rgba(66,133,244,0.07); border:1.5px dashed rgba(66,133,244,0.32);
+      border-radius:12px; pointer-events:none; z-index:5;
+    }
+
     /* Snap label */
     .snap-label {
       position:absolute; bottom:10px; left:50%;
@@ -676,39 +683,76 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
     mw.dataset.aspect = 'free';
     e.preventDefault();
     e.stopPropagation();
-    const inner = mw.querySelector('.media-inner');
-    const startY  = e.clientY;
-    const startX  = e.clientX;
-    const startH  = inner ? inner.offsetHeight : mw.offsetHeight;
-    const startW  = wrap  ? wrap.offsetWidth   : (inner ? inner.offsetWidth : mw.offsetWidth);
-    const list    = wrap  ? wrap.parentElement : null;
+    const inner    = mw.querySelector('.media-inner');
+    const startY   = e.clientY;
+    const startX   = e.clientX;
+    const startH   = inner ? inner.offsetHeight : mw.offsetHeight;
+    const startW   = wrap  ? wrap.offsetWidth   : (inner ? inner.offsetWidth : mw.offsetWidth);
+    const list     = wrap  ? wrap.parentElement : null;
+    const startCols = block._cols || 3;
+    let pendingCols = startCols;
+
+    // ── Blue column-width preview ghost ───────────────────
+    const ghost = document.createElement('div');
+    ghost.className = 'resize-preview';
+    wrap.appendChild(ghost);
+
+    function updateGhost(newCols) {
+      if (!list || newCols === startCols) { ghost.style.display = 'none'; return; }
+      const colW = list.offsetWidth / 3;
+      ghost.style.display = 'block';
+      ghost.style.width   = (colW * newCols) + 'px';
+    }
 
     function onMove(e) {
       const el = inner || mw;
 
-      // ── Step 1: resolve column count from horizontal drag ──
-      let newCols = block._cols || 3;
+      // ── Step 1: column count from horizontal drag (pending only) ──
+      let newCols = startCols;
       if (list && wrap) {
         const listW = list.offsetWidth;
         const colW  = listW / 3;
         const targetW = Math.max(colW * 0.6, startW + (e.clientX - startX));
         newCols = targetW < colW * 1.5 ? 1 : targetW < colW * 2.5 ? 2 : 3;
       }
+      pendingCols = newCols;
+      updateGhost(newCols);
 
-      // ── Step 2: stable frame width for consistent snapping ─
+      // ── Step 2: stable width for snapping (use pending cols) ──
       const stableW = list ? list.offsetWidth * newCols / 3 : (el.offsetWidth || startW);
 
       // ── Step 3: height + aspect-ratio snap ────────────────
       let h = Math.max(80, startH + (e.clientY - startY));
       const ratio = stableW / h;
-      let ratioSnapped = false;
+      let snapped = false;
       for (const s of SNAP_RATIOS) {
         if (Math.abs(ratio - s.r) / s.r < SNAP_THRESHOLD) {
-          h = Math.round(stableW / s.r); // height derived from stable frame width
+          h = Math.round(stableW / s.r);
           snapLbl.textContent = s.label;
           snapLbl.classList.add('show');
-          ratioSnapped = true;
+          snapped = true;
           break;
+        }
+      }
+
+      // ── Step 3b: adjacent block height snap ───────────────
+      if (!snapped && list) {
+        const wrapTop = wrap.getBoundingClientRect().top;
+        for (const b of list.querySelectorAll('.block')) {
+          if (b === wrap) continue;
+          const br = b.getBoundingClientRect();
+          if (Math.abs(br.top - wrapTop) < 24) {
+            const adjInner = b.querySelector('.media-inner');
+            const adjH = adjInner ? adjInner.offsetHeight : b.offsetHeight;
+            const snapZone = Math.max(22, adjH * 0.06);
+            if (Math.abs(h - adjH) < snapZone) {
+              h = adjH;
+              snapLbl.textContent = '⟺ aligned';
+              snapLbl.classList.add('show');
+              snapped = true;
+              break;
+            }
+          }
         }
       }
 
@@ -719,18 +763,10 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
       block._freeH = h;
       delete block._freeW;
 
-      // ── Step 4: apply column change ───────────────────────
-      if (list && wrap) {
-        if (newCols !== (block._cols || 3)) {
-          block._cols = newCols;
-          delete block._col;
-          wrap.dataset.cols = String(newCols);
-          delete wrap.dataset.col;
-        }
-        if (!ratioSnapped) {
-          snapLbl.textContent = {1:'1/3', 2:'2/3', 3:'Full'}[newCols];
-          snapLbl.classList.add('show');
-        }
+      // ── Step 4: show cols hint but DON'T apply yet ─────────
+      if (!snapped) {
+        snapLbl.textContent = {1:'1/3', 2:'2/3', 3:'Full'}[newCols];
+        snapLbl.classList.add('show');
       }
     }
 
@@ -738,6 +774,17 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       snapLbl.classList.remove('show');
+      ghost.remove();
+
+      // Apply pending column count NOW (no reflow during drag)
+      if (list && wrap && pendingCols !== startCols) {
+        block._cols = pendingCols;
+        delete block._col;
+        wrap.dataset.cols = String(pendingCols);
+        delete wrap.dataset.col;
+        requestAnimationFrame(() => setBlockRowSpan(wrap));
+      }
+
       if (activeKey) saveProject(activeKey);
     }
 
