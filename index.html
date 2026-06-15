@@ -236,16 +236,16 @@
     .edit-hint.show { display:block; animation:fadeUp .2s ease both; }
 
     /* Block list */
-    .block-list { display:grid; grid-template-columns:repeat(6,1fr); column-gap:6px; row-gap:0; grid-auto-rows:1px; margin-bottom:20px; align-items:start; }
+    .block-list { display:grid; grid-template-columns:repeat(6,1fr); column-gap:10px; row-gap:0; grid-auto-rows:1px; margin-bottom:20px; align-items:start; }
 
     .block {
       position:relative;
       display:flex; align-items:flex-start; gap:8px;
-      background:transparent; border-radius:14px; padding:6px 0;
+      background:transparent; border-radius:20px; padding:0;
       grid-column:1 / span 6; transition:box-shadow .2s;
       box-sizing:border-box;
     }
-    .edit-on .block { padding:6px 0; cursor:grab; }
+    .edit-on .block { padding:0; cursor:grab; }
     .edit-on .block:active { cursor:grabbing; }
     .edit-on .block-text, .edit-on .block video, .edit-on .block button { cursor:auto; }
     .edit-on .resize-corner { cursor:ns-resize !important; }
@@ -271,7 +271,7 @@
     .block-text {
       font-size:14px; line-height:1.7; color:#333;
       outline:none; min-height:1em;
-      border-radius:4px;
+      border-radius:4px; padding:6px 0;
     }
     .edit-on .block-text { cursor:text; }
     .block-text:focus { outline:none; }
@@ -279,11 +279,11 @@
 
     /* ── Media wrap ── */
     .media-wrap {
-      position:relative; border-radius:10px; overflow:visible;
+      position:relative; border-radius:20px; overflow:visible;
       width:100%; transition:max-width .28s ease, aspect-ratio .28s ease;
     }
     .media-wrap .media-inner {
-      position:relative; border-radius:10px; overflow:hidden;
+      position:relative; border-radius:20px; overflow:hidden;
       background:#111; width:100%; height:auto;
     }
     .media-wrap img, .media-wrap video {
@@ -1088,7 +1088,7 @@ function updateEditUI() {
 function setBlockRowSpan(el) {
   const h = el.offsetHeight;
   if (!h) return;
-  el.style.gridRow = 'span ' + (h + 8);
+  el.style.gridRow = 'span ' + (h + 10);
 }
 
 /* ─── Render blocks ────────────────────────────────────── */
