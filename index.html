@@ -52,7 +52,7 @@
       display: none;
     }
     .view.active { display: block; }
-    #view-project { padding: 48px 40px 112px; }
+    #view-project { padding: 0 40px 112px; }
 
     @keyframes slideInR  { from { transform:translateX(52px);  opacity:0 } to { transform:none; opacity:1 } }
     @keyframes slideInL  { from { transform:translateX(-52px); opacity:0 } to { transform:none; opacity:1 } }
@@ -187,7 +187,10 @@
     /* ─────────────────── DETAIL PAGE ─────────────────── */
     .detail-bar {
       display:flex; align-items:center; gap:10px;
-      margin-bottom:4px; position:relative;
+      position:sticky; top:0; z-index:100;
+      background:rgba(255,255,255,0.92);
+      backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+      padding:18px 0 14px; margin-bottom:4px;
     }
     .back-btn {
       width:40px; height:40px; display:flex; align-items:center; justify-content:center;
@@ -398,6 +401,31 @@
     .add-btn:hover { border-color:#555; color:#333; background:rgba(0,0,0,.04); }
     .add-btn svg   { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
 
+    /* Scroll-to-top button */
+    #scroll-top-btn {
+      position:fixed; bottom:96px; right:20px;
+      width:44px; height:44px; border-radius:50%;
+      background:rgba(255,255,255,0.88); border:1.5px solid rgba(0,0,0,0.12);
+      box-shadow:0 2px 14px rgba(0,0,0,.13);
+      backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+      cursor:pointer; z-index:190;
+      display:flex; align-items:center; justify-content:center;
+      color:#555;
+      opacity:0; pointer-events:none;
+      transition:opacity .22s, transform .18s, box-shadow .18s;
+    }
+    #scroll-top-btn.show { opacity:1; pointer-events:auto; }
+    #scroll-top-btn:hover { transform:translateY(-2px); box-shadow:0 4px 18px rgba(0,0,0,.16); }
+    #scroll-top-btn:active { transform:scale(.9); }
+    #scroll-top-btn svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+
+    /* Block enter animation */
+    @keyframes blockIn {
+      from { opacity:0; transform:translateY(32px); filter:blur(8px); }
+      to   { opacity:1; transform:none; filter:blur(0); }
+    }
+    .block.block-enter { animation:blockIn .5s cubic-bezier(.22,.68,0,1.2) both; }
+
     /* Drop indicator — fixed position overlay, never inserted into grid */
     .drop-indicator {
       position:fixed; height:3px; background:#1a1a1a; border-radius:3px;
@@ -551,6 +579,10 @@
   </div><!-- /view-project -->
 
 </div><!-- /app -->
+
+<button id="scroll-top-btn" aria-label="Scroll to top" onclick="document.getElementById('view-project').scrollTo({top:0,behavior:'smooth'})">
+  <svg viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+</button>
 
 <!-- ══════════════════════════════ BOTTOM NAV ══════════════════════════════ -->
 <nav id="bottom-nav">
@@ -959,7 +991,7 @@ async function openProject(key) {
   const p = PROJECTS[key];
   document.getElementById('d-title').textContent = p.name;
   document.getElementById('d-sub').textContent   = p.sub;
-  renderBlocks();
+  renderBlocks(true);
   updateEditUI();
   showView('view-project', 'enter-r');
 }
@@ -1004,11 +1036,18 @@ function setBlockRowSpan(el) {
 }
 
 /* ─── Render blocks ────────────────────────────────────── */
-function renderBlocks() {
+function renderBlocks(animate) {
   const list = document.getElementById('block-list');
   list.innerHTML = '';
   const proj = PROJECTS[activeKey];
-  proj.blocks.forEach(b => list.appendChild(makeBlockEl(b, proj)));
+  proj.blocks.forEach((b, i) => {
+    const el = makeBlockEl(b, proj);
+    list.appendChild(el);
+    if (animate) {
+      el.classList.add('block-enter');
+      el.style.animationDelay = (i * 55) + 'ms';
+    }
+  });
   requestAnimationFrame(() => list.querySelectorAll('.block').forEach(setBlockRowSpan));
 }
 
@@ -1378,6 +1417,16 @@ function deleteBlock(id) {
 /* ─── Close resize menus on outside click ───────────────── */
 document.addEventListener('click', () => {
   document.querySelectorAll('.resize-menu.open').forEach(m => m.classList.remove('open'));
+});
+
+/* ─── Scroll-to-top ────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  const proj = document.getElementById('view-project');
+  const btn  = document.getElementById('scroll-top-btn');
+  proj.addEventListener('scroll', () => {
+    const atBottom = proj.scrollTop + proj.clientHeight >= proj.scrollHeight - 100;
+    btn.classList.toggle('show', atBottom);
+  });
 });
 
 /* ─── Init ─────────────────────────────────────────────── */
