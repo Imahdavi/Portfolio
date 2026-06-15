@@ -691,11 +691,21 @@ async function loadBoardsData() {
   }
 }
 
-function selectBoard(key) {
+async function selectBoard(key) {
   activeBoardKey = key || null;
   document.getElementById('add-media-box').style.display = key ? '' : 'none';
   document.getElementById('upload-progress').textContent = '';
   document.getElementById('media-url-input').value = '';
+  if (key) {
+    // Always fetch fresh data so we never overwrite layout changes made in the main site
+    try {
+      const res  = await fetch(`${SB_URL}/rest/v1/portfolio_projects?key=eq.${encodeURIComponent(key)}&select=key,data`, {
+        headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+      });
+      const rows = await res.json();
+      if (rows[0]) boardsData[key] = rows[0].data || { blocks: [] };
+    } catch(e) { console.warn('Board fetch failed:', e); }
+  }
   renderBoardBlocks();
 }
 

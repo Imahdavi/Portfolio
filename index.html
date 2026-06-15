@@ -227,7 +227,7 @@
     .edit-hint.show { display:block; animation:fadeUp .2s ease both; }
 
     /* Block list */
-    .block-list { display:grid; grid-template-columns:repeat(3,1fr); column-gap:8px; row-gap:0; grid-auto-rows:1px; grid-auto-flow:dense; margin-bottom:20px; align-items:start; }
+    .block-list { display:grid; grid-template-columns:repeat(3,1fr); column-gap:8px; row-gap:0; grid-auto-rows:1px; margin-bottom:20px; align-items:start; }
 
     .block {
       position:relative;
@@ -398,14 +398,13 @@
     .add-btn:hover { border-color:#555; color:#333; background:rgba(0,0,0,.04); }
     .add-btn svg   { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
 
-    /* Drop line indicator — spans all 3 grid columns */
-    .drop-line {
-      grid-column: 1 / -1;
-      grid-row: span 20;
-      height:3px; background:#1a1a1a; border-radius:3px;
-      margin:0; opacity:0; transition:opacity .15s;
+    /* Drop indicator — fixed position overlay, never inserted into grid */
+    .drop-indicator {
+      position:fixed; height:3px; background:#1a1a1a; border-radius:3px;
+      pointer-events:none; z-index:1001; opacity:0; transition:opacity .12s;
+      left:0; top:0; width:0;
     }
-    .drop-line.show { opacity:1; }
+    .drop-indicator.show { opacity:1; }
 
     /* ─────────────────── BOTTOM NAV ─────────────────── */
     #bottom-nav {
@@ -944,11 +943,20 @@ function setNavActive(btn) {
 /* ─── Project detail ───────────────────────────────────── */
 let activeKey = null;
 
-function openProject(key) {
+async function openProject(key) {
   activeKey = key;
   editMode  = false;
   prevMain  = current;
-  const p   = PROJECTS[key];
+  try {
+    const res  = await fetch(`${SB_URL}/rest/v1/portfolio_projects?key=eq.${encodeURIComponent(key)}&select=data`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+    });
+    const rows = await res.json();
+    if (Array.isArray(rows) && rows[0]?.data?.blocks) {
+      PROJECTS[key].blocks = rows[0].data.blocks;
+    }
+  } catch(e) {}
+  const p = PROJECTS[key];
   document.getElementById('d-title').textContent = p.name;
   document.getElementById('d-sub').textContent   = p.sub;
   renderBlocks();
@@ -1171,7 +1179,24 @@ function makeBlockEl(block, proj) {
 
 /* ─── Drag-to-reorder (iOS-style grid snap) ───────────── */
 let dragEl = null, dragGhost = null, offsetY = 0;
-let dropTarget = null, dropSide = null; // 'left' | 'right' | 'between'
+let dropTarget = null, dropSide = null;
+let _dropInd = null;
+
+function getDropInd() {
+  if (!_dropInd) {
+    _dropInd = document.createElement('div');
+    _dropInd.className = 'drop-indicator';
+    document.body.appendChild(_dropInd);
+  }
+  return _dropInd;
+}
+
+function clearDropIndicators() {
+  document.getElementById('block-list')
+    .querySelectorAll('.block')
+    .forEach(b => b.classList.remove('drop-left','drop-right','drop-center'));
+  getDropInd().classList.remove('show');
+}
 
 function startDrag(e, el) {
   e.preventDefault();
@@ -1194,21 +1219,14 @@ function startDrag(e, el) {
   document.addEventListener('mouseup', onDragEnd);
 }
 
-function clearDropIndicators() {
-  const list = document.getElementById('block-list');
-  list.querySelectorAll('.drop-line').forEach(l => l.remove());
-  list.querySelectorAll('.block').forEach(b => b.classList.remove('drop-left','drop-right','drop-center'));
-}
-
 function onDragMove(e) {
   if (!dragGhost) return;
   dragGhost.style.top = (e.clientY - offsetY) + 'px';
 
-  const list = document.getElementById('block-list');
+  const list  = document.getElementById('block-list');
   const items = [...list.querySelectorAll('.block')].filter(b => b !== dragEl);
   clearDropIndicators();
 
-  // check if cursor is directly over a block
   let hovered = null;
   for (const item of items) {
     const r = item.getBoundingClientRect();
@@ -1219,7 +1237,7 @@ function onDragMove(e) {
   }
 
   if (hovered) {
-    const r = hovered.getBoundingClientRect();
+    const r     = hovered.getBoundingClientRect();
     const third = r.width / 3;
     if (e.clientX < r.left + third) {
       hovered.classList.add('drop-left');
@@ -1232,17 +1250,21 @@ function onDragMove(e) {
       dropTarget = hovered; dropSide = 'center';
     }
   } else {
-    // between rows: find the block just above the cursor
+    // between rows — show a fixed-position line, never touch grid DOM
     let insertAfter = null;
     for (const item of items) {
-      const r = item.getBoundingClientRect();
-      if (e.clientY > r.bottom) insertAfter = item;
+      if (e.clientY > item.getBoundingClientRect().bottom) insertAfter = item;
     }
-    const line = document.createElement('div');
-    line.className = 'drop-line show';
-    if (insertAfter) insertAfter.after(line);
-    else if (items.length) list.insertBefore(line, items[0]);
-    else list.appendChild(line);
+    const listRect = list.getBoundingClientRect();
+    const ind = getDropInd();
+    ind.style.left  = listRect.left + 'px';
+    ind.style.width = listRect.width + 'px';
+    if (insertAfter) {
+      ind.style.top = (insertAfter.getBoundingClientRect().bottom + 2) + 'px';
+    } else if (items.length) {
+      ind.style.top = (items[0].getBoundingClientRect().top - 4) + 'px';
+    }
+    ind.classList.add('show');
     dropTarget = insertAfter; dropSide = 'between';
   }
 }
@@ -1266,26 +1288,28 @@ function onDragEnd(e) {
 
   if (dropSide === 'left') {
     list.insertBefore(dragEl, dropTarget);
-    setBlockCols(dragEl,  proj.blocks.find(b => b.id === dragEl.dataset.id),  1);
+    setBlockCols(dragEl,    proj.blocks.find(b => b.id === dragEl.dataset.id),    1);
     setBlockCols(dropTarget, proj.blocks.find(b => b.id === dropTarget.dataset.id), 1);
   } else if (dropSide === 'right') {
     dropTarget.after(dragEl);
-    setBlockCols(dragEl,  proj.blocks.find(b => b.id === dragEl.dataset.id),  1);
+    setBlockCols(dragEl,    proj.blocks.find(b => b.id === dragEl.dataset.id),    1);
     setBlockCols(dropTarget, proj.blocks.find(b => b.id === dropTarget.dataset.id), 1);
   } else if (dropSide === 'center') {
     list.insertBefore(dragEl, dropTarget);
     setBlockCols(dragEl, proj.blocks.find(b => b.id === dragEl.dataset.id), 3);
   } else {
-    const line = list.querySelector('.drop-line');
-    if (line) list.insertBefore(dragEl, line);
-    else if (dropTarget) dropTarget.after(dragEl);
-    else list.insertBefore(dragEl, list.firstChild);
+    // 'between' — use stored dropTarget, no DOM query needed
+    if (dropTarget) dropTarget.after(dragEl);
+    else {
+      const first = list.querySelector('.block');
+      if (first) list.insertBefore(dragEl, first);
+      else list.appendChild(dragEl);
+    }
     setBlockCols(dragEl, proj.blocks.find(b => b.id === dragEl.dataset.id), 3);
   }
 
   clearDropIndicators();
 
-  // sync block order back to data
   const newOrder = [...list.querySelectorAll('.block')].map(el => el.dataset.id);
   proj.blocks = newOrder.map(id => proj.blocks.find(b => b.id === id)).filter(Boolean);
 
