@@ -210,8 +210,16 @@
     .back-btn:active { transform:scale(.88); }
     .back-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
 
-    .d-title    { font-size:24px; font-weight:700; position:absolute; left:50%; transform:translateX(-50%); white-space:nowrap; pointer-events:none; }
-    .d-subtitle { font-size:13px; color:#888; margin-bottom:20px; text-align:center; padding-left:0; }
+    .d-title    { font-size:24px; font-weight:700; position:absolute; left:50%; transform:translateX(-50%); white-space:nowrap; }
+    .d-subtitle { font-size:13px; color:#888; margin-bottom:12px; text-align:center; padding-left:0; }
+    .d-title[contenteditable="true"], .d-subtitle[contenteditable="true"] {
+      outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px; padding:2px 10px; cursor:text; min-width:40px;
+    }
+    .d-title[contenteditable="true"]:focus, .d-subtitle[contenteditable="true"]:focus {
+      outline-color:rgba(0,0,0,.35);
+    }
+    .d-title:empty:before  { content:attr(data-ph); color:#bbb; }
+    .d-subtitle:empty:before { content:attr(data-ph); color:#bbb; }
 
     /* Edit toggle — hidden until admin session active */
     .edit-toggle { display:none !important; }
@@ -252,6 +260,7 @@
     .block.drop-left   { box-shadow:-3px 0 0 0 rgba(26,23,20,.7); border-radius:14px; }
     .block.drop-right  { box-shadow: 3px 0 0 0 rgba(26,23,20,.7); border-radius:14px; }
     .block.drop-center { outline:2px solid rgba(66,133,244,.5); outline-offset:2px; border-radius:14px; }
+    .block.col-dragging .media-inner { outline:2px solid rgba(66,133,244,.7) !important; outline-offset:2px; }
 
     /* Border follows the actual content (media-inner), not the wrapper */
     .edit-on .media-inner {
@@ -301,6 +310,25 @@
     }
     .edit-on .media-inner .resize-corner { display:flex; }
     .resize-corner svg { width:16px; height:16px; pointer-events:none; }
+
+    /* Align bar — top-center of media-inner, visible in edit mode */
+    .align-bar {
+      position:absolute; top:8px; left:50%; transform:translateX(-50%);
+      display:none; flex-direction:row; gap:2px;
+      background:rgba(26,23,20,.84); border-radius:9px;
+      padding:3px; z-index:16; backdrop-filter:blur(4px);
+      box-shadow:0 2px 8px rgba(0,0,0,.22);
+    }
+    .edit-on .media-inner .align-bar { display:flex; }
+    .align-btn {
+      width:28px; height:22px; border-radius:6px; border:none;
+      background:transparent; cursor:pointer;
+      color:rgba(255,255,255,.5);
+      display:flex; align-items:center; justify-content:center;
+      transition:background .1s, color .1s;
+    }
+    .align-btn:hover { background:rgba(255,255,255,.12); color:rgba(255,255,255,.9); }
+    .align-btn.on    { background:rgba(255,255,255,.22); color:#fff; }
 
     /* Snap label */
     .snap-label {
@@ -556,16 +584,16 @@
       <button class="back-btn" onclick="closeProject()">
         <svg viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
       </button>
-      <div class="d-title" id="d-title">Project</div>
+      <div class="d-title" id="d-title" data-ph="Title"></div>
       <button class="edit-toggle" id="editBtn" onclick="toggleEdit()">
         <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         <span id="editLabel">Edit</span>
       </button>
     </div>
-    <div class="d-subtitle" id="d-sub"></div>
+    <div class="d-subtitle" id="d-sub" data-ph="Subtitle"></div>
 
     <div class="edit-hint" id="editHint">
-      Drag ⠿ to reorder &nbsp;·&nbsp; Click text to edit &nbsp;·&nbsp; Tap × to delete
+      ↕ Drag up/down to reorder &nbsp;·&nbsp; ↔ Drag left/right to reposition &nbsp;·&nbsp; ← ⊕ → align buttons on each block
     </div>
 
     <div class="block-list" id="block-list"></div>
@@ -612,6 +640,9 @@
 const SVG_MUTED   = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2V15H6L11 19V5Z" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 9L17 15" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 9L23 15" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const SVG_UNMUTED = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2V15H6L11 19V5Z" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.54 8.46C16.477 9.398 17.004 10.669 17.004 11.995c0 1.326-.527 2.597-1.464 3.535" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19.07 4.93C20.945 6.805 21.998 9.348 21.998 12c0 2.652-1.053 5.195-2.928 7.07" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const SVG_RESIZE  = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 3V21H3M21 21L9 9" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const SVG_AL = `<svg viewBox="0 0 14 10" width="14" height="10"><rect x="0" y="0" width="7" height="2" fill="currentColor" rx="1"/><rect x="0" y="4" width="10" height="2" fill="currentColor" rx="1"/><rect x="0" y="8" width="7" height="2" fill="currentColor" rx="1"/></svg>`;
+const SVG_AC = `<svg viewBox="0 0 14 10" width="14" height="10"><rect x="3.5" y="0" width="7" height="2" fill="currentColor" rx="1"/><rect x="2" y="4" width="10" height="2" fill="currentColor" rx="1"/><rect x="3.5" y="8" width="7" height="2" fill="currentColor" rx="1"/></svg>`;
+const SVG_AR = `<svg viewBox="0 0 14 10" width="14" height="10"><rect x="7" y="0" width="7" height="2" fill="currentColor" rx="1"/><rect x="4" y="4" width="10" height="2" fill="currentColor" rx="1"/><rect x="7" y="8" width="7" height="2" fill="currentColor" rx="1"/></svg>`;
 
 /* ─── Layout presets ───────────────────────────────────── */
 // Aspect-ratio presets (height shape only — width set via POS_PRESETS)
@@ -625,18 +656,12 @@ const LAYOUT_PRESETS = [
   { key:'21-9',    label:'Cinema',    size:'21:9', aspect:'21/9' },
 ];
 
-// Column-position presets (6-col grid: span + column-start)
-// vis[] = which of the 6 columns are highlighted in the icon
+// Width presets (6-col grid) — position is set via the align buttons (← center →)
 const POS_PRESETS = [
-  { key:'full', label:'Full',       cols:6, cs:1, vis:[1,1,1,1,1,1] },
-  { key:'l2',   label:'Left ½',     cols:3, cs:1, vis:[1,1,1,0,0,0] },
-  { key:'r2',   label:'Right ½',    cols:3, cs:4, vis:[0,0,0,1,1,1] },
-  { key:'l3',   label:'Left ⅓',     cols:2, cs:1, vis:[1,1,0,0,0,0] },
-  { key:'m3',   label:'Mid ⅓',      cols:2, cs:3, vis:[0,0,1,1,0,0] },
-  { key:'r3',   label:'Right ⅓',    cols:2, cs:5, vis:[0,0,0,0,1,1] },
-  { key:'ctr',  label:'Centered',   cols:4, cs:2, vis:[0,1,1,1,1,0] },
-  { key:'cl3',  label:'Ctr-Left',   cols:2, cs:2, vis:[0,1,1,0,0,0] },
-  { key:'cr3',  label:'Ctr-Right',  cols:2, cs:4, vis:[0,0,0,1,1,0] },
+  { key:'full', label:'Full', cols:6, vis:[1,1,1,1,1,1] },
+  { key:'w4',   label:'2/3',  cols:4, vis:[1,1,1,1,0,0] },
+  { key:'w3',   label:'1/2',  cols:3, vis:[1,1,1,0,0,0] },
+  { key:'w2',   label:'1/3',  cols:2, vis:[1,1,0,0,0,0] },
 ];
 
 function makePosIcon(vis) {
@@ -658,16 +683,37 @@ function migrateBlockLayout(block) {
 }
 
 function applyBlockGrid(el, block) {
-  const cols = block._cols || 6;
-  const cs   = block._colStart || 1;
-  el.style.gridColumn = `${cs} / span ${cols}`;
+  const cols  = block._cols || 6;
+  const cs    = block._colStart || 1;
+  const align = block._align || 'left';
+
+  if (align === 'center') {
+    el.style.gridColumn = '1 / span 6';
+  } else if (align === 'right') {
+    el.style.gridColumn = `${Math.max(1, 7 - cols)} / span ${cols}`;
+  } else {
+    el.style.gridColumn = `${cs} / span ${cols}`;
+  }
+
+  const mw = el.querySelector('.media-wrap');
+  if (mw) {
+    if (align === 'center') {
+      mw.style.width       = (cols / 6 * 100).toFixed(2) + '%';
+      mw.style.marginLeft  = 'auto';
+      mw.style.marginRight = 'auto';
+    } else {
+      mw.style.width       = '';
+      mw.style.marginLeft  = '';
+      mw.style.marginRight = '';
+    }
+  }
 }
 
 function applyPreset(mw, block, preset) {
   block.preset = preset.key;
   const inner = mw.querySelector('.media-inner');
-  mw.style.width    = '100%';
   mw.style.maxWidth = '';
+  // width is managed by applyBlockGrid — don't override here
   if (preset.key === 'free') {
     mw.dataset.aspect = 'free';
     if (inner) {
@@ -701,14 +747,14 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
     mw.dataset.aspect = 'free';
     e.preventDefault();
     e.stopPropagation();
-    const inner      = mw.querySelector('.media-inner');
-    const startY     = e.clientY;
-    const startX     = e.clientX;
-    const startH     = inner ? inner.offsetHeight : mw.offsetHeight;
-    const startSpan  = block._cols || 6;
-    const list       = wrap ? wrap.parentElement : null;
+    const inner     = mw.querySelector('.media-inner');
+    const startY    = e.clientY;
+    const startX    = e.clientX;
+    const startH    = inner ? inner.offsetHeight : mw.offsetHeight;
+    const startSpan = block._cols || 6;
+    const startCS   = block._colStart || 1;
+    const list      = wrap ? wrap.parentElement : null;
 
-    // Snap thresholds for 6-col grid: meaningful spans only
     const COL_SNAPS = [
       { span:2, label:'1/3' },
       { span:3, label:'1/2' },
@@ -724,13 +770,19 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
         const colW    = list.offsetWidth / 6;
         const startW  = colW * startSpan;
         const rawSpan = Math.max(0.6, (startW + (e.clientX - startX)) / colW);
-        // Find nearest snap
         let best = COL_SNAPS[0];
         for (const s of COL_SNAPS) {
           if (Math.abs(rawSpan - s.span) < Math.abs(rawSpan - best.span)) best = s;
         }
-        const cs      = block._colStart || 1;
-        const newSpan = Math.min(best.span, 7 - cs); // clamp to available cols
+        const align = block._align || 'left';
+        let newSpan;
+        if (align === 'center') {
+          newSpan = best.span; // centered: any width OK, applyBlockGrid updates mw.style.width
+        } else if (align === 'right') {
+          newSpan = Math.min(best.span, 6);
+        } else {
+          newSpan = Math.min(best.span, 7 - startCS); // left: clamp so block doesn't overflow
+        }
         if (newSpan !== (block._cols || 6)) {
           block._cols = newSpan;
           applyBlockGrid(wrap, block);
@@ -778,7 +830,6 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
       el.style.aspectRatio = 'unset';
       el.style.height = h + 'px';
       el.style.width  = '100%';
-      mw.style.width  = '100%';
       block._freeH = h;
       delete block._freeW;
       setBlockRowSpan(wrap);
@@ -1045,8 +1096,8 @@ async function openProject(key) {
     }
   } catch(e) {}
   const p = PROJECTS[key];
-  document.getElementById('d-title').textContent = p.name;
-  document.getElementById('d-sub').textContent   = p.sub;
+  document.getElementById('d-title').textContent = p.name || '';
+  document.getElementById('d-sub').textContent   = p.sub  || '';
   renderBlocks(true);
   updateEditUI();
   showView('view-project', 'enter-r');
@@ -1071,6 +1122,8 @@ function updateEditUI() {
   const hint  = document.getElementById('editHint');
   const bar   = document.getElementById('addBar');
   const list  = document.getElementById('block-list');
+  const dTitle = document.getElementById('d-title');
+  const dSub   = document.getElementById('d-sub');
 
   btn.classList.toggle('on', editMode);
   document.getElementById('editLabel').textContent = editMode ? 'Done' : 'Edit';
@@ -1082,6 +1135,27 @@ function updateEditUI() {
   list.querySelectorAll('.block-text').forEach(el => {
     el.contentEditable = editMode ? 'true' : 'false';
   });
+
+  // title & subtitle editable in edit mode
+  dTitle.contentEditable = editMode ? 'true' : 'false';
+  dSub.contentEditable   = editMode ? 'true' : 'false';
+  if (!dTitle._saveWired) {
+    dTitle._saveWired = true;
+    dTitle.addEventListener('blur', () => {
+      if (!activeKey) return;
+      PROJECTS[activeKey].name = dTitle.textContent.trim();
+      saveProject(activeKey);
+    });
+    dSub.addEventListener('blur', () => {
+      if (!activeKey) return;
+      PROJECTS[activeKey].sub = dSub.textContent.trim();
+      saveProject(activeKey);
+    });
+    // prevent Enter key from inserting <br>
+    [dTitle, dSub].forEach(el => el.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') { ev.preventDefault(); el.blur(); }
+    }));
+  }
 }
 
 /* ─── Row span for masonry layout ─────────────────────── */
@@ -1183,28 +1257,55 @@ function makeBlockEl(block, proj) {
     corner.innerHTML = SVG_RESIZE;
     inner.appendChild(corner);
 
+    // align bar — top-center of inner, edit mode only
+    const alignBar = document.createElement('div');
+    alignBar.className = 'align-bar';
+    [
+      { v:'left',   icon:SVG_AL, title:'Left'   },
+      { v:'center', icon:SVG_AC, title:'Center' },
+      { v:'right',  icon:SVG_AR, title:'Right'  },
+    ].forEach(a => {
+      const ab = document.createElement('button');
+      ab.className = 'align-btn' + ((block._align || 'left') === a.v ? ' on' : '');
+      ab.innerHTML = a.icon;
+      ab.title = a.title;
+      ab.addEventListener('mousedown', ev => ev.stopPropagation());
+      ab.onclick = ev => {
+        ev.stopPropagation();
+        block._align = a.v;
+        applyBlockGrid(wrap, block);
+        alignBar.querySelectorAll('.align-btn').forEach(b => b.classList.remove('on'));
+        ab.classList.add('on');
+        requestAnimationFrame(() => setBlockRowSpan(wrap));
+        if (activeKey) saveProject(activeKey);
+      };
+      alignBar.appendChild(ab);
+    });
+    inner.appendChild(alignBar);
+
     mw.appendChild(inner);
 
-    // layout menu — position section + aspect section
+    // layout menu — width section + aspect section
     const menu = document.createElement('div');
     menu.className = 'resize-menu';
 
-    // — Position section —
+    // — Width section —
     const posLbl = document.createElement('div');
     posLbl.className = 'rsz-section-lbl';
-    posLbl.textContent = 'Position';
+    posLbl.textContent = 'Width';
     menu.appendChild(posLbl);
 
     const posGrid = document.createElement('div');
     posGrid.className = 'rsz-pos-grid';
     POS_PRESETS.forEach(p => {
       const btn = document.createElement('button');
-      btn.className = 'pos-opt' + ((block._cols === p.cols && block._colStart === p.cs) ? ' active' : '');
+      btn.className = 'pos-opt' + (block._cols === p.cols ? ' active' : '');
       btn.innerHTML = makePosIcon(p.vis) + `<span>${p.label}</span>`;
       btn.title = p.label;
       btn.onclick = (e) => {
         e.stopPropagation();
-        block._cols = p.cols; block._colStart = p.cs;
+        block._cols = p.cols;
+        if ((block._align || 'left') !== 'center') block._colStart = 1;
         applyBlockGrid(wrap, block);
         posGrid.querySelectorAll('.pos-opt').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -1273,11 +1374,12 @@ function makeBlockEl(block, proj) {
   migrateBlockLayout(block);
   applyBlockGrid(wrap, block);
 
-  // drag-to-reorder — click anywhere on the block (not on buttons/video/text)
+  // Free 2D drag: left/right = column position, up/down = order
   wrap.addEventListener('mousedown', (e) => {
     if (!editMode) return;
-    if (e.target.closest('button, video, [contenteditable], .resize-corner, .media-mute-btn')) return;
-    startDrag(e, wrap);
+    if (e.target.closest('button, video, [contenteditable], .resize-corner, .media-mute-btn, .align-btn')) return;
+    e.preventDefault();
+    startFreeDrag(e, wrap);
   });
 
   // keep grid row span in sync with actual rendered height
@@ -1286,10 +1388,106 @@ function makeBlockEl(block, proj) {
   return wrap;
 }
 
+/* ─── Free 2D drag: column (X) + order (Y) simultaneously ─ */
+function startFreeDrag(e, wrap) {
+  const proj = PROJECTS[activeKey];
+  if (!proj) return;
+  const block = proj.blocks.find(b => b.id === wrap.dataset.id);
+  if (!block) return;
+  const list = wrap.parentElement;
+  if (!list) return;
+
+  const cols  = block._cols || 6;
+  const maxCS = Math.max(1, 7 - cols);
+
+  wrap.classList.add('col-dragging');
+
+  let lastCS    = block._colStart || 1;
+  let lastAlign = block._align || 'left';
+  let hasMoved  = false;
+  const startX  = e.clientX, startY = e.clientY;
+
+  function updateAlignBar(align) {
+    const bar = wrap.querySelector('.align-bar');
+    if (!bar) return;
+    const idx = align === 'center' ? 1 : align === 'right' ? 2 : 0;
+    bar.querySelectorAll('.align-btn').forEach((btn, i) => btn.classList.toggle('on', i === idx));
+  }
+
+  function onMove(ev) {
+    // Don't start until cursor has actually moved (prevents click-jump)
+    if (!hasMoved) {
+      if (Math.abs(ev.clientX - startX) < 5 && Math.abs(ev.clientY - startY) < 5) return;
+      hasMoved = true;
+    }
+    const lr   = list.getBoundingClientRect();
+    const colW = lr.width / 6;
+    const relX = ev.clientX - lr.left;
+
+    // ── X → column position (with center snap zone) ──────────────────────────────
+    const centerX = lr.width / 2;
+    if (Math.abs(relX - centerX) < colW * 0.75) {
+      // Center snap zone — snap to perfect center alignment
+      if (lastAlign !== 'center') {
+        lastAlign = 'center';
+        block._align = 'center';
+        applyBlockGrid(wrap, block);
+        updateAlignBar('center');
+      }
+    } else {
+      // Normal column snapping
+      if (lastAlign !== 'left') {
+        lastAlign = 'left';
+        block._align = 'left';
+      }
+      const rawCS = Math.round((relX - (cols * colW) / 2) / colW) + 1;
+      const newCS = Math.max(1, Math.min(maxCS, rawCS));
+      if (newCS !== lastCS) {
+        lastCS = newCS;
+        block._colStart = newCS;
+        applyBlockGrid(wrap, block);
+        updateAlignBar('left');
+      }
+    }
+
+    // ── Y → DOM order (insert before nearest block below cursor) ──
+    const items = [...list.querySelectorAll('.block')].filter(b => b !== wrap);
+    let insertBefore = null;
+    for (const item of items) {
+      const r = item.getBoundingClientRect();
+      if (ev.clientY < r.top + r.height / 2) { insertBefore = item; break; }
+    }
+    const currentNext = wrap.nextElementSibling;
+    const targetNext  = insertBefore;
+    if (currentNext !== targetNext) {
+      if (targetNext) list.insertBefore(wrap, targetNext);
+      else list.appendChild(wrap);
+    }
+
+    requestAnimationFrame(() => list.querySelectorAll('.block').forEach(setBlockRowSpan));
+  }
+
+  function onUp() {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    wrap.classList.remove('col-dragging');
+
+    // Sync proj.blocks order to DOM order
+    const newOrder = [...list.querySelectorAll('.block')].map(el => el.dataset.id);
+    proj.blocks = newOrder.map(id => proj.blocks.find(b => b.id === id)).filter(Boolean);
+
+    requestAnimationFrame(() => list.querySelectorAll('.block').forEach(setBlockRowSpan));
+    if (activeKey) saveProject(activeKey);
+  }
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
 /* ─── Drag-to-reorder (iOS-style grid snap) ───────────── */
-let dragEl = null, dragGhost = null, offsetY = 0;
+let dragEl = null, dragGhost = null, offsetY = 0, offsetX = 0;
 let dropTarget = null, dropSide = null;
-let _dropInd = null;
+let _dropInd = null, _dragZoneLbl = null;
 
 function getDropInd() {
   if (!_dropInd) {
@@ -1308,7 +1506,6 @@ function clearDropIndicators() {
 }
 
 function startDrag(e, el) {
-  e.preventDefault();
   dragEl = el;
   const rect = el.getBoundingClientRect();
   offsetY = e.clientY - rect.top;
@@ -1332,7 +1529,7 @@ function onDragMove(e) {
   if (!dragGhost) return;
   dragGhost.style.top = (e.clientY - offsetY) + 'px';
 
-  const list  = document.getElementById('block-list');
+
   const items = [...list.querySelectorAll('.block')].filter(b => b !== dragEl);
   clearDropIndicators();
 
@@ -1390,26 +1587,34 @@ function onDragEnd(e) {
   const proj = PROJECTS[activeKey];
 
   function setGrid(el, data, cols, cs) {
-    if (data) { data._cols = cols; data._colStart = cs; }
+    if (data) { data._cols = cols; data._colStart = cs; data._align = 'left'; }
     el.style.gridColumn = `${cs} / span ${cols}`;
+    const mw = el.querySelector('.media-wrap');
+    if (mw) { mw.style.width = ''; mw.style.marginLeft = ''; mw.style.marginRight = ''; }
   }
 
   if (dropSide === 'left') {
-    // Place dragEl BEFORE dropTarget, both become half-width side by side
     list.insertBefore(dragEl, dropTarget);
-    setGrid(dragEl,    proj.blocks.find(b => b.id === dragEl.dataset.id),    3, 1);
+    setGrid(dragEl,     proj.blocks.find(b => b.id === dragEl.dataset.id),     3, 1);
     setGrid(dropTarget, proj.blocks.find(b => b.id === dropTarget.dataset.id), 3, 4);
   } else if (dropSide === 'right') {
-    // Place dragEl AFTER dropTarget, both become half-width side by side
     dropTarget.after(dragEl);
     setGrid(dropTarget, proj.blocks.find(b => b.id === dropTarget.dataset.id), 3, 1);
-    setGrid(dragEl,    proj.blocks.find(b => b.id === dragEl.dataset.id),    3, 4);
+    setGrid(dragEl,     proj.blocks.find(b => b.id === dragEl.dataset.id),     3, 4);
   } else if (dropSide === 'center') {
-    // Reorder only, make drag full-width
+    // Drop on center of a block — center the dragged block
     list.insertBefore(dragEl, dropTarget);
-    setGrid(dragEl, proj.blocks.find(b => b.id === dragEl.dataset.id), 6, 1);
+    const dragData = proj.blocks.find(b => b.id === dragEl.dataset.id);
+    if (dragData) {
+      dragData._align = 'center';
+      applyBlockGrid(dragEl, dragData);
+      const bar = dragEl.querySelector('.align-bar');
+      if (bar) bar.querySelectorAll('.align-btn').forEach((btn, i) => {
+        btn.classList.toggle('on', i === 1);
+      });
+    }
   } else {
-    // 'between' — reorder only, keep size
+    // 'between' — reorder only, keep existing alignment
     if (dropTarget) dropTarget.after(dragEl);
     else {
       const first = list.querySelector('.block');
