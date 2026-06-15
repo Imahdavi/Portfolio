@@ -236,41 +236,20 @@
     .edit-hint.show { display:block; animation:fadeUp .2s ease both; }
 
     /* Block list */
-    .block-list { display:grid; grid-template-columns:repeat(3,1fr); column-gap:8px; row-gap:0; grid-auto-rows:1px; margin-bottom:20px; align-items:start; }
+    .block-list { display:grid; grid-template-columns:repeat(6,1fr); column-gap:6px; row-gap:0; grid-auto-rows:1px; margin-bottom:20px; align-items:start; }
 
     .block {
       position:relative;
       display:flex; align-items:flex-start; gap:8px;
       background:transparent; border-radius:14px; padding:6px 0;
-      grid-column:span 3; transition:box-shadow .2s;
+      grid-column:1 / span 6; transition:box-shadow .2s;
       box-sizing:border-box;
     }
-    .block[data-cols="1"] { grid-column:span 1; }
-    .block[data-cols="2"] { grid-column:span 2; }
-    .block[data-col="2"]  { grid-column-start:2; }
-    .block[data-col="3"]  { grid-column-start:3; }
     .edit-on .block { padding:6px 0; cursor:grab; }
     .edit-on .block:active { cursor:grabbing; }
     .edit-on .block-text, .edit-on .block video, .edit-on .block button { cursor:auto; }
-    .edit-on .resize-corner { cursor:nwse-resize !important; }
-    .block.drop-left   { box-shadow:-3px 0 0 0 rgba(26,23,20,.7); border-radius:14px; }
-    .block.drop-right  { box-shadow: 3px 0 0 0 rgba(26,23,20,.7); border-radius:14px; }
-    .block.drop-center { box-shadow: 0 0 0 2px rgba(26,23,20,.5); border-radius:14px; }
-
-    /* Alignment picker (appears in edit mode for half-width blocks) */
-    .block-align {
-      position:absolute; bottom:8px; left:50%; transform:translateX(-50%);
-      display:none; gap:2px; background:rgba(26,23,20,.82); border-radius:8px;
-      padding:3px; z-index:20;
-    }
-    .edit-on .block[data-cols="1"]:hover .block-align,
-    .edit-on .block[data-cols="2"]:hover .block-align { display:flex; }
-    .block-align button {
-      width:26px; height:20px; border:none; background:transparent; cursor:pointer;
-      border-radius:5px; color:rgba(253,251,248,.55); font-size:11px; padding:0;
-      display:flex; align-items:center; justify-content:center; transition:background .1s,color .1s;
-    }
-    .block-align button:hover, .block-align button.on { background:rgba(255,255,255,.15); color:#fdfbf8; }
+    .edit-on .resize-corner { cursor:ns-resize !important; }
+    .block.drop-hover { outline:2px solid rgba(66,133,244,.55); outline-offset:2px; border-radius:14px; }
 
     /* Border follows the actual content (media-inner), not the wrapper */
     .edit-on .media-inner {
@@ -321,13 +300,6 @@
     .edit-on .media-inner .resize-corner { display:flex; }
     .resize-corner svg { width:16px; height:16px; pointer-events:none; }
 
-    /* Column-width preview ghost shown during freehand resize */
-    .resize-preview {
-      position:absolute; top:0; left:0; bottom:0; display:none;
-      background:rgba(66,133,244,0.07); border:1.5px dashed rgba(66,133,244,0.32);
-      border-radius:12px; pointer-events:none; z-index:5;
-    }
-
     /* Snap label */
     .snap-label {
       position:absolute; bottom:10px; left:50%;
@@ -369,7 +341,7 @@
 
     /* Resize menu */
     .resize-menu {
-      position:absolute; bottom:44px; right:8px;
+      position:absolute; bottom:44px; left:8px;
       background:rgba(26,23,20,.93); border-radius:12px;
       padding:5px; display:none; flex-direction:column; gap:2px;
       z-index:20; min-width:148px;
@@ -384,6 +356,23 @@
     }
     .rsz-opt:hover  { background:rgba(255,255,255,.14); }
     .rsz-opt.active { background:rgba(255,255,255,.24); }
+    .rsz-section-lbl {
+      font-size:9.5px; color:rgba(255,255,255,.35); padding:6px 10px 2px;
+      font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+    }
+    .rsz-pos-grid {
+      display:grid; grid-template-columns:repeat(3,1fr); gap:3px; padding:4px 6px 6px;
+    }
+    .pos-opt {
+      display:flex; flex-direction:column; align-items:center; gap:3px;
+      padding:6px 4px; border-radius:7px; border:none;
+      background:transparent; cursor:pointer; color:rgba(255,255,255,.45);
+      font-size:9px; line-height:1; transition:background .1s,color .1s;
+      min-width:0;
+    }
+    .pos-opt:hover  { background:rgba(255,255,255,.1);  color:rgba(255,255,255,.85); }
+    .pos-opt.active { background:rgba(255,255,255,.18); color:#fff; }
+    .rsz-divider { height:1px; background:rgba(255,255,255,.1); margin:3px 6px; }
 
     /* Delete btn (edit mode only) */
     .block-del {
@@ -623,33 +612,62 @@ const SVG_UNMUTED = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"
 const SVG_RESIZE  = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 3V21H3M21 21L9 9" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 /* ─── Layout presets ───────────────────────────────────── */
+// Aspect-ratio presets (height shape only — width set via POS_PRESETS)
 const LAYOUT_PRESETS = [
-  { key:'wide-l',      label:'Wide',      size:'Full',    aspect:'16/9', maxW:'100%' },
-  { key:'wide-m',      label:'Wide',      size:'Normal',  aspect:'16/9', maxW:'72%'  },
-  { key:'wide-s',      label:'Wide',      size:'Small',   aspect:'16/9', maxW:'46%'  },
-  { divider: true },
-  { key:'land-l',      label:'Landscape', size:'Full',    aspect:'4/3',  maxW:'100%' },
-  { key:'land-m',      label:'Landscape', size:'Normal',  aspect:'4/3',  maxW:'68%'  },
-  { key:'land-s',      label:'Landscape', size:'Small',   aspect:'4/3',  maxW:'44%'  },
-  { divider: true },
-  { key:'square-l',    label:'Square',    size:'Large',   aspect:'1/1',  maxW:'80%'  },
-  { key:'square-m',    label:'Square',    size:'Normal',  aspect:'1/1',  maxW:'58%'  },
-  { key:'square-s',    label:'Square',    size:'Small',   aspect:'1/1',  maxW:'36%'  },
-  { divider: true },
-  { key:'portrait-l',  label:'Portrait',  size:'Large',   aspect:'9/16', maxW:'62%'  },
-  { key:'portrait-m',  label:'Portrait',  size:'Normal',  aspect:'9/16', maxW:'46%'  },
-  { key:'portrait-s',  label:'Portrait',  size:'Small',   aspect:'9/16', maxW:'30%'  },
-  { divider: true },
-  { key:'free',        label:'Freehand',  size:'',        aspect:null,   maxW:null   },
+  { key:'free',    label:'Freehand',  size:'',     aspect:null   },
+  { key:'16-9',    label:'Wide',      size:'16:9', aspect:'16/9' },
+  { key:'4-3',     label:'Landscape', size:'4:3',  aspect:'4/3'  },
+  { key:'1-1',     label:'Square',    size:'1:1',  aspect:'1/1'  },
+  { key:'3-4',     label:'Portrait',  size:'3:4',  aspect:'3/4'  },
+  { key:'9-16',    label:'Story',     size:'9:16', aspect:'9/16' },
+  { key:'21-9',    label:'Cinema',    size:'21:9', aspect:'21/9' },
 ];
+
+// Column-position presets (6-col grid: span + column-start)
+// vis[] = which of the 6 columns are highlighted in the icon
+const POS_PRESETS = [
+  { key:'full', label:'Full',       cols:6, cs:1, vis:[1,1,1,1,1,1] },
+  { key:'l2',   label:'Left ½',     cols:3, cs:1, vis:[1,1,1,0,0,0] },
+  { key:'r2',   label:'Right ½',    cols:3, cs:4, vis:[0,0,0,1,1,1] },
+  { key:'l3',   label:'Left ⅓',     cols:2, cs:1, vis:[1,1,0,0,0,0] },
+  { key:'m3',   label:'Mid ⅓',      cols:2, cs:3, vis:[0,0,1,1,0,0] },
+  { key:'r3',   label:'Right ⅓',    cols:2, cs:5, vis:[0,0,0,0,1,1] },
+  { key:'ctr',  label:'Centered',   cols:4, cs:2, vis:[0,1,1,1,1,0] },
+  { key:'cl3',  label:'Ctr-Left',   cols:2, cs:2, vis:[0,1,1,0,0,0] },
+  { key:'cr3',  label:'Ctr-Right',  cols:2, cs:4, vis:[0,0,0,1,1,0] },
+];
+
+function makePosIcon(vis) {
+  const cells = vis.map((on, i) =>
+    `<rect x="${i*5}" y="0" width="4" height="11" fill="${on ? '#fff' : 'rgba(255,255,255,.2)'}" rx="1"/>`
+  ).join('');
+  return `<svg viewBox="0 0 29 11" width="36" height="14" xmlns="http://www.w3.org/2000/svg">${cells}</svg>`;
+}
+
+function migrateBlockLayout(block) {
+  if (block._half) { block._cols = 1; delete block._half; }
+  if (block._colStart === undefined) {
+    const oldCols = block._cols || 3;
+    const oldCol  = block._col;
+    block._cols     = oldCols * 2;                       // 1→2, 2→4, 3→6
+    block._colStart = oldCol ? (oldCol - 1) * 2 + 1 : 1; // col2→3, col3→5
+    delete block._col;
+  }
+}
+
+function applyBlockGrid(el, block) {
+  const cols = block._cols || 6;
+  const cs   = block._colStart || 1;
+  el.style.gridColumn = `${cs} / span ${cols}`;
+}
 
 function applyPreset(mw, block, preset) {
   block.preset = preset.key;
   const inner = mw.querySelector('.media-inner');
+  mw.style.width    = '100%';
+  mw.style.maxWidth = '';
   if (preset.key === 'free') {
     mw.dataset.aspect = 'free';
-    mw.style.width    = '100%';
-    mw.style.maxWidth = '100%';
     if (inner) {
       inner.style.width = '100%';
       if (block._freeH) {
@@ -662,8 +680,6 @@ function applyPreset(mw, block, preset) {
     }
   } else {
     mw.dataset.aspect = preset.key;
-    mw.style.maxWidth = preset.maxW;
-    mw.style.width    = '100%';
     if (inner) { inner.style.aspectRatio = preset.aspect; inner.style.height = 'auto'; }
   }
 }
@@ -683,48 +699,19 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
     mw.dataset.aspect = 'free';
     e.preventDefault();
     e.stopPropagation();
-    const inner    = mw.querySelector('.media-inner');
-    const startY   = e.clientY;
-    const startX   = e.clientX;
-    const startH   = inner ? inner.offsetHeight : mw.offsetHeight;
-    const startW   = wrap  ? wrap.offsetWidth   : (inner ? inner.offsetWidth : mw.offsetWidth);
-    const list     = wrap  ? wrap.parentElement : null;
-    const startCols = block._cols || 3;
-    let pendingCols = startCols;
-
-    // ── Blue column-width preview ghost ───────────────────
-    const ghost = document.createElement('div');
-    ghost.className = 'resize-preview';
-    wrap.appendChild(ghost);
-
-    function updateGhost(newCols) {
-      if (!list || newCols === startCols) { ghost.style.display = 'none'; return; }
-      const colW = list.offsetWidth / 3;
-      ghost.style.display = 'block';
-      ghost.style.width   = (colW * newCols) + 'px';
-    }
+    const inner  = mw.querySelector('.media-inner');
+    const startY = e.clientY;
+    const startH = inner ? inner.offsetHeight : mw.offsetHeight;
+    const list   = wrap ? wrap.parentElement : null;
 
     function onMove(e) {
       const el = inner || mw;
-
-      // ── Step 1: column count from horizontal drag (pending only) ──
-      let newCols = startCols;
-      if (list && wrap) {
-        const listW = list.offsetWidth;
-        const colW  = listW / 3;
-        const targetW = Math.max(colW * 0.6, startW + (e.clientX - startX));
-        newCols = targetW < colW * 1.5 ? 1 : targetW < colW * 2.5 ? 2 : 3;
-      }
-      pendingCols = newCols;
-      updateGhost(newCols);
-
-      // ── Step 2: stable width for snapping (use pending cols) ──
-      const stableW = list ? list.offsetWidth * newCols / 3 : (el.offsetWidth || startW);
-
-      // ── Step 3: height + aspect-ratio snap ────────────────
+      const stableW = el.offsetWidth || (inner ? inner.offsetWidth : mw.offsetWidth);
       let h = Math.max(80, startH + (e.clientY - startY));
       const ratio = stableW / h;
       let snapped = false;
+
+      // Aspect-ratio snap
       for (const s of SNAP_RATIOS) {
         if (Math.abs(ratio - s.r) / s.r < SNAP_THRESHOLD) {
           h = Math.round(stableW / s.r);
@@ -735,7 +722,7 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
         }
       }
 
-      // ── Step 3b: adjacent block height snap ───────────────
+      // Adjacent-block height snap
       if (!snapped && list) {
         const wrapTop = wrap.getBoundingClientRect().top;
         for (const b of list.querySelectorAll('.block')) {
@@ -756,35 +743,20 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
         }
       }
 
+      if (!snapped) snapLbl.classList.remove('show');
       el.style.aspectRatio = 'unset';
       el.style.height = h + 'px';
       el.style.width  = '100%';
       mw.style.width  = '100%';
       block._freeH = h;
       delete block._freeW;
-
-      // ── Step 4: show cols hint but DON'T apply yet ─────────
-      if (!snapped) {
-        snapLbl.textContent = {1:'1/3', 2:'2/3', 3:'Full'}[newCols];
-        snapLbl.classList.add('show');
-      }
+      setBlockRowSpan(wrap);
     }
 
     function onUp() {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       snapLbl.classList.remove('show');
-      ghost.remove();
-
-      // Apply pending column count NOW (no reflow during drag)
-      if (list && wrap && pendingCols !== startCols) {
-        block._cols = pendingCols;
-        delete block._col;
-        wrap.dataset.cols = String(pendingCols);
-        delete wrap.dataset.col;
-        requestAnimationFrame(() => setBlockRowSpan(wrap));
-      }
-
       if (activeKey) saveProject(activeKey);
     }
 
@@ -1182,16 +1154,48 @@ function makeBlockEl(block, proj) {
 
     mw.appendChild(inner);
 
-    // layout preset menu
+    // layout menu — position section + aspect section
     const menu = document.createElement('div');
     menu.className = 'resize-menu';
-    LAYOUT_PRESETS.forEach((p) => {
-      if (p.divider) {
-        const sep = document.createElement('div');
-        sep.style.cssText = 'height:1px;background:rgba(255,255,255,.1);margin:3px 4px;';
-        menu.appendChild(sep);
-        return;
-      }
+
+    // — Position section —
+    const posLbl = document.createElement('div');
+    posLbl.className = 'rsz-section-lbl';
+    posLbl.textContent = 'Position';
+    menu.appendChild(posLbl);
+
+    const posGrid = document.createElement('div');
+    posGrid.className = 'rsz-pos-grid';
+    POS_PRESETS.forEach(p => {
+      const btn = document.createElement('button');
+      btn.className = 'pos-opt' + ((block._cols === p.cols && block._colStart === p.cs) ? ' active' : '');
+      btn.innerHTML = makePosIcon(p.vis) + `<span>${p.label}</span>`;
+      btn.title = p.label;
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        block._cols = p.cols; block._colStart = p.cs;
+        applyBlockGrid(wrap, block);
+        posGrid.querySelectorAll('.pos-opt').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        requestAnimationFrame(() => setBlockRowSpan(wrap));
+        if (activeKey) saveProject(activeKey);
+        menu.classList.remove('open');
+      };
+      posGrid.appendChild(btn);
+    });
+    menu.appendChild(posGrid);
+
+    // — Divider + Aspect section —
+    const divEl = document.createElement('div');
+    divEl.className = 'rsz-divider';
+    menu.appendChild(divEl);
+
+    const aspLbl = document.createElement('div');
+    aspLbl.className = 'rsz-section-lbl';
+    aspLbl.textContent = 'Ratio';
+    menu.appendChild(aspLbl);
+
+    LAYOUT_PRESETS.forEach(p => {
       const opt = document.createElement('button');
       opt.className = 'rsz-opt' + ((block.preset || 'free') === p.key ? ' active' : '');
       opt.dataset.key = p.key;
@@ -1200,11 +1204,14 @@ function makeBlockEl(block, proj) {
       opt.onclick = (e) => {
         e.stopPropagation();
         applyPreset(mw, block, p);
-        applyPreset(mw, block, p); if (activeKey) saveProject(activeKey);
+        menu.querySelectorAll('.rsz-opt').forEach(b => b.classList.remove('active'));
+        opt.classList.add('active');
+        if (activeKey) saveProject(activeKey);
         menu.classList.remove('open');
       };
       menu.appendChild(opt);
     });
+
     resizeBtn.onclick = (e) => {
       e.stopPropagation();
       document.querySelectorAll('.resize-menu.open').forEach(m => { if (m !== menu) m.classList.remove('open'); });
@@ -1212,7 +1219,7 @@ function makeBlockEl(block, proj) {
     };
     mw.appendChild(menu);
 
-    // apply initial layout
+    // apply initial aspect preset
     const initPreset = LAYOUT_PRESETS.find(p => p.key === (block.preset || 'free')) || LAYOUT_PRESETS[0];
     applyPreset(mw, block, initPreset);
 
@@ -1231,30 +1238,9 @@ function makeBlockEl(block, proj) {
   del.onclick = () => deleteBlock(block.id);
   wrap.appendChild(del);
 
-  // alignment picker for sub-full-width blocks
-  const alignPicker = document.createElement('div');
-  alignPicker.className = 'block-align';
-  [['auto','←',null],['2','·','2'],['3','→','3']].forEach(([, icon, colVal]) => {
-    const btn = document.createElement('button');
-    btn.textContent = icon;
-    const current = colVal === null ? !block._col : String(block._col) === colVal;
-    if (current) btn.classList.add('on');
-    btn.addEventListener('mousedown', e => { e.stopPropagation(); });
-    btn.onclick = (e) => {
-      e.stopPropagation();
-      if (colVal === null) { delete block._col; delete wrap.dataset.col; }
-      else { block._col = parseInt(colVal); wrap.dataset.col = colVal; }
-      alignPicker.querySelectorAll('button').forEach(b => b.classList.remove('on'));
-      btn.classList.add('on');
-    };
-    alignPicker.appendChild(btn);
-  });
-  wrap.appendChild(alignPicker);
-
-  // migrate legacy _half flag to _cols
-  if (block._half) { block._cols = 1; delete block._half; }
-  wrap.dataset.cols = String(block._cols || 3);
-  if (block._col) wrap.dataset.col = String(block._col);
+  // migrate old layout data and apply grid position
+  migrateBlockLayout(block);
+  applyBlockGrid(wrap, block);
 
   // drag-to-reorder — click anywhere on the block (not on buttons/video/text)
   wrap.addEventListener('mousedown', (e) => {
@@ -1286,7 +1272,7 @@ function getDropInd() {
 function clearDropIndicators() {
   document.getElementById('block-list')
     .querySelectorAll('.block')
-    .forEach(b => b.classList.remove('drop-left','drop-right','drop-center'));
+    .forEach(b => b.classList.remove('drop-left','drop-right','drop-center','drop-hover'));
   getDropInd().classList.remove('show');
 }
 
@@ -1329,17 +1315,12 @@ function onDragMove(e) {
   }
 
   if (hovered) {
-    const r     = hovered.getBoundingClientRect();
-    const third = r.width / 3;
-    if (e.clientX < r.left + third) {
-      hovered.classList.add('drop-left');
-      dropTarget = hovered; dropSide = 'left';
-    } else if (e.clientX > r.left + 2 * third) {
-      hovered.classList.add('drop-right');
-      dropTarget = hovered; dropSide = 'right';
+    hovered.classList.add('drop-hover');
+    const r = hovered.getBoundingClientRect();
+    if (e.clientY < r.top + r.height / 2) {
+      dropTarget = hovered; dropSide = 'before';
     } else {
-      hovered.classList.add('drop-center');
-      dropTarget = hovered; dropSide = 'center';
+      dropTarget = hovered; dropSide = 'after';
     }
   } else {
     // between rows — show a fixed-position line, never touch grid DOM
@@ -1372,32 +1353,19 @@ function onDragEnd(e) {
   const list = document.getElementById('block-list');
   const proj = PROJECTS[activeKey];
 
-  function setBlockCols(el, data, cols) {
-    if (data) { data._cols = cols; delete data._col; }
-    el.dataset.cols = String(cols);
-    delete el.dataset.col;
-  }
-
-  if (dropSide === 'left') {
-    list.insertBefore(dragEl, dropTarget);
-    setBlockCols(dragEl,    proj.blocks.find(b => b.id === dragEl.dataset.id),    1);
-    setBlockCols(dropTarget, proj.blocks.find(b => b.id === dropTarget.dataset.id), 1);
-  } else if (dropSide === 'right') {
-    dropTarget.after(dragEl);
-    setBlockCols(dragEl,    proj.blocks.find(b => b.id === dragEl.dataset.id),    1);
-    setBlockCols(dropTarget, proj.blocks.find(b => b.id === dropTarget.dataset.id), 1);
-  } else if (dropSide === 'center') {
-    list.insertBefore(dragEl, dropTarget);
-    setBlockCols(dragEl, proj.blocks.find(b => b.id === dragEl.dataset.id), 3);
+  if (dropSide === 'before') {
+    if (dropTarget) list.insertBefore(dragEl, dropTarget);
+  } else if (dropSide === 'after') {
+    if (dropTarget) dropTarget.after(dragEl);
+    else list.appendChild(dragEl);
   } else {
-    // 'between' — use stored dropTarget, no DOM query needed
+    // 'between'
     if (dropTarget) dropTarget.after(dragEl);
     else {
       const first = list.querySelector('.block');
       if (first) list.insertBefore(dragEl, first);
       else list.appendChild(dragEl);
     }
-    setBlockCols(dragEl, proj.blocks.find(b => b.id === dragEl.dataset.id), 3);
   }
 
   clearDropIndicators();
