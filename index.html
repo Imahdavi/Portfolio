@@ -39,7 +39,7 @@
       overflow: hidden;
       transition: max-width .35s ease;
     }
-    #app:has(#view-project.active) { max-width: 960px; }
+    /* project view keeps same width as home */
 
     /* ─────────────────── VIEWS ─────────────────── */
     .view {
@@ -52,7 +52,7 @@
       display: none;
     }
     .view.active { display: block; }
-    #view-project { padding: 0 40px 112px; }
+    #view-project { padding: 0 22px 112px; }
 
     @keyframes slideInR  { from { transform:translateX(52px);  opacity:0 } to { transform:none; opacity:1 } }
     @keyframes slideInL  { from { transform:translateX(-52px); opacity:0 } to { transform:none; opacity:1 } }
@@ -186,21 +186,27 @@
 
     /* ─────────────────── DETAIL PAGE ─────────────────── */
     .detail-bar {
-      display:flex; align-items:center; gap:10px;
-      position:sticky; top:0; z-index:100;
-      background:rgba(255,255,255,0.92);
-      backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
-      padding:18px 0 14px; margin-bottom:4px;
+      display:flex; align-items:center;
+      position:relative;
+      padding:20px 0 14px; margin-bottom:4px;
+      min-height:56px;
     }
+    /* Back button: floats fixed to the left of the app when project is open */
     .back-btn {
       width:40px; height:40px; display:flex; align-items:center; justify-content:center;
-      cursor:pointer; background:rgba(255,255,255,0.72); border:1.5px solid rgba(0,0,0,0.13);
+      cursor:pointer; background:rgba(255,255,255,0.82); border:1.5px solid rgba(0,0,0,0.13);
       border-radius:50%; color:#666; flex-shrink:0;
       transition:background .18s, border-color .18s, transform .15s, box-shadow .18s;
-      box-shadow:0 1px 4px rgba(0,0,0,0.07);
-      backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+      box-shadow:0 2px 10px rgba(0,0,0,0.10);
+      backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
     }
-    .back-btn:hover  { background:rgba(245,245,245,0.9); border-color:rgba(0,0,0,0.22); transform:translateX(-2px); box-shadow:0 2px 8px rgba(0,0,0,0.11); }
+    #app:has(#view-project.active) .back-btn {
+      position:fixed;
+      left:max(10px, calc(50vw - 290px));
+      top:48px;
+      z-index:200;
+    }
+    .back-btn:hover  { background:rgba(245,245,245,0.95); border-color:rgba(0,0,0,0.22); transform:translateX(-2px); box-shadow:0 3px 14px rgba(0,0,0,0.14); }
     .back-btn:active { transform:scale(.88); }
     .back-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
 
