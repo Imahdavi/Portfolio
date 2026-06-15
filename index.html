@@ -249,7 +249,9 @@
     .edit-on .block:active { cursor:grabbing; }
     .edit-on .block-text, .edit-on .block video, .edit-on .block button { cursor:auto; }
     .edit-on .resize-corner { cursor:ns-resize !important; }
-    .block.drop-hover { outline:2px solid rgba(66,133,244,.55); outline-offset:2px; border-radius:14px; }
+    .block.drop-left   { box-shadow:-3px 0 0 0 rgba(26,23,20,.7); border-radius:14px; }
+    .block.drop-right  { box-shadow: 3px 0 0 0 rgba(26,23,20,.7); border-radius:14px; }
+    .block.drop-center { outline:2px solid rgba(66,133,244,.5); outline-offset:2px; border-radius:14px; }
 
     /* Border follows the actual content (media-inner), not the wrapper */
     .edit-on .media-inner {
@@ -699,26 +701,54 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
     mw.dataset.aspect = 'free';
     e.preventDefault();
     e.stopPropagation();
-    const inner  = mw.querySelector('.media-inner');
-    const startY = e.clientY;
-    const startH = inner ? inner.offsetHeight : mw.offsetHeight;
-    const list   = wrap ? wrap.parentElement : null;
+    const inner      = mw.querySelector('.media-inner');
+    const startY     = e.clientY;
+    const startX     = e.clientX;
+    const startH     = inner ? inner.offsetHeight : mw.offsetHeight;
+    const startSpan  = block._cols || 6;
+    const list       = wrap ? wrap.parentElement : null;
+
+    // Snap thresholds for 6-col grid: meaningful spans only
+    const COL_SNAPS = [
+      { span:2, label:'1/3' },
+      { span:3, label:'1/2' },
+      { span:4, label:'2/3' },
+      { span:6, label:'Full'},
+    ];
 
     function onMove(e) {
       const el = inner || mw;
-      const stableW = el.offsetWidth || (inner ? inner.offsetWidth : mw.offsetWidth);
+
+      // ── Horizontal: update column span immediately ─────────────
+      if (list) {
+        const colW    = list.offsetWidth / 6;
+        const startW  = colW * startSpan;
+        const rawSpan = Math.max(0.6, (startW + (e.clientX - startX)) / colW);
+        // Find nearest snap
+        let best = COL_SNAPS[0];
+        for (const s of COL_SNAPS) {
+          if (Math.abs(rawSpan - s.span) < Math.abs(rawSpan - best.span)) best = s;
+        }
+        const cs      = block._colStart || 1;
+        const newSpan = Math.min(best.span, 7 - cs); // clamp to available cols
+        if (newSpan !== (block._cols || 6)) {
+          block._cols = newSpan;
+          applyBlockGrid(wrap, block);
+        }
+      }
+
+      // ── Vertical: height + snap ────────────────────────────────
+      const stableW = (inner || mw).offsetWidth;
       let h = Math.max(80, startH + (e.clientY - startY));
       const ratio = stableW / h;
       let snapped = false;
 
-      // Aspect-ratio snap
       for (const s of SNAP_RATIOS) {
         if (Math.abs(ratio - s.r) / s.r < SNAP_THRESHOLD) {
           h = Math.round(stableW / s.r);
           snapLbl.textContent = s.label;
           snapLbl.classList.add('show');
-          snapped = true;
-          break;
+          snapped = true; break;
         }
       }
 
@@ -729,21 +759,22 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
           if (b === wrap) continue;
           const br = b.getBoundingClientRect();
           if (Math.abs(br.top - wrapTop) < 24) {
-            const adjInner = b.querySelector('.media-inner');
-            const adjH = adjInner ? adjInner.offsetHeight : b.offsetHeight;
-            const snapZone = Math.max(22, adjH * 0.06);
-            if (Math.abs(h - adjH) < snapZone) {
-              h = adjH;
-              snapLbl.textContent = '⟺ aligned';
-              snapLbl.classList.add('show');
-              snapped = true;
-              break;
+            const ai = b.querySelector('.media-inner');
+            const adjH = ai ? ai.offsetHeight : b.offsetHeight;
+            if (Math.abs(h - adjH) < Math.max(22, adjH * 0.06)) {
+              h = adjH; snapLbl.textContent = '⟺ aligned';
+              snapLbl.classList.add('show'); snapped = true; break;
             }
           }
         }
       }
 
-      if (!snapped) snapLbl.classList.remove('show');
+      if (!snapped) {
+        const colLbl = (COL_SNAPS.find(s => s.span === (block._cols || 6)) || {}).label;
+        if (colLbl) { snapLbl.textContent = colLbl; snapLbl.classList.add('show'); }
+        else snapLbl.classList.remove('show');
+      }
+
       el.style.aspectRatio = 'unset';
       el.style.height = h + 'px';
       el.style.width  = '100%';
@@ -1272,7 +1303,7 @@ function getDropInd() {
 function clearDropIndicators() {
   document.getElementById('block-list')
     .querySelectorAll('.block')
-    .forEach(b => b.classList.remove('drop-left','drop-right','drop-center','drop-hover'));
+    .forEach(b => b.classList.remove('drop-left','drop-right','drop-center'));
   getDropInd().classList.remove('show');
 }
 
@@ -1315,12 +1346,17 @@ function onDragMove(e) {
   }
 
   if (hovered) {
-    hovered.classList.add('drop-hover');
-    const r = hovered.getBoundingClientRect();
-    if (e.clientY < r.top + r.height / 2) {
-      dropTarget = hovered; dropSide = 'before';
+    const r     = hovered.getBoundingClientRect();
+    const third = r.width / 3;
+    if (e.clientX < r.left + third) {
+      hovered.classList.add('drop-left');
+      dropTarget = hovered; dropSide = 'left';
+    } else if (e.clientX > r.left + 2 * third) {
+      hovered.classList.add('drop-right');
+      dropTarget = hovered; dropSide = 'right';
     } else {
-      dropTarget = hovered; dropSide = 'after';
+      hovered.classList.add('drop-center');
+      dropTarget = hovered; dropSide = 'center';
     }
   } else {
     // between rows — show a fixed-position line, never touch grid DOM
@@ -1353,13 +1389,27 @@ function onDragEnd(e) {
   const list = document.getElementById('block-list');
   const proj = PROJECTS[activeKey];
 
-  if (dropSide === 'before') {
-    if (dropTarget) list.insertBefore(dragEl, dropTarget);
-  } else if (dropSide === 'after') {
-    if (dropTarget) dropTarget.after(dragEl);
-    else list.appendChild(dragEl);
+  function setGrid(el, data, cols, cs) {
+    if (data) { data._cols = cols; data._colStart = cs; }
+    el.style.gridColumn = `${cs} / span ${cols}`;
+  }
+
+  if (dropSide === 'left') {
+    // Place dragEl BEFORE dropTarget, both become half-width side by side
+    list.insertBefore(dragEl, dropTarget);
+    setGrid(dragEl,    proj.blocks.find(b => b.id === dragEl.dataset.id),    3, 1);
+    setGrid(dropTarget, proj.blocks.find(b => b.id === dropTarget.dataset.id), 3, 4);
+  } else if (dropSide === 'right') {
+    // Place dragEl AFTER dropTarget, both become half-width side by side
+    dropTarget.after(dragEl);
+    setGrid(dropTarget, proj.blocks.find(b => b.id === dropTarget.dataset.id), 3, 1);
+    setGrid(dragEl,    proj.blocks.find(b => b.id === dragEl.dataset.id),    3, 4);
+  } else if (dropSide === 'center') {
+    // Reorder only, make drag full-width
+    list.insertBefore(dragEl, dropTarget);
+    setGrid(dragEl, proj.blocks.find(b => b.id === dragEl.dataset.id), 6, 1);
   } else {
-    // 'between'
+    // 'between' — reorder only, keep size
     if (dropTarget) dropTarget.after(dragEl);
     else {
       const first = list.querySelector('.block');
