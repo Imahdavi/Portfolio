@@ -271,19 +271,10 @@
     .d-title:empty:before  { content:attr(data-ph); color:#bbb; }
     .d-subtitle:empty:before { content:attr(data-ph); color:#bbb; }
 
-    /* Edit toggle — hidden until admin session active */
-    .edit-toggle { display:none !important; }
-    body.is-admin .edit-toggle { display:flex !important; }
-    /* Edit toggle */
-    .edit-toggle {
-      display:flex; align-items:center; gap:6px;
-      padding:6px 14px; border-radius:20px;
-      border:1.5px solid #d4cfc8; background:#f7f4f0;
-      cursor:pointer; font-size:12.5px; font-weight:500; color:#444;
-      transition:all .2s;
-    }
-    .edit-toggle svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
-    .edit-toggle.on  { background:#1a1a1a; color:#fff; border-color:#1a1a1a; }
+    /* Edit nav button — admin only, project view only */
+    .edit-nav-btn { display:none !important; }
+    body.is-admin #app:has(#view-project.active) ~ #bottom-nav .edit-nav-btn { display:flex !important; }
+    #editBtn.on { color:#111; }
 
     /* Edit hint bar */
     .edit-hint {
@@ -487,14 +478,14 @@
     .add-btn:hover { border-color:#555; color:#333; background:rgba(0,0,0,.04); }
     .add-btn svg   { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
 
-    /* Scroll-to-top button */
+    /* Scroll-to-top button — mirrors back-btn position on the right */
     #scroll-top-btn {
-      position:fixed; bottom:96px; right:20px;
-      width:44px; height:44px; border-radius:50%;
-      background:rgba(255,255,255,0.88); border:1.5px solid rgba(0,0,0,0.12);
-      box-shadow:0 2px 14px rgba(0,0,0,.13);
+      position:fixed; top:48px; right:max(10px, calc(50vw - 290px));
+      width:40px; height:40px; border-radius:50%;
+      background:rgba(255,255,255,0.88); border:1.5px solid rgba(0,0,0,0.13);
+      box-shadow:0 2px 10px rgba(0,0,0,.10);
       backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-      cursor:pointer; z-index:190;
+      cursor:pointer; z-index:200;
       display:flex; align-items:center; justify-content:center;
       color:#555;
       opacity:0; pointer-events:none;
@@ -503,7 +494,7 @@
     #scroll-top-btn.show { opacity:1; pointer-events:auto; }
     #scroll-top-btn:hover { transform:translateY(-2px); box-shadow:0 4px 18px rgba(0,0,0,.16); }
     #scroll-top-btn:active { transform:scale(.9); }
-    #scroll-top-btn svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+    #scroll-top-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
 
     /* Block enter animation */
     @keyframes blockIn {
@@ -715,10 +706,6 @@
         <svg viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
       </button>
       <div class="d-title" id="d-title" data-ph="Title"></div>
-      <button class="edit-toggle" id="editBtn" onclick="toggleEdit()">
-        <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        <span id="editLabel">Edit</span>
-      </button>
     </div>
     <div class="d-subtitle" id="d-sub" data-ph="Subtitle"></div>
 
@@ -763,6 +750,10 @@
   <button class="nav-btn an-nav-btn" id="nb-analytics" onclick="goView('view-analytics',this)">
     <span class="nav-tip">Analytics</span>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+  </button>
+  <button class="nav-btn edit-nav-btn" id="editBtn" onclick="toggleEdit()">
+    <span class="nav-tip" id="editLabel">Edit</span>
+    <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
   </button>
 </nav>
 
