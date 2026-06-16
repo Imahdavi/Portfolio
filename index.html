@@ -591,15 +591,20 @@
 </head>
 <body>
 <div id="site-cursor">
-  <svg width="26" height="30" viewBox="0 0 26 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M13 1 L24 7.5 L24 22.5 L13 29 L2 22.5 L2 7.5 Z" fill="#0f0f0f" stroke="rgba(255,255,255,.28)" stroke-width="1.2" stroke-linejoin="round"/>
-    <path d="M13 5 L21 9.5 L21 20.5 L13 25 L5 20.5 L5 9.5 Z" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="0.8"/>
-    <line x1="13" y1="1" x2="13" y2="5" stroke="rgba(255,255,255,.18)" stroke-width="0.8"/>
-    <line x1="13" y1="25" x2="13" y2="29" stroke="rgba(255,255,255,.18)" stroke-width="0.8"/>
-    <line x1="2" y1="7.5" x2="5" y2="9.5" stroke="rgba(255,255,255,.12)" stroke-width="0.8"/>
-    <line x1="24" y1="7.5" x2="21" y2="9.5" stroke="rgba(255,255,255,.12)" stroke-width="0.8"/>
-    <line x1="2" y1="22.5" x2="5" y2="20.5" stroke="rgba(255,255,255,.12)" stroke-width="0.8"/>
-    <line x1="24" y1="22.5" x2="21" y2="20.5" stroke="rgba(255,255,255,.12)" stroke-width="0.8"/>
+  <svg width="24" height="34" viewBox="0 0 48.34 67.54" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="cur-grad" x1="34.13" y1="59.04" x2="-2.73" y2="-4.81" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#000"/>
+        <stop offset=".42" stop-color="#030708"/>
+        <stop offset=".58" stop-color="#0d1e26"/>
+        <stop offset=".69" stop-color="#204557"/>
+        <stop offset=".78" stop-color="#3a7e9f"/>
+        <stop offset=".86" stop-color="#5cc7fb"/>
+      </linearGradient>
+    </defs>
+    <polygon fill="url(#cur-grad)" points="28.25 44.42 35.36 57.79 43.99 59.74 35.37 44.21 37.74 31.15 40.4 32.56 42.27 27.39 0 0 3.02 50.89 9.27 53.27 9.27 50.03 30.41 56.29 25.23 46.8 28.25 44.42"/>
+    <polygon fill="#0c0c0c" points="22.84 56.29 25.41 62.19 34.23 64.25 31.3 58.76 22.84 56.29"/>
+    <polygon fill="#0c0c0c" points="36.93 60.69 39.38 65.5 48.34 67.54 45.46 62.42 36.93 60.69"/>
   </svg>
 </div>
 <div id="app">
@@ -766,7 +771,7 @@
   const cur = document.getElementById('site-cursor');
   if (!cur || !matchMedia('(pointer:fine)').matches) return;
   document.addEventListener('mousemove', e => {
-    cur.style.transform = `translate(${e.clientX - 13}px,${e.clientY - 15}px)`;
+    cur.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
     cur.style.opacity = '1';
   });
   document.addEventListener('mouseleave', () => { cur.style.opacity = '0'; });
