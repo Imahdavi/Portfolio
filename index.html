@@ -945,7 +945,11 @@ const SB_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIs
 const SB_BUCKET = 'Portfolio';
 
 /* ─── Analytics ────────────────────────────────────────── */
-const _SID = Math.random().toString(36).slice(2) + Date.now().toString(36);
+const _SID = sessionStorage.getItem('_vsid') || (() => {
+  const id = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  sessionStorage.setItem('_vsid', id);
+  return id;
+})();
 let _country = null;
 
 async function _getCountry() {
