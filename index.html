@@ -568,22 +568,22 @@
     .nav-btn.active::after { opacity:1; }
 
     /* ─────────────────── CUSTOM CURSOR ─────────────────── */
+    #site-cursor { position:fixed; top:0; left:0; pointer-events:none; z-index:99999; display:none; }
     @media (pointer:fine) {
       * { cursor: none !important; }
       #site-cursor {
-        position:fixed; top:0; left:0; pointer-events:none; z-index:99999;
-        will-change:transform; opacity:0; transition:opacity .2s;
+        display:block; will-change:transform; opacity:0; transition:opacity .2s;
       }
       #site-cursor svg { display:block; transition:transform .12s cubic-bezier(.34,1.56,.64,1); }
-      #site-cursor.pressing svg { transform:scale(.78); }
+      #site-cursor.pressing svg { transform:scale(.8); }
       .cur-ripple {
         position:fixed; pointer-events:none; z-index:99998;
         width:28px; height:28px; border-radius:50%;
-        border:1.5px solid rgba(0,0,0,.28);
+        border:1.5px solid rgba(0,0,0,.25);
         animation:curRipple .5s cubic-bezier(.25,.46,.45,.94) forwards;
       }
       @keyframes curRipple {
-        0%   { transform:translate(-50%,-50%) scale(0); opacity:.7; }
+        0%   { transform:translate(-50%,-50%) scale(0); opacity:.65; }
         100% { transform:translate(-50%,-50%) scale(3.2); opacity:0; }
       }
     }
@@ -591,8 +591,15 @@
 </head>
 <body>
 <div id="site-cursor">
-  <svg width="22" height="24" viewBox="0 0 22 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M2 1L2 19L8 13H7L11 21L14 19.5L10 12H16L2 1Z" fill="#0d0d0d" stroke="rgba(255,255,255,.08)" stroke-width="0.6" stroke-linejoin="round"/>
+  <svg width="26" height="30" viewBox="0 0 26 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M13 1 L24 7.5 L24 22.5 L13 29 L2 22.5 L2 7.5 Z" fill="#0f0f0f" stroke="rgba(255,255,255,.28)" stroke-width="1.2" stroke-linejoin="round"/>
+    <path d="M13 5 L21 9.5 L21 20.5 L13 25 L5 20.5 L5 9.5 Z" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="0.8"/>
+    <line x1="13" y1="1" x2="13" y2="5" stroke="rgba(255,255,255,.18)" stroke-width="0.8"/>
+    <line x1="13" y1="25" x2="13" y2="29" stroke="rgba(255,255,255,.18)" stroke-width="0.8"/>
+    <line x1="2" y1="7.5" x2="5" y2="9.5" stroke="rgba(255,255,255,.12)" stroke-width="0.8"/>
+    <line x1="24" y1="7.5" x2="21" y2="9.5" stroke="rgba(255,255,255,.12)" stroke-width="0.8"/>
+    <line x1="2" y1="22.5" x2="5" y2="20.5" stroke="rgba(255,255,255,.12)" stroke-width="0.8"/>
+    <line x1="24" y1="22.5" x2="21" y2="20.5" stroke="rgba(255,255,255,.12)" stroke-width="0.8"/>
   </svg>
 </div>
 <div id="app">
@@ -760,7 +767,7 @@
   const cur = document.getElementById('site-cursor');
   if (!cur || !matchMedia('(pointer:fine)').matches) return;
   document.addEventListener('mousemove', e => {
-    cur.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
+    cur.style.transform = `translate(${e.clientX - 13}px,${e.clientY - 15}px)`;
     cur.style.opacity = '1';
   });
   document.addEventListener('mouseleave', () => { cur.style.opacity = '0'; });
