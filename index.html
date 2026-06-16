@@ -1011,28 +1011,60 @@ async function loadAnalytics(days, btn) {
   document.getElementById('an-uv').textContent = sessions.size;
   document.getElementById('an-pv').textContent = rows.length;
 
-  // daily bar chart (skip for all-time)
+  // daily line chart
   const chartEl = document.getElementById('an-daily');
+  const dayMap = {};
+  rows.forEach(r => {
+    const d = r.ts.slice(0,10);
+    if (!dayMap[d]) dayMap[d] = new Set();
+    dayMap[d].add(r.session_id);
+  });
+
+  let daily = [];
   if (days === 0) {
-    chartEl.innerHTML = '<div class="an-empty">Showing all-time totals above</div>';
+    const allDates = Object.keys(dayMap).sort();
+    if (allDates.length) {
+      for (let t = new Date(allDates[0]).getTime(); t <= Date.now(); t += 86400000) {
+        const d = new Date(t).toISOString().slice(0,10);
+        daily.push({ d, n: dayMap[d]?.size || 0 });
+      }
+    }
   } else {
-    const dayMap = {};
-    rows.forEach(r => {
-      const d = r.ts.slice(0,10);
-      if (!dayMap[d]) dayMap[d] = new Set();
-      dayMap[d].add(r.session_id);
-    });
-    const daily = [];
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date(Date.now() - i * 86400000).toISOString().slice(0,10);
       daily.push({ d, n: dayMap[d]?.size || 0 });
     }
+  }
+
+  if (!daily.length) {
+    chartEl.innerHTML = '<div class="an-empty">No data yet — visit the site to start tracking</div>';
+  } else {
     const maxN = Math.max(...daily.map(x => x.n), 1);
-    chartEl.innerHTML = `<div class="an-bars">${daily.map(x => {
-      const h = Math.round((x.n / maxN) * 64);
-      const zero = x.n === 0;
-      return `<div class="an-bar-col"><div class="an-bar${zero?' an-bar-zero':''}" style="height:${zero?4:Math.max(h,3)}px" title="${x.n} on ${x.d}"></div><div class="an-bar-date">${x.d.slice(8)}</div></div>`;
-    }).join('')}</div>`;
+    const W = 300, CH = 76, padT = 8, padB = 20;
+    const iH = CH - padT - padB;
+    const n = daily.length;
+    const xStep = n > 1 ? W / (n - 1) : W / 2;
+    const pts = daily.map((x, i) => ({
+      x: +(i * xStep).toFixed(2),
+      y: +(padT + iH - (x.n / maxN) * iH).toFixed(2),
+      n: x.n, d: x.d
+    }));
+    const lineD = pts.map((p, i) => `${i===0?'M':'L'}${p.x},${p.y}`).join(' ');
+    const areaD = `${lineD} L${pts[n-1].x},${padT+iH} L0,${padT+iH} Z`;
+    const every = n <= 7 ? 1 : n <= 14 ? 2 : n <= 31 ? 5 : 7;
+    const labels = pts
+      .filter((_, i) => i === 0 || i === n-1 || i % every === 0)
+      .map(p => `<text x="${p.x}" y="${CH}" text-anchor="middle" font-size="7" fill="#bbb">${p.d.slice(8)}</text>`)
+      .join('');
+    const dots = pts.filter(p => p.n > 0)
+      .map(p => `<circle cx="${p.x}" cy="${p.y}" r="2.5" fill="#1a1a1a" stroke="#fff" stroke-width="1"><title>${p.n} visitors · ${p.d}</title></circle>`)
+      .join('');
+    chartEl.innerHTML = `<svg viewBox="0 0 ${W} ${CH}" width="100%" style="display:block;overflow:visible">
+      <defs><linearGradient id="ang" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a1a1a" stop-opacity=".1"/><stop offset="100%" stop-color="#1a1a1a" stop-opacity="0"/></linearGradient></defs>
+      <path d="${areaD}" fill="url(#ang)"/>
+      <path d="${lineD}" fill="none" stroke="#1a1a1a" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dots}${labels}
+    </svg>`;
   }
 
   // breakdown helper
