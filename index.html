@@ -331,6 +331,32 @@
     .block-text:focus { outline:none; }
     .edit-on .block-text:empty:before { content:attr(data-ph); color:#aaa; pointer-events:none; display:block; }
 
+    /* ── Format toolbar (bold / italic) ── */
+    #fmt-toolbar {
+      position:fixed; z-index:9999;
+      display:none; align-items:center; gap:2px;
+      background:#1a1a1a; border-radius:8px;
+      padding:4px 6px;
+      box-shadow:0 4px 16px rgba(0,0,0,.28);
+      transform:translateX(-50%) translateY(-6px);
+      pointer-events:auto;
+      transition:opacity .12s;
+    }
+    #fmt-toolbar.show { display:flex; }
+    #fmt-toolbar::after {
+      content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%);
+      border:5px solid transparent; border-top-color:#1a1a1a;
+    }
+    #fmt-toolbar button {
+      background:none; border:none; cursor:pointer; color:rgba(255,255,255,.85);
+      width:28px; height:26px; border-radius:5px; font-size:13px; font-weight:700;
+      display:flex; align-items:center; justify-content:center;
+      font-family:Georgia,serif; transition:background .12s, color .1s;
+    }
+    #fmt-toolbar button:hover { background:rgba(255,255,255,.13); color:#fff; }
+    #fmt-toolbar button.fmt-active { background:rgba(255,255,255,.22); color:#fff; }
+    #fmt-toolbar .fmt-sep { width:1px; height:16px; background:rgba(255,255,255,.18); margin:0 2px; }
+
     /* ── Media wrap ── */
     .media-wrap {
       position:relative; border-radius:20px; overflow:visible;
@@ -602,6 +628,11 @@
     <polygon fill="#0c0c0c" points="36.93 60.69 39.38 65.5 48.34 67.54 45.46 62.42 36.93 60.69"/>
   </svg>
 </div>
+<div id="fmt-toolbar">
+  <button id="fmt-b" onmousedown="event.preventDefault();document.execCommand('bold')"><b>B</b></button>
+  <div class="fmt-sep"></div>
+  <button id="fmt-i" onmousedown="event.preventDefault();document.execCommand('italic')"><i>I</i></button>
+</div>
 <div id="app">
 
   <!-- ══════════════════════════════ HOME ══════════════════════════════ -->
@@ -794,6 +825,36 @@
     r.addEventListener('animationend', () => r.remove());
   });
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
+})();
+
+/* ─── Format toolbar (bold / italic) ─────────────────── */
+(function() {
+  const tb = document.getElementById('fmt-toolbar');
+  const btnB = document.getElementById('fmt-b');
+  const btnI = document.getElementById('fmt-i');
+
+  function insideBlockText(node) {
+    let el = node?.nodeType === 3 ? node.parentElement : node;
+    return el?.closest?.('.block-text') || null;
+  }
+
+  function update() {
+    if (!editMode) { tb.classList.remove('show'); return; }
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) { tb.classList.remove('show'); return; }
+    if (!insideBlockText(sel.anchorNode)) { tb.classList.remove('show'); return; }
+    const r = sel.getRangeAt(0).getBoundingClientRect();
+    if (!r.width) { tb.classList.remove('show'); return; }
+    tb.style.left = (r.left + r.width / 2) + 'px';
+    tb.style.top  = (r.top + window.scrollY - 44) + 'px';
+    tb.classList.add('show');
+    btnB.classList.toggle('fmt-active', document.queryCommandState('bold'));
+    btnI.classList.toggle('fmt-active', document.queryCommandState('italic'));
+  }
+
+  document.addEventListener('selectionchange', update);
+  document.addEventListener('mouseup', () => setTimeout(update, 10));
+  document.addEventListener('keyup', update);
 })();
 
 /* ─── SVG icons ────────────────────────────────────────── */
@@ -1581,8 +1642,8 @@ function makeBlockEl(block, proj) {
     t.className = 'block-text';
     t.contentEditable = editMode ? 'true' : 'false';
     t.dataset.ph = 'Type something…';
-    t.textContent = block.content;
-    let _st; t.addEventListener('input', () => { block.content = t.textContent; clearTimeout(_st); _st = setTimeout(() => saveProject(activeKey), 1500); });
+    t.innerHTML = block.content || '';
+    let _st; t.addEventListener('input', () => { block.content = t.innerHTML; clearTimeout(_st); _st = setTimeout(() => saveProject(activeKey), 1500); });
     body.appendChild(t);
   } else {
     // image or video — shared media-wrap with overlay controls
