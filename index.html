@@ -185,6 +185,44 @@
     .soon-wrap { display:flex; align-items:center; justify-content:center; min-height:calc(100dvh - 160px); }
     .soon-word { font-family:'Caveat',cursive; font-size:52px; font-weight:600; animation:fadeUp .6s ease both; }
 
+    /* ─────────────────── ANALYTICS PAGE ─────────────────── */
+    .an-nav-btn { display:none !important; }
+    body.is-admin .an-nav-btn { display:flex !important; }
+
+    .an-title  { font-family:'Caveat',cursive; font-size:27px; font-weight:600; text-align:center; margin-bottom:20px; }
+    .an-range  { display:flex; gap:6px; justify-content:center; margin-bottom:22px; }
+    .an-range-btn { padding:6px 16px; border-radius:20px; border:1px solid rgba(0,0,0,.12); background:#fff; font-size:12.5px; font-weight:500; color:#666; cursor:pointer; transition:all .15s; }
+    .an-range-btn.active { background:#1a1a1a; color:#fff; border-color:#1a1a1a; }
+
+    .an-stats  { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:26px; }
+    .an-stat   { background:#f5f4f2; border-radius:14px; padding:18px 12px; text-align:center; }
+    .an-val    { display:block; font-size:28px; font-weight:700; line-height:1; margin-bottom:5px; }
+    .an-lbl    { font-size:11.5px; color:#888; }
+
+    .an-section { margin-bottom:26px; }
+    .an-sh  { font-size:11px; font-weight:600; color:#aaa; text-transform:uppercase; letter-spacing:.07em; margin-bottom:10px; }
+
+    .an-bars    { display:flex; align-items:flex-end; gap:3px; height:68px; }
+    .an-bar-col { display:flex; flex-direction:column; align-items:center; flex:1; gap:2px; }
+    .an-bar     { width:100%; background:#1a1a1a; border-radius:2px 2px 0 0; min-height:2px; }
+    .an-bar-zero { background:rgba(0,0,0,.07); }
+    .an-bar-date { font-size:8px; color:#bbb; }
+
+    .an-bitem         { display:flex; align-items:center; gap:8px; margin-bottom:9px; }
+    .an-bitem-lbl     { font-size:12.5px; width:72px; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .an-bitem-bar-wrap{ flex:1; background:rgba(0,0,0,.07); border-radius:3px; height:5px; overflow:hidden; }
+    .an-bitem-bar     { height:5px; background:#1a1a1a; border-radius:3px; }
+    .an-bitem-cnt     { font-size:11px; color:#999; width:26px; text-align:right; flex-shrink:0; }
+
+    .an-row-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:26px; }
+
+    .an-proj-item    { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid rgba(0,0,0,.06); }
+    .an-proj-item:last-child { border-bottom:none; }
+    .an-proj-num     { font-size:10.5px; color:#ccc; font-weight:600; width:14px; flex-shrink:0; }
+    .an-proj-name    { flex:1; font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .an-proj-cnt     { font-size:11.5px; color:#999; flex-shrink:0; }
+    .an-empty        { font-size:12px; color:#bbb; padding:8px 0; }
+
     /* ─────────────────── DETAIL PAGE ─────────────────── */
     .detail-bar {
       display:flex; align-items:center;
@@ -579,6 +617,43 @@
   </div><!-- /view-soon -->
 
 
+  <!-- ══════════════════════════════ ANALYTICS ══════════════════════════════ -->
+  <div class="view" id="view-analytics">
+    <div class="an-title">Analytics</div>
+    <div class="an-range">
+      <button class="an-range-btn active" onclick="loadAnalytics(7,this)">7 days</button>
+      <button class="an-range-btn" onclick="loadAnalytics(30,this)">30 days</button>
+      <button class="an-range-btn" onclick="loadAnalytics(0,this)">All time</button>
+    </div>
+    <div class="an-stats">
+      <div class="an-stat"><span class="an-val" id="an-uv">—</span><span class="an-lbl">Unique visitors</span></div>
+      <div class="an-stat"><span class="an-val" id="an-pv">—</span><span class="an-lbl">Page views</span></div>
+    </div>
+    <div class="an-section">
+      <div class="an-sh">Daily visitors</div>
+      <div id="an-daily"></div>
+    </div>
+    <div class="an-row-2">
+      <div class="an-section" style="margin-bottom:0">
+        <div class="an-sh">Countries</div>
+        <div id="an-countries"></div>
+      </div>
+      <div class="an-section" style="margin-bottom:0">
+        <div class="an-sh">Devices</div>
+        <div id="an-devices"></div>
+      </div>
+    </div>
+    <div class="an-section" style="margin-top:26px">
+      <div class="an-sh">Browsers</div>
+      <div id="an-browsers"></div>
+    </div>
+    <div class="an-section">
+      <div class="an-sh">Top projects</div>
+      <div id="an-projects"></div>
+    </div>
+  </div><!-- /view-analytics -->
+
+
   <!-- ══════════════════════════════ PROJECT DETAIL (shared) ══════════════════════════════ -->
   <div class="view" id="view-project">
     <div class="detail-bar">
@@ -630,6 +705,10 @@
   <button class="nav-btn" id="nb-soon" onclick="goView('view-soon',this)">
     <span class="nav-tip">Note</span>
     <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+  </button>
+  <button class="nav-btn an-nav-btn" id="nb-analytics" onclick="goView('view-analytics',this)">
+    <span class="nav-tip">Analytics</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
   </button>
 </nav>
 
@@ -864,6 +943,126 @@ const SB_URL    = 'https://jbdirevxdgcffpaeizcd.supabase.co';
 const SB_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiZGlyZXZ4ZGdjZmZwYWVpemNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NzAwNjgsImV4cCI6MjA5NjU0NjA2OH0._09c4ViKGJvDQXDUGOFEmVWyCg9scPMb6VBGV7DJvoI';
 const SB_BUCKET = 'Portfolio';
 
+/* ─── Analytics ────────────────────────────────────────── */
+const _SID = Math.random().toString(36).slice(2) + Date.now().toString(36);
+let _country = null;
+
+async function _getCountry() {
+  if (_country) return _country;
+  try {
+    const t = await (await fetch('https://cloudflare.com/cdn-cgi/trace')).text();
+    _country = t.match(/loc=([A-Z]{2})/)?.[1] || '??';
+  } catch { _country = '??'; }
+  return _country;
+}
+
+function _getDevice() {
+  const ua = navigator.userAgent;
+  if (/iPad/i.test(ua)) return 'tablet';
+  if (/Mobi|Android|iPhone/i.test(ua)) return 'mobile';
+  return 'desktop';
+}
+
+function _getBrowser() {
+  const ua = navigator.userAgent;
+  if (/Edg\//i.test(ua))  return 'Edge';
+  if (/OPR\//i.test(ua))  return 'Opera';
+  if (/Firefox\//i.test(ua)) return 'Firefox';
+  if (/Chrome\//i.test(ua))  return 'Chrome';
+  if (/Safari\//i.test(ua))  return 'Safari';
+  return 'Other';
+}
+
+async function trackView(project = null) {
+  const country = await _getCountry();
+  fetch(`${SB_URL}/rest/v1/analytics`, {
+    method: 'POST',
+    headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ session_id: _SID, country, device: _getDevice(), browser: _getBrowser(), project, event: 'view' })
+  });
+}
+
+/* ─── Analytics dashboard ──────────────────────────────── */
+let _analyticsRange = 7;
+
+async function loadAnalytics(days, btn) {
+  _analyticsRange = days;
+  if (btn) {
+    document.querySelectorAll('.an-range-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  document.getElementById('an-uv').textContent = '…';
+  document.getElementById('an-pv').textContent = '…';
+
+  let url = `${SB_URL}/rest/v1/analytics?select=ts,session_id,country,device,browser,project&order=ts.desc&limit=5000`;
+  if (days > 0) {
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+    url += `&ts=gte.${encodeURIComponent(since)}`;
+  }
+  let rows;
+  try {
+    rows = await (await fetch(url, { headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` } })).json();
+  } catch(e) { return; }
+  if (!Array.isArray(rows)) return;
+
+  // unique visitors
+  const sessions = new Set(rows.map(r => r.session_id));
+  document.getElementById('an-uv').textContent = sessions.size;
+  document.getElementById('an-pv').textContent = rows.length;
+
+  // daily bar chart (skip for all-time)
+  const chartEl = document.getElementById('an-daily');
+  if (days === 0) {
+    chartEl.innerHTML = '<div class="an-empty">Showing all-time totals above</div>';
+  } else {
+    const dayMap = {};
+    rows.forEach(r => {
+      const d = r.ts.slice(0,10);
+      if (!dayMap[d]) dayMap[d] = new Set();
+      dayMap[d].add(r.session_id);
+    });
+    const daily = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000).toISOString().slice(0,10);
+      daily.push({ d, n: dayMap[d]?.size || 0 });
+    }
+    const maxN = Math.max(...daily.map(x => x.n), 1);
+    chartEl.innerHTML = `<div class="an-bars">${daily.map(x => {
+      const h = Math.round((x.n / maxN) * 64);
+      const zero = x.n === 0;
+      return `<div class="an-bar-col"><div class="an-bar${zero?' an-bar-zero':''}" style="height:${zero?4:Math.max(h,3)}px" title="${x.n} on ${x.d}"></div><div class="an-bar-date">${x.d.slice(8)}</div></div>`;
+    }).join('')}</div>`;
+  }
+
+  // breakdown helper
+  function renderBreakdown(id, map, topN) {
+    const data = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0, topN);
+    const mx = data[0]?.[1] || 1;
+    document.getElementById(id).innerHTML = data.length
+      ? data.map(([k,v]) => `<div class="an-bitem"><div class="an-bitem-lbl" title="${k}">${k}</div><div class="an-bitem-bar-wrap"><div class="an-bitem-bar" style="width:${Math.round(v/mx*100)}%"></div></div><div class="an-bitem-cnt">${v}</div></div>`).join('')
+      : '<div class="an-empty">No data</div>';
+  }
+
+  const countryMap = {}, deviceMap = {}, browserMap = {};
+  rows.forEach(r => {
+    const c = r.country || '??'; countryMap[c] = (countryMap[c]||0)+1;
+    const d = r.device  || 'other'; deviceMap[d]  = (deviceMap[d] ||0)+1;
+    const b = r.browser || 'Other'; browserMap[b] = (browserMap[b]||0)+1;
+  });
+  renderBreakdown('an-countries', countryMap, 5);
+  renderBreakdown('an-devices',   deviceMap,  4);
+  renderBreakdown('an-browsers',  browserMap, 5);
+
+  // top projects
+  const projMap = {};
+  rows.filter(r => r.project).forEach(r => { projMap[r.project] = (projMap[r.project]||0)+1; });
+  const topProj = Object.entries(projMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  document.getElementById('an-projects').innerHTML = topProj.length
+    ? topProj.map(([k,v],i) => `<div class="an-proj-item"><div class="an-proj-num">${i+1}</div><div class="an-proj-name" title="${PROJECTS[k]?.name||k}">${PROJECTS[k]?.name||k}</div><div class="an-proj-cnt">${v} views</div></div>`).join('')
+    : '<div class="an-empty">No project views yet</div>';
+}
+
 async function saveProject(key) {
   const proj = PROJECTS[key];
   const clean = proj.blocks.map(({ _muted, ...b }) => b);
@@ -1055,8 +1254,8 @@ const PROJECTS = {
 function uid() { return Math.random().toString(36).slice(2,9); }
 
 /* ─── View navigation ──────────────────────────────────── */
-const MAIN_VIEWS = ['view-home','view-exp','view-soon'];
-const NAV_MAP    = { 'view-home':'nb-home', 'view-exp':'nb-exp', 'view-soon':'nb-soon' };
+const MAIN_VIEWS = ['view-home','view-exp','view-soon','view-analytics'];
+const NAV_MAP    = { 'view-home':'nb-home', 'view-exp':'nb-exp', 'view-soon':'nb-soon', 'view-analytics':'nb-analytics' };
 let current     = 'view-home';
 let prevMain    = 'view-home';
 let editMode    = false;
@@ -1089,6 +1288,7 @@ function showView(toId, anim) {
     } else if (toId === 'view-soon') {
       history.pushState({ view: 'soon' }, '', '/soon');
     }
+    if (toId === 'view-analytics') loadAnalytics(_analyticsRange);
   }
 }
 
@@ -1132,6 +1332,7 @@ async function openProject(key) {
   activeKey = key;
   editMode  = false;
   prevMain  = current;
+  trackView(key);
   try {
     const res  = await fetch(`${SB_URL}/rest/v1/portfolio_projects?key=eq.${encodeURIComponent(key)}&select=data`, {
       headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
@@ -1762,6 +1963,7 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', async () => {
   if (localStorage.getItem('portfolio_admin') === 'true') document.body.classList.add('is-admin');
   await Promise.all([loadSettings(), loadProjects()]);
+  trackView(null); // track home page visit
 
   // restore view from URL path
   _restoringState = true;
