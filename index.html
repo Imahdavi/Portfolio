@@ -84,7 +84,7 @@
     .avatar  { width:88px; height:88px; border-radius:50%; background:#b5a090; flex-shrink:0; overflow:hidden; display:flex; align-items:center; justify-content:center; }
     .avatar img { width:100%; height:100%; object-fit:cover; display:block; }
 
-    .profile-name { font-family:var(--font-heading); font-size:34px; font-weight:700; line-height:1.05; margin-bottom:5px; }
+    .profile-name { font-family:var(--font-heading); font-size:34px; font-weight:700; line-height:1.05; margin-bottom:5px; opacity:0; }
     .profile-role { font-size:13.5px; color:#555; margin-bottom:2px; }
     .profile-age  { font-size:13.5px; color:#555; margin-bottom:16px; }
 
@@ -766,6 +766,20 @@
 <input type="file" id="fileInput" accept="image/*,video/*" multiple style="display:none"/>
 
 <script>
+/* ─── Font-ready: reveal name once Caveat loads ─────────── */
+(function() {
+  var show = function() {
+    var el = document.querySelector('.profile-name');
+    if (!el || el.style.opacity === '1') return;
+    el.style.transition = 'opacity .3s ease';
+    el.style.opacity = '1';
+  };
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load('700 1em Caveat').then(show, show);
+  }
+  setTimeout(show, 1800);
+})();
+
 /* ─── Custom cursor ────────────────────────────────────── */
 (function() {
   const cur = document.getElementById('site-cursor');
