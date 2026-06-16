@@ -566,9 +566,35 @@
       opacity:0; transition:opacity .2s;
     }
     .nav-btn.active::after { opacity:1; }
+
+    /* ─────────────────── CUSTOM CURSOR ─────────────────── */
+    @media (pointer:fine) {
+      * { cursor: none !important; }
+      #site-cursor {
+        position:fixed; top:0; left:0; pointer-events:none; z-index:99999;
+        will-change:transform; opacity:0; transition:opacity .2s;
+      }
+      #site-cursor svg { display:block; transition:transform .12s cubic-bezier(.34,1.56,.64,1); }
+      #site-cursor.pressing svg { transform:scale(.78); }
+      .cur-ripple {
+        position:fixed; pointer-events:none; z-index:99998;
+        width:28px; height:28px; border-radius:50%;
+        border:1.5px solid rgba(0,0,0,.28);
+        animation:curRipple .5s cubic-bezier(.25,.46,.45,.94) forwards;
+      }
+      @keyframes curRipple {
+        0%   { transform:translate(-50%,-50%) scale(0); opacity:.7; }
+        100% { transform:translate(-50%,-50%) scale(3.2); opacity:0; }
+      }
+    }
   </style>
 </head>
 <body>
+<div id="site-cursor">
+  <svg width="22" height="24" viewBox="0 0 22 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2 1L2 19L8 13H7L11 21L14 19.5L10 12H16L2 1Z" fill="#0d0d0d" stroke="rgba(255,255,255,.08)" stroke-width="0.6" stroke-linejoin="round"/>
+  </svg>
+</div>
 <div id="app">
 
   <!-- ══════════════════════════════ HOME ══════════════════════════════ -->
@@ -729,6 +755,27 @@
 <input type="file" id="fileInput" accept="image/*,video/*" multiple style="display:none"/>
 
 <script>
+/* ─── Custom cursor ────────────────────────────────────── */
+(function() {
+  const cur = document.getElementById('site-cursor');
+  if (!cur || !matchMedia('(pointer:fine)').matches) return;
+  document.addEventListener('mousemove', e => {
+    cur.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
+    cur.style.opacity = '1';
+  });
+  document.addEventListener('mouseleave', () => { cur.style.opacity = '0'; });
+  document.addEventListener('mouseenter', () => { cur.style.opacity = '1'; });
+  document.addEventListener('mousedown', e => {
+    cur.classList.add('pressing');
+    const r = document.createElement('div');
+    r.className = 'cur-ripple';
+    r.style.cssText = `left:${e.clientX}px;top:${e.clientY}px`;
+    document.body.appendChild(r);
+    r.addEventListener('animationend', () => r.remove());
+  });
+  document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
+})();
+
 /* ─── SVG icons ────────────────────────────────────────── */
 const SVG_MUTED   = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2V15H6L11 19V5Z" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 9L17 15" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 9L23 15" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const SVG_UNMUTED = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2V15H6L11 19V5Z" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.54 8.46C16.477 9.398 17.004 10.669 17.004 11.995c0 1.326-.527 2.597-1.464 3.535" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19.07 4.93C20.945 6.805 21.998 9.348 21.998 12c0 2.652-1.053 5.195-2.928 7.07" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
