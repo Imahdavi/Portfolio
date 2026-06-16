@@ -681,9 +681,12 @@ function migrateBlockLayout(block) {
     block._colStart = oldCol ? (oldCol - 1) * 2 + 1 : 1;
     delete block._col;
   }
-  // Migrate pixel-based freeH to aspect ratio using saved width
-  if (block._freeH && !block._freeAspect && block._freeW) {
-    block._freeAspect = +(block._freeW / block._freeH).toFixed(4);
+  // Migrate pixel-based freeH to aspect ratio
+  if (block._freeH && !block._freeAspect) {
+    // Use saved _freeW if available, otherwise estimate from _cols
+    // (block-list is always 496px on desktop: max-width:540 − 44px padding)
+    const refW = block._freeW || ((block._cols || 6) / 6 * 496);
+    block._freeAspect = +(refW / block._freeH).toFixed(4);
   }
 }
 
@@ -874,6 +877,38 @@ async function saveProject(key) {
   });
 }
 
+let _cachedSettings = null;
+
+async function saveSettings() {
+  if (!_cachedSettings) return;
+  await fetch(`${SB_URL}/rest/v1/portfolio_settings?id=eq.1`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ data: _cachedSettings })
+  });
+}
+
+function syncProjectTitleToHome(key, name, sub) {
+  // Update in-memory settings
+  if (_cachedSettings?.sections) {
+    _cachedSettings.sections.forEach(sec => {
+      const card = (sec.cards || []).find(c => c.key === key);
+      if (card) { card.name = name; if (sub !== undefined) card.sub = sub; }
+    });
+  }
+  // Update DOM cards on home page
+  document.querySelectorAll(`.proj-card[data-key="${key}"]`).forEach(el => {
+    const t = el.querySelector('.proj-title');
+    const s = el.querySelector('.proj-sub');
+    if (t) t.textContent = name;
+    if (s && sub !== undefined) s.textContent = sub;
+  });
+  saveSettings();
+}
+
 async function loadSettings() {
   try {
     const res = await fetch(`${SB_URL}/rest/v1/portfolio_settings?id=eq.1&select=data`, {
@@ -882,6 +917,7 @@ async function loadSettings() {
     const rows = await res.json();
     if (!rows || !rows[0]) return;
     const s = rows[0].data;
+    _cachedSettings = s;
 
     // fonts
     if (s.fonts) {
@@ -958,6 +994,7 @@ function renderHomeSections(sections) {
       el.onclick = () => openProject(card.key);
       const thumbBg = card.thumb ? '' : ' style="background:linear-gradient(135deg,#e8e0d8,#c8bdb4)"';
       const thumbImg = card.thumb ? `<img src="${card.thumb}" alt="${card.name}"/>` : '';
+      el.dataset.key = card.key;
       el.innerHTML = `<div class="proj-thumb"${thumbBg}>${thumbImg}</div><div class="proj-title">${card.name}</div><div class="proj-sub">${card.sub||''}</div>`;
       // sync PROJECTS metadata
       if (!PROJECTS[card.key]) PROJECTS[card.key] = { name: card.name, sub: card.sub||'', blocks: [{ id: uid(), type:'text', content:'' }] };
@@ -1152,12 +1189,16 @@ function updateEditUI() {
     dTitle._saveWired = true;
     dTitle.addEventListener('blur', () => {
       if (!activeKey) return;
-      PROJECTS[activeKey].name = dTitle.textContent.trim();
+      const name = dTitle.textContent.trim();
+      PROJECTS[activeKey].name = name;
+      syncProjectTitleToHome(activeKey, name, undefined);
       saveProject(activeKey);
     });
     dSub.addEventListener('blur', () => {
       if (!activeKey) return;
-      PROJECTS[activeKey].sub = dSub.textContent.trim();
+      const sub = dSub.textContent.trim();
+      PROJECTS[activeKey].sub = sub;
+      syncProjectTitleToHome(activeKey, PROJECTS[activeKey].name, sub);
       saveProject(activeKey);
     });
     // prevent Enter key from inserting <br>
@@ -1359,6 +1400,9 @@ function makeBlockEl(block, proj) {
       menu.classList.toggle('open');
     };
     mw.appendChild(menu);
+
+    // migrate first so _freeAspect is set before applyPreset reads it
+    migrateBlockLayout(block);
 
     // apply initial aspect preset
     const initPreset = LAYOUT_PRESETS.find(p => p.key === (block.preset || 'free')) || LAYOUT_PRESETS[0];
