@@ -834,24 +834,22 @@ function spiderSense(x, y) {
   el.style.cssText = 'position:fixed;left:'+x+'px;top:'+y+'px;overflow:visible;pointer-events:none;z-index:99998;width:0;height:0';
   const count = 5;
   for (let i = 0; i < count; i++) {
-    const a = (i / count) * Math.PI * 2 - Math.PI / 2;
-    const perp = a + Math.PI / 2;
-    const r1 = 10, r2 = 30;
-    const x1 = Math.cos(a)*r1, y1 = Math.sin(a)*r1;
-    const x2 = Math.cos(a)*r2, y2 = Math.sin(a)*r2;
-    const mx = (x1+x2)/2 + Math.cos(perp)*7, my = (y1+y2)/2 + Math.sin(perp)*7;
-    const p = document.createElementNS(ns, 'path');
-    p.setAttribute('d', `M${x1.toFixed(1)},${y1.toFixed(1)} Q${mx.toFixed(1)},${my.toFixed(1)} ${x2.toFixed(1)},${y2.toFixed(1)}`);
-    p.setAttribute('stroke', 'rgba(0,0,0,.75)');
-    p.setAttribute('stroke-width', '2');
-    p.setAttribute('stroke-linecap', 'round');
-    p.setAttribute('fill', 'none');
-    el.appendChild(p);
+    const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
+    const bx = Math.cos(angle) * 17;
+    const by = Math.sin(angle) * 17;
+    const deg = angle * 180 / Math.PI + 90;
+    const g = document.createElementNS(ns, 'g');
+    g.setAttribute('transform', `translate(${bx.toFixed(1)},${by.toFixed(1)}) rotate(${deg.toFixed(1)})`);
+    const p = document.createElementNS(ns, 'polygon');
+    p.setAttribute('points', '4,-10 -4,0 2,0 -5,10 5,0 -1,0');
+    p.setAttribute('fill', 'black');
+    g.appendChild(p);
+    el.appendChild(g);
   }
   document.body.appendChild(el);
   el.animate(
-    [{opacity:0.9, transform:'scale(.1)'},{opacity:.8,transform:'scale(1)',offset:.35},{opacity:0,transform:'scale(1.9)'}],
-    {duration:480, easing:'ease-out'}
+    [{opacity:1,transform:'scale(.12)'},{opacity:.9,transform:'scale(1)',offset:.38},{opacity:0,transform:'scale(2.1)'}],
+    {duration:520, easing:'ease-out'}
   ).onfinish = () => el.remove();
 }
 
