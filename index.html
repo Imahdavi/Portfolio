@@ -2357,9 +2357,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       this.alive=true;
       this.maxR=68;
 
-      // Angular spread: 230deg open web, gap faces source
+      // Angular spread: 310deg, gap faces source (rope origin)
       const dir=Math.atan2(ty-sy,tx-sx);
-      const SPAN=Math.PI*230/180;
+      const SPAN=Math.PI*310/180;
       const s=dir-SPAN/2;
       // 8 non-uniform radials (denser toward middle)
       const pts=[0,.11,.23,.37,.52,.66,.79,.90,1];
@@ -2449,10 +2449,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           const x2=this.tx+Math.cos(a2)*rd, y2=this.ty+Math.sin(a2)*rd;
           const diff=a2-a1;
           const ma=a1+diff*.5;
-          // Circular arc bezier: control point factor = 1/cos(half-angle)
-          const bow=1/Math.cos(diff*.5);
-          // Slight gravity sag on outer rings (downward offset)
-          const sagY=(ri+1)*1.8;
+          // Inward sag: control point pulled toward center (bow < 1 = concave)
+          const bow=0.82;
+          // Slight gravity droop on outer rings
+          const sagY=(ri+1)*1.4;
           const cpx=this.tx+Math.cos(ma)*rd*bow;
           const cpy=this.ty+Math.sin(ma)*rd*bow+sagY;
           ctx.beginPath(); ctx.moveTo(x1,y1);
