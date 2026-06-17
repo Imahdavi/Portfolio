@@ -2415,7 +2415,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const fadeT=age>this.TF+this.TE+this.TH?(age-this.TF-this.TE-this.TH)/this.TD:0;
       const alpha=Math.max(0,1-fadeT);
 
-      if('ontouchstart' in window) this.updateSrc();
+      this.updateSrc();
       ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
 
       // Flying rope (partial bezier)
