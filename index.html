@@ -300,17 +300,20 @@
 
     /* Home edit mode */
     #view-home.home-edit .profile-name,
-    #view-home.home-edit .profile-role,
+    #view-home.home-edit .profile-role {
+      outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px;
+      padding:2px 8px; cursor:text; min-width:30px;
+    }
     #view-home.home-edit .sec-label {
       outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px;
-      padding:2px 8px; cursor:text; min-width:30px; display:inline-block;
+      padding:2px 8px; cursor:text; min-width:30px; width:fit-content;
     }
     #view-home.home-edit .proj-card { cursor:grab; }
     #view-home.home-edit .proj-card:active { cursor:grabbing; }
     #view-home.home-edit .proj-card.drag-over { outline:2px solid rgba(0,0,0,.25); border-radius:16px; }
     #view-home.home-edit .proj-title,
     #view-home.home-edit .proj-sub {
-      outline:1px dashed rgba(0,0,0,.15); border-radius:3px; padding:1px 4px; cursor:text;
+      outline:1px dashed rgba(0,0,0,.15); border-radius:3px; cursor:text;
     }
     .home-edit-hint {
       font-size:11.5px; color:#888; background:rgba(0,0,0,.05);
@@ -331,7 +334,7 @@
     #view-home.home-edit .proj-card[data-hidden="true"] .home-card-hide { background:rgba(60,110,230,.7); }
 
     /* Add-card placeholder in grid */
-    .card-add-btn { display:none; flex-direction:column; align-items:center; justify-content:center; border:1.5px dashed rgba(0,0,0,.14); border-radius:16px; background:none; cursor:pointer; color:#ccc; font-size:30px; line-height:1; padding-bottom:28px; aspect-ratio:4/3; transition:all .2s; }
+    .card-add-btn { display:none; flex-direction:column; align-items:center; justify-content:center; border:1.5px dashed rgba(0,0,0,.14); border-radius:16px; background:none; cursor:pointer; color:#ccc; font-size:30px; line-height:1; aspect-ratio:1/1; width:100%; transition:all .2s; }
     .card-add-btn:hover { border-color:rgba(0,0,0,.28); color:#888; background:rgba(0,0,0,.025); }
     #view-home.home-edit .card-add-btn { display:flex; }
 
