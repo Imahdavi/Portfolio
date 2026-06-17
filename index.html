@@ -2353,7 +2353,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   function rnd(){_ws=Math.sin(_ws*127.1)*43758.5453;return _ws-Math.floor(_ws);}
   function easeOut(t){return 1-(1-t)*(1-t);}
 
-  function getScrollY(){ return document.querySelector('#view-home')?.scrollTop||0; }
+  let _scrollY=0;
+  document.addEventListener('scroll',e=>{if(e.target&&e.target.id==='view-home')_scrollY=e.target.scrollTop;},{passive:true,capture:true});
+  function getScrollY(){ return _scrollY; }
 
   class WebShot {
     constructor(sx,sy,tx,ty){
