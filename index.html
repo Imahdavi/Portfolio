@@ -319,6 +319,21 @@
     }
     #view-home.home-edit .home-edit-hint { display:block; animation:fadeUp .2s ease both; }
 
+    /* Card delete button */
+    .home-card-del { display:none; position:absolute; top:6px; right:6px; z-index:10; width:24px; height:24px; border-radius:50%; border:none; background:rgba(0,0,0,.52); color:#fff; font-size:16px; line-height:1; cursor:pointer; padding:0; align-items:center; justify-content:center; transition:background .15s; }
+    .home-card-del:hover { background:rgba(200,20,20,.85); }
+    #view-home.home-edit .home-card-del { display:flex; }
+
+    /* Add-card placeholder in grid */
+    .card-add-btn { display:none; flex-direction:column; align-items:center; justify-content:center; border:1.5px dashed rgba(0,0,0,.14); border-radius:16px; background:none; cursor:pointer; color:#ccc; font-size:30px; line-height:1; padding-bottom:28px; aspect-ratio:4/3; transition:all .2s; }
+    .card-add-btn:hover { border-color:rgba(0,0,0,.28); color:#888; background:rgba(0,0,0,.025); }
+    #view-home.home-edit .card-add-btn { display:flex; }
+
+    /* Add section button */
+    #home-add-sec-btn { display:none; margin-top:6px; padding:11px; border:1.5px dashed rgba(0,0,0,.13); border-radius:8px; background:none; font-size:13px; color:#bbb; cursor:pointer; transition:all .2s; width:100%; text-align:center; }
+    #home-add-sec-btn:hover { border-color:rgba(0,0,0,.28); color:#555; }
+    #view-home.home-edit #home-add-sec-btn { display:block; }
+
     /* Edit hint bar */
     .edit-hint {
       font-size:11.5px; color:#888; background:rgba(0,0,0,.05);
@@ -695,8 +710,9 @@
           </a>
     </div>
 
-    <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag cards to reorder</div>
+    <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
     <div id="home-sections"></div>
+    <button id="home-add-sec-btn" onclick="addHomeSection()">+ Add section</button>
   </div><!-- /view-home -->
 
 
@@ -1813,9 +1829,77 @@ function updateHomeEditUI() {
       el._homeKeyWired = true;
       el.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); el.blur(); } });
     });
+    // delete buttons on each card
+    homeEl.querySelectorAll('.proj-card').forEach(card => {
+      if (card.querySelector('.home-card-del')) return;
+      const del = document.createElement('button');
+      del.className = 'home-card-del';
+      del.textContent = '×';
+      del.addEventListener('click', e => { e.stopPropagation(); card.remove(); });
+      card.appendChild(del);
+    });
+    // + add button at end of each section grid
+    homeEl.querySelectorAll('.card-grid').forEach(grid => {
+      if (grid.querySelector('.card-add-btn')) return;
+      const btn = document.createElement('button');
+      btn.className = 'card-add-btn';
+      btn.textContent = '+';
+      btn.addEventListener('click', () => _addHomeCard(grid, btn));
+      grid.appendChild(btn);
+    });
   } else {
+    homeEl.querySelectorAll('.home-card-del, .card-add-btn').forEach(el => el.remove());
     saveHomeEdits();
   }
+}
+
+function _addHomeCard(grid, addBtn) {
+  const newKey = 'card-' + uid();
+  PROJECTS[newKey] = { name: 'New Project', sub: '', blocks: [{ id: uid(), type:'text', content:'' }] };
+  const el = document.createElement('div');
+  el.className = 'proj-card';
+  el.dataset.key = newKey;
+  el.onclick = () => openProject(newKey);
+  el.innerHTML = `<div class="proj-thumb" style="background:linear-gradient(135deg,#e8e0d8,#c8bdb4)"></div><div class="proj-title">New Project</div><div class="proj-sub"></div>`;
+  const del = document.createElement('button');
+  del.className = 'home-card-del';
+  del.textContent = '×';
+  del.addEventListener('click', e => { e.stopPropagation(); el.remove(); });
+  el.appendChild(del);
+  grid.insertBefore(el, addBtn);
+  ['proj-title','proj-sub'].forEach(cls => {
+    const f = el.querySelector('.'+cls);
+    f.contentEditable = 'true';
+    f._homeKeyWired = true;
+    f.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); f.blur(); } });
+  });
+  _initHomeCardDrag();
+  const titleEl = el.querySelector('.proj-title');
+  titleEl.focus();
+  const r = document.createRange(); r.selectNodeContents(titleEl);
+  const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+}
+
+function addHomeSection() {
+  const container = document.getElementById('home-sections');
+  const label = document.createElement('div');
+  label.className = 'sec-label';
+  label.textContent = 'New Section';
+  label.contentEditable = 'true';
+  label._homeKeyWired = true;
+  label.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); label.blur(); } });
+  const grid = document.createElement('div');
+  grid.className = 'card-grid sg';
+  const addBtn = document.createElement('button');
+  addBtn.className = 'card-add-btn';
+  addBtn.textContent = '+';
+  addBtn.addEventListener('click', () => _addHomeCard(grid, addBtn));
+  grid.appendChild(addBtn);
+  container.appendChild(label);
+  container.appendChild(grid);
+  label.focus();
+  const r = document.createRange(); r.selectNodeContents(label);
+  const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
 }
 
 let _homeDragCard = null;
