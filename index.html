@@ -592,10 +592,21 @@
 
     /* Block enter animation */
     @keyframes blockIn {
-      from { opacity:0; transform:translateY(32px); filter:blur(8px); }
+      from { opacity:0; transform:translateY(36px); filter:blur(10px); }
       to   { opacity:1; transform:none; filter:blur(0); }
     }
-    .block.block-enter { animation:blockIn .5s cubic-bezier(.22,.68,0,1.2) both; }
+    .block.block-enter { animation:blockIn .6s cubic-bezier(.25,.46,.45,.94) both; }
+
+    /* Scroll reveal — same feel, slightly shorter */
+    @keyframes blockReveal {
+      from { opacity:0; transform:translateY(28px); filter:blur(8px); }
+      to   { opacity:1; transform:none; filter:blur(0); }
+    }
+    .block.block-reveal { animation:blockReveal .52s cubic-bezier(.25,.46,.45,.94) both; }
+
+    /* Project view entry — fade only, no horizontal slide */
+    @keyframes fadeProject { from { opacity:0; } to { opacity:1; } }
+    .enter-project { animation: fadeProject .3s ease both; }
 
     /* Drop indicator — fixed position overlay, never inserted into grid */
     .drop-indicator {
@@ -1670,10 +1681,10 @@ function showView(toId, anim) {
   if (toId === current) return;
   document.getElementById(current).classList.remove('active');
   const to = document.getElementById(toId);
-  to.classList.remove('enter-r','enter-l','enter-fade');
+  to.classList.remove('enter-r','enter-l','enter-fade','enter-project');
   to.classList.add('active', anim);
   to.scrollTop = 0;
-  setTimeout(() => to.classList.remove(anim), 350);
+  setTimeout(() => to.classList.remove(anim), 400);
 
   to.querySelectorAll('.sg').forEach(sg => {
     sg.classList.remove('run');
@@ -1755,15 +1766,40 @@ async function openProject(key) {
   document.getElementById('d-sub').textContent   = p.sub  || '';
   renderBlocks(true);
   updateEditUI();
-  showView('view-project', 'enter-r');
+  showView('view-project', 'enter-project');
 }
 
 function closeProject() {
-  // stop all videos before leaving
+  teardownScrollReveal();
   document.querySelectorAll('#view-project video').forEach(v => { v.pause(); v.muted = true; });
   const navBtn = document.getElementById(NAV_MAP[prevMain] || 'nb-home');
   setNavActive(navBtn);
   showView(prevMain, 'enter-l');
+}
+
+let _revealObs = null;
+
+function teardownScrollReveal() {
+  if (_revealObs) { _revealObs.disconnect(); _revealObs = null; }
+}
+
+function setupScrollReveal() {
+  const viewEl = document.getElementById('view-project');
+  const blocks = Array.from(document.querySelectorAll('#block-list .block')).filter(b => !b.dataset.revealed);
+  if (!blocks.length) return;
+
+  _revealObs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const el = entry.target;
+      el.dataset.revealed = '1';
+      el.style.opacity = '';
+      el.classList.add('block-reveal');
+      _revealObs.unobserve(el);
+    });
+  }, { root: viewEl, threshold: 0.08, rootMargin: '0px 0px -10px 0px' });
+
+  blocks.forEach(b => _revealObs.observe(b));
 }
 
 /* ─── Edit mode ────────────────────────────────────────── */
@@ -2079,21 +2115,34 @@ function setBlockRowSpan(el) {
 
 /* ─── Render blocks ────────────────────────────────────── */
 function renderBlocks(animate) {
+  teardownScrollReveal();
   const list = document.getElementById('block-list');
-  // destroy any existing lottie instances before clearing
   const proj0 = PROJECTS[activeKey];
   if (proj0) proj0.blocks.forEach(b => { if (b._lottieInst) { try { b._lottieInst.destroy(); } catch(e){} b._lottieInst = null; } });
   list.innerHTML = '';
   const proj = PROJECTS[activeKey];
-  proj.blocks.forEach((b, i) => {
-    const el = makeBlockEl(b, proj);
-    list.appendChild(el);
-    if (animate) {
-      el.classList.add('block-enter');
-      el.style.animationDelay = (i * 55) + 'ms';
-    }
+  proj.blocks.forEach(b => list.appendChild(makeBlockEl(b, proj)));
+
+  requestAnimationFrame(() => {
+    list.querySelectorAll('.block').forEach(setBlockRowSpan);
+    if (!animate) return;
+    requestAnimationFrame(() => {
+      const viewEl = document.getElementById('view-project');
+      const viewBottom = viewEl.getBoundingClientRect().bottom;
+      let idx = 0;
+      list.querySelectorAll('.block').forEach(el => {
+        const top = el.getBoundingClientRect().top;
+        if (top < viewBottom + 40) {
+          el.classList.add('block-enter');
+          el.style.animationDelay = (idx++ * 60) + 'ms';
+          el.dataset.revealed = '1';
+        } else {
+          el.style.opacity = '0';
+        }
+      });
+      setupScrollReveal();
+    });
   });
-  requestAnimationFrame(() => list.querySelectorAll('.block').forEach(setBlockRowSpan));
 }
 
 function makeBlockEl(block, proj) {
