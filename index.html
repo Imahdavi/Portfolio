@@ -271,10 +271,32 @@
     .d-title:empty:before  { content:attr(data-ph); color:#bbb; }
     .d-subtitle:empty:before { content:attr(data-ph); color:#bbb; }
 
-    /* Edit nav button — admin only, project view only */
+    /* Edit nav button — admin only, home or project view */
     .edit-nav-btn { display:none !important; }
+    body.is-admin #app:has(#view-home.active) ~ #bottom-nav .edit-nav-btn,
     body.is-admin #app:has(#view-project.active) ~ #bottom-nav .edit-nav-btn { display:flex !important; }
     #editBtn.on { color:#111; }
+
+    /* Home edit mode */
+    #view-home.home-edit .profile-name,
+    #view-home.home-edit .profile-role,
+    #view-home.home-edit .sec-label {
+      outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px;
+      padding:2px 8px; cursor:text; min-width:30px; display:inline-block;
+    }
+    #view-home.home-edit .proj-card { cursor:grab; }
+    #view-home.home-edit .proj-card:active { cursor:grabbing; }
+    #view-home.home-edit .proj-card.drag-over { outline:2px solid rgba(0,0,0,.25); border-radius:16px; }
+    #view-home.home-edit .proj-title,
+    #view-home.home-edit .proj-sub {
+      outline:1px dashed rgba(0,0,0,.15); border-radius:3px; padding:1px 4px; cursor:text;
+    }
+    .home-edit-hint {
+      font-size:11.5px; color:#888; background:rgba(0,0,0,.05);
+      border-radius:8px; padding:8px 12px; margin-bottom:14px;
+      display:none;
+    }
+    #view-home.home-edit .home-edit-hint { display:block; animation:fadeUp .2s ease both; }
 
     /* Edit hint bar */
     .edit-hint {
@@ -506,7 +528,7 @@
 
     /* Scroll-to-top button — mirrors back-btn position on the right */
     #scroll-top-btn {
-      position:fixed; top:48px; right:max(10px, calc(50vw - 290px));
+      position:fixed; bottom:96px; right:max(10px, calc(50vw - 280px));
       width:40px; height:40px; border-radius:50%;
       background:rgba(255,255,255,0.88); border:1.5px solid rgba(0,0,0,0.13);
       box-shadow:0 2px 10px rgba(0,0,0,.10);
@@ -668,6 +690,7 @@
           </a>
     </div>
 
+    <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag cards to reorder</div>
     <div id="home-sections"></div>
   </div><!-- /view-home -->
 
@@ -1119,6 +1142,7 @@ function _getBrowser() {
 }
 
 async function trackView(project = null) {
+  if (document.body.classList.contains('is-admin')) return;
   const country = await _getCountry();
   fetch(`${SB_URL}/rest/v1/analytics`, {
     method: 'POST',
@@ -1502,6 +1526,7 @@ window.addEventListener('popstate', () => {
 });
 
 function goView(viewId, btn) {
+  if (editMode && current === 'view-home') { editMode = false; updateHomeEditUI(); }
   const fromIdx = MAIN_VIEWS.indexOf(current);
   const toIdx   = MAIN_VIEWS.indexOf(viewId);
   const anim    = fromIdx === -1 ? 'enter-r' : (toIdx >= fromIdx ? 'enter-r' : 'enter-l');
@@ -1519,9 +1544,11 @@ function setNavActive(btn) {
 let activeKey = null;
 
 async function openProject(key) {
+  if (editMode && current === 'view-home') return;
   activeKey = key;
   editMode  = false;
   prevMain  = current;
+  document.getElementById('scroll-top-btn').classList.remove('show');
   trackView(key);
   try {
     const res  = await fetch(`${SB_URL}/rest/v1/portfolio_projects?key=eq.${encodeURIComponent(key)}&select=data`, {
@@ -1551,7 +1578,8 @@ function closeProject() {
 /* ─── Edit mode ────────────────────────────────────────── */
 function toggleEdit() {
   editMode = !editMode;
-  updateEditUI();
+  if (current === 'view-home') updateHomeEditUI();
+  else updateEditUI();
 }
 
 function updateEditUI() {
@@ -1597,6 +1625,102 @@ function updateEditUI() {
       if (ev.key === 'Enter') { ev.preventDefault(); el.blur(); }
     }));
   }
+}
+
+/* ─── Home edit mode ────────────────────────────────────── */
+function updateHomeEditUI() {
+  const btn = document.getElementById('editBtn');
+  btn.classList.toggle('on', editMode);
+  document.getElementById('editLabel').textContent = editMode ? 'Done' : 'Edit';
+  const homeEl = document.getElementById('view-home');
+  homeEl.classList.toggle('home-edit', editMode);
+
+  const editables = [
+    document.querySelector('.profile-name'),
+    document.querySelector('.profile-role'),
+  ];
+  homeEl.querySelectorAll('.sec-label, .proj-title, .proj-sub').forEach(el => editables.push(el));
+
+  editables.forEach(el => {
+    if (!el) return;
+    el.contentEditable = editMode ? 'true' : 'false';
+  });
+
+  if (editMode) {
+    _initHomeCardDrag();
+    editables.forEach(el => {
+      if (!el || el._homeKeyWired) return;
+      el._homeKeyWired = true;
+      el.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); el.blur(); } });
+    });
+  } else {
+    saveHomeEdits();
+  }
+}
+
+let _homeDragCard = null;
+
+function _initHomeCardDrag() {
+  document.querySelectorAll('#home-sections .proj-card').forEach(card => {
+    if (card._homeDragWired) return;
+    card._homeDragWired = true;
+    card.draggable = true;
+    card.addEventListener('dragstart', e => {
+      _homeDragCard = card;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => card.style.opacity = '.4', 0);
+    });
+    card.addEventListener('dragend', () => {
+      card.style.opacity = '';
+      document.querySelectorAll('.proj-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+    });
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (_homeDragCard && _homeDragCard !== card) card.classList.add('drag-over');
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      if (!_homeDragCard || _homeDragCard === card) return;
+      const parent = card.parentNode;
+      const cards = [...parent.querySelectorAll('.proj-card')];
+      const fromIdx = cards.indexOf(_homeDragCard);
+      const toIdx   = cards.indexOf(card);
+      if (fromIdx < toIdx) parent.insertBefore(_homeDragCard, card.nextSibling);
+      else                  parent.insertBefore(_homeDragCard, card);
+      _homeDragCard = null;
+    });
+  });
+}
+
+function saveHomeEdits() {
+  if (!_cachedSettings) _cachedSettings = {};
+  if (!_cachedSettings.profile) _cachedSettings.profile = {};
+
+  const nameEl = document.querySelector('.profile-name');
+  const roleEl = document.querySelector('.profile-role');
+  if (nameEl) _cachedSettings.profile.name  = nameEl.textContent.trim();
+  if (roleEl) _cachedSettings.profile.title = roleEl.textContent.trim();
+
+  const sections = [];
+  document.querySelectorAll('#home-sections .sec-label').forEach(labelEl => {
+    const gridEl = labelEl.nextElementSibling;
+    const cards  = [];
+    gridEl?.querySelectorAll('.proj-card').forEach(cardEl => {
+      const key  = cardEl.dataset.key;
+      const name = cardEl.querySelector('.proj-title')?.textContent?.trim() || '';
+      const sub  = cardEl.querySelector('.proj-sub')?.textContent?.trim()  || '';
+      const thumb = cardEl.querySelector('.proj-thumb img')?.getAttribute('src') || '';
+      cards.push({ key, name, sub, ...(thumb ? { thumb } : {}) });
+      if (PROJECTS[key]) { PROJECTS[key].name = name; PROJECTS[key].sub = sub; }
+    });
+    sections.push({ title: labelEl.textContent.trim(), cards });
+  });
+  _cachedSettings.sections = sections;
+
+  sections.forEach(sec => sec.cards.forEach(c => syncProjectTitleToHome(c.key, c.name, c.sub)));
+  saveSettings();
 }
 
 /* ─── Row span for masonry layout ─────────────────────── */
@@ -2149,8 +2273,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const proj = document.getElementById('view-project');
   const btn  = document.getElementById('scroll-top-btn');
   proj.addEventListener('scroll', () => {
-    const atBottom = proj.scrollTop + proj.clientHeight >= proj.scrollHeight - 100;
-    btn.classList.toggle('show', atBottom);
+    btn.classList.toggle('show', proj.scrollTop > 200);
   });
 });
 
