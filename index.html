@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
@@ -2334,138 +2334,127 @@ document.addEventListener('DOMContentLoaded', async () => {
   cvs.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:8000;';
   document.body.appendChild(cvs);
   const ctx = cvs.getContext('2d');
+  function resize(){ cvs.width=window.innerWidth; cvs.height=window.innerHeight; }
+  resize(); window.addEventListener('resize',resize);
 
-  function resize(){ cvs.width = window.innerWidth; cvs.height = window.innerHeight; }
-  resize();
-  window.addEventListener('resize', resize);
-
-  function getAvatarSrc() {
-    const av = document.querySelector('#view-home .avatar');
-    if (!av) return { x: window.innerWidth * 0.5, y: 120 };
-    const r = av.getBoundingClientRect();
-    return { x: r.left + r.width * 0.5, y: r.bottom + 4 };
+  function getAvatarSrc(){
+    const av=document.querySelector('#view-home .avatar');
+    if(!av) return {x:window.innerWidth*.5,y:120};
+    const r=av.getBoundingClientRect();
+    return {x:r.left+r.width*.5, y:r.bottom+4};
   }
 
-  let _wseed = 77;
-  function rnd(){ _wseed = Math.sin(_wseed * 127.1) * 43758.5453; return _wseed - Math.floor(_wseed); }
-
-  function easeOut(t){ return 1 - (1-t)*(1-t); }
+  let _ws=91;
+  function rnd(){_ws=Math.sin(_ws*127.1)*43758.5453;return _ws-Math.floor(_ws);}
+  function easeOut(t){return 1-(1-t)*(1-t);}
 
   class WebShot {
-    constructor(sx, sy, tx, ty){
+    constructor(sx,sy,tx,ty){
       this.sx=sx; this.sy=sy; this.tx=tx; this.ty=ty;
-      this.t0 = performance.now();
-      this.TF=230; this.TE=480; this.TH=650; this.TD=480;
-      this.TOTAL = this.TF+this.TE+this.TH+this.TD;
-      this.alive = true;
-      this.maxR = 72;
+      this.t0=performance.now();
+      this.TF=220; this.TE=500; this.TH=650; this.TD=480;
+      this.TOTAL=this.TF+this.TE+this.TH+this.TD;
+      this.alive=true;
+      this.maxR=68;
 
-      // Open web: spread ~260° facing AWAY from source
-      const shotDir = Math.atan2(ty-sy, tx-sx);
-      const SPAN = Math.PI * 260/180;
-      const startA = shotDir - SPAN/2;
-      const NR = 9;
-      this.ang = Array.from({length:NR}, (_,i) =>
-        startA + SPAN * i/(NR-1) + (rnd()-0.5)*0.18
-      );
-      this.RD = [14, 27, 41, 54, 66];
+      // Angular spread: 230deg open web, gap faces source
+      const dir=Math.atan2(ty-sy,tx-sx);
+      const SPAN=Math.PI*230/180;
+      const s=dir-SPAN/2;
+      // 8 non-uniform radials (denser toward middle)
+      const pts=[0,.11,.23,.37,.52,.66,.79,.90,1];
+      this.NR=pts.length;
+      this.ang=pts.map(t=>s+SPAN*t+(rnd()-.5)*.13);
 
-      // 2-3 extra-long frame threads
-      this.frameAng = [
-        startA + SPAN*0.05 + (rnd()-0.5)*0.12,
-        startA + SPAN*0.50 + (rnd()-0.5)*0.12,
-        startA + SPAN*0.95 + (rnd()-0.5)*0.12,
-      ];
-      this.frameLen = this.maxR * (1.55 + rnd()*0.35);
+      // Each radial has own length — edge + 1-2 middle ones extend past rings
+      this.rLen=this.ang.map((_,i)=>{
+        if(i===0||i===this.NR-1) return this.maxR*(1.55+rnd()*.30);
+        if(i===1||i===this.NR-2) return this.maxR*(1.22+rnd()*.15);
+        if(i===Math.floor(this.NR/2)) return this.maxR*(1.30+rnd()*.15);
+        return this.maxR*(.95+rnd()*.10);
+      });
 
-      // Rope curve control point
-      const dx=tx-sx, dy=ty-sy, L=Math.sqrt(dx*dx+dy*dy)||1;
-      const nx=-dy/L, ny=dx/L, bend=(rnd()-0.5)*40;
-      this.cpx = (sx+tx)/2 + nx*bend;
-      this.cpy = (sy+ty)/2 + ny*bend;
+      // 5 ring distances
+      this.RD=[13,25,38,51,63];
+
+      // Rope bezier control point
+      const dx=tx-sx,dy=ty-sy,L=Math.sqrt(dx*dx+dy*dy)||1;
+      const nx=-dy/L,ny=dx/L,bend=(rnd()-.5)*38;
+      this.cpx=(sx+tx)/2+nx*bend;
+      this.cpy=(sy+ty)/2+ny*bend;
     }
 
-    drawRope(fx, fy, ex, ey, cpx, cpy, alpha){
-      const dx=ex-fx, dy=ey-fy, L=Math.sqrt(dx*dx+dy*dy)||1;
-      const nx=-dy/L, ny=dx/L;
+    drawRope(fx,fy,ex,ey,cpx,cpy,a){
+      const dx=ex-fx,dy=ey-fy,L=Math.sqrt(dx*dx+dy*dy)||1;
+      const nx=-dy/L,ny=dx/L;
       ctx.strokeStyle='#0c0a08';
-      // center strand
-      ctx.lineWidth=1.7; ctx.globalAlpha=alpha*0.88;
+      ctx.lineWidth=1.75; ctx.globalAlpha=a*.88;
       ctx.beginPath(); ctx.moveTo(fx,fy);
       ctx.quadraticCurveTo(cpx,cpy,ex,ey); ctx.stroke();
-      // side strands
-      [-2.6,2.6].forEach(off=>{
-        ctx.lineWidth=0.45; ctx.globalAlpha=alpha*0.28;
+      [-2.8,2.8].forEach(o=>{
+        ctx.lineWidth=.45; ctx.globalAlpha=a*.28;
         ctx.beginPath();
-        ctx.moveTo(fx+nx*off, fy+ny*off);
-        ctx.quadraticCurveTo(cpx+nx*off, cpy+ny*off, ex+nx*off, ey+ny*off);
+        ctx.moveTo(fx+nx*o,fy+ny*o);
+        ctx.quadraticCurveTo(cpx+nx*o,cpy+ny*o,ex+nx*o,ey+ny*o);
         ctx.stroke();
       });
     }
 
     draw(now){
-      const age = now - this.t0;
-      if(age >= this.TOTAL){ this.alive=false; return; }
-      const flyT = Math.min(1, age/this.TF);
-      const expT = age>this.TF ? Math.min(1,(age-this.TF)/this.TE) : 0;
-      const fadeT = age>this.TF+this.TE+this.TH ? (age-this.TF-this.TE-this.TH)/this.TD : 0;
-      const alpha = Math.max(0, 1-fadeT);
+      const age=now-this.t0;
+      if(age>=this.TOTAL){this.alive=false;return;}
+      const flyT=Math.min(1,age/this.TF);
+      const expT=age>this.TF?Math.min(1,(age-this.TF)/this.TE):0;
+      const fadeT=age>this.TF+this.TE+this.TH?(age-this.TF-this.TE-this.TH)/this.TD:0;
+      const alpha=Math.max(0,1-fadeT);
 
-      ctx.save();
-      ctx.lineCap='round'; ctx.lineJoin='round';
+      ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
 
       // Flying rope (partial bezier)
       const u=1-flyT;
-      const ex = u*u*this.sx + 2*u*flyT*this.cpx + flyT*flyT*this.tx;
-      const ey = u*u*this.sy + 2*u*flyT*this.cpy + flyT*flyT*this.ty;
-      const subCpx = (1-flyT)*this.sx + flyT*this.cpx;
-      const subCpy = (1-flyT)*this.sy + flyT*this.cpy;
-      this.drawRope(this.sx, this.sy, ex, ey, subCpx, subCpy, alpha);
+      const ex=u*u*this.sx+2*u*flyT*this.cpx+flyT*flyT*this.tx;
+      const ey=u*u*this.sy+2*u*flyT*this.cpy+flyT*flyT*this.ty;
+      const scx=(1-flyT)*this.sx+flyT*this.cpx;
+      const scy=(1-flyT)*this.sy+flyT*this.cpy;
+      this.drawRope(this.sx,this.sy,ex,ey,scx,scy,alpha);
 
-      if(expT <= 0){ ctx.restore(); return; }
-      const R = this.maxR * easeOut(expT);
+      if(expT<=0){ctx.restore();return;}
+      const R=this.maxR*easeOut(expT);
 
       ctx.strokeStyle='#0c0a08';
-
       // Anchor dot
-      ctx.fillStyle='#0c0a08'; ctx.globalAlpha=alpha*0.80;
-      ctx.beginPath(); ctx.arc(this.tx,this.ty,2.0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#0c0a08'; ctx.globalAlpha=alpha*.80;
+      ctx.beginPath(); ctx.arc(this.tx,this.ty,2.2,0,Math.PI*2); ctx.fill();
 
-      // Frame threads (longer radials, no rings)
-      ctx.lineWidth=0.90;
-      this.frameAng.forEach(a=>{
-        ctx.globalAlpha=alpha*0.55;
+      // Radials — each with own length, some extend past rings
+      ctx.lineWidth=.88;
+      this.ang.forEach((a,i)=>{
+        const len=Math.min(R*this.rLen[i]/this.maxR, this.rLen[i]);
+        ctx.globalAlpha=alpha*(this.rLen[i]>this.maxR?0.72:0.84);
         ctx.beginPath();
         ctx.moveTo(this.tx,this.ty);
-        ctx.lineTo(this.tx+Math.cos(a)*Math.min(R*1.5,this.frameLen), this.ty+Math.sin(a)*Math.min(R*1.5,this.frameLen));
+        ctx.lineTo(this.tx+Math.cos(a)*len, this.ty+Math.sin(a)*len);
         ctx.stroke();
       });
 
-      // Regular radials
-      ctx.lineWidth=0.85;
-      this.ang.forEach(a=>{
-        ctx.globalAlpha=alpha*0.82;
-        ctx.beginPath();
-        ctx.moveTo(this.tx,this.ty);
-        ctx.lineTo(this.tx+Math.cos(a)*R, this.ty+Math.sin(a)*R);
-        ctx.stroke();
-      });
-
-      // Ring arcs — OPEN (ai < NR-1, never wrap to first)
+      // Ring arcs — OPEN (no wrap), arc bow = exact circular arc formula
       this.RD.forEach((rd,ri)=>{
-        if(R < rd*0.82) return;
-        const rev = Math.min(1,(R-rd*0.82)/(rd*0.18+3));
-        ctx.globalAlpha = alpha*0.76*rev;
-        ctx.lineWidth = Math.max(0.32, 0.70-ri*0.09);
-        for(let ai=0; ai < this.ang.length-1; ai++){
+        if(R<rd*.80) return;
+        const rev=Math.min(1,(R-rd*.80)/(rd*.20+4));
+        ctx.globalAlpha=alpha*.78*rev;
+        ctx.lineWidth=Math.max(.30, .68-ri*.08);
+        for(let ai=0;ai<this.ang.length-1;ai++){
           const a1=this.ang[ai], a2=this.ang[ai+1];
           const x1=this.tx+Math.cos(a1)*rd, y1=this.ty+Math.sin(a1)*rd;
           const x2=this.tx+Math.cos(a2)*rd, y2=this.ty+Math.sin(a2)*rd;
-          const diff=((a2-a1)+Math.PI*2)%(Math.PI*2);
-          const ma=a1+diff*0.5;
-          const bow=1.10+ri*0.015;
+          const diff=a2-a1;
+          const ma=a1+diff*.5;
+          // Circular arc bezier: control point factor = 1/cos(half-angle)
+          const bow=1/Math.cos(diff*.5);
+          // Slight gravity sag on outer rings (downward offset)
+          const sagY=(ri+1)*1.8;
           const cpx=this.tx+Math.cos(ma)*rd*bow;
-          const cpy=this.ty+Math.sin(ma)*rd*bow;
+          const cpy=this.ty+Math.sin(ma)*rd*bow+sagY;
           ctx.beginPath(); ctx.moveTo(x1,y1);
           ctx.quadraticCurveTo(cpx,cpy,x2,y2); ctx.stroke();
         }
@@ -2476,28 +2465,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const shots=[];
-  (function loop(now){ ctx.clearRect(0,0,cvs.width,cvs.height);
-    for(let i=shots.length-1;i>=0;i--){ shots[i].draw(now); if(!shots[i].alive) shots.splice(i,1); }
+  (function loop(now){
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    for(let i=shots.length-1;i>=0;i--){shots[i].draw(now);if(!shots[i].alive)shots.splice(i,1);}
     requestAnimationFrame(loop);
   })(0);
 
-  function tryShoot(cx, cy){
-    if(typeof current !== 'undefined' && current !== 'view-home') return;
-    const src = getAvatarSrc();
-    const dx=cx-src.x, dy=cy-src.y;
-    if(dx*dx+dy*dy < 52*52) return;
-    shots.push(new WebShot(src.x, src.y, cx, cy));
+  function tryShoot(cx,cy){
+    if(typeof current!=='undefined'&&current!=='view-home') return;
+    const src=getAvatarSrc();
+    const dx=cx-src.x,dy=cy-src.y;
+    if(dx*dx+dy*dy<52*52) return;
+    shots.push(new WebShot(src.x,src.y,cx,cy));
   }
 
-  document.addEventListener('click', e=>{
+  document.addEventListener('click',e=>{
     if(e.target.closest('button,a,input,.nav-btn,.pill')) return;
-    tryShoot(e.clientX, e.clientY);
+    tryShoot(e.clientX,e.clientY);
   });
-  document.addEventListener('touchend', e=>{
+  document.addEventListener('touchend',e=>{
     if(e.target.closest('button,a,input,.nav-btn,.pill')) return;
     const t=e.changedTouches[0];
-    tryShoot(t.clientX, t.clientY);
-  }, {passive:true});
+    tryShoot(t.clientX,t.clientY);
+  },{passive:true});
 })();
 </script>
 </body>
