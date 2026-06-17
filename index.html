@@ -830,18 +830,21 @@
 /* ─── Spider-sense click effect ─────────────────────────── */
 (function(){
   const s = document.createElement('style');
+  s.id = 'ss-kf';
   s.textContent = '@keyframes ss{0%{transform:scale(.12);opacity:1}40%{transform:scale(1);opacity:.85}100%{transform:scale(2.4);opacity:0}}';
   document.head.appendChild(s);
 })();
 function spiderSense(x, y) {
+  const S = 55;
   const ns = 'http://www.w3.org/2000/svg';
   const el = document.createElementNS(ns, 'svg');
-  el.style.cssText = `position:fixed;left:${x}px;top:${y}px;overflow:visible;pointer-events:none;z-index:99998;width:0;height:0;transform-origin:0 0;animation:ss .55s ease-out forwards`;
+  el.setAttribute('viewBox', `-${S} -${S} ${S*2} ${S*2}`);
+  el.style.cssText = `position:fixed;left:${x-S}px;top:${y-S}px;width:${S*2}px;height:${S*2}px;pointer-events:none;z-index:99998;animation:ss .55s ease-out forwards`;
   const count = 5;
   for (let i = 0; i < count; i++) {
     const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
-    const bx = Math.cos(angle) * 18;
-    const by = Math.sin(angle) * 18;
+    const bx = Math.cos(angle) * 22;
+    const by = Math.sin(angle) * 22;
     const deg = angle * 180 / Math.PI + 90;
     const g = document.createElementNS(ns, 'g');
     g.setAttribute('transform', `translate(${bx.toFixed(1)},${by.toFixed(1)}) rotate(${deg.toFixed(1)})`);
