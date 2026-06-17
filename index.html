@@ -192,6 +192,14 @@
     .exp-co   { font-size:16px; font-weight:600; margin-bottom:3px; }
     .exp-role { font-size:13px; color:#555; margin-bottom:1px; }
     .exp-date { font-size:12.5px; color:#999; }
+    .brand-strip { background:#111; border-radius:16px; margin-top:32px; padding:22px 0; overflow:hidden; position:relative; }
+    .brand-strip-label { font-size:10px; letter-spacing:.12em; color:rgba(255,255,255,.3); text-align:center; text-transform:uppercase; margin-bottom:16px; }
+    .brand-track { display:flex; width:max-content; animation:brand-scroll 22s linear infinite; }
+    .brand-track:hover { animation-play-state:paused; }
+    .brand-item { font-size:15px; font-weight:500; color:rgba(255,255,255,.45); padding:0 32px; white-space:nowrap; letter-spacing:.01em; transition:color .2s; cursor:default; }
+    .brand-item:hover { color:rgba(255,255,255,.9); }
+    .brand-sep { color:rgba(255,255,255,.15); padding:0; }
+    @keyframes brand-scroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
 
     /* ─────────────────── SOON PAGE ─────────────────── */
     .soon-wrap { display:flex; align-items:center; justify-content:center; min-height:calc(100dvh - 160px); }
@@ -707,6 +715,10 @@
         <div class="exp-item"><div class="exp-co">Vam30</div><div class="exp-role">Visual &amp; Motion Designer</div><div class="exp-date">2022 — 2024</div></div>
         <div class="exp-item"><div class="exp-co">Freelance</div><div class="exp-role">Visual &amp; Motion Designer</div><div class="exp-date">2022 — 2024</div></div>
       </div>
+    <div class="brand-strip">
+      <div class="brand-strip-label">brands & clients</div>
+      <div class="brand-track" id="brand-track"></div>
+    </div>
   </div><!-- /view-exp -->
 
 
@@ -1389,6 +1401,16 @@ function renderWorkExp(items) {
     container.appendChild(el);
   });
 }
+
+/* ─── Brand marquee ───────────────────────────────────── */
+(function(){
+  const BRANDS = ['Lina','Tosan Tools','Vam30','Netbina','Persil','Tazh','3Engine','Monly','Digit'];
+  const track = document.getElementById('brand-track');
+  if (!track) return;
+  const SEP = '<span class="brand-sep">·</span>';
+  const html = BRANDS.map(b=>`<span class="brand-item">${b}</span>${SEP}`).join('');
+  track.innerHTML = html + html; // duplicate for infinite loop
+})();
 
 /* ─── Render home sections dynamically ────────────────── */
 function renderHomeSections(sections) {
