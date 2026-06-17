@@ -2353,14 +2353,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   function rnd(){_ws=Math.sin(_ws*127.1)*43758.5453;return _ws-Math.floor(_ws);}
   function easeOut(t){return 1-(1-t)*(1-t);}
 
-  let _scrollY=0;
-  document.addEventListener('scroll',e=>{if(e.target&&e.target.id==='view-home')_scrollY=e.target.scrollTop;},{passive:true,capture:true});
-  function getScrollY(){ return _scrollY; }
-
   class WebShot {
     constructor(sx,sy,tx,ty){
       this.sx=sx; this.sy=sy; this.tx=tx; this.ty=ty;
-      this.scroll0=getScrollY();
       this.t0=performance.now();
       this.TF=220; this.TE=500; this.TH=650; this.TD=480;
       this.TOTAL=this.TF+this.TE+this.TH+this.TD;
@@ -2410,8 +2405,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const fadeT=age>this.TF+this.TE+this.TH?(age-this.TF-this.TE-this.TH)/this.TD:0;
       const alpha=Math.max(0,1-fadeT);
 
-      const scrollDelta=getScrollY()-this.scroll0;
-      ctx.save(); ctx.translate(0,-scrollDelta); ctx.lineCap='round'; ctx.lineJoin='round';
+      ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
 
       // Flying rope (partial bezier)
       const u=1-flyT;
