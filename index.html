@@ -835,22 +835,25 @@
   document.head.appendChild(s);
 })();
 function spiderSense(x, y) {
-  const S = 55;
+  const S = 48;
   const ns = 'http://www.w3.org/2000/svg';
   const el = document.createElementNS(ns, 'svg');
   el.setAttribute('viewBox', `-${S} -${S} ${S*2} ${S*2}`);
-  el.style.cssText = `position:fixed;left:${x-S}px;top:${y-S}px;width:${S*2}px;height:${S*2}px;pointer-events:none;z-index:99998;animation:ss .55s ease-out forwards`;
-  const count = 5;
-  for (let i = 0; i < count; i++) {
-    const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
-    const bx = Math.cos(angle) * 22;
-    const by = Math.sin(angle) * 22;
+  el.style.cssText = `position:fixed;left:${x-S}px;top:${y-S}px;width:${S*2}px;height:${S*2}px;pointer-events:none;z-index:99998;animation:ss .52s ease-out forwards`;
+  const colors = ['#e31e24','#0047ab','#e31e24','#0047ab','#e31e24'];
+  const tilt = -Math.PI / 9; // ~20° tilt toward upper-left (spider faces that way)
+  const r = 16;
+  for (let i = 0; i < 5; i++) {
+    // upper semicircle: left → upper-left → top → upper-right → right, then tilted
+    const angle = Math.PI + (i / 4) * Math.PI + tilt;
+    const bx = Math.cos(angle) * r;
+    const by = Math.sin(angle) * r;
     const deg = angle * 180 / Math.PI + 90;
     const g = document.createElementNS(ns, 'g');
     g.setAttribute('transform', `translate(${bx.toFixed(1)},${by.toFixed(1)}) rotate(${deg.toFixed(1)})`);
     const p = document.createElementNS(ns, 'polygon');
-    p.setAttribute('points', '3,-10 -5,2 0,2 -3,10 5,-2 0,-2');
-    p.setAttribute('fill', 'black');
+    p.setAttribute('points', '3,-9 -4,0 0,0 -3,9 4,0 0,0');
+    p.setAttribute('fill', colors[i]);
     g.appendChild(p);
     el.appendChild(g);
   }
