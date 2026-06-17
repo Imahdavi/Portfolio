@@ -2385,19 +2385,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     drawRope(fx,fy,ex,ey,cpx,cpy,a){
-      const dx=ex-fx,dy=ey-fy,L=Math.sqrt(dx*dx+dy*dy)||1;
-      const nx=-dy/L,ny=dx/L;
-      ctx.strokeStyle='#0c0a08';
-      ctx.lineWidth=1.75; ctx.globalAlpha=a*.88;
+      ctx.strokeStyle='rgba(12,10,8,'+a+')';
+      ctx.lineWidth=1.8;
+      ctx.globalAlpha=1;
       ctx.beginPath(); ctx.moveTo(fx,fy);
       ctx.quadraticCurveTo(cpx,cpy,ex,ey); ctx.stroke();
-      [-2.8,2.8].forEach(o=>{
-        ctx.lineWidth=.45; ctx.globalAlpha=a*.28;
-        ctx.beginPath();
-        ctx.moveTo(fx+nx*o,fy+ny*o);
-        ctx.quadraticCurveTo(cpx+nx*o,cpy+ny*o,ex+nx*o,ey+ny*o);
-        ctx.stroke();
-      });
     }
 
     draw(now){
@@ -2479,15 +2471,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     shots.push(new WebShot(src.x,src.y,cx,cy));
   }
 
-  document.addEventListener('click',e=>{
-    if(e.target.closest('button,a,input,.nav-btn,.pill')) return;
-    tryShoot(e.clientX,e.clientY);
-  });
+  let _tx=0,_ty=0,_lastTouch=0;
+  document.addEventListener('touchstart',e=>{
+    const t=e.touches[0]; _tx=t.clientX; _ty=t.clientY;
+  },{passive:true});
   document.addEventListener('touchend',e=>{
     if(e.target.closest('button,a,input,.nav-btn,.pill')) return;
     const t=e.changedTouches[0];
+    const dx=t.clientX-_tx, dy=t.clientY-_ty;
+    if(dx*dx+dy*dy>12*12) return; // was a scroll, not a tap
+    _lastTouch=Date.now();
     tryShoot(t.clientX,t.clientY);
   },{passive:true});
+  document.addEventListener('click',e=>{
+    if(Date.now()-_lastTouch<600) return; // suppress ghost click after touch
+    if(e.target.closest('button,a,input,.nav-btn,.pill')) return;
+    tryShoot(e.clientX,e.clientY);
+  });
 })();
 </script>
 </body>
