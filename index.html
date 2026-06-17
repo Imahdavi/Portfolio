@@ -189,10 +189,21 @@
     .exp-item:last-child { border-bottom:none; }
     #sg-exp:has(.exp-item:hover) .exp-item:not(:hover) { opacity:.38; transform:translateX(-3px); }
     .exp-item:hover { transform:translateX(6px); }
-    .exp-date { font-size:11px; color:#bbb; min-width:90px; text-align:center; flex-shrink:0; line-height:1.4; }
+    .exp-date { display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#bbb; min-width:100px; flex-shrink:0; line-height:1.4; gap:4px; }
+    .exp-y1 { text-align:left; }
+    .exp-y2 { text-align:right; }
     .exp-info { flex:1; }
     .exp-co   { font-size:15px; font-weight:600; margin-bottom:2px; }
     .exp-role { font-size:12.5px; color:#666; }
+    .exp-edit-del { display:none; width:22px; height:22px; min-width:22px; border-radius:50%; border:none; background:rgba(210,40,40,.1); color:#c44; font-size:16px; line-height:1; cursor:pointer; flex-shrink:0; padding:0; transition:background .18s; }
+    .exp-edit-del:hover { background:rgba(210,40,40,.22); }
+    #sg-exp.exp-edit-on .exp-edit-del { display:flex; align-items:center; justify-content:center; }
+    #sg-exp.exp-edit-on .exp-item:hover { transform:none; }
+    #sg-exp.exp-edit-on:has(.exp-item:hover) .exp-item:not(:hover) { opacity:1; transform:none; }
+    #sg-exp.exp-edit-on [contenteditable="true"] { outline:none; border-bottom:1px dashed rgba(0,0,0,.2); min-width:12px; }
+    .exp-add-btn { display:none; width:100%; margin-top:14px; padding:11px; border:1.5px dashed rgba(0,0,0,.15); border-radius:8px; background:none; font-size:13px; color:#aaa; cursor:pointer; transition:all .2s; }
+    .exp-add-btn:hover { border-color:rgba(0,0,0,.3); color:#555; }
+    .exp-add-btn.show { display:block; }
     .brand-grid-wrap { margin-top:36px; padding-top:28px; border-top:1px solid rgba(0,0,0,.07); }
     .brand-grid-label { font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:#ccc; text-align:center; margin-bottom:22px; }
     .brand-grid { display:flex; flex-wrap:wrap; gap:18px 24px; justify-content:center; align-items:center; }
@@ -693,13 +704,14 @@
   <div class="view" id="view-exp">
     <div class="exp-title">Work experience</div>
     <div class="sg" id="sg-exp">
-        <div class="exp-item"><div class="exp-date">2024 — Present</div><div class="exp-info"><div class="exp-co">Lina</div><div class="exp-role">Visual &amp; Motion Designer / Editor</div></div></div>
-        <div class="exp-item"><div class="exp-date">2022 — Present</div><div class="exp-info"><div class="exp-co">Netbina</div><div class="exp-role">Motion Designer</div></div></div>
-        <div class="exp-item"><div class="exp-date">2021 — Present</div><div class="exp-info"><div class="exp-co">Doran Office</div><div class="exp-role">Motion Designer</div></div></div>
-        <div class="exp-item"><div class="exp-date">2024 — 2025</div><div class="exp-info"><div class="exp-co">Tosan Tools</div><div class="exp-role">Motion Designer / Editor</div></div></div>
-        <div class="exp-item"><div class="exp-date">2022 — 2024</div><div class="exp-info"><div class="exp-co">Vam30</div><div class="exp-role">Visual &amp; Motion Designer</div></div></div>
-        <div class="exp-item"><div class="exp-date">2022 — 2024</div><div class="exp-info"><div class="exp-co">Freelance</div><div class="exp-role">Visual &amp; Motion Designer</div></div></div>
+        <div class="exp-item"><div class="exp-date"><span class="exp-y1">2024</span><span class="exp-y2">Present</span></div><div class="exp-info"><div class="exp-co">Lina</div><div class="exp-role">Visual &amp; Motion Designer / Editor</div></div><button class="exp-edit-del" tabindex="-1">×</button></div>
+        <div class="exp-item"><div class="exp-date"><span class="exp-y1">2022</span><span class="exp-y2">Present</span></div><div class="exp-info"><div class="exp-co">Netbina</div><div class="exp-role">Motion Designer</div></div><button class="exp-edit-del" tabindex="-1">×</button></div>
+        <div class="exp-item"><div class="exp-date"><span class="exp-y1">2021</span><span class="exp-y2">Present</span></div><div class="exp-info"><div class="exp-co">Doran Office</div><div class="exp-role">Motion Designer</div></div><button class="exp-edit-del" tabindex="-1">×</button></div>
+        <div class="exp-item"><div class="exp-date"><span class="exp-y1">2024</span><span class="exp-y2">2025</span></div><div class="exp-info"><div class="exp-co">Tosan Tools</div><div class="exp-role">Motion Designer / Editor</div></div><button class="exp-edit-del" tabindex="-1">×</button></div>
+        <div class="exp-item"><div class="exp-date"><span class="exp-y1">2022</span><span class="exp-y2">2024</span></div><div class="exp-info"><div class="exp-co">Vam30</div><div class="exp-role">Visual &amp; Motion Designer</div></div><button class="exp-edit-del" tabindex="-1">×</button></div>
+        <div class="exp-item"><div class="exp-date"><span class="exp-y1">2022</span><span class="exp-y2">2024</span></div><div class="exp-info"><div class="exp-co">Freelance</div><div class="exp-role">Visual &amp; Motion Designer</div></div><button class="exp-edit-del" tabindex="-1">×</button></div>
       </div>
+    <button id="exp-add-btn" class="exp-add-btn" onclick="addExpItem()">+ Add experience</button>
     <div class="brand-grid-wrap">
       <div class="brand-grid-label">brands & clients</div>
       <div class="brand-grid" id="brand-grid"></div>
@@ -1411,7 +1423,7 @@ function renderWorkExp(items) {
   items.forEach(item => {
     const el = document.createElement('div');
     el.className = 'exp-item';
-    el.innerHTML = `<div class="exp-date">${item.from||''} — ${item.to||''}</div><div class="exp-info"><div class="exp-co">${item.company||''}</div><div class="exp-role">${item.role||''}</div></div>`;
+    el.innerHTML = `<div class="exp-date"><span class="exp-y1">${item.from||''}</span><span class="exp-y2">${item.to||''}</span></div><div class="exp-info"><div class="exp-co">${item.company||''}</div><div class="exp-role">${item.role||''}</div></div><button class="exp-edit-del" tabindex="-1">×</button>`;
     container.appendChild(el);
   });
 }
@@ -1667,7 +1679,67 @@ function closeProject() {
 function toggleEdit() {
   editMode = !editMode;
   if (current === 'view-home') updateHomeEditUI();
+  else if (current === 'view-exp') updateExpEditUI();
   else updateEditUI();
+}
+
+function updateExpEditUI() {
+  const btn = document.getElementById('editBtn');
+  btn.classList.toggle('on', editMode);
+  document.getElementById('editLabel').textContent = editMode ? 'Done' : 'Edit';
+  const container = document.getElementById('sg-exp');
+  const addBtn    = document.getElementById('exp-add-btn');
+  container.classList.toggle('exp-edit-on', editMode);
+  addBtn.classList.toggle('show', editMode);
+  container.querySelectorAll('.exp-co, .exp-role, .exp-y1, .exp-y2').forEach(el => {
+    el.contentEditable = editMode ? 'true' : 'false';
+  });
+  if (editMode) {
+    _wireExpDelBtns();
+  } else {
+    saveExpEdits();
+  }
+}
+
+function _wireExpDelBtns() {
+  document.querySelectorAll('#sg-exp .exp-edit-del').forEach(b => {
+    if (b._delWired) return;
+    b._delWired = true;
+    b.addEventListener('click', () => b.closest('.exp-item').remove());
+  });
+}
+
+function saveExpEdits() {
+  if (!_cachedSettings) _cachedSettings = {};
+  const items = [];
+  document.querySelectorAll('#sg-exp .exp-item').forEach(item => {
+    items.push({
+      from:    item.querySelector('.exp-y1')?.textContent.trim() || '',
+      to:      item.querySelector('.exp-y2')?.textContent.trim() || '',
+      company: item.querySelector('.exp-co')?.textContent.trim() || '',
+      role:    item.querySelector('.exp-role')?.textContent.trim() || '',
+    });
+  });
+  _cachedSettings.experience = items;
+  saveSettings();
+}
+
+function addExpItem() {
+  const container = document.getElementById('sg-exp');
+  const el = document.createElement('div');
+  el.className = 'exp-item';
+  el.innerHTML = `<div class="exp-date"><span class="exp-y1">Year</span><span class="exp-y2">Present</span></div><div class="exp-info"><div class="exp-co">Company</div><div class="exp-role">Role</div></div><button class="exp-edit-del" tabindex="-1">×</button>`;
+  container.appendChild(el);
+  const delBtn = el.querySelector('.exp-edit-del');
+  delBtn._delWired = true;
+  delBtn.addEventListener('click', () => el.remove());
+  el.querySelectorAll('.exp-co,.exp-role,.exp-y1,.exp-y2').forEach(e => { e.contentEditable = 'true'; });
+  const co = el.querySelector('.exp-co');
+  co.focus();
+  const range = document.createRange();
+  range.selectNodeContents(co);
+  window.getSelection().removeAllRanges();
+  window.getSelection().addRange(range);
 }
 
 function updateEditUI() {
