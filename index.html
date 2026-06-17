@@ -627,37 +627,21 @@
       #site-cursor {
         display:block; will-change:transform; opacity:0; transition:opacity .2s;
       }
-      #site-cursor svg { display:block; transition:transform .12s cubic-bezier(.34,1.56,.64,1); }
-      #site-cursor.pressing svg { transform:scale(.8); }
-      .cur-ripple {
-        position:fixed; pointer-events:none; z-index:99998;
-        width:28px; height:28px; border-radius:50%;
-        border:1.5px solid rgba(0,0,0,.25);
-        animation:curRipple .5s cubic-bezier(.25,.46,.45,.94) forwards;
-      }
-      @keyframes curRipple {
-        0%   { transform:translate(-50%,-50%) scale(0); opacity:.65; }
-        100% { transform:translate(-50%,-50%) scale(3.2); opacity:0; }
-      }
+      #site-cursor svg { display:block; transform:translate(-14px,-19px); transition:transform .12s cubic-bezier(.34,1.56,.64,1); }
+      #site-cursor.pressing svg { transform:translate(-14px,-19px) scale(.82); }
     }
   </style>
 </head>
 <body>
 <div id="site-cursor">
-  <svg width="24" height="34" viewBox="0 0 48.34 67.54" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="cur-grad" x1="34.13" y1="59.04" x2="-2.73" y2="-4.81" gradientUnits="userSpaceOnUse">
-        <stop offset="0" stop-color="#000"/>
-        <stop offset=".42" stop-color="#030708"/>
-        <stop offset=".58" stop-color="#0d1e26"/>
-        <stop offset=".69" stop-color="#204557"/>
-        <stop offset=".78" stop-color="#3a7e9f"/>
-        <stop offset=".86" stop-color="#5cc7fb"/>
-      </linearGradient>
-    </defs>
-    <polygon fill="url(#cur-grad)" points="28.25 44.42 35.36 57.79 43.99 59.74 35.37 44.21 37.74 31.15 40.4 32.56 42.27 27.39 0 0 3.02 50.89 9.27 53.27 9.27 50.03 30.41 56.29 25.23 46.8 28.25 44.42"/>
-    <polygon fill="#0c0c0c" points="22.84 56.29 25.41 62.19 34.23 64.25 31.3 58.76 22.84 56.29"/>
-    <polygon fill="#0c0c0c" points="36.93 60.69 39.38 65.5 48.34 67.54 45.46 62.42 36.93 60.69"/>
+  <svg width="28" height="33" viewBox="0 0 171 205" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs><clipPath id="spc0"><rect width="170.09" height="204.61"/></clipPath></defs>
+    <g clip-path="url(#spc0)">
+      <path d="M74.19 118.04L96.77 133.94C97.53 134.48 98.56 133.81 98.39 132.9L93.92 109.23L129.21 106.94L170.08 164.81L131.65 104L131.13 103.17H130.05L90.72 103.51L85.24 99.24L105.59 84.69L122.6 80.54L152.9 108.32L124.04 77.88L123.54 77.35L122.72 77.49L104.26 80.65L103.92 80.71L103.51 80.97L81.43 94.83L98.48 51.1L124.58 53.88L127.32 54.17L125.1 52.61L107.17 39.97L122.1 52.02L97.65 47.8L96.48 47.6L95.95 48.77L76.19 92.2L69.42 86.92C68.68 86.34 67.61 86.97 67.75 87.9L68.91 95.57L24.49 90.11L23.72 90.02L23.23 90.47L2.62 109.36C2.29 107.84 0 97.11 0 97.11L1.82 110.41L1.94 111.26L2.64 110.71L24.7 93.35L68.15 101.25C60.4 104.59 42.01 112.52 42.01 112.52L41.29 112.83L40.98 113.41L27.85 137.46L27.53 138.05L27.78 138.58L44.6 173.75L30.29 138.2L44.18 116.18L70.61 106.51L71.13 109.91L58.53 146.99L58.19 147.99L58.76 148.75L101.08 204.63L62.41 147.43L74.21 118.06Z" fill="black"/>
+      <path d="M30.91 74.07C35.69 75.66 40.48 77.21 45.32 78.67C49.22 82.04 53.26 85.54 57.31 88.69C54.08 84.41 50.49 80.15 47.04 76.05C42.95 74.12 38.82 72.28 34.68 70.47C31.68 59.58 28.2 48.86 24.35 38.25C20.33 27.31 15.99 16.51 10.61 6.12C12.56 17.66 15.59 28.89 18.97 40.05C22.49 51.55 26.44 62.91 30.92 74.08Z" fill="black"/>
+      <path d="M69.07 52.12C69.29 56.8 69.55 61.48 69.9 66.15C71.35 71.1 72.79 76.04 74.48 80.92C74.07 75.79 73.42 70.7 72.77 65.59C73.2 61.97 73.45 54.94 73.71 50.17C65.25 40.88 56.36 32.02 47.18 23.46C38.19 15.18 28.98 7.16 19.02 0C26.43 9.78 34.67 18.78 43.19 27.56C51.51 36.06 60.11 44.28 69.08 52.12Z" fill="black"/>
+      <path d="M35.51 36.96L47.41 64.12C47.74 64.87 48.77 64.96 49.22 64.28L51.89 60.32C52.07 60.05 52.37 59.88 52.69 59.86L56.78 59.62C57.65 59.57 58.08 58.52 57.48 57.88L37.22 35.83C36.43 34.97 35.03 35.88 35.5 36.95Z" fill="black"/>
+    </g>
   </svg>
 </div>
 <div id="fmt-toolbar">
@@ -843,6 +827,34 @@
   setTimeout(show, 1800);
 })();
 
+/* ─── Spider-sense click effect ─────────────────────────── */
+function spiderSense(x, y) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const el = document.createElementNS(ns, 'svg');
+  el.style.cssText = 'position:fixed;left:'+x+'px;top:'+y+'px;overflow:visible;pointer-events:none;z-index:99998;width:0;height:0';
+  const count = 5;
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2 - Math.PI / 2;
+    const perp = a + Math.PI / 2;
+    const r1 = 10, r2 = 30;
+    const x1 = Math.cos(a)*r1, y1 = Math.sin(a)*r1;
+    const x2 = Math.cos(a)*r2, y2 = Math.sin(a)*r2;
+    const mx = (x1+x2)/2 + Math.cos(perp)*7, my = (y1+y2)/2 + Math.sin(perp)*7;
+    const p = document.createElementNS(ns, 'path');
+    p.setAttribute('d', `M${x1.toFixed(1)},${y1.toFixed(1)} Q${mx.toFixed(1)},${my.toFixed(1)} ${x2.toFixed(1)},${y2.toFixed(1)}`);
+    p.setAttribute('stroke', 'rgba(0,0,0,.75)');
+    p.setAttribute('stroke-width', '2');
+    p.setAttribute('stroke-linecap', 'round');
+    p.setAttribute('fill', 'none');
+    el.appendChild(p);
+  }
+  document.body.appendChild(el);
+  el.animate(
+    [{opacity:0.9, transform:'scale(.1)'},{opacity:.8,transform:'scale(1)',offset:.35},{opacity:0,transform:'scale(1.9)'}],
+    {duration:480, easing:'ease-out'}
+  ).onfinish = () => el.remove();
+}
+
 /* ─── Custom cursor ────────────────────────────────────── */
 (function() {
   const cur = document.getElementById('site-cursor');
@@ -855,11 +867,7 @@
   document.addEventListener('mouseenter', () => { cur.style.opacity = '1'; });
   document.addEventListener('mousedown', e => {
     cur.classList.add('pressing');
-    const r = document.createElement('div');
-    r.className = 'cur-ripple';
-    r.style.cssText = `left:${e.clientX}px;top:${e.clientY}px`;
-    document.body.appendChild(r);
-    r.addEventListener('animationend', () => r.remove());
+    spiderSense(e.clientX, e.clientY);
   });
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
 })();
