@@ -2382,11 +2382,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       // 5 ring distances
       this.RD=[13,25,38,51,63];
 
-      // Rope bezier control point
+      // Rope bezier control point — bend factor stored for live recalc
       const dx=tx-sx,dy=ty-sy,L=Math.sqrt(dx*dx+dy*dy)||1;
-      const nx=-dy/L,ny=dx/L,bend=(rnd()-.5)*38;
-      this.cpx=(sx+tx)/2+nx*bend;
-      this.cpy=(sy+ty)/2+ny*bend;
+      const nx=-dy/L,ny=dx/L;
+      this.bend=(rnd()-.5)*38;
+      this.cpx=(sx+tx)/2+nx*this.bend;
+      this.cpy=(sy+ty)/2+ny*this.bend;
+    }
+
+    updateSrc(){
+      const src=getAvatarSrc();
+      this.sx=src.x; this.sy=src.y;
+      const dx=this.tx-this.sx,dy=this.ty-this.sy,L=Math.sqrt(dx*dx+dy*dy)||1;
+      const nx=-dy/L,ny=dx/L;
+      this.cpx=(this.sx+this.tx)/2+nx*this.bend;
+      this.cpy=(this.sy+this.ty)/2+ny*this.bend;
     }
 
     drawRope(fx,fy,ex,ey,cpx,cpy,a){
@@ -2405,6 +2415,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const fadeT=age>this.TF+this.TE+this.TH?(age-this.TF-this.TE-this.TH)/this.TD:0;
       const alpha=Math.max(0,1-fadeT);
 
+      if('ontouchstart' in window) this.updateSrc();
       ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
 
       // Flying rope (partial bezier)
