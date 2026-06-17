@@ -1408,7 +1408,7 @@ async function loadAnalytics(days, btn) {
 
 async function saveProject(key) {
   const proj = PROJECTS[key];
-  const clean = proj.blocks.map(({ _muted, ...b }) => b);
+  const clean = proj.blocks.map(({ _muted, _lottieInst, ...b }) => b);
   await fetch(`${SB_URL}/rest/v1/portfolio_projects`, {
     method: 'POST',
     headers: {
