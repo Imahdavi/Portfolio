@@ -192,14 +192,13 @@
     .exp-co   { font-size:16px; font-weight:600; margin-bottom:3px; }
     .exp-role { font-size:13px; color:#555; margin-bottom:1px; }
     .exp-date { font-size:12.5px; color:#999; }
-    .brand-strip { background:#111; border-radius:16px; margin-top:32px; padding:22px 0; overflow:hidden; position:relative; }
-    .brand-strip-label { font-size:10px; letter-spacing:.12em; color:rgba(255,255,255,.3); text-align:center; text-transform:uppercase; margin-bottom:16px; }
-    .brand-track { display:flex; width:max-content; animation:brand-scroll 22s linear infinite; }
-    .brand-track:hover { animation-play-state:paused; }
-    .brand-item { font-size:15px; font-weight:500; color:rgba(255,255,255,.45); padding:0 32px; white-space:nowrap; letter-spacing:.01em; transition:color .2s; cursor:default; }
-    .brand-item:hover { color:rgba(255,255,255,.9); }
-    .brand-sep { color:rgba(255,255,255,.15); padding:0; }
-    @keyframes brand-scroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+    .brand-grid-wrap { margin-top:36px; padding-top:28px; border-top:1px solid rgba(0,0,0,.07); }
+    .brand-grid-label { font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:#ccc; text-align:center; margin-bottom:22px; }
+    .brand-grid { display:flex; flex-wrap:wrap; gap:20px 28px; justify-content:center; align-items:center; }
+    .brand-logo { height:32px; max-width:100px; object-fit:contain; filter:grayscale(1) opacity(.4); transition:filter .28s ease; }
+    .brand-logo:hover { filter:grayscale(0) opacity(1); }
+    .brand-text { font-size:14px; font-weight:600; color:rgba(0,0,0,.22); letter-spacing:-.01em; transition:color .28s; cursor:default; line-height:32px; }
+    .brand-text:hover { color:rgba(0,0,0,.82); }
 
     /* ─────────────────── SOON PAGE ─────────────────── */
     .soon-wrap { display:flex; align-items:center; justify-content:center; min-height:calc(100dvh - 160px); }
@@ -715,9 +714,9 @@
         <div class="exp-item"><div class="exp-co">Vam30</div><div class="exp-role">Visual &amp; Motion Designer</div><div class="exp-date">2022 — 2024</div></div>
         <div class="exp-item"><div class="exp-co">Freelance</div><div class="exp-role">Visual &amp; Motion Designer</div><div class="exp-date">2022 — 2024</div></div>
       </div>
-    <div class="brand-strip">
-      <div class="brand-strip-label">brands & clients</div>
-      <div class="brand-track" id="brand-track"></div>
+    <div class="brand-grid-wrap">
+      <div class="brand-grid-label">brands & clients</div>
+      <div class="brand-grid" id="brand-grid"></div>
     </div>
   </div><!-- /view-exp -->
 
@@ -1402,14 +1401,37 @@ function renderWorkExp(items) {
   });
 }
 
-/* ─── Brand marquee ───────────────────────────────────── */
+/* ─── Brand grid ──────────────────────────────────────── */
 (function(){
-  const BRANDS = ['Lina','Tosan Tools','Vam30','Netbina','Persil','Tazh','3Engine','Monly','Digit'];
-  const track = document.getElementById('brand-track');
-  if (!track) return;
-  const SEP = '<span class="brand-sep">·</span>';
-  const html = BRANDS.map(b=>`<span class="brand-item">${b}</span>${SEP}`).join('');
-  track.innerHTML = html + html; // duplicate for infinite loop
+  const BRANDS = [
+    { name:'Tosan Tools', img:'https://tosantools.com/wp-content/uploads/2023/09/logo-tusan.webp' },
+    { name:'Netbina',     img:'https://netbina.com/wp-content/uploads/netbina_larg.png' },
+    { name:'Digit',       img:'https://digit.ir/images/logodark.svg' },
+    { name:'Persil',      img:'https://logoyab.com/wp-content/uploads/2025/05/Persil-Logo-450x450.png' },
+    { name:'Vam30',       img:'https://vam30.com/logo/vam30.png' },
+    { name:'Tazh',        img:'https://portal.trade/Content/media/trading/company/2016/1/80.png' },
+    { name:'Lina',        text:true },
+    { name:'3Engine',     text:true },
+    { name:'Monly',       text:true },
+  ];
+  const grid = document.getElementById('brand-grid');
+  if (!grid) return;
+  BRANDS.forEach(b => {
+    if (b.text) {
+      const el = document.createElement('span');
+      el.className = 'brand-text';
+      el.textContent = b.name;
+      grid.appendChild(el);
+    } else {
+      const img = document.createElement('img');
+      img.className = 'brand-logo';
+      img.src = b.img;
+      img.alt = b.name;
+      img.title = b.name;
+      img.onerror = function(){ this.outerHTML=`<span class="brand-text">${b.name}</span>`; };
+      grid.appendChild(img);
+    }
+  });
 })();
 
 /* ─── Render home sections dynamically ────────────────── */
