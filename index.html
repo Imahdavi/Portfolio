@@ -319,10 +319,16 @@
     }
     #view-home.home-edit .home-edit-hint { display:block; animation:fadeUp .2s ease both; }
 
-    /* Card delete button */
+    /* Card delete / hide buttons */
     .home-card-del { display:none; position:absolute; top:6px; right:6px; z-index:10; width:24px; height:24px; border-radius:50%; border:none; background:rgba(0,0,0,.52); color:#fff; font-size:16px; line-height:1; cursor:pointer; padding:0; align-items:center; justify-content:center; transition:background .15s; }
     .home-card-del:hover { background:rgba(200,20,20,.85); }
     #view-home.home-edit .home-card-del { display:flex; }
+    .home-card-hide { display:none; position:absolute; top:6px; left:6px; z-index:10; width:24px; height:24px; border-radius:50%; border:none; background:rgba(0,0,0,.45); color:#fff; cursor:pointer; padding:0; align-items:center; justify-content:center; transition:background .15s; }
+    .home-card-hide:hover { background:rgba(0,0,0,.7); }
+    #view-home.home-edit .home-card-hide { display:flex; }
+    .proj-card[data-hidden="true"] { display:none; }
+    #view-home.home-edit .proj-card[data-hidden="true"] { display:block; opacity:.28; filter:grayscale(.6); }
+    #view-home.home-edit .proj-card[data-hidden="true"] .home-card-hide { background:rgba(60,110,230,.7); }
 
     /* Add-card placeholder in grid */
     .card-add-btn { display:none; flex-direction:column; align-items:center; justify-content:center; border:1.5px dashed rgba(0,0,0,.14); border-radius:16px; background:none; cursor:pointer; color:#ccc; font-size:30px; line-height:1; padding-bottom:28px; aspect-ratio:4/3; transition:all .2s; }
@@ -1524,6 +1530,7 @@ function renderHomeSections(sections) {
       const thumbBg = card.thumb ? '' : ' style="background:linear-gradient(135deg,#e8e0d8,#c8bdb4)"';
       const thumbImg = card.thumb ? `<img src="${card.thumb}" alt="${card.name}"/>` : '';
       el.dataset.key = card.key;
+      if (card.hidden) el.dataset.hidden = 'true';
       el.innerHTML = `<div class="proj-thumb"${thumbBg}>${thumbImg}</div><div class="proj-title">${card.name}</div><div class="proj-sub">${card.sub||''}</div>`;
       // sync PROJECTS metadata
       if (!PROJECTS[card.key]) PROJECTS[card.key] = { name: card.name, sub: card.sub||'', blocks: [{ id: uid(), type:'text', content:'' }] };
@@ -1829,7 +1836,7 @@ function updateHomeEditUI() {
       el._homeKeyWired = true;
       el.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); el.blur(); } });
     });
-    // delete buttons on each card
+    // delete + hide buttons on each card
     homeEl.querySelectorAll('.proj-card').forEach(card => {
       if (card.querySelector('.home-card-del')) return;
       const del = document.createElement('button');
@@ -1837,6 +1844,17 @@ function updateHomeEditUI() {
       del.textContent = '×';
       del.addEventListener('click', e => { e.stopPropagation(); card.remove(); });
       card.appendChild(del);
+      const hide = document.createElement('button');
+      hide.className = 'home-card-hide';
+      hide.title = 'Toggle visibility';
+      hide.innerHTML = _eyeSVG(card.dataset.hidden === 'true');
+      hide.addEventListener('click', e => {
+        e.stopPropagation();
+        const h = card.dataset.hidden === 'true';
+        card.dataset.hidden = h ? 'false' : 'true';
+        hide.innerHTML = _eyeSVG(!h);
+      });
+      card.appendChild(hide);
     });
     // + add button at end of each section grid
     homeEl.querySelectorAll('.card-grid').forEach(grid => {
@@ -1848,9 +1866,15 @@ function updateHomeEditUI() {
       grid.appendChild(btn);
     });
   } else {
-    homeEl.querySelectorAll('.home-card-del, .card-add-btn').forEach(el => el.remove());
+    homeEl.querySelectorAll('.home-card-del, .home-card-hide, .card-add-btn').forEach(el => el.remove());
     saveHomeEdits();
   }
+}
+
+function _eyeSVG(hidden) {
+  return hidden
+    ? `<svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2.5" stroke-linecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+    : `<svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2.5" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
 }
 
 function _addHomeCard(grid, addBtn) {
@@ -1866,6 +1890,16 @@ function _addHomeCard(grid, addBtn) {
   del.textContent = '×';
   del.addEventListener('click', e => { e.stopPropagation(); el.remove(); });
   el.appendChild(del);
+  const hide = document.createElement('button');
+  hide.className = 'home-card-hide';
+  hide.innerHTML = _eyeSVG(false);
+  hide.addEventListener('click', e => {
+    e.stopPropagation();
+    const h = el.dataset.hidden === 'true';
+    el.dataset.hidden = h ? 'false' : 'true';
+    hide.innerHTML = _eyeSVG(!h);
+  });
+  el.appendChild(hide);
   grid.insertBefore(el, addBtn);
   ['proj-title','proj-sub'].forEach(cls => {
     const f = el.querySelector('.'+cls);
@@ -1956,7 +1990,8 @@ function saveHomeEdits() {
       const name = cardEl.querySelector('.proj-title')?.textContent?.trim() || '';
       const sub  = cardEl.querySelector('.proj-sub')?.textContent?.trim()  || '';
       const thumb = cardEl.querySelector('.proj-thumb img')?.getAttribute('src') || '';
-      cards.push({ key, name, sub, ...(thumb ? { thumb } : {}) });
+      const hidden = cardEl.dataset.hidden === 'true';
+      cards.push({ key, name, sub, ...(thumb ? { thumb } : {}), ...(hidden ? { hidden: true } : {}) });
       if (PROJECTS[key]) { PROJECTS[key].name = name; PROJECTS[key].sub = sub; }
     });
     sections.push({ title: labelEl.textContent.trim(), cards });
