@@ -828,29 +828,31 @@
 })();
 
 /* ─── Spider-sense click effect ─────────────────────────── */
+(function(){
+  const s = document.createElement('style');
+  s.textContent = '@keyframes ss{0%{transform:scale(.12);opacity:1}40%{transform:scale(1);opacity:.85}100%{transform:scale(2.4);opacity:0}}';
+  document.head.appendChild(s);
+})();
 function spiderSense(x, y) {
   const ns = 'http://www.w3.org/2000/svg';
   const el = document.createElementNS(ns, 'svg');
-  el.style.cssText = 'position:fixed;left:'+x+'px;top:'+y+'px;overflow:visible;pointer-events:none;z-index:99998;width:0;height:0';
+  el.style.cssText = `position:fixed;left:${x}px;top:${y}px;overflow:visible;pointer-events:none;z-index:99998;width:0;height:0;transform-origin:0 0;animation:ss .55s ease-out forwards`;
   const count = 5;
   for (let i = 0; i < count; i++) {
     const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
-    const bx = Math.cos(angle) * 17;
-    const by = Math.sin(angle) * 17;
+    const bx = Math.cos(angle) * 18;
+    const by = Math.sin(angle) * 18;
     const deg = angle * 180 / Math.PI + 90;
     const g = document.createElementNS(ns, 'g');
     g.setAttribute('transform', `translate(${bx.toFixed(1)},${by.toFixed(1)}) rotate(${deg.toFixed(1)})`);
     const p = document.createElementNS(ns, 'polygon');
-    p.setAttribute('points', '4,-10 -4,0 2,0 -5,10 5,0 -1,0');
+    p.setAttribute('points', '3,-10 -5,2 0,2 -3,10 5,-2 0,-2');
     p.setAttribute('fill', 'black');
     g.appendChild(p);
     el.appendChild(g);
   }
   document.body.appendChild(el);
-  el.animate(
-    [{opacity:1,transform:'scale(.12)'},{opacity:.9,transform:'scale(1)',offset:.38},{opacity:0,transform:'scale(2.1)'}],
-    {duration:520, easing:'ease-out'}
-  ).onfinish = () => el.remove();
+  el.addEventListener('animationend', () => el.remove(), {once:true});
 }
 
 /* ─── Custom cursor ────────────────────────────────────── */
