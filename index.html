@@ -2963,6 +2963,9 @@ document.getElementById('thumbInput').addEventListener('change', async function(
 
 async function uploadFiles(files) {
   const list = document.getElementById('block-list');
+  if (!list) { showUploadToast('Error: open a project first', true); return; }
+  if (!activeKey) { showUploadToast('Error: no active project', true); return; }
+
   for (const file of files) {
     const placeholderEl = document.createElement('div');
     placeholderEl.className = 'block block-uploading';
@@ -2970,8 +2973,9 @@ async function uploadFiles(files) {
     list.appendChild(placeholderEl);
     requestAnimationFrame(() => setBlockRowSpan(placeholderEl));
 
-    const ext  = file.name.split('.').pop().toLowerCase();
+    const ext  = (file.name.split('.').pop() || 'bin').toLowerCase();
     const path = `uploads/${Date.now()}_${uid()}.${ext}`;
+    let uploadOk = false;
     try {
       await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -2979,12 +2983,18 @@ async function uploadFiles(files) {
         xhr.setRequestHeader('Authorization', `Bearer ${SB_KEY}`);
         xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
         xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) resolve();
-          else reject(new Error(JSON.parse(xhr.responseText || '{}').message || `HTTP ${xhr.status}`));
+          if (xhr.status >= 200 && xhr.status < 300) { resolve(); return; }
+          let msg = `HTTP ${xhr.status}`;
+          try { msg = JSON.parse(xhr.responseText).message || msg; } catch {}
+          reject(new Error(msg));
         };
-        xhr.onerror = () => reject(new Error('Network error'));
+        xhr.onerror  = () => reject(new Error('Network error — check connection'));
+        xhr.onabort  = () => reject(new Error('Upload aborted'));
+        xhr.ontimeout = () => reject(new Error('Upload timed out'));
+        xhr.timeout  = 120000;
         xhr.send(file);
       });
+      uploadOk = true;
 
       const url  = `${SB_URL}/storage/v1/object/public/${SB_BUCKET}/${path}`;
       const proj = PROJECTS[activeKey];
@@ -2998,7 +3008,7 @@ async function uploadFiles(files) {
       await saveProject(activeKey);
       showUploadToast('Uploaded ✓');
     } catch(e) {
-      list.removeChild(placeholderEl);
+      if (!uploadOk && placeholderEl.parentNode === list) list.removeChild(placeholderEl);
       showUploadToast('Upload failed: ' + e.message, true);
       console.error('Upload error:', e);
     }
