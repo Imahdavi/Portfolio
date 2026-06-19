@@ -330,6 +330,15 @@
     .home-card-hide { display:none; position:absolute; top:6px; left:6px; z-index:10; width:24px; height:24px; border-radius:50%; border:none; background:rgba(0,0,0,.45); color:#fff; cursor:pointer; padding:0; align-items:center; justify-content:center; transition:background .15s; }
     .home-card-hide:hover { background:rgba(0,0,0,.7); }
     #view-home.home-edit .home-card-hide { display:flex; }
+    .home-card-thumb {
+      display:none; position:absolute; inset:0; z-index:9;
+      background:rgba(0,0,0,.3); border:none; cursor:pointer;
+      align-items:center; justify-content:center; border-radius:16px;
+      color:#fff; transition:background .15s;
+    }
+    .home-card-thumb:hover { background:rgba(0,0,0,.5); }
+    .home-card-thumb svg { width:22px; height:22px; stroke:#fff; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+    #view-home.home-edit .home-card-thumb { display:flex; }
     .proj-card[data-hidden="true"] { display:none; }
     #view-home.home-edit .proj-card[data-hidden="true"] { display:block; opacity:.28; filter:grayscale(.6); }
     #view-home.home-edit .proj-card[data-hidden="true"] .home-card-hide { background:rgba(60,110,230,.7); }
@@ -990,6 +999,7 @@
 
 <!-- hidden file input -->
 <input type="file" id="fileInput" accept="image/*,video/*" multiple style="display:none"/>
+<input type="file" id="thumbInput" accept="image/*" style="display:none"/>
 
 <!-- lottie picker sheet -->
 <div id="lottie-picker-overlay" onclick="if(event.target===this)closeLottiePicker()">
@@ -2056,6 +2066,17 @@ function updateHomeEditUI() {
         hide.innerHTML = _eyeSVG(!h);
       });
       card.appendChild(hide);
+
+      const thumbBtn = document.createElement('button');
+      thumbBtn.className = 'home-card-thumb';
+      thumbBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
+      thumbBtn.title = 'Change thumbnail';
+      thumbBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        _pendingThumbCard = card;
+        document.getElementById('thumbInput').click();
+      });
+      card.querySelector('.proj-thumb').appendChild(thumbBtn);
     });
     // + add button at end of each section grid
     homeEl.querySelectorAll('.card-grid').forEach(grid => {
@@ -2067,7 +2088,7 @@ function updateHomeEditUI() {
       grid.appendChild(btn);
     });
   } else {
-    homeEl.querySelectorAll('.home-card-del, .home-card-hide, .card-add-btn').forEach(el => el.remove());
+    homeEl.querySelectorAll('.home-card-del, .home-card-hide, .home-card-thumb, .card-add-btn').forEach(el => el.remove());
     saveHomeEdits();
   }
 }
@@ -2897,6 +2918,48 @@ document.addEventListener('click', () => {
     uploadFiles(files);
   });
 })();
+
+/* ─── Card thumbnail upload ─────────────────────────────── */
+let _pendingThumbCard = null;
+
+document.getElementById('thumbInput').addEventListener('change', async function() {
+  const file = this.files[0];
+  this.value = '';
+  if (!file || !_pendingThumbCard) return;
+  const card = _pendingThumbCard;
+  _pendingThumbCard = null;
+
+  const thumbEl = card.querySelector('.proj-thumb');
+  const origBg  = thumbEl.style.background;
+  thumbEl.style.background = 'linear-gradient(135deg,#e8e0d8,#c8bdb4)';
+  showUploadToast('Uploading…');
+
+  const ext  = file.name.split('.').pop().toLowerCase();
+  const path = `uploads/thumb_${Date.now()}_${uid()}.${ext}`;
+  try {
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${SB_URL}/storage/v1/object/${SB_BUCKET}/${path}`);
+      xhr.setRequestHeader('Authorization', `Bearer ${SB_KEY}`);
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+      xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(`HTTP ${xhr.status}`));
+      xhr.onerror = () => reject(new Error('Network error'));
+      xhr.send(file);
+    });
+
+    const url = `${SB_URL}/storage/v1/object/public/${SB_BUCKET}/${path}`;
+    thumbEl.style.background = '';
+    let img = thumbEl.querySelector('img');
+    if (!img) { img = document.createElement('img'); thumbEl.insertBefore(img, thumbEl.firstChild); }
+    img.src = url;
+    img.alt = '';
+    showUploadToast('Saved ✓');
+    saveHomeEdits();
+  } catch(e) {
+    thumbEl.style.background = origBg;
+    showUploadToast('Upload failed: ' + e.message, true);
+  }
+});
 
 async function uploadFiles(files) {
   const list = document.getElementById('block-list');
