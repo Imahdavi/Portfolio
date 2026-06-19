@@ -2804,15 +2804,18 @@ document.getElementById('fileInput').addEventListener('change', async function()
     const ext  = file.name.split('.').pop().toLowerCase();
     const path = `uploads/${Date.now()}_${uid()}.${ext}`;
     try {
-      const up = await fetch(`${SB_URL}/storage/v1/object/${SB_BUCKET}/${path}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': file.type },
-        body: file
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${SB_URL}/storage/v1/object/${SB_BUCKET}/${path}`);
+        xhr.setRequestHeader('Authorization', `Bearer ${SB_KEY}`);
+        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(JSON.parse(xhr.responseText || '{}').message || `HTTP ${xhr.status}`));
+        };
+        xhr.onerror = () => reject(new Error(`Network error`));
+        xhr.send(file);
       });
-      if (!up.ok) {
-        const errBody = await up.json().catch(() => ({}));
-        throw new Error(errBody.message || `HTTP ${up.status}`);
-      }
 
       const url  = `${SB_URL}/storage/v1/object/public/${SB_BUCKET}/${path}`;
       const proj = PROJECTS[activeKey];
