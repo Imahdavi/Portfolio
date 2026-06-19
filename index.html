@@ -519,6 +519,35 @@
     .rsz-link-input::placeholder { color:rgba(255,255,255,.3); }
     .rsz-link-input:focus { border-color:rgba(255,255,255,.45); background:rgba(255,255,255,.15); }
 
+    /* Link edit button — bottom-left next to layout btn, edit mode only */
+    .media-link-edit-btn {
+      position:absolute; bottom:8px; left:44px;
+      width:28px; height:28px; border-radius:8px;
+      background:rgba(253,251,248,.88); border:none; cursor:pointer;
+      display:none; align-items:center; justify-content:center;
+      z-index:12; backdrop-filter:blur(6px); transition:transform .15s;
+    }
+    .edit-on .media-link-edit-btn { display:flex; }
+    .media-link-edit-btn.active { background:rgba(60,120,255,.92); }
+    .media-link-edit-btn.active svg path { stroke:#fff; }
+    .media-link-edit-btn:hover  { transform:scale(1.1); }
+    .media-link-edit-btn:active { transform:scale(.92); }
+    .media-link-edit-btn svg { width:14px; height:14px; }
+
+    /* Link popover */
+    .link-popover {
+      position:absolute; bottom:44px; left:8px;
+      background:rgba(26,23,20,.93); border-radius:12px;
+      padding:10px; display:none; flex-direction:column; gap:6px;
+      z-index:20; min-width:200px;
+      box-shadow:0 8px 24px rgba(0,0,0,.3);
+    }
+    .link-popover.open { display:flex; animation:fadeUp .15s ease both; }
+    .link-popover-lbl {
+      color:rgba(255,255,255,.45); font-size:11px; font-weight:600;
+      letter-spacing:.04em; padding:0 4px;
+    }
+
     /* Resize button — bottom-left, edit mode only */
     .media-resize-btn {
       position:absolute; bottom:8px; left:8px;
@@ -595,6 +624,30 @@
     }
     .add-btn:hover { border-color:#555; color:#333; background:rgba(0,0,0,.04); }
     .add-btn svg   { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+
+    /* Upload placeholder block */
+    .block-uploading .media-inner {
+      background:#f0efed; display:flex; align-items:center; justify-content:center;
+      aspect-ratio:4/3; flex-direction:column; gap:10px; border-radius:20px;
+    }
+    .upload-spinner {
+      width:28px; height:28px; border-radius:50%;
+      border:3px solid rgba(0,0,0,.1); border-top-color:#1A1714;
+      animation:spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .upload-progress-lbl { font-size:12px; color:#999; font-weight:500; }
+
+    /* Upload toast */
+    #upload-toast {
+      position:fixed; bottom:108px; left:50%; transform:translateX(-50%) translateY(12px);
+      background:#1A1714; color:#fdfbf8; border-radius:12px;
+      padding:10px 18px; font-size:13px; font-weight:500;
+      opacity:0; pointer-events:none; transition:opacity .22s, transform .22s;
+      z-index:9999; white-space:nowrap;
+    }
+    #upload-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    #upload-toast.error { background:#c0392b; }
 
     /* Scroll-to-top button — mirrors back-btn position on the right */
     #scroll-top-btn {
@@ -792,7 +845,7 @@
     </div>
 
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
-    <div id="home-sections"></div>
+    <div id="home-sections" style="opacity:0;transition:opacity .3s ease"></div>
     <button id="home-add-sec-btn" onclick="addHomeSection()">+ Add section</button>
   </div><!-- /view-home -->
 
@@ -800,14 +853,7 @@
   <!-- ══════════════════════════════ WORK EXP ══════════════════════════════ -->
   <div class="view" id="view-exp">
     <div class="exp-title">Work experience</div>
-    <div class="sg" id="sg-exp">
-        <div class="exp-item"><div class="exp-date"><span class="exp-y1">2024</span><span class="exp-y2">Present</span></div><div class="exp-info"><div class="exp-co">Lina</div><div class="exp-role">Visual &amp; Motion Designer / Editor</div></div><button class="exp-edit-del" tabindex="-1">×</button></div>
-        <div class="exp-item"><div class="exp-date"><span class="exp-y1">2022</span><span class="exp-y2">Present</span></div><div class="exp-info"><div class="exp-co">Netbina</div><div class="exp-role">Motion Designer</div></div><button class="exp-edit-del" tabindex="-1">×</button></div>
-        <div class="exp-item"><div class="exp-date"><span class="exp-y1">2021</span><span class="exp-y2">Present</span></div><div class="exp-info"><div class="exp-co">Doran Office</div><div class="exp-role">Motion Designer</div></div><button class="exp-edit-del" tabindex="-1">×</button></div>
-        <div class="exp-item"><div class="exp-date"><span class="exp-y1">2024</span><span class="exp-y2">2025</span></div><div class="exp-info"><div class="exp-co">Tosan Tools</div><div class="exp-role">Motion Designer / Editor</div></div><button class="exp-edit-del" tabindex="-1">×</button></div>
-        <div class="exp-item"><div class="exp-date"><span class="exp-y1">2022</span><span class="exp-y2">2024</span></div><div class="exp-info"><div class="exp-co">Vam30</div><div class="exp-role">Visual &amp; Motion Designer</div></div><button class="exp-edit-del" tabindex="-1">×</button></div>
-        <div class="exp-item"><div class="exp-date"><span class="exp-y1">2022</span><span class="exp-y2">2024</span></div><div class="exp-info"><div class="exp-co">Freelance</div><div class="exp-role">Visual &amp; Motion Designer</div></div><button class="exp-edit-del" tabindex="-1">×</button></div>
-      </div>
+    <div class="sg" id="sg-exp"></div>
     <button id="exp-add-btn" class="exp-add-btn" onclick="addExpItem()">+ Add experience</button>
     <div class="brand-grid-wrap">
       <div class="brand-grid-label">brands & clients</div>
@@ -893,6 +939,8 @@
   </div><!-- /view-project -->
 
 </div><!-- /app -->
+
+<div id="upload-toast"></div>
 
 <button id="scroll-top-btn" aria-label="Scroll to top" onclick="document.getElementById('view-project').scrollTo({top:0,behavior:'smooth'})">
   <svg viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
@@ -1646,11 +1694,14 @@ function renderHomeSections(sections) {
     });
     container.appendChild(grid);
   });
-  requestAnimationFrame(() => container.querySelectorAll('.sg').forEach(sg => {
-    sg.classList.remove('run');
-    void sg.offsetWidth;
-    sg.classList.add('run');
-  }));
+  requestAnimationFrame(() => {
+    container.querySelectorAll('.sg').forEach(sg => {
+      sg.classList.remove('run');
+      void sg.offsetWidth;
+      sg.classList.add('run');
+    });
+    container.style.opacity = '1';
+  });
 }
 
 async function loadProjects() {
@@ -2310,7 +2361,53 @@ function makeBlockEl(block, proj) {
     linkBtn.addEventListener('click', e => e.stopPropagation());
     inner.appendChild(linkBtn);
 
+    // link edit button — bottom-right inside inner, edit mode only
+    const linkEditBtn = document.createElement('button');
+    linkEditBtn.className = 'media-link-edit-btn' + (block._link ? ' active' : '');
+    linkEditBtn.innerHTML = SVG_LINK;
+    linkEditBtn.title = 'Attach link';
+    inner.appendChild(linkEditBtn);
+
     mw.appendChild(inner);
+
+    // link popover — on mw so it can overflow inner's clip
+    const linkPopover = document.createElement('div');
+    linkPopover.className = 'link-popover';
+    const linkPopLbl = document.createElement('div');
+    linkPopLbl.className = 'link-popover-lbl';
+    linkPopLbl.textContent = 'Link';
+    const linkPopInput = document.createElement('input');
+    linkPopInput.type = 'url';
+    linkPopInput.className = 'rsz-link-input';
+    linkPopInput.placeholder = 'https://...';
+    linkPopInput.value = block._link || '';
+    linkPopInput.addEventListener('mousedown', e => e.stopPropagation());
+    linkPopInput.addEventListener('input', () => {
+      const val = linkPopInput.value.trim();
+      block._link = val || undefined;
+      if (val) {
+        linkBtn.href = val; linkBtn.classList.add('has-link');
+        linkEditBtn.classList.add('active');
+      } else {
+        linkBtn.removeAttribute('href'); linkBtn.classList.remove('has-link');
+        linkEditBtn.classList.remove('active');
+      }
+      if (activeKey) saveProject(activeKey);
+    });
+    linkPopover.appendChild(linkPopLbl);
+    linkPopover.appendChild(linkPopInput);
+
+    linkPopover.addEventListener('click', e => e.stopPropagation());
+
+    linkEditBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      document.querySelectorAll('.link-popover.open').forEach(p => { if (p !== linkPopover) p.classList.remove('open'); });
+      document.querySelectorAll('.resize-menu.open').forEach(m => m.classList.remove('open'));
+      linkPopover.classList.toggle('open');
+      if (linkPopover.classList.contains('open')) setTimeout(() => linkPopInput.focus(), 50);
+    });
+
+    mw.appendChild(linkPopover);
 
     // layout menu — width section + aspect section
     const menu = document.createElement('div');
@@ -2371,42 +2468,10 @@ function makeBlockEl(block, proj) {
       menu.appendChild(opt);
     });
 
-    // — Link section —
-    const linkDivEl2 = document.createElement('div');
-    linkDivEl2.className = 'rsz-divider';
-    menu.appendChild(linkDivEl2);
-
-    const linkSectionLbl = document.createElement('div');
-    linkSectionLbl.className = 'rsz-section-lbl';
-    linkSectionLbl.textContent = 'Link';
-    menu.appendChild(linkSectionLbl);
-
-    const linkInputWrap = document.createElement('div');
-    linkInputWrap.style.cssText = 'padding:2px 8px 8px';
-    const linkInput = document.createElement('input');
-    linkInput.type = 'url';
-    linkInput.className = 'rsz-link-input';
-    linkInput.placeholder = 'https://...';
-    linkInput.value = block._link || '';
-    linkInput.addEventListener('mousedown', e => e.stopPropagation());
-    linkInput.addEventListener('input', () => {
-      const val = linkInput.value.trim();
-      block._link = val || undefined;
-      if (val) {
-        linkBtn.href = val;
-        linkBtn.classList.add('has-link');
-      } else {
-        linkBtn.removeAttribute('href');
-        linkBtn.classList.remove('has-link');
-      }
-      if (activeKey) saveProject(activeKey);
-    });
-    linkInputWrap.appendChild(linkInput);
-    menu.appendChild(linkInputWrap);
-
     resizeBtn.onclick = (e) => {
       e.stopPropagation();
       document.querySelectorAll('.resize-menu.open').forEach(m => { if (m !== menu) m.classList.remove('open'); });
+      document.querySelectorAll('.link-popover.open').forEach(p => p.classList.remove('open'));
       menu.classList.toggle('open');
     };
     mw.appendChild(menu);
@@ -2715,31 +2780,57 @@ function addMedia() {
   document.getElementById('fileInput').click();
 }
 
+function showUploadToast(msg, isError) {
+  const t = document.getElementById('upload-toast');
+  t.textContent = msg;
+  t.className = 'show' + (isError ? ' error' : '');
+  clearTimeout(t._hide);
+  t._hide = setTimeout(() => { t.className = ''; }, isError ? 3500 : 2000);
+}
+
 document.getElementById('fileInput').addEventListener('change', async function() {
   const files = [...this.files];
+  this.value = '';
+  const list = document.getElementById('block-list');
+
   for (const file of files) {
+    // 1 — placeholder block while uploading
+    const placeholderEl = document.createElement('div');
+    placeholderEl.className = 'block block-uploading';
+    placeholderEl.innerHTML = `<div class="block-body"><div class="media-wrap"><div class="media-inner"><div class="upload-spinner"></div><div class="upload-progress-lbl">Uploading…</div></div></div></div>`;
+    list.appendChild(placeholderEl);
+    requestAnimationFrame(() => setBlockRowSpan(placeholderEl));
+
     const ext  = file.name.split('.').pop().toLowerCase();
     const path = `uploads/${Date.now()}_${uid()}.${ext}`;
     try {
       const up = await fetch(`${SB_URL}/storage/v1/object/${SB_BUCKET}/${path}`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': file.type, 'x-upsert': 'true' },
+        headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': file.type },
         body: file
       });
-      if (!up.ok) throw new Error('upload failed');
+      if (!up.ok) {
+        const errBody = await up.json().catch(() => ({}));
+        throw new Error(errBody.message || `HTTP ${up.status}`);
+      }
+
       const url  = `${SB_URL}/storage/v1/object/public/${SB_BUCKET}/${path}`;
       const proj = PROJECTS[activeKey];
       const type = file.type.startsWith('video') ? 'video' : 'image';
       const b    = { id: uid(), type, content: url };
       proj.blocks.push(b);
-      const list  = document.getElementById('block-list');
       const newEl = makeBlockEl(b, proj);
-      list.appendChild(newEl);
+      newEl.classList.add('block-enter');
+      list.replaceChild(newEl, placeholderEl);
       requestAnimationFrame(() => setBlockRowSpan(newEl));
       await saveProject(activeKey);
-    } catch(e) { console.error('Upload error:', e); }
+      showUploadToast('Uploaded ✓');
+    } catch(e) {
+      list.removeChild(placeholderEl);
+      showUploadToast('Upload failed: ' + e.message, true);
+      console.error('Upload error:', e);
+    }
   }
-  this.value = '';
 });
 
 let _lpPreviews = {};
@@ -2789,9 +2880,10 @@ function deleteBlock(id) {
   saveProject(activeKey);
 }
 
-/* ─── Close resize menus on outside click ───────────────── */
+/* ─── Close resize menus + link popovers on outside click ───────────────── */
 document.addEventListener('click', () => {
   document.querySelectorAll('.resize-menu.open').forEach(m => m.classList.remove('open'));
+  document.querySelectorAll('.link-popover.open').forEach(p => p.classList.remove('open'));
 });
 
 /* ─── Scroll-to-top ────────────────────────────────────── */
