@@ -638,6 +638,17 @@
     @keyframes spin { to { transform:rotate(360deg); } }
     .upload-progress-lbl { font-size:12px; color:#999; font-weight:500; }
 
+    /* Drag-to-upload overlay */
+    #drop-overlay {
+      display:none; position:fixed; inset:0; z-index:8000;
+      background:rgba(253,251,248,.92); backdrop-filter:blur(6px);
+      flex-direction:column; align-items:center; justify-content:center;
+      gap:12px; pointer-events:none;
+    }
+    #drop-overlay.active { display:flex; }
+    #drop-overlay svg { width:48px; height:48px; stroke:#1A1714; opacity:.35; }
+    #drop-overlay span { font-size:16px; font-weight:600; color:#1A1714; opacity:.5; }
+
     /* Upload toast */
     #upload-toast {
       position:fixed; bottom:108px; left:50%; transform:translateX(-50%) translateY(12px);
@@ -941,6 +952,13 @@
 </div><!-- /app -->
 
 <div id="upload-toast"></div>
+
+<div id="drop-overlay">
+  <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+  </svg>
+  <span>Drop to upload</span>
+</div>
 
 <button id="scroll-top-btn" aria-label="Scroll to top" onclick="document.getElementById('view-project').scrollTo({top:0,behavior:'smooth'})">
   <svg viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
@@ -2788,52 +2806,10 @@ function showUploadToast(msg, isError) {
   t._hide = setTimeout(() => { t.className = ''; }, isError ? 3500 : 2000);
 }
 
-document.getElementById('fileInput').addEventListener('change', async function() {
+document.getElementById('fileInput').addEventListener('change', function() {
   const files = [...this.files];
   this.value = '';
-  const list = document.getElementById('block-list');
-
-  for (const file of files) {
-    // 1 — placeholder block while uploading
-    const placeholderEl = document.createElement('div');
-    placeholderEl.className = 'block block-uploading';
-    placeholderEl.innerHTML = `<div class="block-body"><div class="media-wrap"><div class="media-inner"><div class="upload-spinner"></div><div class="upload-progress-lbl">Uploading…</div></div></div></div>`;
-    list.appendChild(placeholderEl);
-    requestAnimationFrame(() => setBlockRowSpan(placeholderEl));
-
-    const ext  = file.name.split('.').pop().toLowerCase();
-    const path = `uploads/${Date.now()}_${uid()}.${ext}`;
-    try {
-      await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', `${SB_URL}/storage/v1/object/${SB_BUCKET}/${path}`);
-        xhr.setRequestHeader('Authorization', `Bearer ${SB_KEY}`);
-        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) resolve();
-          else reject(new Error(JSON.parse(xhr.responseText || '{}').message || `HTTP ${xhr.status}`));
-        };
-        xhr.onerror = () => reject(new Error(`Network error`));
-        xhr.send(file);
-      });
-
-      const url  = `${SB_URL}/storage/v1/object/public/${SB_BUCKET}/${path}`;
-      const proj = PROJECTS[activeKey];
-      const type = file.type.startsWith('video') ? 'video' : 'image';
-      const b    = { id: uid(), type, content: url };
-      proj.blocks.push(b);
-      const newEl = makeBlockEl(b, proj);
-      newEl.classList.add('block-enter');
-      list.replaceChild(newEl, placeholderEl);
-      requestAnimationFrame(() => setBlockRowSpan(newEl));
-      await saveProject(activeKey);
-      showUploadToast('Uploaded ✓');
-    } catch(e) {
-      list.removeChild(placeholderEl);
-      showUploadToast('Upload failed: ' + e.message, true);
-      console.error('Upload error:', e);
-    }
-  }
+  if (files.length) uploadFiles(files);
 });
 
 let _lpPreviews = {};
@@ -2888,6 +2864,83 @@ document.addEventListener('click', () => {
   document.querySelectorAll('.resize-menu.open').forEach(m => m.classList.remove('open'));
   document.querySelectorAll('.link-popover.open').forEach(p => p.classList.remove('open'));
 });
+
+/* ─── Drag-to-upload ───────────────────────────────────── */
+(function() {
+  let _dragCount = 0;
+  const overlay = document.getElementById('drop-overlay');
+
+  document.addEventListener('dragenter', e => {
+    if (!editMode || current !== 'view-project') return;
+    if (!e.dataTransfer.types.includes('Files')) return;
+    _dragCount++;
+    overlay.classList.add('active');
+  });
+
+  document.addEventListener('dragleave', () => {
+    _dragCount--;
+    if (_dragCount <= 0) { _dragCount = 0; overlay.classList.remove('active'); }
+  });
+
+  document.addEventListener('dragover', e => {
+    if (!editMode || current !== 'view-project') return;
+    e.preventDefault();
+  });
+
+  document.addEventListener('drop', e => {
+    _dragCount = 0;
+    overlay.classList.remove('active');
+    if (!editMode || current !== 'view-project') return;
+    e.preventDefault();
+    const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
+    if (!files.length) return;
+    uploadFiles(files);
+  });
+})();
+
+async function uploadFiles(files) {
+  const list = document.getElementById('block-list');
+  for (const file of files) {
+    const placeholderEl = document.createElement('div');
+    placeholderEl.className = 'block block-uploading';
+    placeholderEl.innerHTML = `<div class="block-body"><div class="media-wrap"><div class="media-inner"><div class="upload-spinner"></div><div class="upload-progress-lbl">Uploading…</div></div></div></div>`;
+    list.appendChild(placeholderEl);
+    requestAnimationFrame(() => setBlockRowSpan(placeholderEl));
+
+    const ext  = file.name.split('.').pop().toLowerCase();
+    const path = `uploads/${Date.now()}_${uid()}.${ext}`;
+    try {
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${SB_URL}/storage/v1/object/${SB_BUCKET}/${path}`);
+        xhr.setRequestHeader('Authorization', `Bearer ${SB_KEY}`);
+        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(JSON.parse(xhr.responseText || '{}').message || `HTTP ${xhr.status}`));
+        };
+        xhr.onerror = () => reject(new Error('Network error'));
+        xhr.send(file);
+      });
+
+      const url  = `${SB_URL}/storage/v1/object/public/${SB_BUCKET}/${path}`;
+      const proj = PROJECTS[activeKey];
+      const type = file.type.startsWith('video') ? 'video' : 'image';
+      const b    = { id: uid(), type, content: url };
+      proj.blocks.push(b);
+      const newEl = makeBlockEl(b, proj);
+      newEl.classList.add('block-enter');
+      list.replaceChild(newEl, placeholderEl);
+      requestAnimationFrame(() => setBlockRowSpan(newEl));
+      await saveProject(activeKey);
+      showUploadToast('Uploaded ✓');
+    } catch(e) {
+      list.removeChild(placeholderEl);
+      showUploadToast('Upload failed: ' + e.message, true);
+      console.error('Upload error:', e);
+    }
+  }
+}
 
 /* ─── Scroll-to-top ────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
