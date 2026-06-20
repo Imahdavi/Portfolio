@@ -14,6 +14,7 @@
       --font-body: 'Inter', sans-serif;
       --font-heading: 'Caveat', cursive;
       --font-title: 'Inter', sans-serif;
+      --font-intro: 'Inter', sans-serif;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
@@ -88,8 +89,8 @@
     .avatar img { width:100%; height:100%; object-fit:cover; display:block; }
 
     .profile-name { font-family:var(--font-heading); font-size:34px; font-weight:700; line-height:1.05; margin-bottom:5px; opacity:0; }
-    .profile-role { font-size:13.5px; color:#555; margin-bottom:2px; }
-    .profile-age  { font-size:13.5px; color:#555; margin-bottom:16px; }
+    .profile-role { font-family:var(--font-intro); font-size:13.5px; color:#555; margin-bottom:2px; }
+    .profile-age  { font-family:var(--font-intro); font-size:13.5px; color:#555; margin-bottom:16px; }
 
     .contact-row  { display:flex; align-items:center; justify-content:center; gap:7px; flex-wrap:wrap; margin-top:16px; margin-bottom:32px; }
     .contact-lbl  { font-size:12.5px; color:#888; white-space:nowrap; width:100%; text-align:center; margin-bottom:2px; }
@@ -293,10 +294,12 @@
 
     /* Home edit mode */
     #view-home.home-edit .profile-name,
-    #view-home.home-edit .profile-role {
+    #view-home.home-edit .profile-role,
+    #view-home.home-edit .profile-age {
       outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px;
       padding:2px 8px; cursor:text; min-width:30px;
     }
+    #view-home.home-edit .profile-age { display:inline-block; }
     #view-home.home-edit .sec-label {
       outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px;
       padding:2px 8px; cursor:text; min-width:30px; width:fit-content;
@@ -1069,6 +1072,14 @@
         <input class="font-custom" type="text" placeholder="or type a Google Font…"/>
       </div>
     </div>
+    <div class="font-row" data-slot="intro">
+      <div class="font-row-lbl">Intro · معرفی (نقش و سن)</div>
+      <div class="font-row-preview">Visual &amp; Motion Designer · 25 yo ✦</div>
+      <div class="font-row-controls">
+        <select class="font-select"></select>
+        <input class="font-custom" type="text" placeholder="or type a Google Font…"/>
+      </div>
+    </div>
     <div class="font-row" data-slot="title">
       <div class="font-row-lbl">Project titles · اسم پروژه</div>
       <div class="font-row-preview">Logo Motion</div>
@@ -1658,9 +1669,9 @@ const CURATED_FONTS = [
   { name:'Righteous',        fb:'cursive' },
   { name:'Comfortaa',        fb:'cursive' },
 ];
-const FONT_SLOTS = ['heading','title','body'];
-const FONT_DEFAULTS = { heading:'Caveat', title:'Inter', body:'Inter' };
-const FONT_VARS = { heading:'--font-heading', title:'--font-title', body:'--font-body' };
+const FONT_SLOTS = ['heading','intro','title','body'];
+const FONT_DEFAULTS = { heading:'Caveat', intro:'Inter', title:'Inter', body:'Inter' };
+const FONT_VARS = { heading:'--font-heading', intro:'--font-intro', title:'--font-title', body:'--font-body' };
 
 function _fontFallback(name) {
   const f = CURATED_FONTS.find(f => f.name.toLowerCase() === (name||'').toLowerCase());
@@ -1757,7 +1768,11 @@ async function loadSettings() {
     if (s.profile) {
       if (s.profile.name)  document.querySelector('.profile-name').textContent = s.profile.name;
       if (s.profile.title) document.querySelector('.profile-role').textContent = s.profile.title;
-      if (s.profile.age)   document.querySelector('.profile-age').textContent  = s.profile.age + ' yo ✦';
+      if (s.profile.age != null && s.profile.age !== '') {
+        const a = String(s.profile.age).trim();
+        // old format stored just a number; new format stores the full text
+        document.querySelector('.profile-age').textContent = /^\d+$/.test(a) ? a + ' yo ✦' : a;
+      }
       if (s.profile.photo_url) document.querySelector('.avatar img').src = s.profile.photo_url;
     }
 
@@ -2202,6 +2217,7 @@ function updateHomeEditUI() {
   const editables = [
     document.querySelector('.profile-name'),
     document.querySelector('.profile-role'),
+    document.querySelector('.profile-age'),
   ];
   homeEl.querySelectorAll('.sec-label, .proj-title, .proj-sub').forEach(el => editables.push(el));
 
@@ -2370,8 +2386,10 @@ function saveHomeEdits() {
 
   const nameEl = document.querySelector('.profile-name');
   const roleEl = document.querySelector('.profile-role');
+  const ageEl  = document.querySelector('.profile-age');
   if (nameEl) _cachedSettings.profile.name  = nameEl.textContent.trim();
   if (roleEl) _cachedSettings.profile.title = roleEl.textContent.trim();
+  if (ageEl)  _cachedSettings.profile.age   = ageEl.textContent.trim();
 
   const sections = [];
   document.querySelectorAll('#home-sections .sec-label').forEach(labelEl => {
