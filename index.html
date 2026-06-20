@@ -13,6 +13,7 @@
     :root {
       --font-body: 'Inter', sans-serif;
       --font-heading: 'Caveat', cursive;
+      --font-title: 'Inter', sans-serif;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
@@ -107,7 +108,7 @@
     .pill:active { transform:scale(.94); }
 
     /* ─────────────────── SECTION TITLE ─────────────────── */
-    .sec-label { font-family:'Caveat',cursive; font-size:27px; font-weight:600; margin-bottom:18px; }
+    .sec-label { font-family:var(--font-heading); font-size:27px; font-weight:600; margin-bottom:18px; }
 
     /* ─────────────────── CARD GRID ─────────────────── */
     .card-grid {
@@ -151,7 +152,7 @@
     .proj-card:active .proj-thumb { transform:scale(.95); transition-duration:.1s; }
     .proj-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
 
-    .proj-title { font-size:13.5px; font-weight:600; margin-bottom:2px; }
+    .proj-title { font-family:var(--font-title); font-size:13.5px; font-weight:600; margin-bottom:2px; }
     .proj-sub   { font-size:11px; color:#777; line-height:1.35; }
 
     /* ── thumb colours ── */
@@ -176,7 +177,7 @@
     .persian { font-size:22px; font-weight:900; background:linear-gradient(135deg,#e63946,#f4a261,#2a9d8f,#e9c46a,#264653); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 
     /* ─────────────────── WORK EXP PAGE ─────────────────── */
-    .exp-title { font-family:'Caveat',cursive; font-size:27px; font-weight:600; text-align:center; margin-bottom:32px; }
+    .exp-title { font-family:var(--font-heading); font-size:27px; font-weight:600; text-align:center; margin-bottom:32px; }
     .exp-item  { display:flex; align-items:center; gap:24px; padding:9px 0; border-bottom:1px solid rgba(0,0,0,.08); transition:opacity .22s, transform .22s cubic-bezier(.25,.46,.45,.94); }
     .exp-item:last-child { border-bottom:none; }
     #sg-exp:has(.exp-item:hover) .exp-item:not(:hover) { opacity:.38; transform:translateX(-3px); }
@@ -207,13 +208,13 @@
 
     /* ─────────────────── SOON PAGE ─────────────────── */
     .soon-wrap { display:flex; align-items:center; justify-content:center; min-height:calc(100dvh - 160px); }
-    .soon-word { font-family:'Caveat',cursive; font-size:52px; font-weight:600; animation:fadeUp .6s ease both; }
+    .soon-word { font-family:var(--font-heading); font-size:52px; font-weight:600; animation:fadeUp .6s ease both; }
 
     /* ─────────────────── ANALYTICS PAGE ─────────────────── */
     .an-nav-btn { display:none !important; }
     body.is-admin .an-nav-btn { display:flex !important; }
 
-    .an-title  { font-family:'Caveat',cursive; font-size:27px; font-weight:600; text-align:center; margin-bottom:20px; }
+    .an-title  { font-family:var(--font-heading); font-size:27px; font-weight:600; text-align:center; margin-bottom:20px; }
     .an-range  { display:flex; gap:6px; justify-content:center; margin-bottom:22px; }
     .an-range-btn { padding:6px 16px; border-radius:20px; border:1px solid rgba(0,0,0,.12); background:#fff; font-size:12.5px; font-weight:500; color:#666; cursor:pointer; transition:all .15s; }
     .an-range-btn.active { background:#1a1a1a; color:#fff; border-color:#1a1a1a; }
@@ -273,7 +274,7 @@
     .back-btn:active { transform:scale(.88); }
     .back-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
 
-    .d-title    { font-size:24px; font-weight:700; position:absolute; left:50%; transform:translateX(-50%); white-space:nowrap; }
+    .d-title    { font-family:var(--font-title); font-size:24px; font-weight:700; position:absolute; left:50%; transform:translateX(-50%); white-space:nowrap; }
     .d-subtitle { font-size:13px; color:#888; margin-bottom:24px; text-align:center; padding-left:0; }
     .d-title[contenteditable="true"], .d-subtitle[contenteditable="true"] {
       outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px; padding:2px 10px; cursor:text; min-width:40px;
@@ -769,7 +770,7 @@
     }
     @keyframes slideInSheet { from { transform:translateY(100%) } to { transform:none } }
     #lottie-picker-sheet h3 {
-      font-family:'Caveat',cursive; font-size:22px; font-weight:600;
+      font-family:var(--font-heading); font-size:22px; font-weight:600;
       text-align:center; margin-bottom:16px; color:#1a1a1a;
     }
     .lottie-pick-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -790,6 +791,52 @@
       transition:background .15s;
     }
     #lottie-picker-cancel:hover { background:rgba(0,0,0,.1); }
+
+    /* ─────────────────── FONT PICKER ─────────────────── */
+    #home-fonts-btn { display:none; margin-top:6px; padding:11px; border:1.5px dashed rgba(0,0,0,.13); border-radius:8px; background:none; font-size:13px; color:#bbb; cursor:pointer; transition:all .2s; width:100%; text-align:center; }
+    #home-fonts-btn:hover { border-color:rgba(0,0,0,.28); color:#555; }
+    #view-home.home-edit #home-fonts-btn { display:block; }
+    #font-picker-overlay {
+      display:none; position:fixed; inset:0; z-index:5200;
+      background:rgba(0,0,0,.38); backdrop-filter:blur(4px);
+      align-items:flex-end; justify-content:center;
+    }
+    #font-picker-overlay.show { display:flex; }
+    #font-picker-sheet {
+      background:#fff; border-radius:20px 20px 0 0;
+      padding:20px 16px 32px; width:100%; max-width:540px;
+      animation:slideInSheet .25s cubic-bezier(.25,.46,.45,.94) both;
+      max-height:88vh; overflow-y:auto;
+    }
+    #font-picker-sheet h3 {
+      font-family:var(--font-heading); font-size:22px; font-weight:600;
+      text-align:center; margin-bottom:18px; color:#1a1a1a;
+    }
+    .font-row { margin-bottom:18px; }
+    .font-row-lbl { font-size:11px; font-weight:600; color:#aaa; text-transform:uppercase; letter-spacing:.07em; margin-bottom:7px; }
+    .font-row-preview { font-size:20px; color:#1a1a1a; margin-bottom:9px; min-height:26px; line-height:1.2; }
+    .font-row-controls { display:flex; gap:8px; }
+    .font-select {
+      flex:1; padding:10px 12px; border:1.5px solid rgba(0,0,0,.12); border-radius:11px;
+      background:#f7f6f4; font-size:13.5px; color:#333; cursor:pointer; outline:none;
+      font-family:inherit; -webkit-appearance:none; appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='3'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right 12px center; padding-right:34px;
+    }
+    .font-select:focus { border-color:rgba(0,0,0,.3); }
+    .font-custom {
+      flex:1.2; padding:10px 12px; border:1.5px solid rgba(0,0,0,.12); border-radius:11px;
+      background:#fff; font-size:13.5px; color:#333; outline:none; font-family:inherit; box-sizing:border-box; min-width:0;
+    }
+    .font-custom:focus { border-color:rgba(0,0,0,.3); }
+    .font-custom::placeholder { color:#bbb; }
+    #font-picker-close {
+      display:block; width:100%; margin-top:4px; padding:12px;
+      border:none; background:#1a1a1a; border-radius:12px;
+      font-size:14px; font-weight:600; color:#fff; cursor:pointer;
+      transition:background .15s;
+    }
+    #font-picker-close:hover { background:#000; }
 
     /* ─────────────────── CUSTOM CURSOR ─────────────────── */
     #site-cursor { position:fixed; top:0; left:0; pointer-events:none; z-index:99999; display:none; }
@@ -858,6 +905,7 @@
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
     <div id="home-sections" style="opacity:0;transition:opacity .3s ease"></div>
     <button id="home-add-sec-btn" onclick="addHomeSection()">+ Add section</button>
+    <button id="home-fonts-btn" onclick="openFontPanel()">Aa &nbsp;Change fonts</button>
   </div><!-- /view-home -->
 
 
@@ -1007,6 +1055,37 @@
       </button>
     </div>
     <button id="lottie-picker-cancel" onclick="closeLottiePicker()">Cancel</button>
+  </div>
+</div>
+
+<div id="font-picker-overlay" onclick="if(event.target===this)closeFontPanel()">
+  <div id="font-picker-sheet">
+    <h3>Fonts</h3>
+    <div class="font-row" data-slot="heading">
+      <div class="font-row-lbl">Headings · سرتیترها</div>
+      <div class="font-row-preview">Works · Projects</div>
+      <div class="font-row-controls">
+        <select class="font-select"></select>
+        <input class="font-custom" type="text" placeholder="or type a Google Font…"/>
+      </div>
+    </div>
+    <div class="font-row" data-slot="title">
+      <div class="font-row-lbl">Project titles · اسم پروژه</div>
+      <div class="font-row-preview">Logo Motion</div>
+      <div class="font-row-controls">
+        <select class="font-select"></select>
+        <input class="font-custom" type="text" placeholder="or type a Google Font…"/>
+      </div>
+    </div>
+    <div class="font-row" data-slot="body">
+      <div class="font-row-lbl">Body text · متن بدنه</div>
+      <div class="font-row-preview">The quick brown fox jumps over.</div>
+      <div class="font-row-controls">
+        <select class="font-select"></select>
+        <input class="font-custom" type="text" placeholder="or type a Google Font…"/>
+      </div>
+    </div>
+    <button id="font-picker-close" onclick="closeFontPanel()">Done</button>
   </div>
 </div>
 
@@ -1554,6 +1633,113 @@ function syncProjectTitleToHome(key, name, sub) {
   saveSettings();
 }
 
+/* ─── Fonts ────────────────────────────────────────────── */
+// Curated Google Fonts. fb = fallback family group.
+const CURATED_FONTS = [
+  { name:'Inter',            fb:'sans-serif' },
+  { name:'Poppins',          fb:'sans-serif' },
+  { name:'Montserrat',       fb:'sans-serif' },
+  { name:'Manrope',          fb:'sans-serif' },
+  { name:'DM Sans',          fb:'sans-serif' },
+  { name:'Work Sans',        fb:'sans-serif' },
+  { name:'Nunito',           fb:'sans-serif' },
+  { name:'Roboto',           fb:'sans-serif' },
+  { name:'Space Grotesk',    fb:'sans-serif' },
+  { name:'Outfit',           fb:'sans-serif' },
+  { name:'Playfair Display', fb:'serif' },
+  { name:'Lora',             fb:'serif' },
+  { name:'Cormorant Garamond', fb:'serif' },
+  { name:'Caveat',           fb:'cursive' },
+  { name:'Dancing Script',   fb:'cursive' },
+  { name:'Pacifico',         fb:'cursive' },
+  { name:'Sacramento',       fb:'cursive' },
+  { name:'Lobster',          fb:'cursive' },
+  { name:'Bebas Neue',       fb:'sans-serif' },
+  { name:'Righteous',        fb:'cursive' },
+  { name:'Comfortaa',        fb:'cursive' },
+];
+const FONT_SLOTS = ['heading','title','body'];
+const FONT_DEFAULTS = { heading:'Caveat', title:'Inter', body:'Inter' };
+const FONT_VARS = { heading:'--font-heading', title:'--font-title', body:'--font-body' };
+
+function _fontFallback(name) {
+  const f = CURATED_FONTS.find(f => f.name.toLowerCase() === (name||'').toLowerCase());
+  return f ? f.fb : 'sans-serif';
+}
+
+// Apply a {heading,title,body} font set: load needed Google Fonts + set CSS vars.
+function applyFonts(fonts) {
+  const resolved = {};
+  FONT_SLOTS.forEach(slot => { resolved[slot] = (fonts && fonts[slot]) || FONT_DEFAULTS[slot]; });
+
+  // Build a single Google Fonts URL covering every unique family
+  const fams = [...new Set(Object.values(resolved))];
+  const url = 'https://fonts.googleapis.com/css2?' +
+    fams.map(n => `family=${encodeURIComponent(n)}:wght@300;400;500;600;700`).join('&') +
+    '&display=swap';
+  document.getElementById('gfonts-link').href = url;
+
+  FONT_SLOTS.forEach(slot => {
+    document.documentElement.style.setProperty(FONT_VARS[slot], `'${resolved[slot]}', ${_fontFallback(resolved[slot])}`);
+  });
+  return resolved;
+}
+
+function _setFont(slot, name) {
+  name = (name || '').trim();
+  if (!name) return;
+  if (!_cachedSettings) _cachedSettings = {};
+  if (!_cachedSettings.fonts) _cachedSettings.fonts = {};
+  _cachedSettings.fonts[slot] = name;
+  applyFonts(_cachedSettings.fonts);
+  // refresh the in-panel previews to the live font
+  document.querySelectorAll(`#font-picker-sheet .font-row[data-slot="${slot}"] .font-row-preview`)
+    .forEach(p => p.style.fontFamily = `'${name}', ${_fontFallback(name)}`);
+  saveSettings();
+}
+
+let _fontPanelBuilt = false;
+function _buildFontPanel() {
+  if (_fontPanelBuilt) return;
+  _fontPanelBuilt = true;
+  document.querySelectorAll('#font-picker-sheet .font-row').forEach(row => {
+    const slot   = row.dataset.slot;
+    const select = row.querySelector('.font-select');
+    const custom = row.querySelector('.font-custom');
+
+    CURATED_FONTS.forEach(f => {
+      const o = document.createElement('option');
+      o.value = f.name; o.textContent = f.name;
+      select.appendChild(o);
+    });
+
+    select.addEventListener('change', () => { custom.value = ''; _setFont(slot, select.value); });
+    const commitCustom = () => { if (custom.value.trim()) _setFont(slot, custom.value); };
+    custom.addEventListener('change', commitCustom);
+    custom.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); custom.blur(); } });
+  });
+}
+
+function openFontPanel() {
+  _buildFontPanel();
+  const fonts = (_cachedSettings && _cachedSettings.fonts) || {};
+  document.querySelectorAll('#font-picker-sheet .font-row').forEach(row => {
+    const slot    = row.dataset.slot;
+    const current = fonts[slot] || FONT_DEFAULTS[slot];
+    const select  = row.querySelector('.font-select');
+    const custom  = row.querySelector('.font-custom');
+    const inList  = CURATED_FONTS.some(f => f.name === current);
+    if (inList) { select.value = current; custom.value = ''; }
+    else        { custom.value = current; }
+    row.querySelector('.font-row-preview').style.fontFamily = `'${current}', ${_fontFallback(current)}`;
+  });
+  document.getElementById('font-picker-overlay').classList.add('show');
+}
+
+function closeFontPanel() {
+  document.getElementById('font-picker-overlay').classList.remove('show');
+}
+
 async function loadSettings() {
   try {
     const res = await fetch(`${SB_URL}/rest/v1/portfolio_settings?id=eq.1&select=data`, {
@@ -1565,14 +1751,7 @@ async function loadSettings() {
     _cachedSettings = s;
 
     // fonts
-    if (s.fonts) {
-      const bf = s.fonts.body || 'Inter';
-      const hf = s.fonts.heading || 'Caveat';
-      document.getElementById('gfonts-link').href =
-        `https://fonts.googleapis.com/css2?family=${encodeURIComponent(bf)}:wght@300;400;500;600&family=${encodeURIComponent(hf)}:wght@500;700&display=swap`;
-      document.documentElement.style.setProperty('--font-body', `'${bf}', sans-serif`);
-      document.documentElement.style.setProperty('--font-heading', `'${hf}', cursive`);
-    }
+    if (s.fonts) applyFonts(s.fonts);
 
     // profile
     if (s.profile) {
