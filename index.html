@@ -176,15 +176,6 @@
     .persian { font-size:22px; font-weight:900; background:linear-gradient(135deg,#e63946,#f4a261,#2a9d8f,#e9c46a,#264653); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 
     /* ─────────────────── WORK EXP PAGE ─────────────────── */
-    #exp-photo-wrap {
-      width:34%; margin:0 auto 28px;
-      overflow:hidden; border-radius:14px;
-    }
-    #exp-photo-wrap img {
-      width:100%; display:block; object-fit:cover; object-position:center top;
-      transform:scale(1.09); transition:transform .55s cubic-bezier(.25,.46,.45,.94);
-      will-change:transform;
-    }
     .exp-title { font-family:'Caveat',cursive; font-size:27px; font-weight:600; text-align:center; margin-bottom:32px; }
     .exp-item  { display:flex; align-items:center; gap:24px; padding:9px 0; border-bottom:1px solid rgba(0,0,0,.08); transition:opacity .22s, transform .22s cubic-bezier(.25,.46,.45,.94); }
     .exp-item:last-child { border-bottom:none; }
@@ -3034,37 +3025,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-/* ─── Work exp parallax ────────────────────────────────── */
-function _initExpParallax() {
-  const wrap = document.getElementById('exp-photo-wrap');
-  const img  = document.getElementById('exp-photo-img');
-  if (!wrap || !img) return;
-  const view = document.getElementById('view-exp');
-
-  // Desktop: mouse moves image in the opposite direction for depth feel
-  view.addEventListener('mousemove', e => {
-    const r = wrap.getBoundingClientRect();
-    const x = (e.clientX - r.left  - r.width  / 2) / (r.width  / 2);
-    const y = (e.clientY - r.top   - r.height / 2) / (r.height / 2);
-    img.style.transform = `scale(1.09) translate(${x * 11}px, ${y * 8}px)`;
-  });
-  view.addEventListener('mouseleave', () => {
-    img.style.transform = 'scale(1.09) translate(0,0)';
-  });
-
-  // Mobile: gyroscope tilt parallax
-  window.addEventListener('deviceorientation', e => {
-    if (current !== 'view-exp') return;
-    const x = Math.max(-1, Math.min(1, (e.gamma  || 0)         / 20));
-    const y = Math.max(-1, Math.min(1, ((e.beta  || 45) - 45)  / 20));
-    img.style.transform = `scale(1.09) translate(${x * 13}px, ${y * 9}px)`;
-  });
-}
-
 /* ─── Init ─────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', async () => {
   if (localStorage.getItem('portfolio_admin') === 'true') document.body.classList.add('is-admin');
-  _initExpParallax();
   await Promise.all([loadSettings(), loadProjects()]);
   trackView(null); // track home page visit
 
