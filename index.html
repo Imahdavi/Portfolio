@@ -86,45 +86,59 @@
     @keyframes profileIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:none } }
     .profile { display:none; }
 
-    /* ── Blob nav ──────────────────────────────────────────── */
-    .blob-nav-wrap { display:flex; flex-direction:column; align-items:center; padding:28px 0 18px; }
-    .blob-nav-inner { position:relative; display:flex; flex-direction:column; align-items:center; gap:14px; }
-    .blob-goo {
-      position:absolute; inset:-40px;
-      display:flex; flex-direction:column; align-items:center; gap:14px;
-      padding-top:40px;
-      filter:blur(14px) contrast(22);
-      pointer-events:none; background:white;
+    /* ── Blob nav — fixed, always visible ─────────────────── */
+    .blob-nav-wrap {
+      position:fixed; top:0; left:50%; transform:translateX(-50%);
+      z-index:200; padding:10px 28px 15px;
+      background:#fafafa; overflow:hidden;
     }
-    .blob-goo-profile { width:88px; height:88px; border-radius:50%; background:#111; flex-shrink:0; }
-    .blob-goo-navrow  { display:flex; gap:20px; }
-    .blob-goo-nav     { width:54px; height:54px; border-radius:50%; background:#111;
-                        transition:transform .45s cubic-bezier(.34,1.56,.64,1); }
-    .blob-goo-nav.active { transform:scale(1.12); }
+    .blob-nav-inner {
+      position:relative;
+      display:flex; flex-direction:column; align-items:center; gap:8px;
+    }
+    /* Gooey blob layer */
+    .blob-goo {
+      position:absolute; inset:-22px;
+      display:flex; flex-direction:column; align-items:center; gap:8px;
+      padding-top:22px;
+      filter:blur(11px) contrast(24);
+      pointer-events:none; background:#fafafa;
+    }
+    .blob-goo-profile {
+      width:64px; height:64px; border-radius:50%; background:#111; flex-shrink:0;
+      transform:translateX(var(--prof-tx,0px));
+      transition:transform .55s cubic-bezier(.34,1.56,.64,1);
+    }
+    .blob-goo-navrow { display:flex; gap:14px; }
+    .blob-goo-nav    { width:42px; height:42px; border-radius:50%; background:#111; }
+    /* Content layer */
     .blob-profile-btn {
-      position:relative; z-index:1;
-      width:88px; height:88px; border-radius:50%;
-      border:none; background:transparent; padding:0; cursor:pointer;
-      overflow:hidden; flex-shrink:0;
+      position:relative; z-index:1; flex-shrink:0;
+      width:64px; height:64px; border-radius:50%;
+      border:none; background:transparent; padding:0; cursor:pointer; overflow:hidden;
+      transform:translateX(var(--prof-tx,0px));
+      transition:transform .55s cubic-bezier(.34,1.56,.64,1);
     }
     .blob-profile-btn img { width:100%; height:100%; object-fit:cover; display:block; }
     .blob-initials {
       position:absolute; inset:0;
       display:flex; align-items:center; justify-content:center;
-      font-family:var(--font-heading); font-size:28px; color:white; pointer-events:none;
+      font-family:var(--font-heading); font-size:22px; color:white; pointer-events:none; z-index:0;
     }
-    .blob-navrow { display:flex; gap:20px; position:relative; z-index:1; }
+    .blob-navrow { display:flex; gap:14px; position:relative; z-index:1; }
     .bnav-btn {
-      width:54px; height:54px; border-radius:50%;
+      width:42px; height:42px; border-radius:50%;
       border:none; background:transparent; cursor:pointer;
-      color:rgba(255,255,255,.38);
+      color:rgba(255,255,255,.32);
       display:flex; align-items:center; justify-content:center;
       transition:color .3s; padding:0;
     }
-    .bnav-btn.active { color:rgba(255,255,255,.95); }
-    .bnav-btn svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; display:block; }
+    .bnav-btn.active { color:rgba(255,255,255,.92); }
+    .bnav-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; display:block; }
     .an-blob { display:none !important; }
     body.is-admin .an-blob { display:flex !important; }
+    /* top padding for all views so content isn't under fixed blob */
+    .view { padding-top:128px; }
     .avatar  { position:relative; width:88px; height:88px; border-radius:50%; background:#b5a090; flex-shrink:0; overflow:hidden; display:flex; align-items:center; justify-content:center; }
     .avatar img { width:100%; height:100%; object-fit:cover; display:block; }
     .avatar-edit-btn {
@@ -2122,23 +2136,39 @@ function goView(viewId, btn) {
 function setNavActive(btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  // sync blob nav
   const viewId = btn.dataset.view;
   document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.blob-goo-nav').forEach(b => b.classList.remove('active'));
   if (viewId) {
     const bb = document.querySelector(`.bnav-btn[data-view="${viewId}"]`);
     if (bb) bb.classList.add('active');
-    const navBtns = document.querySelectorAll('.blob-goo-nav');
-    const bnavBtns = document.querySelectorAll('.bnav-btn');
-    bnavBtns.forEach((b,i) => { if (b.dataset.view === viewId && navBtns[i]) navBtns[i].classList.add('active'); });
+    _updateBlobProfilePos(viewId);
   }
 }
 
 function blobNav(viewId, blobBtn) {
-  const navBtn = document.querySelector(`#bottom-nav .nav-btn[data-view="${viewId}"]`) || document.getElementById('nb-home');
+  const navBtn = document.querySelector(`#bottom-nav .nav-btn[data-view="${viewId}"]`);
   goView(viewId, navBtn || blobBtn);
 }
+
+function _updateBlobProfilePos(viewId) {
+  const inner = document.querySelector('.blob-nav-inner');
+  if (!inner) return;
+  const btns = [...document.querySelectorAll('.bnav-btn')].filter(b => getComputedStyle(b).display !== 'none');
+  const activeBtn = btns.find(b => b.dataset.view === viewId);
+  if (!activeBtn) return;
+  const innerRect = inner.getBoundingClientRect();
+  const btnRect   = activeBtn.getBoundingClientRect();
+  const tx = (btnRect.left + btnRect.width/2) - (innerRect.left + innerRect.width/2);
+  inner.style.setProperty('--prof-tx', tx.toFixed(1) + 'px');
+}
+
+// move blob nav to body so it persists across view changes
+document.addEventListener('DOMContentLoaded', () => {
+  const wrap = document.getElementById('blob-nav-wrap');
+  const app  = document.getElementById('app');
+  if (wrap && app) document.body.insertBefore(wrap, app);
+  _updateBlobProfilePos('view-home');
+});
 
 /* ─── Project detail ───────────────────────────────────── */
 let activeKey = null;
