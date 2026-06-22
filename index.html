@@ -1229,10 +1229,14 @@ function spiderSense(x, y) {
   document.addEventListener('mousedown', e => {
     cur.classList.add('pressing');
     spiderSense(e.clientX, e.clientY);
-    _webClickCard = e.target.closest('.proj-card') || null;
   });
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
 })();
+
+/* track which card was clicked (outside pointer:fine guard so it always fires) */
+document.addEventListener('mousedown', e => {
+  _webClickCard = e.target.closest('.proj-card') || null;
+});
 
 /* ─── Format toolbar (bold / italic) ─────────────────── */
 (function() {
