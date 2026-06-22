@@ -1214,38 +1214,70 @@ function spiderSense(x, y) {
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
 })();
 
-/* ─── Spider web threads SVG on card click ─────────────── */
+/* ─── Spider web catch SVG ──────────────────────────────── */
 function _webCatchSVG(card) {
-  const r = card.getBoundingClientRect();
-  const P = 30;
+  const r  = card.getBoundingClientRect();
+  const P  = 28, W = r.width, H = r.height;
+  const TW = W + P*2, TH = H + P*2;
   const ns = 'http://www.w3.org/2000/svg';
-  const W = r.width + P * 2, H = r.height + P * 2;
   const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svg.style.cssText = `position:fixed;left:${r.left-P}px;top:${r.top-P}px;width:${W}px;height:${H}px;pointer-events:none;z-index:9997;overflow:visible`;
+  svg.setAttribute('viewBox', `0 0 ${TW} ${TH}`);
+  svg.style.cssText = `position:fixed;left:${r.left-P}px;top:${r.top-P}px;width:${TW}px;height:${TH}px;pointer-events:none;z-index:9997;overflow:visible`;
+
   const g = document.createElementNS(ns, 'g');
-  g.setAttribute('stroke-linecap', 'round');
-  g.setAttribute('filter', 'drop-shadow(0 0 1px rgba(0,0,0,.35))');
-  // corners: TL, TR, BL, BR in SVG coords
-  const cx = r.width + P, cy = r.height + P;
+  g.setAttribute('stroke-linecap','round');
+  g.setAttribute('filter','drop-shadow(0 0 1.5px rgba(0,0,0,.45))');
+
+  // border trace — runs around the card perimeter
+  const perim = 2*(W+H);
+  const border = document.createElementNS(ns,'rect');
+  border.setAttribute('x',P); border.setAttribute('y',P);
+  border.setAttribute('width',W); border.setAttribute('height',H);
+  border.setAttribute('rx','14'); border.setAttribute('ry','14');
+  border.setAttribute('fill','none');
+  border.setAttribute('stroke','rgba(255,255,255,.82)');
+  border.setAttribute('stroke-width','1.6');
+  border.setAttribute('stroke-dasharray',perim);
+  border.setAttribute('stroke-dashoffset',perim);
+  border.style.animation = 'web-draw .38s ease-out forwards';
+  g.appendChild(border);
+
+  // threads from all 4 sides going slightly inward + diagonal corners outward
+  const ins = 22;
   const threads = [
-    [[P,P],[0,0]],   [[P,P],[P*.4,0]], [[P,P],[0,P*.4]],
-    [[cx,P],[W,0]],  [[cx,P],[cx+P*.6,0]], [[cx,P],[W,P*.4]],
-    [[P,cy],[0,H]],  [[P,cy],[P*.4,H]], [[P,cy],[0,cy+P*.6]],
-    [[cx,cy],[W,H]], [[cx,cy],[cx+P*.6,H]], [[cx,cy],[W,cy+P*.6]],
+    // LEFT → inward
+    [[0,       P+H*.15], [P+ins,   P+H*.15+4]],
+    [[0,       P+H*.48], [P+ins-4, P+H*.48-3]],
+    [[0,       P+H*.8 ], [P+ins+3, P+H*.8 +5]],
+    // RIGHT → inward
+    [[TW,      P+H*.22], [P+W-ins,   P+H*.22-4]],
+    [[TW,      P+H*.55], [P+W-ins+4, P+H*.55+3]],
+    [[TW,      P+H*.85], [P+W-ins-3, P+H*.85-5]],
+    // TOP → inward
+    [[P+W*.18, 0],       [P+W*.18+3, P+ins  ]],
+    [[P+W*.55, 0],       [P+W*.55-4, P+ins+2]],
+    [[P+W*.82, 0],       [P+W*.82+2, P+ins-3]],
+    // BOTTOM → inward
+    [[P+W*.22, TH],      [P+W*.22-3, P+H-ins  ]],
+    [[P+W*.6,  TH],      [P+W*.6 +4, P+H-ins-2]],
+    [[P+W*.85, TH],      [P+W*.85-2, P+H-ins+3]],
+    // diagonal corners outward
+    [[P,   P  ],[0, 0 ]], [[P+W,P  ],[TW,0 ]],
+    [[P,   P+H],[0, TH]], [[P+W,P+H],[TW,TH]],
   ];
   threads.forEach(([[x1,y1],[x2,y2]], i) => {
     const len = Math.hypot(x2-x1, y2-y1);
-    const line = document.createElementNS(ns, 'line');
+    const line = document.createElementNS(ns,'line');
     line.setAttribute('x1',x1); line.setAttribute('y1',y1);
     line.setAttribute('x2',x2); line.setAttribute('y2',y2);
-    line.setAttribute('stroke', i % 3 === 0 ? 'rgba(255,255,255,.85)' : 'rgba(255,255,255,.6)');
-    line.setAttribute('stroke-width', i % 3 === 0 ? '1.2' : '0.8');
-    line.setAttribute('stroke-dasharray', len);
-    line.setAttribute('stroke-dashoffset', len);
-    line.style.animation = `web-draw .18s ${i*10}ms ease-out forwards`;
+    line.setAttribute('stroke','rgba(255,255,255,.72)');
+    line.setAttribute('stroke-width', i >= 12 ? '1.1' : '0.85');
+    line.setAttribute('stroke-dasharray',len);
+    line.setAttribute('stroke-dashoffset',len);
+    line.style.animation = `web-draw .17s ${28+i*11}ms ease-out forwards`;
     g.appendChild(line);
   });
+
   svg.appendChild(g);
   document.body.appendChild(svg);
   return svg;
