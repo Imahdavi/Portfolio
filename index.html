@@ -1196,154 +1196,98 @@ function spiderSense(x, y) {
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
 })();
 
-/* ─── Spider web catch SVG ──────────────────────────────── */
+/* ─── Spider web catch SVG — dense, realistic cobweb drawn on click ───── */
 function _webCatchSVG(card) {
   const r  = card.getBoundingClientRect();
-  const P  = 28, W = r.width, H = r.height;
+  const P  = 38, W = r.width, H = r.height;
   const TW = W + P*2, TH = H + P*2;
   const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
   svg.setAttribute('viewBox', `0 0 ${TW} ${TH}`);
-  svg.style.cssText = `position:fixed;left:${r.left-P}px;top:${r.top-P}px;width:${TW}px;height:${TH}px;pointer-events:none;z-index:9997;overflow:visible`;
+  // mix-blend-mode:difference → white threads on dark cards, black on light
+  svg.style.cssText = `position:fixed;left:${r.left-P}px;top:${r.top-P}px;width:${TW}px;height:${TH}px;pointer-events:none;z-index:9997;mix-blend-mode:difference;overflow:visible`;
 
-  const g = document.createElementNS(ns, 'g');
+  const g = document.createElementNS(ns,'g');
+  g.setAttribute('stroke','white');
+  g.setAttribute('fill','none');
   g.setAttribute('stroke-linecap','round');
-  g.setAttribute('filter','drop-shadow(0 0 1.5px rgba(0,0,0,.45))');
+  g.setAttribute('stroke-linejoin','round');
 
-  // border trace — runs around the card perimeter
-  const perim = 2*(W+H);
-  const border = document.createElementNS(ns,'rect');
-  border.setAttribute('x',P); border.setAttribute('y',P);
-  border.setAttribute('width',W); border.setAttribute('height',H);
-  border.setAttribute('rx','14'); border.setAttribute('ry','14');
-  border.setAttribute('fill','none');
-  border.setAttribute('stroke','rgba(255,255,255,.82)');
-  border.setAttribute('stroke-width','1.6');
-  border.setAttribute('stroke-dasharray',perim);
-  border.setAttribute('stroke-dashoffset',perim);
-  border.style.animation = 'web-draw .38s ease-out forwards';
-  g.appendChild(border);
+  // seeded RNG so the web is stable for a given card size
+  let seed = Math.floor(W*7 + H*13 + 1);
+  const rnd = () => { seed = (seed*1103515245 + 12345) & 0x7fffffff; return seed/0x7fffffff; };
 
-  // threads from all 4 sides going slightly inward + diagonal corners outward
-  const ins = 22;
-  const threads = [
-    // LEFT → inward
-    [[0,       P+H*.15], [P+ins,   P+H*.15+4]],
-    [[0,       P+H*.48], [P+ins-4, P+H*.48-3]],
-    [[0,       P+H*.8 ], [P+ins+3, P+H*.8 +5]],
-    // RIGHT → inward
-    [[TW,      P+H*.22], [P+W-ins,   P+H*.22-4]],
-    [[TW,      P+H*.55], [P+W-ins+4, P+H*.55+3]],
-    [[TW,      P+H*.85], [P+W-ins-3, P+H*.85-5]],
-    // TOP → inward
-    [[P+W*.18, 0],       [P+W*.18+3, P+ins  ]],
-    [[P+W*.55, 0],       [P+W*.55-4, P+ins+2]],
-    [[P+W*.82, 0],       [P+W*.82+2, P+ins-3]],
-    // BOTTOM → inward
-    [[P+W*.22, TH],      [P+W*.22-3, P+H-ins  ]],
-    [[P+W*.6,  TH],      [P+W*.6 +4, P+H-ins-2]],
-    [[P+W*.85, TH],      [P+W*.85-2, P+H-ins+3]],
-    // diagonal corners outward
-    [[P,   P  ],[0, 0 ]], [[P+W,P  ],[TW,0 ]],
-    [[P,   P+H],[0, TH]], [[P+W,P+H],[TW,TH]],
-  ];
-  threads.forEach(([[x1,y1],[x2,y2]], i) => {
-    const len = Math.hypot(x2-x1, y2-y1);
-    const line = document.createElementNS(ns,'line');
-    line.setAttribute('x1',x1); line.setAttribute('y1',y1);
-    line.setAttribute('x2',x2); line.setAttribute('y2',y2);
-    line.setAttribute('stroke','rgba(255,255,255,.72)');
-    line.setAttribute('stroke-width', i >= 12 ? '1.1' : '0.85');
-    line.setAttribute('stroke-dasharray',len);
-    line.setAttribute('stroke-dashoffset',len);
-    line.style.animation = `web-draw .17s ${28+i*11}ms ease-out forwards`;
-    g.appendChild(line);
+  // hub slightly off-centre
+  const cx = P + W*0.47, cy = P + H*0.42;
+
+  // 17 radial threads, irregular spacing, reaching past the card edges
+  const NR = 17;
+  const ends = [];
+  for (let i=0;i<NR;i++){
+    const a = (i/NR)*Math.PI*2 + (rnd()-0.5)*0.22;
+    const dx = Math.cos(a), dy = Math.sin(a);
+    let t = Infinity;
+    if (dx > 1e-4)  t = Math.min(t, (TW-cx)/dx);
+    if (dx < -1e-4) t = Math.min(t, cx/-dx);
+    if (dy > 1e-4)  t = Math.min(t, (TH-cy)/dy);
+    if (dy < -1e-4) t = Math.min(t, cy/-dy);
+    ends.push([cx+dx*t, cy+dy*t]);
+  }
+
+  // collect path segments {d, w} then animate each with a stagger
+  const segs = [];
+  // radial threads
+  ends.forEach(([ex,ey]) => {
+    segs.push({ d:`M${cx.toFixed(1)},${cy.toFixed(1)}L${ex.toFixed(1)},${ey.toFixed(1)}`, w:0.7 });
+  });
+  // concentric rings with organic sag — each ring is one animated path
+  const rings = [0.09,0.18,0.29,0.41,0.54,0.68,0.83,0.97];
+  rings.forEach((frac, ri) => {
+    const pts = ends.map(([ex,ey], i) => {
+      const px = cx+(ex-cx)*frac, py = cy+(ey-cy)*frac;
+      const nx = -(ey-cy), ny = ex-cx, nl = Math.hypot(nx,ny)||1;
+      const sag = (rnd()-0.5) * 9 * (0.35+frac);   // bigger sag further out
+      return [px+nx/nl*sag, py+ny/nl*sag];
+    });
+    const n = pts.length;
+    let d = `M${pts[n-1][0].toFixed(1)},${pts[n-1][1].toFixed(1)}`;
+    pts.forEach(([px,py], i) => {
+      const [ppx,ppy] = pts[(i-1+n)%n];
+      const mpx = (px+ppx)/2, mpy = (py+ppy)/2;
+      const cpx = mpx + (cx-mpx)*0.14, cpy = mpy + (cy-mpy)*0.14; // pull toward hub
+      d += `Q${cpx.toFixed(1)},${cpy.toFixed(1)} ${px.toFixed(1)},${py.toFixed(1)}`;
+    });
+    segs.push({ d:d+'Z', w:0.7 });
+  });
+  // extra tangle: short messy chords between nearby ring points for that cobweb look
+  const TANGLE = 14;
+  for (let k=0;k<TANGLE;k++){
+    const i = Math.floor(rnd()*NR);
+    const f1 = 0.25+rnd()*0.7, f2 = f1 + (rnd()-0.5)*0.18;
+    const j = (i + (rnd()<0.5?1:NR-1)) % NR;
+    const ax = cx+(ends[i][0]-cx)*f1, ay = cy+(ends[i][1]-cy)*f1;
+    const bx = cx+(ends[j][0]-cx)*f2, by = cy+(ends[j][1]-cy)*f2;
+    const mx = (ax+bx)/2 + (rnd()-0.5)*6, my = (ay+by)/2 + (rnd()-0.5)*6;
+    segs.push({ d:`M${ax.toFixed(1)},${ay.toFixed(1)}Q${mx.toFixed(1)},${my.toFixed(1)} ${bx.toFixed(1)},${by.toFixed(1)}`, w:0.55 });
+  }
+
+  // build animated paths — pathLength=1 normalises the draw-on regardless of length
+  segs.forEach((s, i) => {
+    const path = document.createElementNS(ns,'path');
+    path.setAttribute('d', s.d);
+    path.setAttribute('stroke-width', s.w);
+    path.setAttribute('pathLength','1');
+    path.setAttribute('stroke-dasharray','1');
+    path.setAttribute('stroke-dashoffset','1');
+    const delay = i < NR ? i*7 : 60 + (i-NR)*9;   // radials first, then rings + tangle
+    path.style.animation = `web-draw .22s ${delay}ms ease-out forwards`;
+    g.appendChild(path);
   });
 
   svg.appendChild(g);
   document.body.appendChild(svg);
   return svg;
 }
-
-/* ─── Full spider web on card hover (fixed overlay, extends beyond card) ── */
-function _makeWebSVG(card) {
-  const r = card.getBoundingClientRect();
-  const P = 36, W = r.width, H = r.height;
-  const TW = W + P*2, TH = H + P*2;
-  const ns = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('viewBox', `0 0 ${TW} ${TH}`);
-  svg.style.cssText = `position:fixed;left:${r.left-P}px;top:${r.top-P}px;width:${TW}px;height:${TH}px;pointer-events:none;z-index:4;mix-blend-mode:difference;opacity:0;transition:opacity .3s;overflow:visible`;
-
-  // hub slightly off-center inside card area
-  const cx = P + W*.46, cy = P + H*.43;
-
-  // 13 radial threads at irregular angles
-  const angDeg = [2,28,54,78,102,130,162,192,220,246,270,294,328];
-  const ends = angDeg.map(deg => {
-    const a = deg*Math.PI/180, dx = Math.cos(a), dy = Math.sin(a);
-    let t = Infinity;
-    if (dx > 1e-4)  t = Math.min(t, (TW-cx)/dx);
-    if (dx < -1e-4) t = Math.min(t, cx/-dx);
-    if (dy > 1e-4)  t = Math.min(t, (TH-cy)/dy);
-    if (dy < -1e-4) t = Math.min(t, cy/-dy);
-    return [+(cx+dx*t).toFixed(1), +(cy+dy*t).toFixed(1)];
-  });
-
-  let d = '';
-  // radial threads
-  ends.forEach(([ex,ey]) => { d += `M${cx.toFixed(1)},${cy.toFixed(1)} L${ex},${ey} `; });
-
-  // 6 connecting rings with organic perturbation
-  [.13,.27,.42,.57,.72,.88].forEach((frac, ri) => {
-    const pts = ends.map(([ex,ey], i) => {
-      const px = cx+(ex-cx)*frac, py = cy+(ey-cy)*frac;
-      const nx = -(ey-cy), ny = ex-cx, nl = Math.hypot(nx,ny)||1;
-      const sign = ((i*3+ri*5)%2) ? 1 : -1;
-      const amt = 4*sign*(0.55+0.45*((i*7+ri*11)%10)/10);
-      return [+(px+nx/nl*amt).toFixed(1), +(py+ny/nl*amt).toFixed(1)];
-    });
-    const n = pts.length;
-    d += `M${pts[n-1][0]},${pts[n-1][1]} `;
-    pts.forEach(([px,py], i) => {
-      const [ppx,ppy] = pts[(i-1+n)%n];
-      const mpx = (px+ppx)/2, mpy = (py+ppy)/2;
-      const cpx = +(mpx+(cx-mpx)*.1).toFixed(1);
-      const cpy = +(mpy+(cy-mpy)*.1).toFixed(1);
-      d += `Q${cpx},${cpy} ${px},${py} `;
-    });
-    d += 'Z ';
-  });
-
-  const path = document.createElementNS(ns, 'path');
-  path.setAttribute('d', d.trim());
-  path.setAttribute('stroke', 'white');
-  path.setAttribute('stroke-width', '.78');
-  path.setAttribute('fill', 'none');
-  path.setAttribute('stroke-linecap', 'round');
-  path.setAttribute('stroke-linejoin', 'round');
-  svg.appendChild(path);
-  return svg;
-}
-
-let _webHoverCard = null, _webHoverSvg = null;
-document.addEventListener('mouseover', function(e) {
-  if (typeof editMode !== 'undefined' && editMode) return;
-  const card = e.target.closest('#view-home .proj-card');
-  if (card === _webHoverCard) return;
-  if (_webHoverSvg) {
-    const s = _webHoverSvg; _webHoverSvg = null;
-    s.style.opacity = '0';
-    setTimeout(() => s.remove(), 320);
-  }
-  _webHoverCard = card || null;
-  if (!card) return;
-  _webHoverSvg = _makeWebSVG(card);
-  document.body.appendChild(_webHoverSvg);
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    if (_webHoverSvg) _webHoverSvg.style.opacity = '.85';
-  }));
-});
 
 /* track which card was clicked (outside pointer:fine guard so it always fires) */
 document.addEventListener('mousedown', e => {
@@ -2225,7 +2169,7 @@ async function openProject(key) {
   if (_card && !_card.classList.contains('web-stuck')) {
     _card.classList.add('web-stuck');
     _webSvg = _webCatchSVG(_card);
-    await new Promise(r => setTimeout(r, 340));
+    await new Promise(r => setTimeout(r, 480));
   }
   activeKey = key;
   editMode  = false;
