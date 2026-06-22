@@ -129,7 +129,7 @@
 
     .proj-card { position:relative; cursor:pointer; transition:opacity .25s, filter .25s, transform .25s; }
 
-    /* spider web overlay on non-hovered blurred cards */
+    /* spider web on hovered card */
     .proj-card::before {
       content:'';
       position:absolute; top:0; right:0; z-index:3;
@@ -141,10 +141,30 @@
       transform-origin:top right;
       transition:opacity .35s, transform .45s cubic-bezier(.34,1.56,.64,1);
     }
-    .card-grid:has(.proj-card:hover) .proj-card:not(:hover)::before {
+    .proj-card:hover::before {
       opacity:1;
       transform:scale(1) rotate(0deg);
     }
+
+    /* caught-in-web click animation */
+    @keyframes web-caught {
+      0%   { transform:scale(1) rotate(0deg); }
+      12%  { transform:scale(.88) rotate(-2.5deg) translate(-2px,2px); }
+      28%  { transform:scale(.93) rotate(2deg) translate(2px,-1px); }
+      46%  { transform:scale(.91) rotate(-1.2deg) translate(-1px,1px); }
+      64%  { transform:scale(.97) rotate(.6deg); }
+      82%  { transform:scale(.99) rotate(-.2deg); }
+      100% { transform:scale(1) rotate(0deg); }
+    }
+    @keyframes web-vib {
+      0%,100% { transform:scale(1) rotate(0deg); opacity:1; }
+      18%  { transform:scale(1.12) rotate(5deg); opacity:.6; }
+      36%  { transform:scale(.9) rotate(-3.5deg); opacity:.85; }
+      55%  { transform:scale(1.06) rotate(2.5deg); opacity:.7; }
+      75%  { transform:scale(.97) rotate(-1deg); opacity:.88; }
+    }
+    .proj-card.web-caught { animation:web-caught .42s cubic-bezier(.36,.07,.19,.97) both; }
+    .proj-card.web-caught::before { animation:web-vib .42s ease both !important; opacity:1 !important; }
 
     /* white-lift overlay on non-hovered cards */
     .proj-card::after {
@@ -1205,6 +1225,13 @@ function spiderSense(x, y) {
   document.addEventListener('mousedown', e => {
     cur.classList.add('pressing');
     spiderSense(e.clientX, e.clientY);
+    const card = e.target.closest('.proj-card');
+    if (card) {
+      card.classList.remove('web-caught');
+      void card.offsetWidth;
+      card.classList.add('web-caught');
+      setTimeout(() => card.classList.remove('web-caught'), 440);
+    }
   });
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
 })();
