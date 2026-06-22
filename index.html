@@ -14,6 +14,7 @@
       --font-body: 'Inter', sans-serif;
       --font-heading: 'Caveat', cursive;
       --font-name: 'Caveat', cursive;
+      --font-name-size: 34px;
       --font-title: 'Inter', sans-serif;
       --font-intro: 'Inter', sans-serif;
     }
@@ -127,7 +128,7 @@
     .ae-s4 { width:26px; left:66%; top:56%; animation:aeF4 3.0s  ease-in-out infinite; animation-delay:1.25s; }
     .ae-s5 { width:28px; left:81%; top:12%; animation:aeF5 2.7s  ease-in-out infinite; animation-delay:.65s; }
 
-    .profile-name { font-family:var(--font-name); font-size:34px; font-weight:700; line-height:1.05; margin-bottom:3px; opacity:0; }
+    .profile-name { font-family:var(--font-name); font-size:var(--font-name-size); font-weight:700; line-height:1.05; margin-bottom:3px; opacity:0; }
     .profile-role { font-family:var(--font-intro); font-size:13px; color:#666; margin-bottom:1px; }
     .profile-age  { font-family:var(--font-intro); font-size:13px; color:#666; }
 
@@ -206,8 +207,12 @@
     .proj-card:hover .proj-thumb::after { opacity:.85; transform:scale(1); }
     #view-home.home-edit .proj-thumb::after { display:none; }
 
-    .proj-title { font-family:var(--font-title); font-size:13.5px; font-weight:600; margin-bottom:2px; }
-    .proj-sub   { font-size:11px; color:#777; line-height:1.35; }
+    .proj-title { font-family:var(--font-title); font-size:13.5px; font-weight:600; margin-bottom:2px; display:none; }
+    .proj-sub   { font-size:11px; color:#777; line-height:1.35; display:none; }
+    .d-title    { display:none !important; }
+    .d-subtitle { display:none !important; }
+    .d-title[contenteditable="true"]    { display:block !important; }
+    .d-subtitle[contenteditable="true"] { display:block !important; }
 
     /* ── thumb colours ── */
     .c-lina   { background:#FADCE0; }
@@ -371,7 +376,7 @@
     #view-home.home-edit .proj-card.drag-over { outline:2px solid rgba(0,0,0,.25); border-radius:16px; }
     #view-home.home-edit .proj-title,
     #view-home.home-edit .proj-sub {
-      outline:1px dashed rgba(0,0,0,.15); border-radius:3px; cursor:text;
+      display:block; outline:1px dashed rgba(0,0,0,.15); border-radius:3px; cursor:text;
     }
     .home-edit-hint {
       font-size:11.5px; color:#888; background:rgba(0,0,0,.05);
@@ -914,6 +919,10 @@
     }
     .font-custom:focus { border-color:rgba(0,0,0,.28); }
     .font-custom::placeholder { color:#c0c0c0; font-size:12px; }
+    .font-row-size { display:flex; align-items:center; gap:9px; margin-top:9px; }
+    .font-row-size-lbl { font-size:10.5px; font-weight:600; color:#bbb; white-space:nowrap; }
+    .font-size-range { flex:1; height:3px; accent-color:#1a1a1a; cursor:pointer; }
+    .font-size-val { font-size:12px; color:#888; min-width:32px; text-align:right; }
     #font-picker-close { display:none; }
 
     /* ─────────────────── CUSTOM CURSOR ─────────────────── */
@@ -1155,6 +1164,11 @@
       <div class="font-row-controls">
         <select class="font-select"></select>
         <input class="font-custom" type="text" placeholder="Google Font name…"/>
+      </div>
+      <div class="font-row-size">
+        <span class="font-row-size-lbl">Size</span>
+        <input type="range" class="font-size-range" id="name-size-range" min="18" max="72" step="1" value="34"/>
+        <span class="font-size-val" id="name-size-val">34px</span>
       </div>
     </div>
     <div class="font-row" data-slot="intro">
@@ -1793,6 +1807,10 @@ function applyFonts(fonts) {
   FONT_SLOTS.forEach(slot => {
     document.documentElement.style.setProperty(FONT_VARS[slot], `'${resolved[slot]}', ${_fontFallback(resolved[slot])}`);
   });
+
+  if (fonts && fonts.nameSize) {
+    document.documentElement.style.setProperty('--font-name-size', fonts.nameSize + 'px');
+  }
   return resolved;
 }
 
@@ -1829,6 +1847,20 @@ function _buildFontPanel() {
     custom.addEventListener('change', commitCustom);
     custom.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); custom.blur(); } });
   });
+
+  // Name size slider
+  const sizeRange = document.getElementById('name-size-range');
+  const sizeVal   = document.getElementById('name-size-val');
+  sizeRange.addEventListener('input', () => {
+    const sz = sizeRange.value;
+    sizeVal.textContent = sz + 'px';
+    document.documentElement.style.setProperty('--font-name-size', sz + 'px');
+    document.querySelector('.font-row[data-slot="name"] .font-row-preview').style.fontSize = sz + 'px';
+    if (!_cachedSettings) _cachedSettings = {};
+    if (!_cachedSettings.fonts) _cachedSettings.fonts = {};
+    _cachedSettings.fonts.nameSize = +sz;
+  });
+  sizeRange.addEventListener('change', () => saveSettings());
 }
 
 function openFontPanel() {
@@ -1844,6 +1876,12 @@ function openFontPanel() {
     else        { custom.value = current; }
     row.querySelector('.font-row-preview').style.fontFamily = `'${current}', ${_fontFallback(current)}`;
   });
+  const sz = fonts.nameSize || 34;
+  const sizeRange = document.getElementById('name-size-range');
+  const sizeVal   = document.getElementById('name-size-val');
+  sizeRange.value = sz;
+  sizeVal.textContent = sz + 'px';
+  document.querySelector('.font-row[data-slot="name"] .font-row-preview').style.fontSize = sz + 'px';
   document.getElementById('font-picker-overlay').classList.add('show');
 }
 
