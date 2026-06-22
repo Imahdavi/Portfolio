@@ -138,10 +138,6 @@
       transition:opacity .35s, transform .45s cubic-bezier(.34,1.56,.64,1);
     }
     .proj-card:hover::before { opacity:1; transform:scale(1) rotate(0deg); }
-    .proj-card.web-stuck::before { opacity:1 !important; transform:scale(1) rotate(0deg) !important; transition:none !important; }
-
-    /* SVG thread draw-on animation (for click web) */
-    @keyframes web-draw { to { stroke-dashoffset:0; } }
 
     /* white-lift overlay on non-hovered cards */
     .proj-card::after {
@@ -1211,102 +1207,6 @@ function spiderSense(x, y) {
 })();
 
 /* ─── Spider web catch SVG — dense, realistic cobweb drawn on click ───── */
-function _webCatchSVG(card) {
-  const r  = card.getBoundingClientRect();
-  const P  = 38, W = r.width, H = r.height;
-  const TW = W + P*2, TH = H + P*2;
-  const ns = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('viewBox', `0 0 ${TW} ${TH}`);
-  // mix-blend-mode:difference → white threads on dark cards, black on light
-  svg.style.cssText = `position:fixed;left:${r.left-P}px;top:${r.top-P}px;width:${TW}px;height:${TH}px;pointer-events:none;z-index:9997;mix-blend-mode:difference;overflow:visible`;
-
-  const g = document.createElementNS(ns,'g');
-  g.setAttribute('stroke','white');
-  g.setAttribute('fill','none');
-  g.setAttribute('stroke-linecap','round');
-  g.setAttribute('stroke-linejoin','round');
-
-  // seeded RNG so the web is stable for a given card size
-  let seed = Math.floor(W*7 + H*13 + 1);
-  const rnd = () => { seed = (seed*1103515245 + 12345) & 0x7fffffff; return seed/0x7fffffff; };
-
-  // hub slightly off-centre
-  const cx = P + W*0.47, cy = P + H*0.42;
-
-  // 17 radial threads, irregular spacing, reaching past the card edges
-  const NR = 17;
-  const ends = [];
-  for (let i=0;i<NR;i++){
-    const a = (i/NR)*Math.PI*2 + (rnd()-0.5)*0.22;
-    const dx = Math.cos(a), dy = Math.sin(a);
-    let t = Infinity;
-    if (dx > 1e-4)  t = Math.min(t, (TW-cx)/dx);
-    if (dx < -1e-4) t = Math.min(t, cx/-dx);
-    if (dy > 1e-4)  t = Math.min(t, (TH-cy)/dy);
-    if (dy < -1e-4) t = Math.min(t, cy/-dy);
-    ends.push([cx+dx*t, cy+dy*t]);
-  }
-
-  // collect path segments {d, w} then animate each with a stagger
-  const segs = [];
-  // radial threads
-  ends.forEach(([ex,ey]) => {
-    segs.push({ d:`M${cx.toFixed(1)},${cy.toFixed(1)}L${ex.toFixed(1)},${ey.toFixed(1)}`, w:0.7 });
-  });
-  // concentric rings with organic sag — each ring is one animated path
-  const rings = [0.09,0.18,0.29,0.41,0.54,0.68,0.83,0.97];
-  rings.forEach((frac, ri) => {
-    const pts = ends.map(([ex,ey], i) => {
-      const px = cx+(ex-cx)*frac, py = cy+(ey-cy)*frac;
-      const nx = -(ey-cy), ny = ex-cx, nl = Math.hypot(nx,ny)||1;
-      const sag = (rnd()-0.5) * 9 * (0.35+frac);   // bigger sag further out
-      return [px+nx/nl*sag, py+ny/nl*sag];
-    });
-    const n = pts.length;
-    let d = `M${pts[n-1][0].toFixed(1)},${pts[n-1][1].toFixed(1)}`;
-    pts.forEach(([px,py], i) => {
-      const [ppx,ppy] = pts[(i-1+n)%n];
-      const mpx = (px+ppx)/2, mpy = (py+ppy)/2;
-      const cpx = mpx + (cx-mpx)*0.14, cpy = mpy + (cy-mpy)*0.14; // pull toward hub
-      d += `Q${cpx.toFixed(1)},${cpy.toFixed(1)} ${px.toFixed(1)},${py.toFixed(1)}`;
-    });
-    segs.push({ d:d+'Z', w:0.7 });
-  });
-  // extra tangle: short messy chords between nearby ring points for that cobweb look
-  const TANGLE = 14;
-  for (let k=0;k<TANGLE;k++){
-    const i = Math.floor(rnd()*NR);
-    const f1 = 0.25+rnd()*0.7, f2 = f1 + (rnd()-0.5)*0.18;
-    const j = (i + (rnd()<0.5?1:NR-1)) % NR;
-    const ax = cx+(ends[i][0]-cx)*f1, ay = cy+(ends[i][1]-cy)*f1;
-    const bx = cx+(ends[j][0]-cx)*f2, by = cy+(ends[j][1]-cy)*f2;
-    const mx = (ax+bx)/2 + (rnd()-0.5)*6, my = (ay+by)/2 + (rnd()-0.5)*6;
-    segs.push({ d:`M${ax.toFixed(1)},${ay.toFixed(1)}Q${mx.toFixed(1)},${my.toFixed(1)} ${bx.toFixed(1)},${by.toFixed(1)}`, w:0.55 });
-  }
-
-  // build animated paths — pathLength=1 normalises the draw-on regardless of length
-  segs.forEach((s, i) => {
-    const path = document.createElementNS(ns,'path');
-    path.setAttribute('d', s.d);
-    path.setAttribute('stroke-width', s.w);
-    path.setAttribute('pathLength','1');
-    path.setAttribute('stroke-dasharray','1');
-    path.setAttribute('stroke-dashoffset','1');
-    const delay = i < NR ? i*7 : 60 + (i-NR)*9;   // radials first, then rings + tangle
-    path.style.animation = `web-draw .22s ${delay}ms ease-out forwards`;
-    g.appendChild(path);
-  });
-
-  svg.appendChild(g);
-  document.body.appendChild(svg);
-  return svg;
-}
-
-/* track which card was clicked (outside pointer:fine guard so it always fires) */
-document.addEventListener('mousedown', e => {
-  _webClickCard = e.target.closest('.proj-card') || null;
-});
 
 /* ─── Format toolbar (bold / italic) ─────────────────── */
 (function() {
@@ -2173,18 +2073,9 @@ function setNavActive(btn) {
 
 /* ─── Project detail ───────────────────────────────────── */
 let activeKey = null;
-let _webClickCard = null;
 
 async function openProject(key) {
   if (editMode && current === 'view-home') return;
-  const _card = _webClickCard;
-  _webClickCard = null;
-  let _webSvg = null;
-  if (_card && !_card.classList.contains('web-stuck')) {
-    _card.classList.add('web-stuck');
-    _webSvg = _webCatchSVG(_card);
-    await new Promise(r => setTimeout(r, 480));
-  }
   activeKey = key;
   editMode  = false;
   prevMain  = current;
@@ -2205,12 +2096,6 @@ async function openProject(key) {
   renderBlocks(true);
   updateEditUI();
   showView('view-project', 'enter-project');
-  if (_card) _card.classList.remove('web-stuck');
-  if (_webSvg) {
-    _webSvg.style.transition = 'opacity .22s';
-    _webSvg.style.opacity = '0';
-    setTimeout(() => _webSvg.remove(), 240);
-  }
 }
 
 function closeProject() {
