@@ -120,15 +120,15 @@
     @keyframes aeF4 { 0%,100%{transform:translateY(0)}    50%{transform:translateY(-13px)} }
     @keyframes aeF5 { 0%,100%{transform:translateY(0)}    50%{transform:translateY(-9px)}  }
     /* positions + timing */
-    .ae-s1 { width:26px; left:5%;  top:12%; animation:aeF1 3.2s ease-in-out infinite; }
-    .ae-s2 { width:23px; left:22%; top:60%; animation:aeF2 2.85s ease-in-out infinite; animation-delay:.45s; }
-    .ae-s3 { width:26px; left:44%; top:3%;  animation:aeF3 3.6s  ease-in-out infinite; animation-delay:.9s; }
-    .ae-s4 { width:21px; left:65%; top:55%; animation:aeF4 3.0s  ease-in-out infinite; animation-delay:1.25s; }
-    .ae-s5 { width:22px; left:82%; top:14%; animation:aeF5 2.7s  ease-in-out infinite; animation-delay:.65s; }
+    .ae-s1 { width:32px; left:4%;  top:10%; animation:aeF1 3.2s  ease-in-out infinite; }
+    .ae-s2 { width:28px; left:18%; top:62%; animation:aeF2 2.85s ease-in-out infinite; animation-delay:.45s; }
+    .ae-s3 { width:32px; left:43%; top:2%;  animation:aeF3 3.6s  ease-in-out infinite; animation-delay:.9s; }
+    .ae-s4 { width:26px; left:66%; top:56%; animation:aeF4 3.0s  ease-in-out infinite; animation-delay:1.25s; }
+    .ae-s5 { width:28px; left:81%; top:12%; animation:aeF5 2.7s  ease-in-out infinite; animation-delay:.65s; }
 
-    .profile-name { font-family:var(--font-heading); font-size:34px; font-weight:700; line-height:1.05; margin-bottom:5px; opacity:0; }
-    .profile-role { font-family:var(--font-intro); font-size:13.5px; color:#555; margin-bottom:2px; }
-    .profile-age  { font-family:var(--font-intro); font-size:13.5px; color:#555; margin-bottom:16px; }
+    .profile-name { font-family:var(--font-heading); font-size:34px; font-weight:700; line-height:1.05; margin-bottom:4px; opacity:0; text-align:center; }
+    .profile-role { font-family:var(--font-intro); font-size:13px; color:#666; margin-bottom:1px; text-align:center; }
+    .profile-age  { font-family:var(--font-intro); font-size:13px; color:#666; margin-bottom:16px; text-align:center; }
 
     .contact-row  { display:flex; align-items:center; justify-content:center; gap:7px; flex-wrap:wrap; margin-top:16px; margin-bottom:32px; }
     .contact-lbl  { font-size:12.5px; color:#888; white-space:nowrap; width:100%; text-align:center; margin-bottom:2px; }
@@ -939,16 +939,32 @@
 
     <div class="profile-header-wrap">
       <div class="ae-shapes" aria-hidden="true">
-        <!-- diamond (yellow) -->
-        <svg class="ae-shape ae-s1" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polygon points="12,0 24,12 12,24 0,12" fill="#FFC107"/></svg>
-        <!-- left triangle (pink) -->
-        <svg class="ae-shape ae-s2" viewBox="0 0 20 24" xmlns="http://www.w3.org/2000/svg"><polygon points="20,0 0,12 20,24" fill="#FF6B9D"/></svg>
-        <!-- circle (blue) -->
-        <svg class="ae-shape ae-s3" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#29B6F6"/></svg>
-        <!-- hourglass (purple) -->
-        <svg class="ae-shape ae-s4" viewBox="0 0 22 26" xmlns="http://www.w3.org/2000/svg"><polygon points="0,0 22,0 11,13 22,26 0,26 11,13" fill="#7C4DFF"/></svg>
-        <!-- chevron (red) -->
-        <svg class="ae-shape ae-s5" viewBox="0 0 20 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 2 L4 12 L16 22" stroke="#F44336" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <!-- Linear keyframe: sharp diamond -->
+        <svg class="ae-shape ae-s1" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 2 L30 16 L16 30 L2 16 Z" fill="#FFB800"/>
+          <path d="M16 7 L25 16 L16 25 L7 16 Z" fill="#FFDB6E" opacity=".55"/>
+        </svg>
+        <!-- Ease-out keyframe: left-facing half-diamond -->
+        <svg class="ae-shape ae-s2" viewBox="0 0 26 32" xmlns="http://www.w3.org/2000/svg">
+          <path d="M24 2 L2 16 L24 30 L24 2 Z" fill="#FF5FA2"/>
+          <path d="M24 9 L9 16 L24 23 Z" fill="#FFA8CE" opacity=".6"/>
+        </svg>
+        <!-- Bezier keyframe: circle -->
+        <svg class="ae-shape ae-s3" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="16" cy="16" r="14" fill="#14B8F5"/>
+          <circle cx="16" cy="16" r="8"  fill="#7CDDFF" opacity=".55"/>
+        </svg>
+        <!-- Easy-ease keyframe: hourglass -->
+        <svg class="ae-shape ae-s4" viewBox="0 0 28 32" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 1 L27 1 L14 16 L27 31 L1 31 L14 16 Z" fill="#7C3AFF"/>
+          <path d="M7 4 L21 4 L14 12 Z" fill="#B490FF" opacity=".55"/>
+          <path d="M7 28 L21 28 L14 20 Z" fill="#B490FF" opacity=".55"/>
+        </svg>
+        <!-- Hold keyframe: rounded square -->
+        <svg class="ae-shape ae-s5" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="2" width="26" height="26" rx="6" fill="#FF3B30"/>
+          <rect x="8" y="8" width="14" height="14" rx="3" fill="#FF8A82" opacity=".55"/>
+        </svg>
       </div>
       <div class="pbc-avatar" onclick="document.getElementById('avatarInput').click()">
         <button class="avatar-edit-btn" title="Change photo" onclick="event.stopPropagation();document.getElementById('avatarInput').click()">
