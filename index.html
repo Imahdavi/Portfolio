@@ -68,7 +68,7 @@
     .enter-fade { animation: fadeUp   .28s ease both; }
 
     /* ── Stagger ── */
-    @keyframes cardUp { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:none } }
+    @keyframes cardUp { from { opacity:0; transform:translateY(16px) } to { opacity:1; } }
     .sg > * { opacity:0 }
     .sg.run > * { animation: cardUp .35s ease forwards; animation-delay: .30s }
     .sg.run > *:nth-child(1)  { animation-delay: .04s }
