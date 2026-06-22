@@ -88,17 +88,15 @@
     .profile { display:none; }
     /* ── Profile header — floating AE keyframe shapes ───────── */
     .profile-header-wrap {
-      position:relative; height:158px;
-      margin:0 0 18px;
+      display:flex; justify-content:center;
+      margin:0 0 14px;
       animation:profileIn .5s ease both;
     }
 
-    /* Avatar — centered */
+    /* Avatar */
     .pbc-avatar {
-      position:absolute; left:50%; top:50%;
-      transform:translate(-50%,-50%);
       width:78px; height:78px; border-radius:50%; overflow:hidden;
-      cursor:pointer; background:#b5a090; z-index:2;
+      cursor:pointer; background:#b5a090; position:relative;
     }
     .pbc-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
     .avatar-edit-btn {
@@ -939,34 +937,6 @@
   <div class="view active" id="view-home">
 
     <div class="profile-header-wrap">
-      <div class="ae-shapes" aria-hidden="true">
-        <!-- Linear keyframe: sharp diamond -->
-        <svg class="ae-shape ae-s1" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-          <path d="M16 2 L30 16 L16 30 L2 16 Z" fill="#FFB800"/>
-          <path d="M16 7 L25 16 L16 25 L7 16 Z" fill="#FFDB6E" opacity=".55"/>
-        </svg>
-        <!-- Ease-out keyframe: left-facing half-diamond -->
-        <svg class="ae-shape ae-s2" viewBox="0 0 26 32" xmlns="http://www.w3.org/2000/svg">
-          <path d="M24 2 L2 16 L24 30 L24 2 Z" fill="#FF5FA2"/>
-          <path d="M24 9 L9 16 L24 23 Z" fill="#FFA8CE" opacity=".6"/>
-        </svg>
-        <!-- Bezier keyframe: circle -->
-        <svg class="ae-shape ae-s3" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="16" cy="16" r="14" fill="#14B8F5"/>
-          <circle cx="16" cy="16" r="8"  fill="#7CDDFF" opacity=".55"/>
-        </svg>
-        <!-- Easy-ease keyframe: hourglass -->
-        <svg class="ae-shape ae-s4" viewBox="0 0 28 32" xmlns="http://www.w3.org/2000/svg">
-          <path d="M1 1 L27 1 L14 16 L27 31 L1 31 L14 16 Z" fill="#7C3AFF"/>
-          <path d="M7 4 L21 4 L14 12 Z" fill="#B490FF" opacity=".55"/>
-          <path d="M7 28 L21 28 L14 20 Z" fill="#B490FF" opacity=".55"/>
-        </svg>
-        <!-- Hold keyframe: rounded square -->
-        <svg class="ae-shape ae-s5" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
-          <rect x="2" y="2" width="26" height="26" rx="6" fill="#FF3B30"/>
-          <rect x="8" y="8" width="14" height="14" rx="3" fill="#FF8A82" opacity=".55"/>
-        </svg>
-      </div>
       <div class="pbc-avatar" onclick="document.getElementById('avatarInput').click()">
         <button class="avatar-edit-btn" title="Change photo" onclick="event.stopPropagation();document.getElementById('avatarInput').click()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
