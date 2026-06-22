@@ -2112,7 +2112,7 @@ async function openProject(key) {
   if (_card && !_card.classList.contains('web-stuck')) {
     _card.classList.add('web-stuck');
     await new Promise(r => setTimeout(r, 420));
-    _card.classList.remove('web-stuck');
+    // intentionally NOT removing web-stuck here — keep web visible through fetch + view transition
   }
   activeKey = key;
   editMode  = false;
@@ -2134,6 +2134,7 @@ async function openProject(key) {
   renderBlocks(true);
   updateEditUI();
   showView('view-project', 'enter-project');
+  if (_card) _card.classList.remove('web-stuck');
 }
 
 function closeProject() {
