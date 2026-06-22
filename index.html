@@ -148,7 +148,7 @@
       transform: scale(.97);
     }
     .card-grid:has(.proj-card:hover) .proj-card:hover {
-      transform: translateY(-2px) scale(1.005);
+      transform: translateY(-2px) scale(1.04) rotate(-2.5deg);
     }
 
     .proj-thumb {
@@ -1288,6 +1288,78 @@ function _webCatchSVG(card) {
   document.body.appendChild(svg);
   return svg;
 }
+
+/* ─── Spider web on card hover ─────────────────────────── */
+function _makeWebSVG(card) {
+  const r = card.getBoundingClientRect();
+  const P = 38, W = r.width, H = r.height;
+  const TW = W + P*2, TH = H + P*2;
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${TW} ${TH}`);
+  svg.style.cssText = `position:fixed;left:${r.left-P}px;top:${r.top-P}px;width:${TW}px;height:${TH}px;pointer-events:none;z-index:4;mix-blend-mode:difference;opacity:0;transition:opacity .3s;overflow:visible`;
+
+  const cx = P + W*.46, cy = P + H*.43;
+  const angDeg = [2,28,54,78,102,130,162,192,220,246,270,294,328];
+  const ends = angDeg.map(deg => {
+    const a = deg*Math.PI/180, dx = Math.cos(a), dy = Math.sin(a);
+    let t = Infinity;
+    if (dx > 1e-4)  t = Math.min(t, (TW-cx)/dx);
+    if (dx < -1e-4) t = Math.min(t, cx/-dx);
+    if (dy > 1e-4)  t = Math.min(t, (TH-cy)/dy);
+    if (dy < -1e-4) t = Math.min(t, cy/-dy);
+    return [+(cx+dx*t).toFixed(1), +(cy+dy*t).toFixed(1)];
+  });
+
+  let d = '';
+  ends.forEach(([ex,ey]) => { d += `M${cx.toFixed(1)},${cy.toFixed(1)} L${ex},${ey} `; });
+  [.13,.27,.42,.57,.72,.88].forEach((frac, ri) => {
+    const pts = ends.map(([ex,ey], i) => {
+      const px = cx+(ex-cx)*frac, py = cy+(ey-cy)*frac;
+      const nx = -(ey-cy), ny = ex-cx, nl = Math.hypot(nx,ny)||1;
+      const sign = ((i*3+ri*5)%2) ? 1 : -1;
+      const amt = 4*sign*(0.55+0.45*((i*7+ri*11)%10)/10);
+      return [+(px+nx/nl*amt).toFixed(1), +(py+ny/nl*amt).toFixed(1)];
+    });
+    const n = pts.length;
+    d += `M${pts[n-1][0]},${pts[n-1][1]} `;
+    pts.forEach(([px,py], i) => {
+      const [ppx,ppy] = pts[(i-1+n)%n];
+      const mpx = (px+ppx)/2, mpy = (py+ppy)/2;
+      d += `Q${+(mpx+(cx-mpx)*.1).toFixed(1)},${+(mpy+(cy-mpy)*.1).toFixed(1)} ${px},${py} `;
+    });
+    d += 'Z ';
+  });
+
+  const path = document.createElementNS(ns, 'path');
+  path.setAttribute('d', d.trim());
+  path.setAttribute('stroke', 'white');
+  path.setAttribute('stroke-width', '.78');
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke-linecap', 'round');
+  path.setAttribute('stroke-linejoin', 'round');
+  svg.appendChild(path);
+  return svg;
+}
+
+let _webHoverCard = null, _webHoverSvg = null;
+document.addEventListener('mouseover', function(e) {
+  if (typeof editMode !== 'undefined' && editMode) return;
+  const card = e.target.closest('#view-home .proj-card');
+  if (card === _webHoverCard) return;
+  if (_webHoverSvg) {
+    const s = _webHoverSvg; _webHoverSvg = null;
+    s.style.opacity = '0';
+    setTimeout(() => s.remove(), 320);
+  }
+  _webHoverCard = card || null;
+  if (!card) return;
+  _webHoverSvg = _makeWebSVG(card);
+  document.body.appendChild(_webHoverSvg);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (_webHoverSvg) _webHoverSvg.style.opacity = '.85';
+  }));
+});
 
 /* track which card was clicked (outside pointer:fine guard so it always fires) */
 document.addEventListener('mousedown', e => {
