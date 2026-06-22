@@ -146,25 +146,30 @@
       transform:scale(1) rotate(0deg);
     }
 
-    /* caught-in-web click animation */
+    /* caught-in-web: card shakes then stays compressed/tilted */
     @keyframes web-caught {
       0%   { transform:scale(1) rotate(0deg); }
-      12%  { transform:scale(.88) rotate(-2.5deg) translate(-2px,2px); }
-      28%  { transform:scale(.93) rotate(2deg) translate(2px,-1px); }
-      46%  { transform:scale(.91) rotate(-1.2deg) translate(-1px,1px); }
-      64%  { transform:scale(.97) rotate(.6deg); }
-      82%  { transform:scale(.99) rotate(-.2deg); }
-      100% { transform:scale(1) rotate(0deg); }
+      12%  { transform:scale(.86) rotate(-3deg) translate(-3px,2px); }
+      26%  { transform:scale(.92) rotate(2.5deg) translate(2px,-2px); }
+      42%  { transform:scale(.9) rotate(-1.5deg) translate(-1px,1px); }
+      58%  { transform:scale(.94) rotate(.8deg); }
+      75%  { transform:scale(.96) rotate(-.4deg); }
+      100% { transform:scale(.96) rotate(-.4deg); }
     }
-    @keyframes web-vib {
-      0%,100% { transform:scale(1) rotate(0deg); opacity:1; }
-      18%  { transform:scale(1.12) rotate(5deg); opacity:.6; }
-      36%  { transform:scale(.9) rotate(-3.5deg); opacity:.85; }
-      55%  { transform:scale(1.06) rotate(2.5deg); opacity:.7; }
-      75%  { transform:scale(.97) rotate(-1deg); opacity:.88; }
+    /* web expands from corner and stays covering the card */
+    @keyframes web-spread {
+      0%   { transform:scale(1) rotate(0deg); opacity:1; }
+      28%  { transform:scale(1.5) rotate(6deg); opacity:.75; }
+      100% { transform:scale(1.35) rotate(0deg); opacity:.7; }
     }
-    .proj-card.web-caught { animation:web-caught .42s cubic-bezier(.36,.07,.19,.97) both; }
-    .proj-card.web-caught::before { animation:web-vib .42s ease both !important; opacity:1 !important; }
+    .proj-card.web-stuck {
+      animation:web-caught .44s cubic-bezier(.36,.07,.19,.97) forwards;
+      pointer-events:none;
+    }
+    .proj-card.web-stuck::before {
+      animation:web-spread .5s cubic-bezier(.34,1.56,.64,1) forwards !important;
+      opacity:.7 !important;
+    }
 
     /* white-lift overlay on non-hovered cards */
     .proj-card::after {
@@ -1225,16 +1230,23 @@ function spiderSense(x, y) {
   document.addEventListener('mousedown', e => {
     cur.classList.add('pressing');
     spiderSense(e.clientX, e.clientY);
-    const card = e.target.closest('.proj-card');
-    if (card) {
-      card.classList.remove('web-caught');
-      void card.offsetWidth;
-      card.classList.add('web-caught');
-      setTimeout(() => card.classList.remove('web-caught'), 440);
-    }
   });
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
 })();
+
+/* ─── Spider-web card catch (intercept click, delay nav) ─── */
+document.addEventListener('click', function(e) {
+  if (typeof editMode !== 'undefined' && editMode) return;
+  const card = e.target.closest('.proj-card');
+  if (!card || card.classList.contains('web-stuck')) return;
+  e.stopImmediatePropagation();
+  const handler = card.onclick;
+  card.classList.add('web-stuck');
+  setTimeout(() => {
+    card.classList.remove('web-stuck');
+    if (handler) handler();
+  }, 430);
+}, true);
 
 /* ─── Format toolbar (bold / italic) ─────────────────── */
 (function() {
