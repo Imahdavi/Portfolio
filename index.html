@@ -164,7 +164,6 @@
     }
     .proj-card.web-stuck {
       animation:web-caught .44s cubic-bezier(.36,.07,.19,.97) forwards;
-      pointer-events:none;
     }
     .proj-card.web-stuck::before {
       animation:web-spread .5s cubic-bezier(.34,1.56,.64,1) forwards !important;
@@ -1230,23 +1229,10 @@ function spiderSense(x, y) {
   document.addEventListener('mousedown', e => {
     cur.classList.add('pressing');
     spiderSense(e.clientX, e.clientY);
+    _webClickCard = e.target.closest('.proj-card') || null;
   });
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
 })();
-
-/* ─── Spider-web card catch (intercept click, delay nav) ─── */
-document.addEventListener('click', function(e) {
-  if (typeof editMode !== 'undefined' && editMode) return;
-  const card = e.target.closest('.proj-card');
-  if (!card || card.classList.contains('web-stuck')) return;
-  e.stopImmediatePropagation();
-  const handler = card.onclick;
-  card.classList.add('web-stuck');
-  setTimeout(() => {
-    card.classList.remove('web-stuck');
-    if (handler) handler();
-  }, 430);
-}, true);
 
 /* ─── Format toolbar (bold / italic) ─────────────────── */
 (function() {
@@ -2113,9 +2099,17 @@ function setNavActive(btn) {
 
 /* ─── Project detail ───────────────────────────────────── */
 let activeKey = null;
+let _webClickCard = null;
 
 async function openProject(key) {
   if (editMode && current === 'view-home') return;
+  const _card = _webClickCard;
+  _webClickCard = null;
+  if (_card && !_card.classList.contains('web-stuck')) {
+    _card.classList.add('web-stuck');
+    await new Promise(r => setTimeout(r, 420));
+    _card.classList.remove('web-stuck');
+  }
   activeKey = key;
   editMode  = false;
   prevMain  = current;
