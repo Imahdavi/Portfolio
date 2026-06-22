@@ -13,6 +13,7 @@
     :root {
       --font-body: 'Inter', sans-serif;
       --font-heading: 'Caveat', cursive;
+      --font-name: 'Caveat', cursive;
       --font-title: 'Inter', sans-serif;
       --font-intro: 'Inter', sans-serif;
     }
@@ -126,7 +127,7 @@
     .ae-s4 { width:26px; left:66%; top:56%; animation:aeF4 3.0s  ease-in-out infinite; animation-delay:1.25s; }
     .ae-s5 { width:28px; left:81%; top:12%; animation:aeF5 2.7s  ease-in-out infinite; animation-delay:.65s; }
 
-    .profile-name { font-family:var(--font-heading); font-size:34px; font-weight:700; line-height:1.05; margin-bottom:3px; opacity:0; }
+    .profile-name { font-family:var(--font-name); font-size:34px; font-weight:700; line-height:1.05; margin-bottom:3px; opacity:0; }
     .profile-role { font-family:var(--font-intro); font-size:13px; color:#666; margin-bottom:1px; }
     .profile-age  { font-family:var(--font-intro); font-size:13px; color:#666; }
 
@@ -862,45 +863,58 @@
     #view-home.home-edit #home-fonts-btn { display:block; }
     #font-picker-overlay {
       display:none; position:fixed; inset:0; z-index:5200;
-      background:rgba(0,0,0,.38); backdrop-filter:blur(4px);
+      background:rgba(0,0,0,.4); backdrop-filter:blur(6px);
       align-items:flex-end; justify-content:center;
     }
     #font-picker-overlay.show { display:flex; }
     #font-picker-sheet {
-      background:#fff; border-radius:20px 20px 0 0;
-      padding:20px 16px 32px; width:100%; max-width:540px;
-      animation:slideInSheet .25s cubic-bezier(.25,.46,.45,.94) both;
-      max-height:88vh; overflow-y:auto;
+      background:#fafaf9; border-radius:24px 24px 0 0;
+      padding:0 0 36px; width:100%; max-width:560px;
+      animation:slideInSheet .28s cubic-bezier(.25,.46,.45,.94) both;
+      max-height:90vh; overflow-y:auto;
     }
-    #font-picker-sheet h3 {
-      font-family:var(--font-heading); font-size:22px; font-weight:600;
-      text-align:center; margin-bottom:18px; color:#1a1a1a;
+    #font-picker-drag { width:36px; height:4px; background:rgba(0,0,0,.13); border-radius:2px; margin:12px auto 0; }
+    #font-picker-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 18px 0;
     }
-    .font-row { margin-bottom:18px; }
-    .font-row-lbl { font-size:11px; font-weight:600; color:#aaa; text-transform:uppercase; letter-spacing:.07em; margin-bottom:7px; }
-    .font-row-preview { font-size:20px; color:#1a1a1a; margin-bottom:9px; min-height:26px; line-height:1.2; }
-    .font-row-controls { display:flex; gap:8px; }
+    #font-picker-header h3 {
+      font-size:17px; font-weight:700; color:#1a1a1a; letter-spacing:-.02em;
+    }
+    #font-picker-header-done {
+      padding:6px 14px; border:none; background:#1a1a1a; border-radius:20px;
+      font-size:13px; font-weight:600; color:#fff; cursor:pointer; transition:background .15s;
+    }
+    #font-picker-header-done:hover { background:#000; }
+    .fp-section-lbl {
+      font-size:10px; font-weight:700; color:#b0b0b0; text-transform:uppercase;
+      letter-spacing:.09em; padding:18px 18px 8px;
+    }
+    .fp-section-lbl:first-of-type { padding-top:16px; }
+    .font-row {
+      margin:0 12px 8px;
+      background:#fff; border:1px solid rgba(0,0,0,.07);
+      border-radius:16px; padding:14px 14px 12px; overflow:hidden;
+    }
+    .font-row-lbl { font-size:10.5px; font-weight:600; color:#999; letter-spacing:.04em; margin-bottom:6px; }
+    .font-row-preview { font-size:22px; color:#1a1a1a; margin-bottom:10px; min-height:28px; line-height:1.2; }
+    .font-row-controls { display:flex; gap:7px; }
     .font-select {
-      flex:1; padding:10px 12px; border:1.5px solid rgba(0,0,0,.12); border-radius:11px;
-      background:#f7f6f4; font-size:13.5px; color:#333; cursor:pointer; outline:none;
+      flex:1; padding:9px 12px; border:1.5px solid rgba(0,0,0,.1); border-radius:10px;
+      background:#f5f5f3; font-size:13px; color:#333; cursor:pointer; outline:none;
       font-family:inherit; -webkit-appearance:none; appearance:none;
       background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='3'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-      background-repeat:no-repeat; background-position:right 12px center; padding-right:34px;
+      background-repeat:no-repeat; background-position:right 11px center; padding-right:32px;
     }
-    .font-select:focus { border-color:rgba(0,0,0,.3); }
+    .font-select:focus { border-color:rgba(0,0,0,.28); background:#fff; }
     .font-custom {
-      flex:1.2; padding:10px 12px; border:1.5px solid rgba(0,0,0,.12); border-radius:11px;
-      background:#fff; font-size:13.5px; color:#333; outline:none; font-family:inherit; box-sizing:border-box; min-width:0;
+      flex:1; padding:9px 12px; border:1.5px solid rgba(0,0,0,.1); border-radius:10px;
+      background:#fff; font-size:13px; color:#333; outline:none; font-family:inherit;
+      box-sizing:border-box; min-width:0;
     }
-    .font-custom:focus { border-color:rgba(0,0,0,.3); }
-    .font-custom::placeholder { color:#bbb; }
-    #font-picker-close {
-      display:block; width:100%; margin-top:4px; padding:12px;
-      border:none; background:#1a1a1a; border-radius:12px;
-      font-size:14px; font-weight:600; color:#fff; cursor:pointer;
-      transition:background .15s;
-    }
-    #font-picker-close:hover { background:#000; }
+    .font-custom:focus { border-color:rgba(0,0,0,.28); }
+    .font-custom::placeholder { color:#c0c0c0; font-size:12px; }
+    #font-picker-close { display:none; }
 
     /* ─────────────────── CUSTOM CURSOR ─────────────────── */
     #site-cursor { position:fixed; top:0; left:0; pointer-events:none; z-index:99999; display:none; }
@@ -1128,39 +1142,56 @@
 
 <div id="font-picker-overlay" onclick="if(event.target===this)closeFontPanel()">
   <div id="font-picker-sheet">
-    <h3>Fonts</h3>
+    <div id="font-picker-drag"></div>
+    <div id="font-picker-header">
+      <h3>Fonts</h3>
+      <button id="font-picker-header-done" onclick="closeFontPanel()">Done</button>
+    </div>
+
+    <div class="fp-section-lbl">Profile</div>
+    <div class="font-row" data-slot="name">
+      <div class="font-row-lbl">Name · اسم</div>
+      <div class="font-row-preview">Alireza Mahdavi</div>
+      <div class="font-row-controls">
+        <select class="font-select"></select>
+        <input class="font-custom" type="text" placeholder="Google Font name…"/>
+      </div>
+    </div>
+    <div class="font-row" data-slot="intro">
+      <div class="font-row-lbl">Role &amp; Age · نقش و سن</div>
+      <div class="font-row-preview">Visual Designer · 25 yo ✦</div>
+      <div class="font-row-controls">
+        <select class="font-select"></select>
+        <input class="font-custom" type="text" placeholder="Google Font name…"/>
+      </div>
+    </div>
+
+    <div class="fp-section-lbl">Content</div>
     <div class="font-row" data-slot="heading">
       <div class="font-row-lbl">Headings · سرتیترها</div>
       <div class="font-row-preview">Works · Projects</div>
       <div class="font-row-controls">
         <select class="font-select"></select>
-        <input class="font-custom" type="text" placeholder="or type a Google Font…"/>
-      </div>
-    </div>
-    <div class="font-row" data-slot="intro">
-      <div class="font-row-lbl">Intro · معرفی (نقش و سن)</div>
-      <div class="font-row-preview">Visual &amp; Motion Designer · 25 yo ✦</div>
-      <div class="font-row-controls">
-        <select class="font-select"></select>
-        <input class="font-custom" type="text" placeholder="or type a Google Font…"/>
+        <input class="font-custom" type="text" placeholder="Google Font name…"/>
       </div>
     </div>
     <div class="font-row" data-slot="title">
-      <div class="font-row-lbl">Project titles · اسم پروژه</div>
+      <div class="font-row-lbl">Project titles · اسم پروژه‌ها</div>
       <div class="font-row-preview">Logo Motion</div>
       <div class="font-row-controls">
         <select class="font-select"></select>
-        <input class="font-custom" type="text" placeholder="or type a Google Font…"/>
+        <input class="font-custom" type="text" placeholder="Google Font name…"/>
       </div>
     </div>
     <div class="font-row" data-slot="body">
       <div class="font-row-lbl">Body text · متن بدنه</div>
-      <div class="font-row-preview">The quick brown fox jumps over.</div>
+      <div class="font-row-preview">The quick brown fox.</div>
       <div class="font-row-controls">
         <select class="font-select"></select>
-        <input class="font-custom" type="text" placeholder="or type a Google Font…"/>
+        <input class="font-custom" type="text" placeholder="Google Font name…"/>
       </div>
     </div>
+
     <button id="font-picker-close" onclick="closeFontPanel()">Done</button>
   </div>
 </div>
@@ -1172,7 +1203,7 @@ const LOTTIE_DATA = {
   kala: {"v":"5.12.1","fr":60,"ip":0,"op":108,"w":141,"h":43,"nm":"Kala jason","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":3,"nm":"Null 64","sr":1,"ks":{"o":{"a":0,"k":0,"ix":11},"r":{"a":0,"k":0,"ix":10},"p":{"a":0,"k":[69,21.5,0],"ix":2,"l":2},"a":{"a":0,"k":[0,0,0],"ix":1,"l":2},"s":{"a":0,"k":[21.5,21.5,100],"ix":6,"l":2}},"ao":0,"ip":0,"op":7200,"st":0,"bm":0},{"ddd":0,"ind":2,"ty":1,"nm":"Black Solid 1","parent":1,"td":1,"sr":1,"ks":{"o":{"a":0,"k":100,"ix":11},"r":{"a":0,"k":0,"ix":10},"p":{"a":0,"k":[0,0,0],"ix":2,"l":2},"a":{"a":0,"k":[70.5,18.5,0],"ix":1,"l":2},"s":{"a":0,"k":[465.116,465.116,100],"ix":6,"l":2}},"ao":0,"hasMask":true,"masksProperties":[{"inv":false,"mode":"a","pt":{"a":0,"k":{"i":[[0,0],[0,0],[0,0],[0,0]],"o":[[0,0],[0,0],[0,0],[0,0]],"v":[[82.25,-3],[57.25,-3],[57.25,22],[82.25,22]],"c":true},"ix":1},"o":{"a":0,"k":100,"ix":3},"x":{"a":0,"k":0,"ix":4},"nm":"Mask 1"}],"sw":141,"sh":37,"sc":"#000000","ip":0,"op":7200,"st":0,"bm":0},{"ddd":0,"ind":4,"ty":4,"nm":"Vector 18","parent":1,"tt":2,"tp":2,"sr":1,"ks":{"o":{"a":0,"k":100,"ix":11},"r":{"a":0,"k":0,"ix":10},"p":{"a":0,"k":[-141.86,-29.047,0],"ix":2,"l":2},"a":{"a":0,"k":[0,0,0],"ix":1,"l":2},"s":{"a":0,"k":[465.116,465.116,100],"ix":6,"l":2}},"ao":0,"shapes":[{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[0,0],[8.5,-13.51]],"o":[[-9.25,-16.02],[0,0]],"v":[[72.25,5.765],[-12,5.255]],"c":false},"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"st","c":{"a":0,"k":[0.176470592618,0.403921574354,0.823529422283,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":1,"ix":5},"lc":1,"lj":1,"ml":4,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Vector 14","np":2,"cix":2,"bm":0,"ix":1,"mn":"ADBE Vector Group","hd":false},{"ty":"tm","s":{"a":1,"k":[{"i":{"x":[0.271],"y":[1]},"o":{"x":[0.742],"y":[0]},"t":0,"s":[100]},{"i":{"x":[0.196],"y":[1]},"o":{"x":[0.838],"y":[0]},"t":11.891,"s":[100]},{"t":107,"s":[0]}],"ix":1,"x":"var $bm_rt;\n$bm_rt = loopOut();"},"e":{"a":1,"k":[{"i":{"x":[0.196],"y":[1]},"o":{"x":[0.838],"y":[0]},"t":0,"s":[100]},{"i":{"x":[0.266],"y":[1]},"o":{"x":[0.936],"y":[0]},"t":95.111,"s":[0]},{"t":107,"s":[0]}],"ix":2,"x":"var $bm_rt;\n$bm_rt = loopOut();"},"o":{"a":0,"k":0,"ix":3},"m":1,"ix":2,"nm":"Trim Paths 1","mn":"ADBE Vector Filter - Trim","hd":false}],"ip":0,"op":7200,"st":0,"ct":1,"bm":0},{"ddd":0,"ind":8,"ty":4,"nm":"Vector","parent":1,"sr":1,"ks":{"o":{"a":0,"k":100,"ix":11},"r":{"a":1,"k":[{"i":{"x":[0.062],"y":[1]},"o":{"x":[0.864],"y":[0]},"t":0,"s":[0]},{"i":{"x":[0.334],"y":[1]},"o":{"x":[0.625],"y":[0]},"t":28.533,"s":[180]},{"i":{"x":[0.077],"y":[0.997]},"o":{"x":[0.877],"y":[0]},"t":53.5,"s":[60]},{"i":{"x":[0.833],"y":[1]},"o":{"x":[0.328],"y":[0.167]},"t":90.059,"s":[360]},{"t":107,"s":[360]}],"ix":10,"x":"var $bm_rt;\n$bm_rt = loopOut();"},"p":{"a":1,"k":[{"i":{"x":0.013,"y":1},"o":{"x":0.673,"y":0},"t":0,"s":[-2.326,-58.14,0],"to":[0,0,0],"ti":[0,0,0]},{"i":{"x":0.013,"y":1},"o":{"x":0.673,"y":0},"t":53.5,"s":[-2.326,-30.814,0],"to":[0,0,0],"ti":[0,0,0]},{"t":107,"s":[-2.326,-58.14,0]}],"ix":2,"l":2,"x":"var $bm_rt;\n$bm_rt = loopOut();"},"a":{"a":0,"k":[0,0,0],"ix":1,"l":2},"s":{"a":0,"k":[465.116,465.116,100],"ix":6,"l":2}},"ao":0,"shapes":[{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]],"o":[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]],"v":[[6.667,-3.75],[0,-7.5],[-6.667,-3.75],[-6.667,3.75],[0,7.5],[6.667,3.75]],"c":true},"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ind":1,"ty":"sh","ix":2,"ks":{"a":0,"k":{"i":[[0,0],[0,0]],"o":[[0,0],[0,0]],"v":[[6.667,-3.75],[0,0]],"c":false},"ix":2},"nm":"Path 2","mn":"ADBE Vector Shape - Group","hd":false},{"ind":2,"ty":"sh","ix":3,"ks":{"a":0,"k":{"i":[[0,0],[0,0]],"o":[[0,0],[0,0]],"v":[[0,7.5],[0,0]],"c":false},"ix":2},"nm":"Path 3","mn":"ADBE Vector Shape - Group","hd":false},{"ind":3,"ty":"sh","ix":4,"ks":{"a":0,"k":{"i":[[0,0],[0,0]],"o":[[0,0],[0,0]],"v":[[-6.667,-3.75],[0,0]],"c":false},"ix":2},"nm":"Path 4","mn":"ADBE Vector Shape - Group","hd":false},{"ind":4,"ty":"sh","ix":5,"ks":{"a":0,"k":{"i":[[0,0],[0,0]],"o":[[0,0],[0,0]],"v":[[-3.333,-1.875],[3.333,-5.625]],"c":false},"ix":2},"nm":"Path 5","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"mm","mm":1,"nm":"Merge Paths 1","mn":"ADBE Vector Filter - Merge","hd":false},{"ty":"st","c":{"a":0,"k":[0.176470592618,0.403921574354,0.823529422283,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":2,"ix":5},"lc":2,"lj":2,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Vector","np":7,"cix":2,"bm":0,"ix":1,"mn":"ADBE Vector Group","hd":false}],"ip":0,"op":7200,"st":0,"ct":1,"bm":0},{"ddd":0,"ind":9,"ty":4,"nm":"Line 211","parent":1,"sr":1,"ks":{"o":{"a":0,"k":100,"ix":11},"r":{"a":0,"k":0,"ix":10},"p":{"a":0,"k":[6.977,86.047,0],"ix":2,"l":2},"a":{"a":0,"k":[0,0,0],"ix":1,"l":2},"s":{"a":0,"k":[465.116,465.116,100],"ix":6,"l":2}},"ao":0,"shapes":[{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[0,0],[0,0]],"o":[[0,0],[0,0]],"v":[[-70,0],[70,0]],"c":false},"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"st","c":{"a":0,"k":[0.176470592618,0.403921574354,0.823529422283,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":2,"ix":5},"lc":1,"lj":1,"ml":4,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Line 211","np":2,"cix":2,"bm":0,"ix":1,"mn":"ADBE Vector Group","hd":false}],"ip":0,"op":7200,"st":0,"ct":1,"bm":0},{"ddd":0,"ind":10,"ty":4,"nm":"Vector (Stroke)","parent":1,"sr":1,"ks":{"o":{"a":0,"k":100,"ix":11},"r":{"a":0,"k":0,"ix":10},"p":{"a":0,"k":[276.744,30.233,0],"ix":2,"l":2},"a":{"a":0,"k":[0,0,0],"ix":1,"l":2},"s":{"a":0,"k":[-465.116,465.116,100],"ix":6,"l":2}},"ao":0,"shapes":[{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[0.53,0],[0.375,-0.375],[0,-0.53],[-0.375,-0.375],[-0.53,0],[-0.375,0.375],[0,0.53],[0.375,0.375]],"o":[[-0.53,0],[-0.375,0.375],[0,0.53],[0.375,0.375],[0.53,0],[0.375,-0.375],[0,-0.53],[-0.375,-0.375]],"v":[[-1,-10],[-2.414,-9.414],[-3,-8],[-2.414,-6.586],[-1,-6],[0.414,-6.586],[1,-8],[0.414,-9.414]],"c":true},"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ind":1,"ty":"sh","ix":2,"ks":{"a":0,"k":{"i":[[0,0],[0.339,-0.254],[0,0],[-0.136,-0.408],[0,0],[-0.524,0.175],[0.175,0.524],[0,0],[0,0],[0,0],[-0.11,-0.164],[0,0],[0,0],[-0.536,0.134],[0.134,0.536],[0,0],[0.064,0.095],[0,0],[0,0],[0,0],[-0.14,-0.023],[0,0],[-0.091,0.545],[0.545,0.091],[0,0]],"o":[[-0.353,-0.235],[0,0],[-0.344,0.258],[0,0],[0.175,0.524],[0.524,-0.175],[0,0],[0,0],[0,0],[0,0.197],[0,0],[0,0],[0.134,0.536],[0.536,-0.134],[0,0],[-0.028,-0.111],[0,0],[0,0],[0,0],[0.118,0.078],[0,0],[0.545,0.091],[0.091,-0.545],[0,0],[0,0]],"v":[[-0.445,-4.832],[-1.6,-4.8],[-5.6,-1.8],[-5.949,-0.684],[-4.949,2.316],[-3.684,2.949],[-3.051,1.684],[-3.823,-0.633],[-2,-2],[-2,2],[-1.832,2.555],[0.072,5.41],[1.03,9.242],[2.242,9.97],[2.97,8.757],[1.97,4.757],[1.832,4.445],[0,1.697],[0,-2.132],[1.445,-1.168],[1.836,-1.014],[4.836,-0.514],[5.986,-1.336],[5.164,-2.487],[2.376,-2.951]],"c":true},"ix":2},"nm":"Path 2","mn":"ADBE Vector Shape - Group","hd":false},{"ind":2,"ty":"sh","ix":3,"ks":{"a":0,"k":{"i":[[0,0],[0.494,0.247],[0.247,-0.494],[0,0],[-0.494,-0.247],[-0.247,0.494]],"o":[[0.247,-0.494],[-0.494,-0.247],[0,0],[-0.247,0.494],[0.494,0.247],[0,0]],"v":[[-1.106,5.447],[-1.553,4.105],[-2.894,4.553],[-4.894,8.553],[-4.447,9.894],[-3.106,9.447]],"c":true},"ix":2},"nm":"Path 3","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"mm","mm":1,"nm":"Merge Paths 1","mn":"ADBE Vector Filter - Merge","hd":false},{"ty":"fl","c":{"a":0,"k":[0.066666670144,0.0941176489,0.152941182256,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Vector (Stroke)","np":5,"cix":2,"bm":0,"ix":1,"mn":"ADBE Vector Group","hd":false}],"ip":0,"op":7200,"st":0,"ct":1,"bm":0},{"ddd":0,"ind":11,"ty":4,"nm":"Vector 16","parent":1,"sr":1,"ks":{"o":{"a":0,"k":100,"ix":11},"r":{"a":0,"k":0,"ix":10},"p":{"a":0,"k":[-272.093,30.233,0],"ix":2,"l":2},"a":{"a":0,"k":[0,0,0],"ix":1,"l":2},"s":{"a":0,"k":[465.116,465.116,100],"ix":6,"l":2}},"ao":0,"shapes":[{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[0,0],[0,0]],"o":[[0,0],[0,0]],"v":[[9,9],[-9,9]],"c":false},"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ind":1,"ty":"sh","ix":2,"ks":{"a":0,"k":{"i":[[0,0],[0,0],[0.563,-0.563],[0.796,0],[0.563,0.563],[0,0.796],[0,0]],"o":[[0,0],[0,0.796],[-0.563,0.563],[-0.796,0],[-0.563,-0.563],[0,0],[0,0]],"v":[[-3,-5],[-3,-4],[-3.879,-1.879],[-6,-1],[-8.121,-1.879],[-9,-4],[-9,-5]],"c":false},"ix":2},"nm":"Path 2","mn":"ADBE Vector Shape - Group","hd":false},{"ind":2,"ty":"sh","ix":3,"ks":{"a":0,"k":{"i":[[0,0],[0,0],[0.563,-0.563],[0.796,0],[0.563,0.563],[0,0.796]],"o":[[0,0],[0,0.796],[-0.563,0.563],[-0.796,0],[-0.563,-0.563],[0,0]],"v":[[3,-5],[3,-4],[2.121,-1.879],[0,-1],[-2.121,-1.879],[-3,-4]],"c":false},"ix":2},"nm":"Path 3","mn":"ADBE Vector Shape - Group","hd":false},{"ind":3,"ty":"sh","ix":4,"ks":{"a":0,"k":{"i":[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0.563,-0.563],[0.796,0],[0.563,0.563],[0,0.796]],"o":[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0.796],[-0.563,0.563],[-0.796,0],[-0.563,-0.563],[0,0]],"v":[[9,-5],[7,-9],[-7,-9],[-9,-5],[9,-5],[9,-4],[8.121,-1.879],[6,-1],[3.879,-1.879],[3,-4]],"c":false},"ix":2},"nm":"Path 4","mn":"ADBE Vector Shape - Group","hd":false},{"ind":4,"ty":"sh","ix":5,"ks":{"a":0,"k":{"i":[[0,0],[0,0]],"o":[[0,0],[0,0]],"v":[[-7,-1.15],[-7,9]],"c":false},"ix":2},"nm":"Path 5","mn":"ADBE Vector Shape - Group","hd":false},{"ind":5,"ty":"sh","ix":6,"ks":{"a":0,"k":{"i":[[0,0],[0,0]],"o":[[0,0],[0,0]],"v":[[7,-1.15],[7,9]],"c":false},"ix":2},"nm":"Path 6","mn":"ADBE Vector Shape - Group","hd":false},{"ind":6,"ty":"sh","ix":7,"ks":{"a":0,"k":{"i":[[0,0],[0,0],[0.375,0.375],[0.53,0],[0,0],[0.375,-0.375],[0,-0.53],[0,0]],"o":[[0,0],[0,-0.53],[-0.375,-0.375],[0,0],[-0.53,0],[-0.375,0.375],[0,0],[0,0]],"v":[[3,9],[3,5],[2.414,3.586],[1,3],[-1,3],[-2.414,3.586],[-3,5],[-3,9]],"c":false},"ix":2},"nm":"Path 7","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"mm","mm":1,"nm":"Merge Paths 1","mn":"ADBE Vector Filter - Merge","hd":false},{"ty":"st","c":{"a":0,"k":[0.176470592618,0.403921574354,0.823529422283,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":2,"ix":5},"lc":2,"lj":2,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Vector","np":9,"cix":2,"bm":0,"ix":1,"mn":"ADBE Vector Group","hd":false}],"ip":0,"op":7200,"st":0,"ct":1,"bm":0}],"markers":[],"props":{}}
 };
 
-/* ─── Font-ready: reveal name once Caveat loads ─────────── */
+/* ─── Font-ready: reveal name once name-font loads ─────────── */
 (function() {
   var show = function() {
     var el = document.querySelector('.profile-name');
@@ -1181,7 +1212,9 @@ const LOTTIE_DATA = {
     el.style.opacity = '1';
   };
   if (document.fonts && document.fonts.load) {
-    document.fonts.load('700 1em Caveat').then(show, show);
+    var nameFontRaw = getComputedStyle(document.documentElement).getPropertyValue('--font-name') || 'Caveat';
+    var nameFont = nameFontRaw.trim().replace(/^['"]|['"].*$/g, '') || 'Caveat';
+    document.fonts.load('700 1em ' + nameFont).then(show, show);
   }
   setTimeout(show, 1800);
 })();
@@ -1736,9 +1769,9 @@ const CURATED_FONTS = [
   { name:'Righteous',        fb:'cursive' },
   { name:'Comfortaa',        fb:'cursive' },
 ];
-const FONT_SLOTS = ['heading','intro','title','body'];
-const FONT_DEFAULTS = { heading:'Caveat', intro:'Inter', title:'Inter', body:'Inter' };
-const FONT_VARS = { heading:'--font-heading', intro:'--font-intro', title:'--font-title', body:'--font-body' };
+const FONT_SLOTS = ['name','heading','intro','title','body'];
+const FONT_DEFAULTS = { name:'Caveat', heading:'Caveat', intro:'Inter', title:'Inter', body:'Inter' };
+const FONT_VARS = { name:'--font-name', heading:'--font-heading', intro:'--font-intro', title:'--font-title', body:'--font-body' };
 
 function _fontFallback(name) {
   const f = CURATED_FONTS.find(f => f.name.toLowerCase() === (name||'').toLowerCase());
