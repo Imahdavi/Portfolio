@@ -3366,7 +3366,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   resize(); window.addEventListener('resize',resize);
 
   function getAvatarSrc(){
-    const av=document.querySelector('#view-home .avatar');
+    const av=document.querySelector('#view-home .pbc-avatar');
     if(!av) return {x:window.innerWidth*.5,y:120};
     const r=av.getBoundingClientRect();
     return {x:r.left+r.width*.5, y:r.bottom+4};
