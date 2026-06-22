@@ -1265,43 +1265,51 @@ function _webCatchSVG(card) {
   return svg;
 }
 
-/* ─── Full spider web on card hover ─────────────────────── */
-function _makeWebSVG(w, h) {
+/* ─── Full spider web on card hover (fixed overlay, extends beyond card) ── */
+function _makeWebSVG(card) {
+  const r = card.getBoundingClientRect();
+  const P = 36, W = r.width, H = r.height;
+  const TW = W + P*2, TH = H + P*2;
   const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-  svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:3;mix-blend-mode:difference;opacity:0;transition:opacity .3s';
+  svg.setAttribute('viewBox', `0 0 ${TW} ${TH}`);
+  svg.style.cssText = `position:fixed;left:${r.left-P}px;top:${r.top-P}px;width:${TW}px;height:${TH}px;pointer-events:none;z-index:4;mix-blend-mode:difference;opacity:0;transition:opacity .3s;overflow:visible`;
 
-  const cx = w * .46, cy = h * .42;
-  const angDeg = [-8, 28, 62, 98, 138, 180, 222, 262, 305];
+  // hub slightly off-center inside card area
+  const cx = P + W*.46, cy = P + H*.43;
+
+  // 13 radial threads at irregular angles
+  const angDeg = [2,28,54,78,102,130,162,192,220,246,270,294,328];
   const ends = angDeg.map(deg => {
-    const a = deg * Math.PI / 180, dx = Math.cos(a), dy = Math.sin(a);
+    const a = deg*Math.PI/180, dx = Math.cos(a), dy = Math.sin(a);
     let t = Infinity;
-    if (dx > 1e-4)  t = Math.min(t, (w - cx) / dx);
-    if (dx < -1e-4) t = Math.min(t, cx / -dx);
-    if (dy > 1e-4)  t = Math.min(t, (h - cy) / dy);
-    if (dy < -1e-4) t = Math.min(t, cy / -dy);
-    return [+(cx + dx * t).toFixed(1), +(cy + dy * t).toFixed(1)];
+    if (dx > 1e-4)  t = Math.min(t, (TW-cx)/dx);
+    if (dx < -1e-4) t = Math.min(t, cx/-dx);
+    if (dy > 1e-4)  t = Math.min(t, (TH-cy)/dy);
+    if (dy < -1e-4) t = Math.min(t, cy/-dy);
+    return [+(cx+dx*t).toFixed(1), +(cy+dy*t).toFixed(1)];
   });
 
   let d = '';
   // radial threads
-  ends.forEach(([ex, ey]) => { d += `M${cx.toFixed(1)},${cy.toFixed(1)} L${ex},${ey} `; });
+  ends.forEach(([ex,ey]) => { d += `M${cx.toFixed(1)},${cy.toFixed(1)} L${ex},${ey} `; });
 
-  // connecting rings — irregular quadratic beziers
-  [.17, .34, .51, .68, .85].forEach((frac, ri) => {
-    const pts = ends.map(([ex, ey], i) => {
-      const px = cx + (ex - cx) * frac, py = cy + (ey - cy) * frac;
-      const nx = -(ey - cy), ny = ex - cx, nl = Math.hypot(nx, ny) || 1;
-      const p = 2.8 * ((i + ri) % 2 ? 1 : -1);
-      return [+(px + nx / nl * p).toFixed(1), +(py + ny / nl * p).toFixed(1)];
+  // 6 connecting rings with organic perturbation
+  [.13,.27,.42,.57,.72,.88].forEach((frac, ri) => {
+    const pts = ends.map(([ex,ey], i) => {
+      const px = cx+(ex-cx)*frac, py = cy+(ey-cy)*frac;
+      const nx = -(ey-cy), ny = ex-cx, nl = Math.hypot(nx,ny)||1;
+      const sign = ((i*3+ri*5)%2) ? 1 : -1;
+      const amt = 4*sign*(0.55+0.45*((i*7+ri*11)%10)/10);
+      return [+(px+nx/nl*amt).toFixed(1), +(py+ny/nl*amt).toFixed(1)];
     });
     const n = pts.length;
     d += `M${pts[n-1][0]},${pts[n-1][1]} `;
-    pts.forEach(([px, py], i) => {
-      const [ppx, ppy] = pts[(i - 1 + n) % n];
-      const cpx = +((px + ppx) / 2 + (cx - (px + ppx) / 2) * .1).toFixed(1);
-      const cpy = +((py + ppy) / 2 + (cy - (py + ppy) / 2) * .1).toFixed(1);
+    pts.forEach(([px,py], i) => {
+      const [ppx,ppy] = pts[(i-1+n)%n];
+      const mpx = (px+ppx)/2, mpy = (py+ppy)/2;
+      const cpx = +(mpx+(cx-mpx)*.1).toFixed(1);
+      const cpy = +(mpy+(cy-mpy)*.1).toFixed(1);
       d += `Q${cpx},${cpy} ${px},${py} `;
     });
     d += 'Z ';
@@ -1310,7 +1318,7 @@ function _makeWebSVG(w, h) {
   const path = document.createElementNS(ns, 'path');
   path.setAttribute('d', d.trim());
   path.setAttribute('stroke', 'white');
-  path.setAttribute('stroke-width', '.8');
+  path.setAttribute('stroke-width', '.78');
   path.setAttribute('fill', 'none');
   path.setAttribute('stroke-linecap', 'round');
   path.setAttribute('stroke-linejoin', 'round');
@@ -1323,22 +1331,17 @@ document.addEventListener('mouseover', function(e) {
   if (typeof editMode !== 'undefined' && editMode) return;
   const card = e.target.closest('#view-home .proj-card');
   if (card === _webHoverCard) return;
-  // remove old
   if (_webHoverSvg) {
     const s = _webHoverSvg; _webHoverSvg = null;
     s.style.opacity = '0';
-    setTimeout(() => s.remove(), 310);
+    setTimeout(() => s.remove(), 320);
   }
   _webHoverCard = card || null;
   if (!card) return;
-  const thumb = card.querySelector('.proj-thumb');
-  if (!thumb) return;
-  const w = thumb.offsetWidth, h = thumb.offsetHeight;
-  if (!w || !h) return;
-  _webHoverSvg = _makeWebSVG(w, h);
-  thumb.appendChild(_webHoverSvg);
+  _webHoverSvg = _makeWebSVG(card);
+  document.body.appendChild(_webHoverSvg);
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    if (_webHoverSvg) _webHoverSvg.style.opacity = '.82';
+    if (_webHoverSvg) _webHoverSvg.style.opacity = '.85';
   }));
 });
 
