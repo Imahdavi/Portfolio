@@ -87,35 +87,47 @@
     .profile { display:none; }
     /* ── Profile dumbbell blob ─────────────────────────────── */
     .profile-blob-wrap {
-      position:relative; width:252px; height:88px;
+      position:relative; width:248px; height:88px;
       margin:20px auto 24px;
       animation:profileIn .5s ease both;
-      transition:transform .35s cubic-bezier(.34,1.56,.64,1);
+      transition:transform .5s cubic-bezier(.34,1.56,.64,1);
+      cursor:pointer;
     }
-    .profile-blob-wrap:hover { transform:scale(1.03); }
-    .profile-blob-wrap:active { transform:scale(.97); }
+    /* hover: whole blob lifts + right bubble grows (bubbly merge) */
+    .profile-blob-wrap:hover { transform:translateY(-3px) scale(1.02); }
+    /* click: squish then spring back */
+    .profile-blob-wrap:active { transform:scaleX(.95) scaleY(1.06) !important;
+      transition-duration:.12s; }
 
-    /* Goo layer – creates the organic bubbly shape */
+    /* Goo layer */
     .pbw-goo {
-      position:absolute; inset:-15px;
-      display:flex; align-items:center; padding:15px;
+      position:absolute; inset:-16px;
+      display:flex; align-items:center; padding:16px;
       filter:blur(13px) contrast(22); background:white;
       pointer-events:none;
     }
     .pbw-goo-left {
       width:84px; height:84px; border-radius:50%; background:#111;
-      flex-shrink:0; margin-right:-26px;
-      transition:transform .4s cubic-bezier(.34,1.56,.64,1);
+      flex-shrink:0; margin-right:-30px;
+      transition:transform .5s cubic-bezier(.34,1.56,.64,1);
     }
     .pbw-goo-bar {
-      flex:1; height:58px; border-radius:29px; background:#111;
+      flex:1; height:56px; border-radius:28px; background:#111;
+      transition:height .4s cubic-bezier(.34,1.56,.64,1);
     }
     .pbw-goo-right {
       width:50px; height:50px; border-radius:50%; background:#111;
-      flex-shrink:0; margin-left:-26px;
-      transition:transform .4s cubic-bezier(.34,1.56,.64,1);
+      flex-shrink:0; margin-left:-30px;
+      transition:transform .5s cubic-bezier(.34,1.56,.64,1);
     }
-    .profile-blob-wrap:hover .pbw-goo-right { transform:scale(1.18); }
+    /* hover: right bubble pops + bar swells = bubbly connection */
+    .profile-blob-wrap:hover .pbw-goo-bar  { height:66px; }
+    .profile-blob-wrap:hover .pbw-goo-right { transform:scale(1.28); }
+    .profile-blob-wrap:hover .pbw-goo-left  { transform:scale(1.04); }
+    /* click: flatten everything */
+    .profile-blob-wrap:active .pbw-goo-left  { transform:scaleX(1.08) scaleY(.92); }
+    .profile-blob-wrap:active .pbw-goo-right { transform:scaleX(1.08) scaleY(.92); }
+    .profile-blob-wrap:active .pbw-goo-bar   { height:50px; }
 
     /* Content layer */
     .pbc-avatar {
@@ -138,9 +150,10 @@
       border:none; background:transparent; z-index:2;
       display:flex; align-items:center; justify-content:center; gap:3px;
       cursor:pointer; color:white; padding:0;
-      transition:transform .4s cubic-bezier(.34,1.56,.64,1);
+      transition:transform .5s cubic-bezier(.34,1.56,.64,1);
     }
-    .profile-blob-wrap:hover .pbc-arrow { transform:scale(1.18); }
+    .profile-blob-wrap:hover .pbc-arrow  { transform:scale(1.28); }
+    .profile-blob-wrap:active .pbc-arrow { transform:scaleX(1.08) scaleY(.92); }
     .pbc-dot { width:5px; height:5px; border-radius:50%; background:currentColor; flex-shrink:0; display:inline-block; }
     .pbc-arrow svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
 
