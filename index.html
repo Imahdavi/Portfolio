@@ -146,29 +146,10 @@
       transform:scale(1) rotate(0deg);
     }
 
-    /* caught-in-web: card shakes then stays compressed/tilted */
-    @keyframes web-caught {
-      0%   { transform:scale(1) rotate(0deg); }
-      12%  { transform:scale(.86) rotate(-3deg) translate(-3px,2px); }
-      26%  { transform:scale(.92) rotate(2.5deg) translate(2px,-2px); }
-      42%  { transform:scale(.9) rotate(-1.5deg) translate(-1px,1px); }
-      58%  { transform:scale(.94) rotate(.8deg); }
-      75%  { transform:scale(.96) rotate(-.4deg); }
-      100% { transform:scale(.96) rotate(-.4deg); }
-    }
-    /* web expands from corner and stays covering the card */
-    @keyframes web-spread {
-      0%   { transform:scale(1) rotate(0deg); opacity:1; }
-      28%  { transform:scale(1.5) rotate(6deg); opacity:.75; }
-      100% { transform:scale(1.35) rotate(0deg); opacity:.7; }
-    }
-    .proj-card.web-stuck {
-      animation:web-caught .44s cubic-bezier(.36,.07,.19,.97) forwards;
-    }
-    .proj-card.web-stuck::before {
-      animation:web-spread .5s cubic-bezier(.34,1.56,.64,1) forwards !important;
-      opacity:.7 !important;
-    }
+    /* SVG thread draw-on animation */
+    @keyframes web-draw { to { stroke-dashoffset:0; } }
+    /* keep corner web visible while caught */
+    .proj-card.web-stuck::before { opacity:1 !important; transform:scale(1) rotate(0deg) !important; transition:none !important; }
 
     /* white-lift overlay on non-hovered cards */
     .proj-card::after {
@@ -1233,6 +1214,43 @@ function spiderSense(x, y) {
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
 })();
 
+/* ─── Spider web threads SVG on card click ─────────────── */
+function _webCatchSVG(card) {
+  const r = card.getBoundingClientRect();
+  const P = 30;
+  const ns = 'http://www.w3.org/2000/svg';
+  const W = r.width + P * 2, H = r.height + P * 2;
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.style.cssText = `position:fixed;left:${r.left-P}px;top:${r.top-P}px;width:${W}px;height:${H}px;pointer-events:none;z-index:9997;overflow:visible`;
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('stroke-linecap', 'round');
+  g.setAttribute('filter', 'drop-shadow(0 0 1px rgba(0,0,0,.35))');
+  // corners: TL, TR, BL, BR in SVG coords
+  const cx = r.width + P, cy = r.height + P;
+  const threads = [
+    [[P,P],[0,0]],   [[P,P],[P*.4,0]], [[P,P],[0,P*.4]],
+    [[cx,P],[W,0]],  [[cx,P],[cx+P*.6,0]], [[cx,P],[W,P*.4]],
+    [[P,cy],[0,H]],  [[P,cy],[P*.4,H]], [[P,cy],[0,cy+P*.6]],
+    [[cx,cy],[W,H]], [[cx,cy],[cx+P*.6,H]], [[cx,cy],[W,cy+P*.6]],
+  ];
+  threads.forEach(([[x1,y1],[x2,y2]], i) => {
+    const len = Math.hypot(x2-x1, y2-y1);
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+    line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+    line.setAttribute('stroke', i % 3 === 0 ? 'rgba(255,255,255,.85)' : 'rgba(255,255,255,.6)');
+    line.setAttribute('stroke-width', i % 3 === 0 ? '1.2' : '0.8');
+    line.setAttribute('stroke-dasharray', len);
+    line.setAttribute('stroke-dashoffset', len);
+    line.style.animation = `web-draw .18s ${i*10}ms ease-out forwards`;
+    g.appendChild(line);
+  });
+  svg.appendChild(g);
+  document.body.appendChild(svg);
+  return svg;
+}
+
 /* track which card was clicked (outside pointer:fine guard so it always fires) */
 document.addEventListener('mousedown', e => {
   _webClickCard = e.target.closest('.proj-card') || null;
@@ -2109,10 +2127,11 @@ async function openProject(key) {
   if (editMode && current === 'view-home') return;
   const _card = _webClickCard;
   _webClickCard = null;
+  let _webSvg = null;
   if (_card && !_card.classList.contains('web-stuck')) {
     _card.classList.add('web-stuck');
-    await new Promise(r => setTimeout(r, 420));
-    // intentionally NOT removing web-stuck here — keep web visible through fetch + view transition
+    _webSvg = _webCatchSVG(_card);
+    await new Promise(r => setTimeout(r, 340));
   }
   activeKey = key;
   editMode  = false;
@@ -2135,6 +2154,11 @@ async function openProject(key) {
   updateEditUI();
   showView('view-project', 'enter-project');
   if (_card) _card.classList.remove('web-stuck');
+  if (_webSvg) {
+    _webSvg.style.transition = 'opacity .22s';
+    _webSvg.style.opacity = '0';
+    setTimeout(() => _webSvg.remove(), 240);
+  }
 }
 
 function closeProject() {
