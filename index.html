@@ -199,10 +199,10 @@
     /* Spider-web hover overlay */
     .proj-thumb::after {
       content:''; position:absolute; inset:0; z-index:3; pointer-events:none;
-      background: url('web-hover.svg') center/110% 110% no-repeat;
+      background: url('web.png') center/130% 130% no-repeat;
+      filter: brightness(0) invert(1);
       opacity:0; transform:scale(1.06);
       transition:opacity .4s ease, transform .5s cubic-bezier(.34,1.56,.64,1);
-      filter: drop-shadow(0 0 2px rgba(0,0,0,.6)) drop-shadow(0 0 5px rgba(0,0,0,.3));
     }
     .proj-card:hover .proj-thumb::after { opacity:.92; transform:scale(1); }
     #view-home.home-edit .proj-thumb::after { display:none; }
