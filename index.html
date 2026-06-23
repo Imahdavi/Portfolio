@@ -200,7 +200,7 @@
     .proj-thumb::after {
       content:''; position:absolute; inset:0; z-index:3; pointer-events:none;
       background:
-        url('web-hover.svg') center/100% 100% no-repeat,
+        url('web-hover.svg') center/110% 110% no-repeat,
         rgba(0,0,0,.38);
       opacity:0; transform:scale(1.06);
       transition:opacity .4s ease, transform .5s cubic-bezier(.34,1.56,.64,1);
@@ -208,8 +208,8 @@
     .proj-card:hover .proj-thumb::after { opacity:1; transform:scale(1); }
     #view-home.home-edit .proj-thumb::after { display:none; }
 
-    .proj-title { font-family:var(--font-title); font-size:13.5px; font-weight:600; margin-bottom:2px; display:none; }
-    .proj-sub   { font-size:11px; color:#777; line-height:1.35; display:none; }
+    .proj-title { font-family:var(--font-title); font-size:13.5px; font-weight:600; margin-bottom:2px; }
+    .proj-sub   { font-size:11px; color:#777; line-height:1.35; }
     .d-title    { display:none !important; }
     .d-subtitle { display:none !important; }
     .d-title[contenteditable="true"]    { display:block !important; }
