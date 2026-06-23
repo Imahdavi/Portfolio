@@ -196,15 +196,16 @@
     }
     .proj-card:active .proj-thumb { transform:scale(.95); transition-duration:.1s; }
     .proj-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
-    /* Spider-web hover overlay (white, fits the square thumb) */
+    /* Spider-web hover overlay (white on dark backing, fills thumb exactly) */
     .proj-thumb::after {
       content:''; position:absolute; inset:0; z-index:3; pointer-events:none;
-      background:url('web-hover.svg') center/125% 125% no-repeat;
+      background:
+        url('web-hover.svg') center/100% 100% no-repeat,
+        rgba(0,0,0,.38);
       opacity:0; transform:scale(1.06);
       transition:opacity .4s ease, transform .5s cubic-bezier(.34,1.56,.64,1);
-      filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.28));
     }
-    .proj-card:hover .proj-thumb::after { opacity:.85; transform:scale(1); }
+    .proj-card:hover .proj-thumb::after { opacity:1; transform:scale(1); }
     #view-home.home-edit .proj-thumb::after { display:none; }
 
     .proj-title { font-family:var(--font-title); font-size:13.5px; font-weight:600; margin-bottom:2px; display:none; }
