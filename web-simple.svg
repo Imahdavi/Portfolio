@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <g fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round">
+    <!-- 8 spokes from center to corners/edges -->
+    <g stroke-width="0.6" opacity="0.9">
+      <line x1="50" y1="50" x2="0"   y2="0"/>
+      <line x1="50" y1="50" x2="50"  y2="0"/>
+      <line x1="50" y1="50" x2="100" y2="0"/>
+      <line x1="50" y1="50" x2="100" y2="50"/>
+      <line x1="50" y1="50" x2="100" y2="100"/>
+      <line x1="50" y1="50" x2="50"  y2="100"/>
+      <line x1="50" y1="50" x2="0"   y2="100"/>
+      <line x1="50" y1="50" x2="0"   y2="50"/>
+    </g>
+    <!-- Concentric rings (connecting spokes) -->
+    <g stroke-width="0.55" opacity="0.85">
+      <polygon points="50,40 57.1,42.9 60,50 57.1,57.1 50,60 42.9,57.1 40,50 42.9,42.9"/>
+      <polygon points="50,30 64.1,35.9 70,50 64.1,64.1 50,70 35.9,64.1 30,50 35.9,35.9"/>
+      <polygon points="50,20 71.2,28.8 80,50 71.2,71.2 50,80 28.8,71.2 20,50 28.8,28.8"/>
+      <polygon points="50,10 78.3,21.7 90,50 78.3,78.3 50,90 21.7,78.3 10,50 21.7,21.7"/>
+      <polygon points="50,1  84.6,15.4 99,50 84.6,84.6 50,99 15.4,84.6 1,50  15.4,15.4"/>
+    </g>
+  </g>
+</svg>

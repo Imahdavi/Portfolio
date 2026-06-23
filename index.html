@@ -7,7 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231a1a1a'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='Inter,system-ui,sans-serif' font-size='12' font-weight='600' fill='white'%3EAM%3C/text%3E%3C/svg%3E"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link id="gfonts-link" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Inter:wght@300;400;500;600&display=block" rel="stylesheet"/>
+  <link id="gfonts-link" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
   <style>
     :root {
@@ -199,12 +199,11 @@
     /* Spider-web hover overlay */
     .proj-thumb::after {
       content:''; position:absolute; inset:0; z-index:3; pointer-events:none;
-      background: url('web.png') center/cover no-repeat;
-      filter: brightness(0) invert(1);
+      background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%20100'%3E%3Cg%20fill%3D'none'%20stroke%3D'white'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20stroke-width%3D'.7'%20opacity%3D'.9'%3E%3Cline%20x1%3D'50'%20y1%3D'50'%20x2%3D'0'%20y2%3D'0'%2F%3E%3Cline%20x1%3D'50'%20y1%3D'50'%20x2%3D'50'%20y2%3D'0'%2F%3E%3Cline%20x1%3D'50'%20y1%3D'50'%20x2%3D'100'%20y2%3D'0'%2F%3E%3Cline%20x1%3D'50'%20y1%3D'50'%20x2%3D'100'%20y2%3D'50'%2F%3E%3Cline%20x1%3D'50'%20y1%3D'50'%20x2%3D'100'%20y2%3D'100'%2F%3E%3Cline%20x1%3D'50'%20y1%3D'50'%20x2%3D'50'%20y2%3D'100'%2F%3E%3Cline%20x1%3D'50'%20y1%3D'50'%20x2%3D'0'%20y2%3D'100'%2F%3E%3Cline%20x1%3D'50'%20y1%3D'50'%20x2%3D'0'%20y2%3D'50'%2F%3E%3C%2Fg%3E%3Cg%20stroke-width%3D'.6'%20opacity%3D'.85'%3E%3Cpolygon%20points%3D'50%2C40%2057.1%2C42.9%2060%2C50%2057.1%2C57.1%2050%2C60%2042.9%2C57.1%2040%2C50%2042.9%2C42.9'%2F%3E%3Cpolygon%20points%3D'50%2C30%2064.1%2C35.9%2070%2C50%2064.1%2C64.1%2050%2C70%2035.9%2C64.1%2030%2C50%2035.9%2C35.9'%2F%3E%3Cpolygon%20points%3D'50%2C20%2071.2%2C28.8%2080%2C50%2071.2%2C71.2%2050%2C80%2028.8%2C71.2%2020%2C50%2028.8%2C28.8'%2F%3E%3Cpolygon%20points%3D'50%2C10%2078.3%2C21.7%2090%2C50%2078.3%2C78.3%2050%2C90%2021.7%2C78.3%2010%2C50%2021.7%2C21.7'%2F%3E%3Cpolygon%20points%3D'50%2C1%2084.6%2C15.4%2099%2C50%2084.6%2C84.6%2050%2C99%2015.4%2C84.6%201%2C50%2015.4%2C15.4'%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E") center/100% 100% no-repeat;
       opacity:0; transform:scale(1.06);
       transition:opacity .4s ease, transform .5s cubic-bezier(.34,1.56,.64,1);
     }
-    .proj-card:hover .proj-thumb::after { opacity:.92; transform:scale(1); }
+    .proj-card:hover .proj-thumb::after { opacity:.9; transform:scale(1); }
     #view-home.home-edit .proj-thumb::after { display:none; }
 
     .proj-title { font-family:var(--font-title); font-size:13.5px; font-weight:600; margin-bottom:2px; }
