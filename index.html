@@ -1298,6 +1298,65 @@ function spiderSense(x, y) {
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
 })();
 
+/* ─── Spider-web thwip sound on card hover ──────────────── */
+(function() {
+  if (window.matchMedia('(pointer:coarse)').matches) return; // skip touch
+  var _actx = null;
+  var _lastThwip = 0;
+
+  function _getCtx() {
+    if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_actx.state === 'suspended') _actx.resume();
+    return _actx;
+  }
+
+  function playThwip() {
+    var now = Date.now();
+    if (now - _lastThwip < 320) return;
+    _lastThwip = now;
+    try {
+      var ctx  = _getCtx();
+      var t    = ctx.currentTime;
+      var dur  = 0.18;
+
+      // — oscillator sweep (the "thwip" tone) —
+      var osc  = ctx.createOscillator();
+      var og   = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(1800, t);
+      osc.frequency.exponentialRampToValueAtTime(420, t + dur);
+      og.gain.setValueAtTime(0.18, t);
+      og.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.connect(og); og.connect(ctx.destination);
+      osc.start(t); osc.stop(t + dur);
+
+      // — noise burst (the "web texture") —
+      var buf  = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+      var data = buf.getChannelData(0);
+      for (var i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      var src  = ctx.createBufferSource();
+      src.buffer = buf;
+      var bpf  = ctx.createBiquadFilter();
+      bpf.type = 'bandpass';
+      bpf.frequency.setValueAtTime(3200, t);
+      bpf.frequency.exponentialRampToValueAtTime(900, t + dur);
+      bpf.Q.value = 1.2;
+      var ng   = ctx.createGain();
+      ng.gain.setValueAtTime(0.22, t);
+      ng.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      src.connect(bpf); bpf.connect(ng); ng.connect(ctx.destination);
+      src.start(t);
+    } catch(e) {}
+  }
+
+  document.getElementById('home-sections').addEventListener('mouseover', function(e) {
+    if (editMode) return;
+    var card = e.target.closest('.proj-card');
+    if (!card || card === e.relatedTarget || card.contains(e.relatedTarget)) return;
+    playThwip();
+  });
+})();
+
 /* ─── Spider web catch SVG — dense, realistic cobweb drawn on click ───── */
 
 /* ─── Format toolbar (bold / italic) ─────────────────── */
