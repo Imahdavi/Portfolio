@@ -1299,69 +1299,47 @@ function spiderSense(x, y) {
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
 })();
 
-/* ─── Web-shooter sound on card click (Andrew Garfield style) ── */
+/* ─── Web-shooter sound on card click (real Spider-Man SFX clip) ── */
 (function() {
-  var _actx = null;
-  var _last = 0;
+  var _actx = null, _buf = null, _loading = false, _last = 0;
+  // a single, isolated "thwip" extracted from web-shot.mp3 (the 4.19s shot)
+  var SHOT_OFFSET = 4.18, SHOT_DUR = 0.55;
 
   function _getCtx() {
     if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_actx.state === 'suspended') _actx.resume();
     return _actx;
   }
 
-  function _synth(ctx) {
-    var t = ctx.currentTime;
-    var master = ctx.createGain(); master.gain.value = 0.95; master.connect(ctx.destination);
-
-    /* 1. trigger click — sharp pneumatic release transient */
-    var cb = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * .012), ctx.sampleRate);
-    var cd = cb.getChannelData(0);
-    for (var i = 0; i < cd.length; i++) cd[i] = (Math.random()*2-1) * Math.exp(-i / (ctx.sampleRate * .002));
-    var cs = ctx.createBufferSource(); cs.buffer = cb;
-    var cf = ctx.createBiquadFilter(); cf.type = 'highpass'; cf.frequency.value = 2200;
-    var cg = ctx.createGain(); cg.gain.setValueAtTime(.7, t); cg.gain.exponentialRampToValueAtTime(.001, t+.012);
-    cs.connect(cf); cf.connect(cg); cg.connect(master); cs.start(t);
-
-    /* 2. the THWIP — air burst noise, bandpass sweeping high→low (pitch glide of the web shooting out) */
-    var nb = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * .17), ctx.sampleRate);
-    var nd = nb.getChannelData(0); for (var j = 0; j < nd.length; j++) nd[j] = Math.random()*2-1;
-    var ns = ctx.createBufferSource(); ns.buffer = nb;
-    var nf = ctx.createBiquadFilter(); nf.type = 'bandpass'; nf.Q.value = 2.2;
-    nf.frequency.setValueAtTime(6500, t+.004);
-    nf.frequency.exponentialRampToValueAtTime(650, t+.15);
-    var ng = ctx.createGain();
-    ng.gain.setValueAtTime(.001, t+.004);
-    ng.gain.linearRampToValueAtTime(1.6, t+.018);
-    ng.gain.exponentialRampToValueAtTime(.001, t+.17);
-    ns.connect(nf); nf.connect(ng); ng.connect(master); ns.start(t+.004);
-
-    /* 3. subtle pitched whip — gives the tonal "thwip" tail without sounding electronic */
-    var o = ctx.createOscillator(), g = ctx.createGain();
-    o.type = 'sawtooth';
-    o.frequency.setValueAtTime(2200, t+.006); o.frequency.exponentialRampToValueAtTime(380, t+.14);
-    g.gain.setValueAtTime(.001, t+.006); g.gain.linearRampToValueAtTime(.13, t+.02); g.gain.exponentialRampToValueAtTime(.001, t+.15);
-    var lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3000;
-    o.connect(g); g.connect(lp); lp.connect(master); o.start(t+.006); o.stop(t+.15);
+  function _preload() {
+    if (_buf || _loading) return;
+    _loading = true;
+    fetch('web-shot.mp3')
+      .then(function(r) { return r.arrayBuffer(); })
+      .then(function(a) { return _getCtx().decodeAudioData(a); })
+      .then(function(b) { _buf = b; })
+      .catch(function() { _loading = false; });
   }
 
-  // Unlock + warm up the AudioContext on the very first user interaction,
-  // so by the time a card is clicked the context is already 'running' and
-  // the sound can start synchronously inside the gesture (required by Safari/iOS).
-  function _unlock() {
-    var ctx = _getCtx();
-    if (ctx.state === 'suspended') ctx.resume();
-  }
+  // Unlock the AudioContext and start loading the clip on the first interaction.
   ['pointerdown', 'touchstart', 'keydown'].forEach(function(ev) {
-    document.addEventListener(ev, _unlock, { passive: true });
+    document.addEventListener(ev, function() { _getCtx(); _preload(); }, { passive: true });
   });
 
   function playShot() {
     var now = Date.now();
-    if (now - _last < 300) return;
+    if (now - _last < 200) return;
     _last = now;
     var ctx = _getCtx();
-    if (ctx.state === 'suspended') ctx.resume();
-    _synth(ctx); // play synchronously within the click gesture
+    if (!_buf) { _preload(); return; } // not decoded yet — skip this one click
+    var t = ctx.currentTime;
+    var src = ctx.createBufferSource(); src.buffer = _buf;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(1.0, t);
+    g.gain.setValueAtTime(1.0, t + SHOT_DUR - 0.03);
+    g.gain.linearRampToValueAtTime(0.0001, t + SHOT_DUR); // tiny fade so the cut is clean
+    src.connect(g); g.connect(ctx.destination);
+    src.start(t, SHOT_OFFSET, SHOT_DUR);
   }
 
   document.addEventListener('click', function(e) {
