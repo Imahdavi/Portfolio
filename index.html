@@ -2304,9 +2304,33 @@ function closeProject() {
 }
 
 let _revealObs = null;
+let _videoObs = null;
 
 function teardownScrollReveal() {
   if (_revealObs) { _revealObs.disconnect(); _revealObs = null; }
+  if (_videoObs) { _videoObs.disconnect(); _videoObs = null; }
+}
+
+// Lazy-load videos: only set src (= start downloading) when a block nears the
+// viewport, and pause when it leaves. rootMargin ~one screen ahead so playback
+// is ready by the time the user scrolls to it. Big Supabase egress saver.
+function setupLazyVideos() {
+  if (_videoObs) { _videoObs.disconnect(); _videoObs = null; }
+  const viewEl = document.getElementById('view-project');
+  const vids = document.querySelectorAll('#block-list video[data-lazy-src]');
+  if (!vids.length) return;
+  _videoObs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const v = entry.target;
+      if (entry.isIntersecting) {
+        if (!v.getAttribute('src') && v.dataset.lazySrc) v.src = v.dataset.lazySrc;
+        const p = v.play(); if (p && p.catch) p.catch(() => {});
+      } else {
+        v.pause(); // keeps src/cache — never re-downloads, just stops playback
+      }
+    });
+  }, { root: viewEl, rootMargin: '700px 0px 700px 0px', threshold: 0.01 });
+  vids.forEach(v => _videoObs.observe(v));
 }
 
 function setupScrollReveal() {
@@ -2675,6 +2699,7 @@ function renderBlocks(animate) {
 
   requestAnimationFrame(() => {
     list.querySelectorAll('.block').forEach(setBlockRowSpan);
+    setupLazyVideos();
     if (!animate) return;
     requestAnimationFrame(() => {
       const viewEl = document.getElementById('view-project');
@@ -2753,11 +2778,13 @@ function makeBlockEl(block, proj) {
         block._freeAspect = +(141/43).toFixed(4);
       }
     } else {
-      // video: loop, autoplay muted, no controls
+      // video: loop, muted, no controls. Lazy-loaded — src is deferred and
+      // only set once the block nears the viewport (see setupLazyVideos), so
+      // off-screen videos never download. Saves Supabase egress.
       const vid = document.createElement('video');
-      vid.src = block.content;
+      vid.dataset.lazySrc = block.content;
+      vid.preload = 'none';
       vid.loop = true;
-      vid.autoplay = true;
       vid.muted = true;
       vid.playsInline = true;
       block._muted = true;
