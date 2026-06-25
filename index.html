@@ -1339,16 +1339,24 @@ function spiderSense(x, y) {
     ns.connect(nf); nf.connect(ng); ng.connect(master); ns.start(t+.012);
   }
 
+  // Unlock + warm up the AudioContext on the very first user interaction,
+  // so by the time a card is clicked the context is already 'running' and
+  // the sound can start synchronously inside the gesture (required by Safari/iOS).
+  function _unlock() {
+    var ctx = _getCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+  }
+  ['pointerdown', 'touchstart', 'keydown'].forEach(function(ev) {
+    document.addEventListener(ev, _unlock, { passive: true });
+  });
+
   function playShot() {
     var now = Date.now();
     if (now - _last < 300) return;
     _last = now;
     var ctx = _getCtx();
-    if (ctx.state === 'suspended') {
-      ctx.resume().then(function() { _synth(ctx); });
-    } else {
-      _synth(ctx);
-    }
+    if (ctx.state === 'suspended') ctx.resume();
+    _synth(ctx); // play synchronously within the click gesture
   }
 
   document.addEventListener('click', function(e) {
@@ -2106,34 +2114,6 @@ function _makeSecDelBtn(label, grid) {
   return btn;
 }
 
-/* ─── Auto-populate card thumbnails from project blocks ── */
-function _autoPopulateThumbs() {
-  const container = document.getElementById('home-sections');
-  if (!container) return;
-  container.querySelectorAll('.proj-card').forEach(cardEl => {
-    const key = cardEl.dataset.key;
-    if (!key) return;
-    const thumbEl = cardEl.querySelector('.proj-thumb');
-    if (!thumbEl || thumbEl.querySelector('img,video')) return;
-    const proj = PROJECTS[key];
-    if (!proj || !proj.blocks || !proj.blocks.length) return;
-    const mediaBlock = proj.blocks.find(b => (b.type === 'image' || b.type === 'video') && b.content);
-    if (!mediaBlock) return;
-    const url = mediaBlock.content;
-    const isVideo = /\.(mp4|webm|mov|ogg)$/i.test(url);
-    let media;
-    if (isVideo) {
-      media = document.createElement('video');
-      media.src = url; media.autoplay = true; media.muted = true;
-      media.loop = true; media.playsInline = true;
-    } else {
-      media = document.createElement('img');
-      media.src = url; media.alt = key;
-    }
-    thumbEl.style.background = '';
-    thumbEl.appendChild(media);
-  });
-}
 
 /* ─── Render home sections dynamically ────────────────── */
 function renderHomeSections(sections) {
@@ -2199,7 +2179,6 @@ const DEFAULT_SECTIONS = [
     { key: 'ui',     name: 'Ui Design',   sub: 'Interaction, Web, App',       thumb: '' },
     { key: 'edit',   name: 'Edit',        sub: 'Vlog, Music video, Edit',     thumb: '' },
     { key: 'web',    name: 'Web',         sub: 'Banner, Header',              thumb: '' },
-    { key: 'other',  name: 'Other',       sub: ':D',                          thumb: '' },
   ]},
 ];
 
@@ -2213,7 +2192,6 @@ const PROJECTS = {
   ui:     { name:'Ui Design',    sub:'Interaction, Web, App',                     blocks:[{ id:uid(), type:'text', content:'UI/UX design for web and mobile — interaction design, prototyping, and design systems.' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Ui/3%20engine%20-%20Instagram.mp4' }] },
   edit:   { name:'Edit',         sub:'Vlog, Music video, Edit',                   blocks:[{ id:uid(), type:'text', content:'Video editing for vlogs, music videos, and promotional content. Dynamic cuts and motion-synced edits.' }] },
   web:    { name:'Web',          sub:'Banner, Header',                            blocks:[{ id:uid(), type:'text', content:'Web banner and header design for digital marketing campaigns.' }] },
-  other:  { name:'Other',        sub:':D',                                        blocks:[{ id:uid(), type:'text', content:'Experimental animations, personal work, and fun stuff. :D' }] },
 };
 
 function uid() { return Math.random().toString(36).slice(2,9); }
@@ -2649,6 +2627,11 @@ function saveHomeEdits() {
   if (roleEl) _cachedSettings.profile.title = roleEl.textContent.trim();
   if (ageEl)  _cachedSettings.profile.age   = ageEl.textContent.trim();
 
+  // build a lookup of previously-saved thumbs so a render glitch can never wipe them
+  const _prevThumbs = {};
+  (_cachedSettings.sections || []).forEach(sec =>
+    (sec.cards || []).forEach(c => { if (c.thumb) _prevThumbs[c.key] = c.thumb; }));
+
   const sections = [];
   document.querySelectorAll('#home-sections .sec-label').forEach(labelEl => {
     let gridEl = labelEl.nextElementSibling;
@@ -2658,7 +2641,10 @@ function saveHomeEdits() {
       const key  = cardEl.dataset.key;
       const name = cardEl.querySelector('.proj-title')?.textContent?.trim() || '';
       const sub  = cardEl.querySelector('.proj-sub')?.textContent?.trim()  || '';
-      const thumb = cardEl.querySelector('.proj-thumb img')?.getAttribute('src') || '';
+      // read thumb from img OR video src; if DOM lost it, fall back to the
+      // previously-saved value so saving never destroys an existing thumbnail
+      const mediaEl = cardEl.querySelector('.proj-thumb img, .proj-thumb video');
+      const thumb = mediaEl?.getAttribute('src') || _prevThumbs[key] || '';
       const hidden = cardEl.dataset.hidden === 'true';
       cards.push({ key, name, sub, ...(thumb ? { thumb } : {}), ...(hidden ? { hidden: true } : {}) });
       if (PROJECTS[key]) { PROJECTS[key].name = name; PROJECTS[key].sub = sub; }
@@ -3524,7 +3510,6 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', async () => {
   if (localStorage.getItem('portfolio_admin') === 'true') document.body.classList.add('is-admin');
   await Promise.all([loadSettings(), loadProjects()]);
-  _autoPopulateThumbs();
   trackView(null); // track home page visit
 
   // restore view from URL path
