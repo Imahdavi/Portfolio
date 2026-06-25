@@ -1301,48 +1301,54 @@ function spiderSense(x, y) {
 
 /* ─── Web-shooter sound on card click (Andrew Garfield style) ── */
 (function() {
-  if (window.matchMedia('(pointer:coarse)').matches) return;
   var _actx = null;
   var _last = 0;
 
-  function _ctx() {
+  function _getCtx() {
     if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
-    if (_actx.state === 'suspended') _actx.resume();
     return _actx;
+  }
+
+  function _synth(ctx) {
+    var t = ctx.currentTime;
+    var master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
+
+    /* metallic snap click */
+    var cb = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * .022), ctx.sampleRate);
+    var cd = cb.getChannelData(0);
+    for (var i = 0; i < cd.length; i++) cd[i] = (Math.random()*2-1) * Math.exp(-i / (ctx.sampleRate * .004));
+    var cs = ctx.createBufferSource(); cs.buffer = cb;
+    var cf = ctx.createBiquadFilter(); cf.type = 'highpass'; cf.frequency.value = 3000;
+    var cg = ctx.createGain(); cg.gain.setValueAtTime(.9, t); cg.gain.exponentialRampToValueAtTime(.001, t+.022);
+    cs.connect(cf); cf.connect(cg); cg.connect(master); cs.start(t);
+
+    /* hi-freq zip sweep */
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(4800, t+.01); o.frequency.exponentialRampToValueAtTime(600, t+.18);
+    g.gain.setValueAtTime(.001, t+.01); g.gain.linearRampToValueAtTime(.45, t+.025); g.gain.exponentialRampToValueAtTime(.001, t+.19);
+    o.connect(g); g.connect(master); o.start(t+.01); o.stop(t+.19);
+
+    /* web air texture */
+    var nb = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * .16), ctx.sampleRate);
+    var nd = nb.getChannelData(0); for (var j = 0; j < nd.length; j++) nd[j] = Math.random()*2-1;
+    var ns = ctx.createBufferSource(); ns.buffer = nb;
+    var nf = ctx.createBiquadFilter(); nf.type = 'bandpass';
+    nf.frequency.setValueAtTime(5500, t+.012); nf.frequency.exponentialRampToValueAtTime(1500, t+.17); nf.Q.value = .7;
+    var ng = ctx.createGain(); ng.gain.setValueAtTime(.001, t+.012); ng.gain.linearRampToValueAtTime(.3, t+.03); ng.gain.exponentialRampToValueAtTime(.001, t+.18);
+    ns.connect(nf); nf.connect(ng); ng.connect(master); ns.start(t+.012);
   }
 
   function playShot() {
     var now = Date.now();
-    if (now - _last < 280) return;
+    if (now - _last < 300) return;
     _last = now;
-    try {
-      var ctx = _ctx(), t = ctx.currentTime;
-
-      /* metallic click */
-      var cb = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * .018), ctx.sampleRate);
-      var cd = cb.getChannelData(0);
-      for (var i = 0; i < cd.length; i++) cd[i] = (Math.random()*2-1) * Math.exp(-i / (ctx.sampleRate * .004));
-      var cs = ctx.createBufferSource(); cs.buffer = cb;
-      var cf = ctx.createBiquadFilter(); cf.type = 'highpass'; cf.frequency.value = 3500;
-      var cg = ctx.createGain(); cg.gain.setValueAtTime(.55, t); cg.gain.exponentialRampToValueAtTime(.001, t+.018);
-      cs.connect(cf); cf.connect(cg); cg.connect(ctx.destination); cs.start(t);
-
-      /* hi-freq zip */
-      var o = ctx.createOscillator(), g = ctx.createGain();
-      o.type = 'sine';
-      o.frequency.setValueAtTime(4200, t+.012); o.frequency.exponentialRampToValueAtTime(750, t+.15);
-      g.gain.setValueAtTime(.001, t+.012); g.gain.linearRampToValueAtTime(.2, t+.026); g.gain.exponentialRampToValueAtTime(.001, t+.16);
-      o.connect(g); g.connect(ctx.destination); o.start(t+.012); o.stop(t+.16);
-
-      /* web air texture */
-      var nb = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * .13), ctx.sampleRate);
-      var nd = nb.getChannelData(0); for (var j = 0; j < nd.length; j++) nd[j] = Math.random()*2-1;
-      var ns = ctx.createBufferSource(); ns.buffer = nb;
-      var nf = ctx.createBiquadFilter(); nf.type = 'bandpass';
-      nf.frequency.setValueAtTime(5000, t+.015); nf.frequency.exponentialRampToValueAtTime(1800, t+.14); nf.Q.value = .6;
-      var ng = ctx.createGain(); ng.gain.setValueAtTime(.001, t+.015); ng.gain.linearRampToValueAtTime(.14, t+.03); ng.gain.exponentialRampToValueAtTime(.001, t+.15);
-      ns.connect(nf); nf.connect(ng); ng.connect(ctx.destination); ns.start(t+.015);
-    } catch(e) {}
+    var ctx = _getCtx();
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(function() { _synth(ctx); });
+    } else {
+      _synth(ctx);
+    }
   }
 
   document.addEventListener('click', function(e) {
