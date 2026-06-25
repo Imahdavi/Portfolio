@@ -1295,15 +1295,16 @@ function spiderSense(x, y) {
   document.addEventListener('mousedown', e => {
     cur.classList.add('pressing');
     spiderSense(e.clientX, e.clientY);
+    if (window._playWebShot) window._playWebShot();
   });
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
 })();
 
-/* ─── Web-shooter sound on card click (real Spider-Man SFX clip) ── */
+/* ─── Web-shooter sound — plays wherever a web is shot (any click) ── */
 (function() {
   var _actx = null, _buf = null, _loading = false, _last = 0;
-  // the first "thwip" from web-shot.mp3, at half volume
-  var SHOT_OFFSET = 1.55, SHOT_DUR = 0.35, SHOT_GAIN = 0.5;
+  // the first "thwip" from web-shot.mp3, kept quiet
+  var SHOT_OFFSET = 1.55, SHOT_DUR = 0.35, SHOT_GAIN = 0.3;
 
   function _getCtx() {
     if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1342,10 +1343,12 @@ function spiderSense(x, y) {
     src.start(t, SHOT_OFFSET, SHOT_DUR);
   }
 
-  document.addEventListener('click', function(e) {
+  // Expose so the spider-web burst (spiderSense) can fire the sound in sync,
+  // wherever the user shoots a web on the page.
+  window._playWebShot = function() {
     if (typeof editMode !== 'undefined' && editMode) return;
-    if (e.target.closest('#home-sections .proj-card')) playShot();
-  });
+    playShot();
+  };
 })();
 
 /* ─── Spider web catch SVG — dense, realistic cobweb drawn on click ───── */
