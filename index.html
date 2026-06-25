@@ -1302,8 +1302,8 @@ function spiderSense(x, y) {
 /* ─── Web-shooter sound on card click (real Spider-Man SFX clip) ── */
 (function() {
   var _actx = null, _buf = null, _loading = false, _last = 0;
-  // a single, isolated "thwip" extracted from web-shot.mp3 (the 4.19s shot)
-  var SHOT_OFFSET = 4.18, SHOT_DUR = 0.55;
+  // the first "thwip" from web-shot.mp3, at half volume
+  var SHOT_OFFSET = 1.55, SHOT_DUR = 0.35, SHOT_GAIN = 0.5;
 
   function _getCtx() {
     if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1335,8 +1335,8 @@ function spiderSense(x, y) {
     var t = ctx.currentTime;
     var src = ctx.createBufferSource(); src.buffer = _buf;
     var g = ctx.createGain();
-    g.gain.setValueAtTime(1.0, t);
-    g.gain.setValueAtTime(1.0, t + SHOT_DUR - 0.03);
+    g.gain.setValueAtTime(SHOT_GAIN, t);
+    g.gain.setValueAtTime(SHOT_GAIN, t + SHOT_DUR - 0.03);
     g.gain.linearRampToValueAtTime(0.0001, t + SHOT_DUR); // tiny fade so the cut is clean
     src.connect(g); g.connect(ctx.destination);
     src.start(t, SHOT_OFFSET, SHOT_DUR);
