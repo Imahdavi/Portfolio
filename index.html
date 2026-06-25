@@ -1796,16 +1796,29 @@ async function saveProject(key) {
 
 let _cachedSettings = null;
 
+let _saveInFlight = false, _saveDirty = false;
 async function saveSettings() {
   if (!_cachedSettings) return;
-  await fetch(`${SB_URL}/rest/v1/portfolio_settings?id=eq.1`, {
-    method: 'PATCH',
-    headers: {
-      'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ data: _cachedSettings })
-  });
+  // Serialize saves: if one is already running, mark dirty and let it re-run
+  // afterwards. This prevents many concurrent PATCHes from arriving out of
+  // order and clobbering newer data (e.g. a just-uploaded thumbnail).
+  if (_saveInFlight) { _saveDirty = true; return; }
+  _saveInFlight = true;
+  try {
+    await fetch(`${SB_URL}/rest/v1/portfolio_settings?id=eq.1`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ data: _cachedSettings })
+    });
+  } catch (e) {
+    _saveDirty = true; // network hiccup — make sure we try again
+  } finally {
+    _saveInFlight = false;
+    if (_saveDirty) { _saveDirty = false; saveSettings(); }
+  }
 }
 
 function syncProjectTitleToHome(key, name, sub) {
@@ -3353,25 +3366,33 @@ document.getElementById('thumbInput').addEventListener('change', async function(
   thumbEl.style.background = 'linear-gradient(135deg,#e8e0d8,#c8bdb4)';
   showUploadToast('Uploading…');
 
-  const ext  = file.name.split('.').pop().toLowerCase();
-  const path = `uploads/thumb_${Date.now()}_${uid()}.${ext}`;
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
   try {
     const buf = await file.arrayBuffer();
-    await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', `${SB_URL}/storage/v1/object/${SB_BUCKET}/${path}`);
-      xhr.setRequestHeader('apikey', SB_KEY);
-      xhr.setRequestHeader('Authorization', `Bearer ${SB_KEY}`);
-      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-      xhr.onload = () => {
-        console.log('[thumb-upload] status:', xhr.status, xhr.responseText.slice(0,200));
-        xhr.status < 300 ? resolve() : reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText}`));
-      };
-      xhr.onerror = () => { console.error('[thumb-upload] onerror'); reject(new Error('Network error')); };
-      xhr.send(buf);
-    });
+    // Upload with up to 3 attempts; a 409 (duplicate path) just means an
+    // unlucky name collision, so retry with a fresh path.
+    let finalPath = '';
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const path = `uploads/thumb_${Date.now()}_${uid()}.${ext}`;
+      const status = await new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${SB_URL}/storage/v1/object/${SB_BUCKET}/${path}`);
+        xhr.setRequestHeader('apikey', SB_KEY);
+        xhr.setRequestHeader('Authorization', `Bearer ${SB_KEY}`);
+        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+        xhr.onload  = () => { console.log('[thumb-upload]', xhr.status, xhr.responseText.slice(0,160)); resolve({ ok: xhr.status < 300, code: xhr.status, body: xhr.responseText }); };
+        xhr.onerror = () => { console.error('[thumb-upload] network error'); resolve({ ok: false, code: 0, body: 'network' }); };
+        xhr.send(buf);
+      });
+      if (status.ok) { finalPath = path; break; }
+      if (status.code !== 400 && status.code !== 409) {
+        throw new Error(`HTTP ${status.code}: ${String(status.body).slice(0,120)}`);
+      }
+      // else: duplicate/collision — loop and try a new path
+    }
+    if (!finalPath) throw new Error('Upload failed after retries');
 
-    const url = `${SB_URL}/storage/v1/object/public/${SB_BUCKET}/${path}`;
+    const url = `${SB_URL}/storage/v1/object/public/${SB_BUCKET}/${finalPath}`;
     thumbEl.style.background = '';
     let img = thumbEl.querySelector('img');
     if (!img) { img = document.createElement('img'); thumbEl.insertBefore(img, thumbEl.firstChild); }
