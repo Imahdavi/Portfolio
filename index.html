@@ -195,7 +195,8 @@
       box-shadow:0 5px 14px rgba(0,0,0,.09);
     }
     .proj-card:active .proj-thumb { transform:scale(.95); transition-duration:.1s; }
-    .proj-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+    .proj-thumb img,
+    .proj-thumb video { width:100%; height:100%; object-fit:cover; display:block; }
     /* Spider-web hover overlay */
     .proj-thumb::after {
       content:''; position:absolute; inset:0; z-index:3; pointer-events:none;
@@ -1298,62 +1299,55 @@ function spiderSense(x, y) {
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
 })();
 
-/* ─── Spider-web thwip sound on card hover ──────────────── */
+/* ─── Web-shooter sound on card click (Andrew Garfield style) ── */
 (function() {
-  if (window.matchMedia('(pointer:coarse)').matches) return; // skip touch
+  if (window.matchMedia('(pointer:coarse)').matches) return;
   var _actx = null;
-  var _lastThwip = 0;
+  var _last = 0;
 
-  function _getCtx() {
+  function _ctx() {
     if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
     if (_actx.state === 'suspended') _actx.resume();
     return _actx;
   }
 
-  function playThwip() {
+  function playShot() {
     var now = Date.now();
-    if (now - _lastThwip < 320) return;
-    _lastThwip = now;
+    if (now - _last < 280) return;
+    _last = now;
     try {
-      var ctx  = _getCtx();
-      var t    = ctx.currentTime;
-      var dur  = 0.18;
+      var ctx = _ctx(), t = ctx.currentTime;
 
-      // — oscillator sweep (the "thwip" tone) —
-      var osc  = ctx.createOscillator();
-      var og   = ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(1800, t);
-      osc.frequency.exponentialRampToValueAtTime(420, t + dur);
-      og.gain.setValueAtTime(0.18, t);
-      og.gain.exponentialRampToValueAtTime(0.001, t + dur);
-      osc.connect(og); og.connect(ctx.destination);
-      osc.start(t); osc.stop(t + dur);
+      /* metallic click */
+      var cb = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * .018), ctx.sampleRate);
+      var cd = cb.getChannelData(0);
+      for (var i = 0; i < cd.length; i++) cd[i] = (Math.random()*2-1) * Math.exp(-i / (ctx.sampleRate * .004));
+      var cs = ctx.createBufferSource(); cs.buffer = cb;
+      var cf = ctx.createBiquadFilter(); cf.type = 'highpass'; cf.frequency.value = 3500;
+      var cg = ctx.createGain(); cg.gain.setValueAtTime(.55, t); cg.gain.exponentialRampToValueAtTime(.001, t+.018);
+      cs.connect(cf); cf.connect(cg); cg.connect(ctx.destination); cs.start(t);
 
-      // — noise burst (the "web texture") —
-      var buf  = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
-      var data = buf.getChannelData(0);
-      for (var i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-      var src  = ctx.createBufferSource();
-      src.buffer = buf;
-      var bpf  = ctx.createBiquadFilter();
-      bpf.type = 'bandpass';
-      bpf.frequency.setValueAtTime(3200, t);
-      bpf.frequency.exponentialRampToValueAtTime(900, t + dur);
-      bpf.Q.value = 1.2;
-      var ng   = ctx.createGain();
-      ng.gain.setValueAtTime(0.22, t);
-      ng.gain.exponentialRampToValueAtTime(0.001, t + dur);
-      src.connect(bpf); bpf.connect(ng); ng.connect(ctx.destination);
-      src.start(t);
+      /* hi-freq zip */
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(4200, t+.012); o.frequency.exponentialRampToValueAtTime(750, t+.15);
+      g.gain.setValueAtTime(.001, t+.012); g.gain.linearRampToValueAtTime(.2, t+.026); g.gain.exponentialRampToValueAtTime(.001, t+.16);
+      o.connect(g); g.connect(ctx.destination); o.start(t+.012); o.stop(t+.16);
+
+      /* web air texture */
+      var nb = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * .13), ctx.sampleRate);
+      var nd = nb.getChannelData(0); for (var j = 0; j < nd.length; j++) nd[j] = Math.random()*2-1;
+      var ns = ctx.createBufferSource(); ns.buffer = nb;
+      var nf = ctx.createBiquadFilter(); nf.type = 'bandpass';
+      nf.frequency.setValueAtTime(5000, t+.015); nf.frequency.exponentialRampToValueAtTime(1800, t+.14); nf.Q.value = .6;
+      var ng = ctx.createGain(); ng.gain.setValueAtTime(.001, t+.015); ng.gain.linearRampToValueAtTime(.14, t+.03); ng.gain.exponentialRampToValueAtTime(.001, t+.15);
+      ns.connect(nf); nf.connect(ng); ng.connect(ctx.destination); ns.start(t+.015);
     } catch(e) {}
   }
 
-  document.getElementById('home-sections').addEventListener('mouseover', function(e) {
-    if (editMode) return;
-    var card = e.target.closest('.proj-card');
-    if (!card || card === e.relatedTarget || card.contains(e.relatedTarget)) return;
-    playThwip();
+  document.addEventListener('click', function(e) {
+    if (typeof editMode !== 'undefined' && editMode) return;
+    if (e.target.closest('#home-sections .proj-card')) playShot();
   });
 })();
 
@@ -2104,6 +2098,35 @@ function _makeSecDelBtn(label, grid) {
     saveHomeEdits();
   });
   return btn;
+}
+
+/* ─── Auto-populate card thumbnails from project blocks ── */
+function _autoPopulateThumbs() {
+  const container = document.getElementById('home-sections');
+  if (!container) return;
+  container.querySelectorAll('.proj-card').forEach(cardEl => {
+    const key = cardEl.dataset.key;
+    if (!key) return;
+    const thumbEl = cardEl.querySelector('.proj-thumb');
+    if (!thumbEl || thumbEl.querySelector('img,video')) return;
+    const proj = PROJECTS[key];
+    if (!proj || !proj.blocks || !proj.blocks.length) return;
+    const mediaBlock = proj.blocks.find(b => (b.type === 'image' || b.type === 'video') && b.content);
+    if (!mediaBlock) return;
+    const url = mediaBlock.content;
+    const isVideo = /\.(mp4|webm|mov|ogg)$/i.test(url);
+    let media;
+    if (isVideo) {
+      media = document.createElement('video');
+      media.src = url; media.autoplay = true; media.muted = true;
+      media.loop = true; media.playsInline = true;
+    } else {
+      media = document.createElement('img');
+      media.src = url; media.alt = key;
+    }
+    thumbEl.style.background = '';
+    thumbEl.appendChild(media);
+  });
 }
 
 /* ─── Render home sections dynamically ────────────────── */
@@ -3495,6 +3518,7 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', async () => {
   if (localStorage.getItem('portfolio_admin') === 'true') document.body.classList.add('is-admin');
   await Promise.all([loadSettings(), loadProjects()]);
+  _autoPopulateThumbs();
   trackView(null); // track home page visit
 
   // restore view from URL path
