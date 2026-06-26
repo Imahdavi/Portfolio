@@ -741,23 +741,23 @@
     #upload-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
     #upload-toast.error { background:#c0392b; }
 
-    /* Sound toggle button — sits beside the bottom nav */
+    /* Sound toggle button — floats beside bottom nav, same style as nav-btn */
     #sound-toggle-btn {
-      position:fixed; bottom:22px; left:calc(50% + 148px);
-      width:44px; height:44px; border-radius:50%;
-      background:#fff; border:none; cursor:pointer; z-index:200;
-      display:flex; align-items:center; justify-content:center;
-      box-shadow:0 4px 16px rgba(0,0,0,.11);
-      color:#aaa; transition:color .18s, box-shadow .18s, transform .15s;
+      position:fixed; bottom:33px; left:calc(50% + 172px);
+      background:none; border:none; cursor:pointer; z-index:200;
+      color:#bbb; display:flex; align-items:center; justify-content:center;
+      width:26px; height:26px;
+      transition:color .2s, transform .15s;
     }
-    #sound-toggle-btn:hover { color:#444; box-shadow:0 4px 20px rgba(0,0,0,.17); transform:translateY(-1px); }
-    #sound-toggle-btn:active { transform:scale(.88); }
-    #sound-toggle-btn svg { width:20px; height:20px; display:block; }
+    #sound-toggle-btn:hover  { color:#444; transform:translateY(-2px); }
+    #sound-toggle-btn:active { transform:scale(.86); }
+    #sound-toggle-btn svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; display:block; }
     #sound-toggle-btn .icon-on  { display:block; }
     #sound-toggle-btn .icon-off { display:none; }
-    #sound-toggle-btn.muted { color:#ccc; }
     #sound-toggle-btn.muted .icon-on  { display:none; }
     #sound-toggle-btn.muted .icon-off { display:block; }
+    #sound-toggle-btn .nav-tip { bottom:calc(100% + 10px); }
+    #sound-toggle-btn:hover .nav-tip { opacity:1; transform:translateX(-50%) translateY(0); }
 
     /* Scroll-to-top button — mirrors back-btn position on the right */
     #scroll-top-btn {
@@ -1154,16 +1154,21 @@
   </button>
 </nav>
 
-<button id="sound-toggle-btn" onclick="toggleWebSound()" aria-label="Toggle sound">
-  <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+<button id="sound-toggle-btn" onclick="toggleWebSound()" aria-label="Toggle web-shot sound">
+  <span class="nav-tip">Web Sound</span>
+  <!-- active: speaker + web-ray lines -->
+  <svg class="icon-on" viewBox="0 0 24 24">
+    <polygon points="10 5 5 9 2 9 2 15 5 15 10 19 10 5"/>
+    <line x1="13" y1="8.5" x2="17" y2="6"/>
+    <line x1="13.5" y1="12" x2="21" y2="12"/>
+    <line x1="13" y1="15.5" x2="17" y2="18"/>
+    <path d="M14.5 9.5a5 5 0 0 1 0 5"/>
   </svg>
-  <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-    <line x1="23" y1="9" x2="17" y2="15"/>
-    <line x1="17" y1="9" x2="23" y2="15"/>
+  <!-- muted: speaker + X -->
+  <svg class="icon-off" viewBox="0 0 24 24">
+    <polygon points="10 5 5 9 2 9 2 15 5 15 10 19 10 5"/>
+    <line x1="14" y1="9" x2="20" y2="15"/>
+    <line x1="20" y1="9" x2="14" y2="15"/>
   </svg>
 </button>
 
@@ -1382,6 +1387,14 @@ function spiderSense(x, y) {
     playShot();
   };
 })();
+
+/* ─── Mobile touch: web animation + sound ───────────────── */
+document.addEventListener('touchstart', function(e) {
+  if (typeof editMode !== 'undefined' && editMode) return;
+  var t = e.changedTouches[0];
+  spiderSense(t.clientX, t.clientY);
+  if (window._playWebShot) window._playWebShot();
+}, {passive: true});
 
 /* ─── Sound toggle ───────────────────────────────────────── */
 function toggleWebSound() {
