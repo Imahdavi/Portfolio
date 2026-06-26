@@ -1306,7 +1306,7 @@ function _drawWeb(x, y, zIndex) {
   const ns = 'http://www.w3.org/2000/svg';
   const el = document.createElementNS(ns, 'svg');
   el.setAttribute('viewBox', `0 0 ${SZ} ${SZ}`);
-  el.style.cssText = `position:fixed;left:${x-C}px;top:${y-C}px;width:${SZ}px;height:${SZ}px;pointer-events:none;z-index:${zIndex};animation:ss .8s ease-out forwards`;
+  el.style.cssText = `position:fixed;left:${x-C}px;top:${y-C}px;width:${SZ}px;height:${SZ}px;pointer-events:none;z-index:${zIndex};transform-box:fill-box;transform-origin:center;animation:ss .8s ease-out forwards`;
   const angs = Array.from({length:SPOKES}, (_,s) => (s/SPOKES)*Math.PI*2 - Math.PI/2);
   let d = '';
   for (let i = 1; i <= RINGS; i++) {
