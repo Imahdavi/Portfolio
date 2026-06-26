@@ -749,6 +749,7 @@
       width:26px; height:26px;
       transition:color .2s, transform .15s;
     }
+    #sound-toggle-btn::before { content:''; position:absolute; inset:-12px -10px; }
     #sound-toggle-btn:hover  { color:#444; transform:translateY(-2px); }
     #sound-toggle-btn:active { transform:scale(.86); }
     #sound-toggle-btn svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; display:block; }
@@ -843,6 +844,12 @@
     }
     .nav-btn:hover .nav-tip {
       opacity:1; transform:translateX(-50%) translateY(0);
+    }
+
+    /* expanded hit area — invisible, doesn't affect layout */
+    .nav-btn::before {
+      content:''; position:absolute;
+      inset:-12px -10px;
     }
 
     /* nav active dot */
