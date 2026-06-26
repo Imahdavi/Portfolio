@@ -1973,6 +1973,7 @@ function closeFontPanel() {
 async function loadSettings() {
   try {
     const res = await fetch(`${SB_URL}/rest/v1/portfolio_settings?id=eq.1&select=data`, {
+      cache: 'no-store',
       headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
     });
     const rows = await res.json();
@@ -2156,6 +2157,7 @@ function renderHomeSections(sections) {
 async function loadProjects() {
   try {
     const res = await fetch(`${SB_URL}/rest/v1/portfolio_projects?select=key,data`, {
+      cache: 'no-store',
       headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
     });
     const rows = await res.json();
@@ -2280,6 +2282,7 @@ async function openProject(key) {
   trackView(key);
   try {
     const res  = await fetch(`${SB_URL}/rest/v1/portfolio_projects?key=eq.${encodeURIComponent(key)}&select=data`, {
+      cache: 'no-store',
       headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
     });
     const rows = await res.json();
