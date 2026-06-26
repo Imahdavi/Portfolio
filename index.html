@@ -857,10 +857,10 @@
     }
     #web-canvas-close:hover { background:rgba(0,0,0,0.13); color:#333; }
     #web-canvas-hint {
-      position:absolute; bottom:90px; left:50%;
+      position:absolute; top:36px; left:50%;
       transform:translateX(-50%);
-      font-size:12px; color:#ccc; pointer-events:none;
-      letter-spacing:.5px; white-space:nowrap;
+      font-family:var(--font-heading); font-size:26px; font-weight:600;
+      color:#1a1a1a; pointer-events:none; white-space:nowrap;
     }
     /* ─────────────────── LOTTIE PICKER ─────────────────── */
     #lottie-picker-overlay {
@@ -1177,7 +1177,7 @@
 <!-- ══ SPIDER WEB CANVAS ══ -->
 <div id="web-canvas-overlay">
   <button id="web-canvas-close" onmousedown="event.stopPropagation()" onclick="closeWebCanvas()" aria-label="Close">✕</button>
-  <span id="web-canvas-hint">کلیک کن — تار می‌زنه</span>
+  <span id="web-canvas-hint">Click to Shoot</span>
 </div>
 
 <!-- hidden file input -->
