@@ -741,6 +741,24 @@
     #upload-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
     #upload-toast.error { background:#c0392b; }
 
+    /* Sound toggle button — sits beside the bottom nav */
+    #sound-toggle-btn {
+      position:fixed; bottom:22px; left:calc(50% + 148px);
+      width:44px; height:44px; border-radius:50%;
+      background:#fff; border:none; cursor:pointer; z-index:200;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow:0 4px 16px rgba(0,0,0,.11);
+      color:#aaa; transition:color .18s, box-shadow .18s, transform .15s;
+    }
+    #sound-toggle-btn:hover { color:#444; box-shadow:0 4px 20px rgba(0,0,0,.17); transform:translateY(-1px); }
+    #sound-toggle-btn:active { transform:scale(.88); }
+    #sound-toggle-btn svg { width:20px; height:20px; display:block; }
+    #sound-toggle-btn .icon-on  { display:block; }
+    #sound-toggle-btn .icon-off { display:none; }
+    #sound-toggle-btn.muted { color:#ccc; }
+    #sound-toggle-btn.muted .icon-on  { display:none; }
+    #sound-toggle-btn.muted .icon-off { display:block; }
+
     /* Scroll-to-top button — mirrors back-btn position on the right */
     #scroll-top-btn {
       position:fixed; bottom:96px; right:max(10px, calc(50vw - 280px));
@@ -1136,6 +1154,19 @@
   </button>
 </nav>
 
+<button id="sound-toggle-btn" onclick="toggleWebSound()" aria-label="Toggle sound">
+  <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+  </svg>
+  <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+    <line x1="23" y1="9" x2="17" y2="15"/>
+    <line x1="17" y1="9" x2="23" y2="15"/>
+  </svg>
+</button>
+
 <!-- hidden file input -->
 <input type="file" id="fileInput" accept="image/*,video/*" multiple style="display:none"/>
 <input type="file" id="thumbInput" accept="image/*" style="display:none"/>
@@ -1344,11 +1375,19 @@ function spiderSense(x, y) {
 
   // Expose so the spider-web burst (spiderSense) can fire the sound in sync,
   // wherever the user shoots a web on the page.
+  window._webShotMuted = false;
   window._playWebShot = function() {
     if (typeof editMode !== 'undefined' && editMode) return;
+    if (window._webShotMuted) return;
     playShot();
   };
 })();
+
+/* ─── Sound toggle ───────────────────────────────────────── */
+function toggleWebSound() {
+  window._webShotMuted = !window._webShotMuted;
+  document.getElementById('sound-toggle-btn').classList.toggle('muted', window._webShotMuted);
+}
 
 /* ─── Spider web catch SVG — dense, realistic cobweb drawn on click ───── */
 
