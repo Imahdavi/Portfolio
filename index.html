@@ -836,6 +836,33 @@
     }
     .nav-btn.active::after { opacity:1; }
 
+    /* spider button */
+    #nb-spider { color:#ddd; }
+    #nb-spider.web-open { color:#e31e24; transform:rotate(45deg); }
+    #nb-spider svg { stroke-width:1.6; }
+
+    /* ─────────────────── WEB CANVAS ─────────────────── */
+    #web-canvas-overlay {
+      display:none; position:fixed; inset:0; z-index:9999;
+      background:#fff; cursor:crosshair;
+    }
+    #web-canvas-overlay.show { display:block; }
+    #web-canvas-close {
+      position:fixed; top:20px; right:20px;
+      width:38px; height:38px; border-radius:50%;
+      background:rgba(0,0,0,0.07); border:none; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      color:#888; z-index:10000; font-size:18px; line-height:1;
+      transition:background .15s, color .15s;
+    }
+    #web-canvas-close:hover { background:rgba(0,0,0,0.13); color:#333; }
+    #web-canvas-hint {
+      position:fixed; bottom:100px; left:50%;
+      transform:translateX(-50%);
+      font-size:13px; color:#ccc; pointer-events:none;
+      letter-spacing:.5px; white-space:nowrap;
+    }
+
     /* ─────────────────── LOTTIE PICKER ─────────────────── */
     #lottie-picker-overlay {
       display:none; position:fixed; inset:0; z-index:5000;
@@ -1134,7 +1161,25 @@
     <span class="nav-tip" id="editLabel">Edit</span>
     <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
   </button>
+  <button class="nav-btn" id="nb-spider" onclick="toggleWebCanvas()">
+    <span class="nav-tip">Web Shooter</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/>
+      <line x1="12" y1="2" x2="12" y2="22"/>
+      <line x1="2" y1="12" x2="22" y2="12"/>
+      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+      <line x1="19.07" y1="4.93" x2="4.93" y2="19.07"/>
+      <path d="M12 5 Q16.5 8.5 19 12 Q16.5 15.5 12 19 Q7.5 15.5 5 12 Q7.5 8.5 12 5Z"/>
+      <path d="M12 8 Q14.5 10 16 12 Q14.5 14 12 16 Q9.5 14 8 12 Q9.5 10 12 8Z"/>
+    </svg>
+  </button>
 </nav>
+
+<!-- ══ SPIDER WEB CANVAS ══ -->
+<div id="web-canvas-overlay" onmousedown="if(event.target.id!=='web-canvas-close'){spiderSense(event.clientX,event.clientY);if(window._playWebShot)window._playWebShot();}">
+  <button id="web-canvas-close" onmousedown="event.stopPropagation()" onclick="closeWebCanvas()" aria-label="Close">✕</button>
+  <span id="web-canvas-hint">کلیک کن تار بزن</span>
+</div>
 
 <!-- hidden file input -->
 <input type="file" id="fileInput" accept="image/*,video/*" multiple style="display:none"/>
@@ -1294,6 +1339,7 @@ function spiderSense(x, y) {
   document.addEventListener('mouseenter', () => { cur.style.opacity = '1'; });
   document.addEventListener('mousedown', e => {
     cur.classList.add('pressing');
+    if (document.getElementById('web-canvas-overlay').classList.contains('show')) return;
     spiderSense(e.clientX, e.clientY);
     if (window._playWebShot) window._playWebShot();
   });
@@ -1352,6 +1398,31 @@ function spiderSense(x, y) {
 })();
 
 /* ─── Spider web catch SVG — dense, realistic cobweb drawn on click ───── */
+
+/* ─── Web Canvas overlay ─────────────────── */
+(function() {
+  var _open = false;
+
+  window.toggleWebCanvas = function() {
+    _open ? closeWebCanvas() : openWebCanvas();
+  };
+
+  window.openWebCanvas = function() {
+    _open = true;
+    document.getElementById('web-canvas-overlay').classList.add('show');
+    document.getElementById('nb-spider').classList.add('web-open');
+  };
+
+  window.closeWebCanvas = function() {
+    _open = false;
+    document.getElementById('web-canvas-overlay').classList.remove('show');
+    document.getElementById('nb-spider').classList.remove('web-open');
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && _open) closeWebCanvas();
+  });
+})();
 
 /* ─── Format toolbar (bold / italic) ─────────────────── */
 (function() {
