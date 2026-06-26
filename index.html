@@ -857,11 +857,24 @@
     }
     #web-canvas-close:hover { background:rgba(0,0,0,0.13); color:#333; }
     #web-canvas-hint {
-      position:fixed; bottom:100px; left:50%;
+      position:absolute; bottom:90px; left:50%;
       transform:translateX(-50%);
-      font-size:13px; color:#ccc; pointer-events:none;
+      font-size:12px; color:#ccc; pointer-events:none;
       letter-spacing:.5px; white-space:nowrap;
     }
+    #web-shooter-badge {
+      position:absolute; top:12%; left:50%;
+      transform:translateX(-50%);
+      display:flex; flex-direction:column; align-items:center; gap:8px;
+      pointer-events:none;
+      animation:wsbadge 2.4s ease-in-out infinite;
+    }
+    @keyframes wsbadge {
+      0%,100% { transform:translateX(-50%) scale(1); }
+      50%      { transform:translateX(-50%) scale(1.07); }
+    }
+    #web-shooter-badge svg { display:block; filter:drop-shadow(0 3px 10px rgba(227,30,36,.25)); }
+    #web-shooter-badge span { font-size:11px; color:#ccc; letter-spacing:.8px; }
 
     /* ─────────────────── LOTTIE PICKER ─────────────────── */
     #lottie-picker-overlay {
@@ -1176,9 +1189,18 @@
 </nav>
 
 <!-- ══ SPIDER WEB CANVAS ══ -->
-<div id="web-canvas-overlay" onmousedown="if(event.target.id!=='web-canvas-close'){spiderSense(event.clientX,event.clientY);if(window._playWebShot)window._playWebShot();}">
+<div id="web-canvas-overlay" style="position:relative">
   <button id="web-canvas-close" onmousedown="event.stopPropagation()" onclick="closeWebCanvas()" aria-label="Close">✕</button>
-  <span id="web-canvas-hint">کلیک کن تار بزن</span>
+  <div id="web-shooter-badge">
+    <svg viewBox="0 0 52 52" width="52" height="52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="26,2 50,26 26,50 2,26" fill="#e31e24"/>
+      <polygon points="26,10 42,26 26,42 10,26" fill="white"/>
+      <polygon points="26,17 35,26 26,35 17,26" fill="#e31e24"/>
+      <circle cx="26" cy="26" r="4" fill="white"/>
+    </svg>
+    <span>هر جا کلیک کنی</span>
+  </div>
+  <span id="web-canvas-hint">کلیک کن — تار می‌زنه</span>
 </div>
 
 <!-- hidden file input -->
@@ -1298,31 +1320,39 @@ setTimeout(revealProfileName, 2800);
 (function(){
   const s = document.createElement('style');
   s.id = 'ss-kf';
-  s.textContent = '@keyframes ss{0%{transform:translate(0,0);opacity:1}20%{transform:translate(3px,-2px);opacity:1}40%{transform:translate(-2px,2px);opacity:1}60%{transform:translate(2px,-1px);opacity:1}85%{transform:translate(0,0);opacity:1}100%{transform:translate(0,0);opacity:0}}';
+  s.textContent = '@keyframes ss{0%{transform:scale(0.15);opacity:0}12%{transform:scale(1.08) translate(1px,-1px);opacity:1}25%{transform:scale(0.97) translate(-1px,1px);opacity:1}40%{transform:scale(1.02) translate(1px,0);opacity:1}60%{transform:scale(1) translate(0,0);opacity:1}85%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:0}}';
   document.head.appendChild(s);
 })();
 function spiderSense(x, y) {
-  const S = 48;
+  const SPOKES = 14, RINGS = 6, R = 46, EXT = 18, DENS = 1.75;
+  const TOT = R + EXT, SZ = TOT * 2, C = TOT;
   const ns = 'http://www.w3.org/2000/svg';
   const el = document.createElementNS(ns, 'svg');
-  el.setAttribute('viewBox', `-${S} -${S} ${S*2} ${S*2}`);
-  el.style.cssText = `position:fixed;left:${x-S}px;top:${y-S}px;width:${S*2}px;height:${S*2}px;pointer-events:none;z-index:99998;animation:ss .4s ease-out forwards`;
-  const colors = ['#e31e24','#0047ab','#e31e24','#0047ab','#e31e24'];
-  const tilt = -Math.PI / 9;
-  const r = 16;
-  for (let i = 0; i < 5; i++) {
-    const angle = Math.PI + (i / 4) * Math.PI + tilt;
-    const bx = Math.cos(angle) * r;
-    const by = Math.sin(angle) * r;
-    const deg = angle * 180 / Math.PI + 90;
-    const g = document.createElementNS(ns, 'g');
-    g.setAttribute('transform', `translate(${bx.toFixed(1)},${by.toFixed(1)}) rotate(${deg.toFixed(1)})`);
-    const p = document.createElementNS(ns, 'polygon');
-    p.setAttribute('points', '2,-10 -3,0 -1,0 -2,10 3,0 1,0');
-    p.setAttribute('fill', colors[i]);
-    g.appendChild(p);
-    el.appendChild(g);
+  el.setAttribute('viewBox', `0 0 ${SZ} ${SZ}`);
+  el.style.cssText = `position:fixed;left:${x-C}px;top:${y-C}px;width:${SZ}px;height:${SZ}px;pointer-events:none;z-index:99999;animation:ss .75s ease-out forwards`;
+  const angs = Array.from({length:SPOKES}, (_,s) => (s/SPOKES)*Math.PI*2 - Math.PI/2);
+  let d = '';
+  for (let i = 1; i <= RINGS; i++) {
+    const rr = R * Math.pow(i/RINGS, DENS);
+    for (let s = 0; s < SPOKES; s++) {
+      const a1 = angs[s], a2 = angs[(s+1)%SPOKES];
+      const x1 = C + Math.cos(a1)*rr, y1 = C + Math.sin(a1)*rr;
+      const x2 = C + Math.cos(a2)*rr, y2 = C + Math.sin(a2)*rr;
+      const am = (a1+a2)/2;
+      d += `M${x1.toFixed(1)} ${y1.toFixed(1)} Q${(C+Math.cos(am)*rr*0.86).toFixed(1)} ${(C+Math.sin(am)*rr*0.86).toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+    }
   }
+  for (let s = 0; s < SPOKES; s++) {
+    const a = angs[s];
+    d += `M${C} ${C} L${(C+Math.cos(a)*TOT).toFixed(1)} ${(C+Math.sin(a)*TOT).toFixed(1)}`;
+  }
+  const path = document.createElementNS(ns, 'path');
+  path.setAttribute('d', d);
+  path.setAttribute('stroke', '#e31e24');
+  path.setAttribute('stroke-width', '1.3');
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke-linecap', 'round');
+  el.appendChild(path);
   document.body.appendChild(el);
   el.addEventListener('animationend', () => el.remove(), {once:true});
 }
@@ -1409,7 +1439,8 @@ function spiderSense(x, y) {
 
   window.openWebCanvas = function() {
     _open = true;
-    document.getElementById('web-canvas-overlay').classList.add('show');
+    var ov = document.getElementById('web-canvas-overlay');
+    ov.classList.add('show');
     document.getElementById('nb-spider').classList.add('web-open');
   };
 
@@ -1421,6 +1452,23 @@ function spiderSense(x, y) {
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && _open) closeWebCanvas();
+  });
+
+  // Canvas shooting handler — runs after DOM is ready
+  document.addEventListener('DOMContentLoaded', function() {
+    var ov = document.getElementById('web-canvas-overlay');
+    if (!ov) return;
+    ov.addEventListener('mousedown', function(e) {
+      if (e.target.id === 'web-canvas-close') return;
+      spiderSense(e.clientX, e.clientY);
+      if (window._playWebShot) window._playWebShot();
+    });
+    ov.addEventListener('touchstart', function(e) {
+      if (e.target.id === 'web-canvas-close') return;
+      var t = e.touches[0];
+      spiderSense(t.clientX, t.clientY);
+      if (window._playWebShot) window._playWebShot();
+    }, {passive:true});
   });
 })();
 
