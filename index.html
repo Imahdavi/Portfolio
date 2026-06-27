@@ -1348,25 +1348,36 @@ function spiderSense(x, y) {
 
 /* â”€â”€â”€ Web-shooter sound â€” plays wherever a web is shot (any click) â”€â”€ */
 (function() {
-  var _pool = [], _pi = 0, _last = 0, _unlocked = false;
-  var POOL_SIZE = 5, SHOT_OFFSET = 1.55, SHOT_DUR = 0.35, VOL = 0.35;
+  // Web Audio API — unlike <audio>, it never registers a system media session,
+  // so no playback notification appears on the phone. Overlapping taps work
+  // natively since each shot is its own BufferSource.
+  var _ctx = null, _gain = null, _buf = null, _last = 0;
+  var SHOT_OFFSET = 1.55, SHOT_DUR = 0.35, VOL = 0.35;
 
-  // Use the actual file â€” a pool of elements lets rapid taps overlap (one element can't replay mid-play).
-  for (var i = 0; i < POOL_SIZE; i++) {
-    var a = new Audio('web-shot.mp3');
-    a.preload = 'auto';
-    a.volume = VOL;
-    _pool.push(a);
+  function _getCtx() {
+    if (!_ctx) {
+      _ctx = new (window.AudioContext || window.webkitAudioContext)();
+      _gain = _ctx.createGain();
+      _gain.gain.value = VOL;
+      _gain.connect(_ctx.destination);
+    }
+    return _ctx;
   }
 
-  // iOS only lets play() succeed inside a user gesture, and each element must be
-  // "unlocked" once. On the first interaction, prime every element in the pool.
+  function _load() {
+    if (_buf) return;
+    fetch('web-shot.mp3')
+      .then(function(r) { return r.arrayBuffer(); })
+      .then(function(ab) { return _getCtx().decodeAudioData(ab); })
+      .then(function(b) { _buf = b; })
+      .catch(function() {});
+  }
+
+  // Unlock the context once on the first interaction, then preload the clip.
   function unlock() {
-    if (_unlocked) return;
-    _unlocked = true;
-    _pool.forEach(function(a) {
-      a.play().then(function() { a.pause(); a.currentTime = 0; }).catch(function() {});
-    });
+    var ctx = _getCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    _load();
   }
   ['pointerdown', 'touchstart', 'keydown'].forEach(function(ev) {
     document.addEventListener(ev, unlock, { once: true, passive: true });
@@ -1376,15 +1387,13 @@ function spiderSense(x, y) {
     var now = Date.now();
     if (now - _last < 60) return;
     _last = now;
-    var a = _pool[_pi];
-    _pi = (_pi + 1) % POOL_SIZE;
-    try {
-      if (a._t) { clearTimeout(a._t); }
-      a.currentTime = SHOT_OFFSET;
-      var p = a.play();
-      if (p && p.catch) p.catch(function() {});
-      a._t = setTimeout(function() { try { a.pause(); } catch (e) {} }, SHOT_DUR * 1000);
-    } catch (e) {}
+    var ctx = _getCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    if (!_buf) { _load(); return; }
+    var src = ctx.createBufferSource();
+    src.buffer = _buf;
+    src.connect(_gain);
+    src.start(0, SHOT_OFFSET, SHOT_DUR);
   }
   window._webShotMuted = false;
   window._playWebShot = function() {
