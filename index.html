@@ -287,10 +287,11 @@
     .an-range-btn { padding:6px 16px; border-radius:20px; border:1px solid rgba(0,0,0,.12); background:#fff; font-size:12.5px; font-weight:500; color:#666; cursor:pointer; transition:all .15s; }
     .an-range-btn.active { background:#1a1a1a; color:#fff; border-color:#1a1a1a; }
 
-    .an-stats  { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:26px; }
+    .an-stats  { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
     .an-stat   { background:#f5f4f2; border-radius:14px; padding:18px 12px; text-align:center; }
     .an-val    { display:block; font-size:28px; font-weight:700; line-height:1; margin-bottom:5px; }
     .an-lbl    { font-size:11.5px; color:#888; }
+    .an-newret { text-align:center; font-size:12px; color:#999; min-height:15px; margin-bottom:24px; }
 
     .an-section { margin-bottom:26px; }
     .an-sh  { font-size:11px; font-weight:600; color:#aaa; text-transform:uppercase; letter-spacing:.07em; margin-bottom:10px; }
@@ -1069,6 +1070,7 @@
       <div class="an-stat"><span class="an-val" id="an-uv">â€”</span><span class="an-lbl">Unique visitors</span></div>
       <div class="an-stat"><span class="an-val" id="an-pv">â€”</span><span class="an-lbl">Page views</span></div>
     </div>
+    <div class="an-newret" id="an-newret"></div>
     <div class="an-section">
       <div class="an-sh">Daily visitors</div>
       <div id="an-daily"></div>
@@ -1086,6 +1088,10 @@
     <div class="an-section" style="margin-top:26px">
       <div class="an-sh">Browsers</div>
       <div id="an-browsers"></div>
+    </div>
+    <div class="an-section">
+      <div class="an-sh">Traffic sources</div>
+      <div id="an-referrers"></div>
     </div>
     <div class="an-section">
       <div class="an-sh">Top projects</div>
@@ -1688,11 +1694,35 @@ const SB_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIs
 const SB_BUCKET = 'Portfolio';
 
 /* â”€â”€â”€ Analytics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function _mkId() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+// session_id resets per tab session (counts visits); visitor_id persists in
+// localStorage (counts unique people/devices across days).
 const _SID = sessionStorage.getItem('_vsid') || (() => {
-  const id = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const id = _mkId();
   sessionStorage.setItem('_vsid', id);
   return id;
 })();
+const _VID = localStorage.getItem('_pf_vid') || (() => {
+  const id = _mkId();
+  localStorage.setItem('_pf_vid', id);
+  return id;
+})();
+// First-ever visit? (true only on the very first page load of this device)
+const _IS_NEW = !localStorage.getItem('_pf_seen');
+localStorage.setItem('_pf_seen', '1');
+
+// Where the visitor came from — Instagram, Google, direct, etc.
+function _getReferrer() {
+  try {
+    const r = document.referrer;
+    if (!r) return 'direct';
+    const h = new URL(r).hostname.replace(/^www\./, '');
+    if (h === location.hostname) return 'internal';
+    return h;
+  } catch { return 'direct'; }
+}
 let _country = null;
 
 async function _getCountry() {
@@ -1727,7 +1757,7 @@ async function trackView(project = null) {
   fetch(`${SB_URL}/rest/v1/analytics`, {
     method: 'POST',
     headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ session_id: _SID, country, device: _getDevice(), browser: _getBrowser(), project, event: 'view' })
+    body: JSON.stringify({ session_id: _SID, visitor_id: _VID, referrer: _getReferrer(), country, device: _getDevice(), browser: _getBrowser(), project, event: 'view' })
   });
 }
 
@@ -1744,21 +1774,41 @@ async function loadAnalytics(days, btn) {
   document.getElementById('an-uv').textContent = 'â€¦';
   document.getElementById('an-pv').textContent = 'â€¦';
 
-  let url = `${SB_URL}/rest/v1/analytics?select=ts,session_id,country,device,browser,project&order=ts.desc&limit=5000`;
-  if (days > 0) {
-    const since = new Date(Date.now() - days * 86400000).toISOString();
-    url += `&ts=gte.${encodeURIComponent(since)}`;
-  }
-  let rows;
+  // Always pull the full history so we can tell new vs returning visitors
+  // (a visitor's *first ever* visit may predate the selected range).
+  const url = `${SB_URL}/rest/v1/analytics?select=ts,session_id,visitor_id,referrer,country,device,browser,project&order=ts.desc&limit=20000`;
+  let all;
   try {
-    rows = await (await fetch(url, { headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` } })).json();
+    all = await (await fetch(url, { headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` } })).json();
   } catch(e) { return; }
-  if (!Array.isArray(rows)) return;
+  if (!Array.isArray(all)) return;
 
-  // unique visitors
-  const sessions = new Set(rows.map(r => r.session_id));
-  document.getElementById('an-uv').textContent = sessions.size;
+  // visitor key: persistent visitor_id, falling back to session_id for old rows
+  const vidOf = r => r.visitor_id || r.session_id;
+
+  // earliest timestamp seen for each visitor, across all of history
+  const firstSeen = {};
+  all.forEach(r => {
+    const v = vidOf(r);
+    if (!firstSeen[v] || r.ts < firstSeen[v]) firstSeen[v] = r.ts;
+  });
+
+  // rows within the selected range
+  const sinceTs = days > 0 ? new Date(Date.now() - days * 86400000).toISOString() : null;
+  const rows = sinceTs ? all.filter(r => r.ts >= sinceTs) : all;
+
+  // unique visitors in range, split into new vs returning
+  const visitors = new Set(rows.map(vidOf));
+  let newCount = 0;
+  visitors.forEach(v => { if (!sinceTs || firstSeen[v] >= sinceTs) newCount++; });
+  const returningCount = visitors.size - newCount;
+
+  document.getElementById('an-uv').textContent = visitors.size;
   document.getElementById('an-pv').textContent = rows.length;
+  const nrEl = document.getElementById('an-newret');
+  if (nrEl) nrEl.textContent = visitors.size
+    ? `${newCount} new Â· ${returningCount} returning`
+    : '';
 
   // daily line chart
   const chartEl = document.getElementById('an-daily');
@@ -1766,7 +1816,7 @@ async function loadAnalytics(days, btn) {
   rows.forEach(r => {
     const d = r.ts.slice(0,10);
     if (!dayMap[d]) dayMap[d] = new Set();
-    dayMap[d].add(r.session_id);
+    dayMap[d].add(vidOf(r));
   });
 
   let daily = [];
@@ -1776,7 +1826,7 @@ async function loadAnalytics(days, btn) {
     rows.forEach(r => {
       const h = r.ts.slice(0,13);
       if (!hourMap[h]) hourMap[h] = new Set();
-      hourMap[h].add(r.session_id);
+      hourMap[h].add(vidOf(r));
     });
     for (let i = 23; i >= 0; i--) {
       const t = new Date(Date.now() - i * 3600000);
@@ -1847,6 +1897,18 @@ async function loadAnalytics(days, btn) {
   renderBreakdown('an-countries', countryMap, 5);
   renderBreakdown('an-devices',   deviceMap,  4);
   renderBreakdown('an-browsers',  browserMap, 5);
+
+  // traffic sources — counted per unique visitor (each visitor's referrer,
+  // preferring a real external source over plain internal navigation)
+  const refByVisitor = {};
+  rows.forEach(r => {
+    const v = vidOf(r), ref = r.referrer || 'direct';
+    if (refByVisitor[v] === undefined || (refByVisitor[v] === 'internal' && ref !== 'internal'))
+      refByVisitor[v] = ref;
+  });
+  const referrerMap = {};
+  Object.values(refByVisitor).forEach(ref => { referrerMap[ref] = (referrerMap[ref]||0)+1; });
+  renderBreakdown('an-referrers', referrerMap, 6);
 
   // top projects
   const projMap = {};
