@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
@@ -1348,7 +1348,7 @@ function spiderSense(x, y) {
 
 /* â”€â”€â”€ Web-shooter sound â€” plays wherever a web is shot (any click) â”€â”€ */
 (function() {
-  var _aud = null, _last = 0;
+  var _aud = null, _last = 0, _t = null;
   var SHOT_OFFSET = 1.55, SHOT_DUR = 0.35;
 
   // Use the actual file â€” data URI (~104 KB) exceeds iOS Safari's audio src limit.
@@ -1359,13 +1359,13 @@ function spiderSense(x, y) {
     var now = Date.now();
     if (now - _last < 80) return;
     _last = now;
+    if (_t) { clearTimeout(_t); _t = null; }
     _aud.volume = 0.35;
     _aud.currentTime = SHOT_OFFSET;
     var p = _aud.play();
     if (p && p.catch) p.catch(function() {});
-    setTimeout(function() { try { _aud.pause(); } catch(e) {} }, SHOT_DUR * 1000);
+    _t = setTimeout(function() { _t = null; try { _aud.pause(); } catch(e) {} }, SHOT_DUR * 1000);
   }
-
   window._webShotMuted = false;
   window._playWebShot = function() {
     if (typeof editMode !== 'undefined' && editMode) return;
