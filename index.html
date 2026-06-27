@@ -838,6 +838,7 @@
       transition:color .2s, transform .15s;
     }
     .nav-btn svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; display:block; }
+    #nb-exp svg path { fill:currentColor; stroke:none; }
     .nav-btn.active { color:#111; }
     .nav-btn:hover  { color:#444; transform:translateY(-2px); }
     .nav-btn:active { transform:scale(.86); }
@@ -1173,15 +1174,28 @@
 <nav id="bottom-nav">
   <button class="nav-btn active" id="nb-home" onclick="goView('view-home',this)">
     <span class="nav-tip">Home</span>
-    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M9.07874 16.1354H14.8937" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M2.40002 13.713C2.40002 8.082 3.01402 8.475 6.31902 5.41C7.76502 4.246 10.015 2 11.958 2C13.9 2 16.195 4.235 17.654 5.41C20.959 8.475 21.572 8.082 21.572 13.713C21.572 22 19.613 22 11.986 22C4.35903 22 2.40002 22 2.40002 13.713Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
   </button>
   <button class="nav-btn" id="nb-exp" onclick="goView('view-exp',this)">
-    <span class="nav-tip">Work Experience</span>
-    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+    <span class="nav-tip">Experience</span>
+    <svg viewBox="0 0 24 24" fill="none">
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M12.2112 13.1388C12.6254 13.1388 12.9612 13.4746 12.9612 13.8888V16.5168C12.9612 16.931 12.6254 17.2668 12.2112 17.2668C11.797 17.2668 11.4612 16.931 11.4612 16.5168V13.8888C11.4612 13.4746 11.797 13.1388 12.2112 13.1388Z" fill="currentColor"/>
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M2.46816 11.0476C2.7057 10.7083 3.17334 10.6257 3.51268 10.8633L3.52447 10.8715C5.81289 12.2764 8.85547 13.1417 12.2066 13.1417C15.5556 13.1417 18.605 12.2775 20.8937 10.8746L20.8997 10.8702C21.2352 10.6273 21.7041 10.7023 21.947 11.0378C22.19 11.3733 22.115 11.8422 21.7795 12.0851L21.7505 12.1061C21.7354 12.1171 21.7198 12.1275 21.704 12.1373C19.1512 13.7098 15.8141 14.6417 12.2066 14.6417C8.59869 14.6417 5.2706 13.7096 2.7191 12.1372C2.70666 12.1295 2.69445 12.1215 2.68249 12.1131L2.65249 12.0921C2.31315 11.8546 2.23062 11.3869 2.46816 11.0476Z" fill="currentColor"/>
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M5.51404 7.50226C4.32205 8.56381 3.75024 10.3338 3.75024 13.3507C3.75024 16.3676 4.32205 18.1375 5.51404 19.1991C6.73242 20.2841 8.78513 20.8037 12.2112 20.8037C15.6379 20.8037 17.6906 20.2841 18.9088 19.1991C20.1007 18.1376 20.6722 16.3677 20.6722 13.3507C20.6722 10.3337 20.1007 8.56376 18.9088 7.50224C17.6906 6.41723 15.6379 5.89767 12.2112 5.89767C8.78513 5.89767 6.73242 6.41722 5.51404 7.50226ZM4.51645 6.38208C6.17657 4.90363 8.72936 4.39767 12.2112 4.39767C15.6936 4.39767 18.2464 4.90362 19.9064 6.38211C21.5928 7.88408 22.1722 10.2157 22.1722 13.3507C22.1722 16.4857 21.5928 18.8173 19.9064 20.3192C18.2464 21.7977 15.6936 22.3037 12.2112 22.3037C8.72936 22.3037 6.17657 21.7977 4.51645 20.3193C2.82994 18.8173 2.25024 16.4858 2.25024 13.3507C2.25024 10.2156 2.82994 7.88404 4.51645 6.38208Z" fill="currentColor"/>
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M8.19873 4.73929C8.19873 3.13726 9.38523 1.70029 11.0087 1.70029H13.4137C15.0372 1.70029 16.2237 3.13726 16.2237 4.73929V5.36929C16.2237 5.7835 15.8879 6.11929 15.4737 6.11929C15.0595 6.11929 14.7237 5.7835 14.7237 5.36929V4.73929C14.7237 3.81332 14.0642 3.20029 13.4137 3.20029H11.0087C10.3582 3.20029 9.69873 3.81332 9.69873 4.73929V5.36929C9.69873 5.7835 9.36294 6.11929 8.94873 6.11929C8.53452 6.11929 8.19873 5.7835 8.19873 5.36929V4.73929Z" fill="currentColor"/>
+    </svg>
   </button>
   <button class="nav-btn" id="nb-soon" onclick="goView('view-soon',this)">
     <span class="nav-tip">Note</span>
-    <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M14.3053 15.4498H8.90527" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M12.2604 11.4385H8.90442" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M20.1598 8.29988L14.4898 2.89988C13.7598 2.79988 12.9398 2.74988 12.0398 2.74988C5.74978 2.74988 3.64978 5.06988 3.64978 11.9999C3.64978 18.9399 5.74978 21.2499 12.0398 21.2499C18.3398 21.2499 20.4398 18.9399 20.4398 11.9999C20.4398 10.5799 20.3498 9.34988 20.1598 8.29988Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M13.9342 2.83252V5.49352C13.9342 7.35152 15.4402 8.85652 17.2982 8.85652H20.2492" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
   </button>
   <button class="nav-btn an-nav-btn" id="nb-analytics" onclick="goView('view-analytics',this)">
     <span class="nav-tip">Analytics</span>
@@ -1954,8 +1968,8 @@ async function loadAnalytics(days, btn) {
   renderBreakdown('an-referrers', referrerMap, 6);
 
   // page views — the main tabs (project=null is Home; exp/note are special keys)
-  const PAGE_KEYS = { 'work-experience': 'Work Experience', 'note': 'Note' };
-  const pageMap = { 'Home': 0, 'Work Experience': 0, 'Note': 0 };
+  const PAGE_KEYS = { 'work-experience': 'Experience', 'note': 'Note' };
+  const pageMap = { 'Home': 0, 'Experience': 0, 'Note': 0 };
   rows.forEach(r => {
     if (!r.project)                pageMap['Home']++;
     else if (PAGE_KEYS[r.project]) pageMap[PAGE_KEYS[r.project]]++;
