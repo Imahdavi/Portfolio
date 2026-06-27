@@ -1332,6 +1332,7 @@ setTimeout(revealProfileName, 2800);
   document.head.appendChild(s);
 })();
 function spiderSense(x, y) {
+  if (typeof editMode !== 'undefined' && editMode) return; // no web while editing
   const S = 48;
   const ns = 'http://www.w3.org/2000/svg';
   const el = document.createElementNS(ns, 'svg');
@@ -3008,6 +3009,31 @@ function makeBlockEl(block, proj) {
         muteBtn.title     = block._muted ? 'Unmute' : 'Mute';
       };
       inner.appendChild(muteBtn);
+
+      // Hide the mute toggle for videos that have no audio track. Detection is
+      // heuristic and browser-specific, so we only hide once we're confident
+      // there's no audio — never hide a video that might actually have sound.
+      let _audioResolved = false;
+      const resolveAudio = () => {
+        if (_audioResolved) return;
+        let has = null; // null = can't tell yet
+        if (typeof vid.mozHasAudio === 'boolean') {
+          has = vid.mozHasAudio;
+        } else if (vid.audioTracks && typeof vid.audioTracks.length === 'number'
+                   && !('webkitAudioDecodedByteCount' in vid)) {
+          has = vid.audioTracks.length > 0;
+        } else if ('webkitAudioDecodedByteCount' in vid) {
+          if (vid.webkitAudioDecodedByteCount > 0) has = true;
+          else if (vid.currentTime > 0.6) has = false; // played enough, still no audio bytes
+        } else {
+          has = true; // unknown engine — keep the button
+        }
+        if (has === null) return;
+        _audioResolved = true;
+        muteBtn.hidden = !has;
+      };
+      vid.addEventListener('loadedmetadata', resolveAudio);
+      vid.addEventListener('timeupdate', resolveAudio);
     }
 
     // layout button + menu (bottom-right of inner, visible in edit mode)
@@ -3923,6 +3949,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function tryShoot(cx,cy){
     if(typeof current!=='undefined'&&current!=='view-home') return;
+    if(typeof editMode!=='undefined'&&editMode) return; // no web while editing
     const src=getAvatarSrc();
     const dx=cx-src.x,dy=cy-src.y;
     if(dx*dx+dy*dy<52*52) return;
