@@ -90,9 +90,17 @@
     .profile { display:none; }
     /* ── Profile header — floating AE keyframe shapes ───────── */
     .profile-header-wrap {
-      display:flex; align-items:center; justify-content:center; gap:14px;
-      margin:0 0 18px;
+      display:flex; align-items:flex-end; justify-content:center; gap:14px;
+      margin:0 0 18px; padding-top:36px;
       animation:profileIn .5s ease both;
+    }
+    .avatar-swing-wrap {
+      display:flex; flex-direction:column; align-items:center;
+      transform-origin:top center; will-change:transform; flex-shrink:0;
+    }
+    .avatar-thread {
+      width:1px; height:32px; flex-shrink:0;
+      background:linear-gradient(to bottom, transparent 0%, rgba(90,84,80,.45) 100%);
     }
 
     /* Avatar */
@@ -1010,6 +1018,8 @@
   <div class="view active" id="view-home">
 
     <div class="profile-header-wrap">
+      <div class="avatar-swing-wrap" id="avatarSwing">
+      <div class="avatar-thread"></div>
       <div class="pbc-avatar" onclick="if(document.getElementById('view-home').classList.contains('home-edit'))document.getElementById('avatarInput').click()">
         <button class="avatar-edit-btn" title="Change photo" onclick="event.stopPropagation();if(document.getElementById('view-home').classList.contains('home-edit'))document.getElementById('avatarInput').click()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -1017,6 +1027,7 @@
         <!-- swap src="" with your photo path -->
         <img src="" id="pfAv" alt="Alireza Mahdavi"><script>(function(){var u=localStorage.getItem('pf_avatar');if(u)document.getElementById('pfAv').src=u;})()</script>
       </div>
+      </div><!-- /avatar-swing-wrap -->
       <div class="profile-text">
         <div class="profile-name">Alireza Mahdavi</div>
         <div class="profile-role">Visual &amp; Motion Designer · 25 yo ✦</div>
@@ -4004,6 +4015,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(e.target.closest('button,a,input,.nav-btn,.pill')) return;
     tryShoot(e.clientX,e.clientY);
   });
+})();
+</script>
+
+<script>
+/* ── Avatar pendulum physics ─────────────────────────── */
+(function(){
+  var wrap = document.getElementById('avatarSwing');
+  if (!wrap) return;
+  var angle = 0, vel = 0;
+  var damping = 0.93, stiffness = 0.022;
+  var mouseTarget = 0, t = 0;
+
+  function tick() {
+    t += 0.016;
+    var idle = Math.sin(t * 0.4) * 0.006; // barely-perceptible micro-sway
+    vel += (mouseTarget - angle) * stiffness + idle;
+    vel *= damping;
+    angle += vel;
+    wrap.style.transform = 'rotate(' + angle.toFixed(4) + 'deg)';
+    requestAnimationFrame(tick);
+  }
+
+  document.addEventListener('mousemove', function(e) {
+    var r = wrap.getBoundingClientRect();
+    var cx = r.left + r.width / 2;
+    var dx = e.clientX - cx;
+    var dy = e.clientY - r.top;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    mouseTarget = dist < 300 ? (dx / 300) * 9 : 0;
+  });
+
+  var lastY = 0;
+  var homeEl = document.getElementById('view-home');
+  if (homeEl) homeEl.addEventListener('scroll', function() {
+    var sy = homeEl.scrollTop;
+    vel += (sy - lastY) * 0.04;
+    lastY = sy;
+  }, { passive: true });
+
+  tick();
 })();
 </script>
 </body>
