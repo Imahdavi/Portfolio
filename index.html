@@ -741,10 +741,14 @@
     #upload-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
     #upload-toast.error { background:#c0392b; }
 
-    /* Sound toggle button — floats beside bottom nav, same style as nav-btn */
+    /* Sound toggle button — lives inside bottom-nav, separated by .nav-sep */
+    .nav-sep {
+      width:1px; height:18px; background:rgba(0,0,0,.13);
+      align-self:center; flex-shrink:0;
+    }
     #sound-toggle-btn {
-      position:fixed; bottom:33px; left:calc(50% + 172px);
-      background:none; border:none; cursor:pointer; z-index:200;
+      position:relative;
+      background:none; border:none; cursor:pointer;
       color:#bbb; display:flex; align-items:center; justify-content:center;
       width:26px; height:26px;
       transition:color .2s, transform .15s;
@@ -1159,9 +1163,8 @@
     <span class="nav-tip" id="editLabel">Edit</span>
     <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
   </button>
-</nav>
-
-<button id="sound-toggle-btn" onclick="toggleWebSound()" aria-label="Toggle web-shot sound">
+  <span class="nav-sep"></span>
+  <button id="sound-toggle-btn" onclick="toggleWebSound()" aria-label="Toggle web-shot sound">
   <span class="nav-tip">Web Sound</span>
   <!-- active: speaker + web-ray lines -->
   <svg class="icon-on" viewBox="0 0 24 24">
@@ -1177,7 +1180,8 @@
     <line x1="14" y1="9" x2="20" y2="15"/>
     <line x1="20" y1="9" x2="14" y2="15"/>
   </svg>
-</button>
+  </button>
+</nav>
 
 <!-- hidden file input -->
 <input type="file" id="fileInput" accept="image/*,video/*" multiple style="display:none"/>
@@ -1369,20 +1373,29 @@ function spiderSense(x, y) {
     document.addEventListener(ev, function() { _getCtx(); _preload(); }, { passive: true });
   });
 
-  function playShot() {
-    var now = Date.now();
-    if (now - _last < 200) return;
-    _last = now;
-    var ctx = _getCtx();
-    if (!_buf) { _preload(); return; } // not decoded yet — skip this one click
+  function _doPlay(ctx) {
+    if (!_buf) return;
     var t = ctx.currentTime;
     var src = ctx.createBufferSource(); src.buffer = _buf;
     var g = ctx.createGain();
     g.gain.setValueAtTime(SHOT_GAIN, t);
     g.gain.setValueAtTime(SHOT_GAIN, t + SHOT_DUR - 0.03);
-    g.gain.linearRampToValueAtTime(0.0001, t + SHOT_DUR); // tiny fade so the cut is clean
+    g.gain.linearRampToValueAtTime(0.0001, t + SHOT_DUR);
     src.connect(g); g.connect(ctx.destination);
     src.start(t, SHOT_OFFSET, SHOT_DUR);
+  }
+
+  function playShot() {
+    var now = Date.now();
+    if (now - _last < 200) return;
+    _last = now;
+    var ctx = _getCtx();
+    if (!_buf) { _preload(); return; }
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(function() { _doPlay(ctx); });
+    } else {
+      _doPlay(ctx);
+    }
   }
 
   // Expose so the spider-web burst (spiderSense) can fire the sound in sync,
