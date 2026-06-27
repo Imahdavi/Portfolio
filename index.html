@@ -287,14 +287,24 @@
     .an-range-btn { padding:6px 16px; border-radius:20px; border:1px solid rgba(0,0,0,.12); background:#fff; font-size:12.5px; font-weight:500; color:#666; cursor:pointer; transition:all .15s; }
     .an-range-btn.active { background:#1a1a1a; color:#fff; border-color:#1a1a1a; }
 
-    .an-stats  { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
-    .an-stat   { background:#f5f4f2; border-radius:14px; padding:18px 12px; text-align:center; }
-    .an-val    { display:block; font-size:28px; font-weight:700; line-height:1; margin-bottom:5px; }
-    .an-lbl    { font-size:11.5px; color:#888; }
-    .an-newret { text-align:center; font-size:12px; color:#999; min-height:15px; margin-bottom:24px; }
+    .an-stats  { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+    .an-stat   { background:#f5f4f2; border-radius:14px; padding:16px 12px; text-align:center; }
+    .an-val    { display:block; font-size:26px; font-weight:700; line-height:1; margin-bottom:5px; }
+    .an-lbl    { font-size:12px; font-weight:500; color:#555; }
+    .an-sub    { display:block; font-size:10px; color:#aaa; margin-top:3px; }
+
+    .an-split-wrap { margin-bottom:24px; }
+    .an-split      { display:flex; height:9px; border-radius:6px; overflow:hidden; background:#e3e1dd; }
+    .an-split-new  { height:100%; background:#1a1a1a; transition:width .4s ease; }
+    .an-split-legend { display:flex; justify-content:center; gap:18px; font-size:11.5px; color:#888; margin-top:8px; }
+    .an-split-legend b { color:#444; font-weight:600; margin-left:2px; }
+    .an-dot     { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+    .an-dot-new { background:#1a1a1a; }
+    .an-dot-ret { background:#c4c0ba; }
 
     .an-section { margin-bottom:26px; }
     .an-sh  { font-size:11px; font-weight:600; color:#aaa; text-transform:uppercase; letter-spacing:.07em; margin-bottom:10px; }
+    .an-cap { font-size:10px; font-weight:400; color:#cfcbc4; text-transform:none; letter-spacing:0; margin-left:5px; }
 
     .an-bars    { display:flex; align-items:flex-end; gap:3px; height:68px; }
     .an-bar-col { display:flex; flex-direction:column; align-items:center; flex:1; gap:2px; }
@@ -1067,34 +1077,42 @@
       <button class="an-range-btn" onclick="loadAnalytics(0,this)">All time</button>
     </div>
     <div class="an-stats">
-      <div class="an-stat"><span class="an-val" id="an-uv">â€”</span><span class="an-lbl">Unique visitors</span></div>
-      <div class="an-stat"><span class="an-val" id="an-pv">â€”</span><span class="an-lbl">Page views</span></div>
+      <div class="an-stat"><span class="an-val" id="an-uv">â€”</span><span class="an-lbl">Unique visitors</span><span class="an-sub">different people</span></div>
+      <div class="an-stat"><span class="an-val" id="an-pv">â€”</span><span class="an-lbl">Page views</span><span class="an-sub">total page opens</span></div>
+      <div class="an-stat"><span class="an-val" id="an-new">â€”</span><span class="an-lbl">New</span><span class="an-sub">first time here</span></div>
+      <div class="an-stat"><span class="an-val" id="an-ret">â€”</span><span class="an-lbl">Returning</span><span class="an-sub">came back again</span></div>
     </div>
-    <div class="an-newret" id="an-newret"></div>
+    <div class="an-split-wrap" id="an-split-wrap">
+      <div class="an-split"><div class="an-split-new" id="an-split-new"></div></div>
+      <div class="an-split-legend">
+        <span><i class="an-dot an-dot-new"></i>New <b id="an-split-newpct">â€”</b></span>
+        <span><i class="an-dot an-dot-ret"></i>Returning <b id="an-split-retpct">â€”</b></span>
+      </div>
+    </div>
     <div class="an-section">
-      <div class="an-sh">Daily visitors</div>
+      <div class="an-sh">Daily visitors <span class="an-cap">unique people per day</span></div>
       <div id="an-daily"></div>
     </div>
     <div class="an-row-2">
       <div class="an-section" style="margin-bottom:0">
-        <div class="an-sh">Countries</div>
+        <div class="an-sh">Countries <span class="an-cap">by views</span></div>
         <div id="an-countries"></div>
       </div>
       <div class="an-section" style="margin-bottom:0">
-        <div class="an-sh">Devices</div>
+        <div class="an-sh">Devices <span class="an-cap">by views</span></div>
         <div id="an-devices"></div>
       </div>
     </div>
     <div class="an-section" style="margin-top:26px">
-      <div class="an-sh">Browsers</div>
+      <div class="an-sh">Browsers <span class="an-cap">by views</span></div>
       <div id="an-browsers"></div>
     </div>
     <div class="an-section">
-      <div class="an-sh">Traffic sources</div>
+      <div class="an-sh">Traffic sources <span class="an-cap">where visitors came from</span></div>
       <div id="an-referrers"></div>
     </div>
     <div class="an-section">
-      <div class="an-sh">Top projects</div>
+      <div class="an-sh">Top projects <span class="an-cap">by views</span></div>
       <div id="an-projects"></div>
     </div>
   </div><!-- /view-analytics -->
@@ -1803,12 +1821,17 @@ async function loadAnalytics(days, btn) {
   visitors.forEach(v => { if (!sinceTs || firstSeen[v] >= sinceTs) newCount++; });
   const returningCount = visitors.size - newCount;
 
-  document.getElementById('an-uv').textContent = visitors.size;
-  document.getElementById('an-pv').textContent = rows.length;
-  const nrEl = document.getElementById('an-newret');
-  if (nrEl) nrEl.textContent = visitors.size
-    ? `${newCount} new Â· ${returningCount} returning`
-    : '';
+  document.getElementById('an-uv').textContent  = visitors.size;
+  document.getElementById('an-pv').textContent  = rows.length;
+  document.getElementById('an-new').textContent = newCount;
+  document.getElementById('an-ret').textContent = returningCount;
+
+  // new vs returning proportion bar
+  const total   = visitors.size || 1;
+  const newPct  = Math.round(newCount / total * 100);
+  document.getElementById('an-split-new').style.width = newPct + '%';
+  document.getElementById('an-split-newpct').textContent = newPct + '%';
+  document.getElementById('an-split-retpct').textContent = (100 - newPct) + '%';
 
   // daily line chart
   const chartEl = document.getElementById('an-daily');
