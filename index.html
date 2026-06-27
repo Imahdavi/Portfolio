@@ -97,14 +97,14 @@
 
     /* Avatar */
     .pbc-avatar {
-      width:78px; height:78px; border-radius:50%; overflow:hidden; flex-shrink:0;
+      width:78px; height:78px; border-radius:18px; overflow:hidden; flex-shrink:0;
       cursor:pointer; background:#b5a090; position:relative;
     }
     .profile-text { min-width:0; }
     .pbc-avatar img { width:100%; height:100%; object-fit:cover; display:block; color:transparent; font-size:0; }
     .avatar-edit-btn {
       position:absolute; inset:0; display:none; align-items:center; justify-content:center;
-      background:rgba(0,0,0,.42); border:none; cursor:pointer; color:#fff; border-radius:50%;
+      background:rgba(0,0,0,.42); border:none; cursor:pointer; color:#fff; border-radius:18px;
       transition:background .15s;
     }
     .avatar-edit-btn:hover { background:rgba(0,0,0,.55); }
@@ -1040,6 +1040,11 @@
           <a class="pill" id="link-twitter" href="https://x.com/imahdvi" target="_blank">
             <svg fill="currentColor" stroke="none" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
           </a>
+          <span class="contact-lbl">or leave a</span>
+          <button class="pill" onclick="goView('view-soon',document.getElementById('nb-soon'))">
+            <svg viewBox="0 0 24 24"><path d="M14.3053 15.4498H8.90527"/><path d="M12.2604 11.4385H8.90442"/><path fill-rule="evenodd" clip-rule="evenodd" d="M20.1598 8.29988L14.4898 2.89988C13.7598 2.79988 12.9398 2.74988 12.0398 2.74988C5.74978 2.74988 3.64978 5.06988 3.64978 11.9999C3.64978 18.9399 5.74978 21.2499 12.0398 21.2499C18.3398 21.2499 20.4398 18.9399 20.4398 11.9999C20.4398 10.5799 20.3498 9.34988 20.1598 8.29988Z"/><path d="M13.9342 2.83252V5.49352C13.9342 7.35152 15.4402 8.85652 17.2982 8.85652H20.2492"/></svg>
+            Note
+          </button>
     </div>
 
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
