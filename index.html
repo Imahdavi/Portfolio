@@ -129,8 +129,8 @@
     .ae-s5 { width:28px; left:81%; top:12%; animation:aeF5 2.7s  ease-in-out infinite; animation-delay:.65s; }
 
     .profile-name { font-family:var(--font-name); font-size:var(--font-name-size); font-weight:700; line-height:1.05; margin-bottom:3px; opacity:0; }
-    .profile-role { font-family:var(--font-intro); font-size:13px; color:#666; margin-bottom:1px; }
-    .profile-age  { font-family:var(--font-intro); font-size:13px; color:#666; }
+    .profile-role { font-family:var(--font-intro); font-size:13px; color:#666; }
+    .profile-age  { display:none !important; }
 
     .contact-row  { display:flex; align-items:center; justify-content:center; gap:7px; flex-wrap:wrap; margin-top:16px; margin-bottom:32px; }
     .contact-lbl  { font-size:12.5px; color:#888; white-space:nowrap; margin-right:5px; }
@@ -1019,8 +1019,8 @@
       </div>
       <div class="profile-text">
         <div class="profile-name">Alireza Mahdavi</div>
-        <div class="profile-role">Visual &amp; Motion Designer</div>
-        <div class="profile-age">25 yo ✦</div>
+        <div class="profile-role">Visual &amp; Motion Designer · 25 yo ✦</div>
+        <div class="profile-age"></div>
       </div>
     </div>
     <div class="contact-row">
@@ -1041,9 +1041,14 @@
             <svg fill="currentColor" stroke="none" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
           </a>
           <span class="contact-lbl">or leave a</span>
-          <button class="pill" onclick="goView('view-soon',document.getElementById('nb-soon'))">
-            <svg viewBox="0 0 24 24"><path d="M14.3053 15.4498H8.90527"/><path d="M12.2604 11.4385H8.90442"/><path fill-rule="evenodd" clip-rule="evenodd" d="M20.1598 8.29988L14.4898 2.89988C13.7598 2.79988 12.9398 2.74988 12.0398 2.74988C5.74978 2.74988 3.64978 5.06988 3.64978 11.9999C3.64978 18.9399 5.74978 21.2499 12.0398 21.2499C18.3398 21.2499 20.4398 18.9399 20.4398 11.9999C20.4398 10.5799 20.3498 9.34988 20.1598 8.29988Z"/><path d="M13.9342 2.83252V5.49352C13.9342 7.35152 15.4402 8.85652 17.2982 8.85652H20.2492"/></svg>
-            Note
+          <button class="nav-btn" onclick="goView('view-soon',document.getElementById('nb-soon'))">
+            <span class="nav-tip">Note</span>
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M14.3053 15.4498H8.90527" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12.2604 11.4385H8.90442" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M20.1598 8.29988L14.4898 2.89988C13.7598 2.79988 12.9398 2.74988 12.0398 2.74988C5.74978 2.74988 3.64978 5.06988 3.64978 11.9999C3.64978 18.9399 5.74978 21.2499 12.0398 21.2499C18.3398 21.2499 20.4398 18.9399 20.4398 11.9999C20.4398 10.5799 20.3498 9.34988 20.1598 8.29988Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M13.9342 2.83252V5.49352C13.9342 7.35152 15.4402 8.85652 17.2982 8.85652H20.2492" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </button>
     </div>
 
