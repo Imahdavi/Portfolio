@@ -824,7 +824,7 @@
       position:fixed; bottom:22px; left:50%;
       transform:translateX(-50%);
       background:#fff; border-radius:999px;
-      padding:13px 28px;
+      padding:17px 28px;
       display:flex; align-items:center; gap:28px;
       box-shadow:0 6px 28px rgba(0,0,0,.13);
       z-index:200;
@@ -979,7 +979,7 @@
     /* ─────────────────── CUSTOM CURSOR ─────────────────── */
     #site-cursor { position:fixed; top:0; left:0; pointer-events:none; z-index:99999; display:none; }
     @media (pointer:fine) {
-      * { cursor: none !important; }
+      .pf-cursor-on * { cursor: none !important; }
       #site-cursor {
         display:block; will-change:transform; opacity:0; transition:opacity .2s;
       }
@@ -1376,11 +1376,18 @@ function spiderSense(x, y) {
   const cur = document.getElementById('site-cursor');
   if (!cur || !matchMedia('(pointer:fine)').matches) return;
   document.addEventListener('mousemove', e => {
+    document.documentElement.classList.add('pf-cursor-on');
     cur.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
     cur.style.opacity = '1';
   });
-  document.addEventListener('mouseleave', () => { cur.style.opacity = '0'; });
-  document.addEventListener('mouseenter', () => { cur.style.opacity = '1'; });
+  document.addEventListener('mouseleave', () => {
+    document.documentElement.classList.remove('pf-cursor-on');
+    cur.style.opacity = '0';
+  });
+  document.addEventListener('mouseenter', () => {
+    document.documentElement.classList.add('pf-cursor-on');
+    cur.style.opacity = '1';
+  });
   document.addEventListener('mousedown', e => {
     cur.classList.add('pressing');
     spiderSense(e.clientX, e.clientY);
