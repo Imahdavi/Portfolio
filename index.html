@@ -1856,6 +1856,9 @@ async function loadAnalytics(days, btn) {
     dayMap[d].add(vidOf(r));
   });
 
+  // 14h/2h is ambiguous across midnight — show 12h clock with AM/PM instead
+  const fmtHour = h => (h % 12 === 0 ? 12 : h % 12) + (h < 12 ? 'AM' : 'PM');
+
   let daily = [];
   if (days === 1) {
     // hourly breakdown for the last 24h, in local time
@@ -1868,7 +1871,7 @@ async function loadAnalytics(days, btn) {
     for (let i = 23; i >= 0; i--) {
       const t = new Date(Date.now() - i * 3600000);
       const h = localHour(t);
-      daily.push({ d: pad2(t.getHours()) + ':00', label: t.getHours() + 'h', n: hourMap[h]?.size || 0 });
+      daily.push({ d: fmtHour(t.getHours()), label: fmtHour(t.getHours()), n: hourMap[h]?.size || 0 });
     }
   } else if (days === 0) {
     const allDates = Object.keys(dayMap).sort();
