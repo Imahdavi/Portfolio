@@ -1384,7 +1384,7 @@ function spiderSense(x, y) {
   document.addEventListener('mousedown', e => {
     cur.classList.add('pressing');
     spiderSense(e.clientX, e.clientY);
-    if (window._playWebShot) window._playWebShot();
+    if (!e.target.closest('#sound-toggle-btn') && window._playWebShot) window._playWebShot();
   });
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
 })();
@@ -1459,6 +1459,7 @@ function spiderSense(x, y) {
 /* ─── Mobile touch: web animation + sound ───────────────── */
 document.addEventListener('touchstart', function(e) {
   if (typeof editMode !== 'undefined' && editMode) return;
+  if (e.target.closest('#sound-toggle-btn')) return;
   var t = e.changedTouches[0];
   spiderSense(t.clientX, t.clientY);
   if (window._playWebShot) window._playWebShot();
