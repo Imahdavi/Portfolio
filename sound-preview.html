@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<title>Web Shooter Sounds</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:system-ui,sans-serif; background:#0d0d0d; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:2rem; color:#fff; }
+.wrap { width:100%; max-width:540px; }
+h1 { font-size:17px; font-weight:600; margin-bottom:3px; }
+p  { font-size:13px; color:#666; margin-bottom:24px; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.card {
+  background:#1a1a1a; border:1px solid #2a2a2a; border-radius:14px;
+  padding:18px 16px 14px; cursor:pointer;
+  transition:border-color .15s, background .15s, transform .1s;
+  user-select:none; position:relative; overflow:hidden;
+}
+.card:hover { background:#222; border-color:#3a3a3a; }
+.card:active { transform:scale(.97); }
+.card.playing { border-color:#e63; background:#1f1410; }
+.card.playing::after {
+  content:''; position:absolute; inset:0;
+  background:radial-gradient(circle at center, rgba(230,60,30,.12), transparent 70%);
+  pointer-events:none;
+}
+.num  { font-size:10px; font-weight:700; color:#444; letter-spacing:.08em; margin-bottom:6px; }
+.name { font-size:13px; font-weight:600; color:#eee; margin-bottom:3px; }
+.desc { font-size:12px; color:#555; margin-bottom:14px; line-height:1.4; }
+.play-row { display:flex; align-items:center; gap:7px; }
+.play-icon {
+  width:26px; height:26px; border-radius:50%;
+  background:#2a2a2a; border:1px solid #333;
+  display:flex; align-items:center; justify-content:center;
+  transition:background .15s, border-color .15s;
+}
+.card.playing .play-icon { background:#e63; border-color:#e63; }
+.play-icon svg { width:9px; height:9px; fill:#aaa; }
+.card.playing .play-icon svg { fill:#fff; }
+.play-lbl { font-size:11px; color:#555; }
+.card.playing .play-lbl { color:#e63; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🕸 Web Shooter — Andrew Garfield Style</h1>
+  <p>کلیک کن روی هر کدوم — هر کدوم رو خواستی بگو</p>
+  <div class="grid" id="grid"></div>
+</div>
+<script>
+/* ── Andrew Garfield web shooter sounds ──
+   His shooter is more mechanical+electronic: a crisp metallic click/snap
+   followed by a hi-pitched zip/whoosh. Less cartoony than classic thwip. */
+
+const SOUNDS = [
+  {
+    id:1, name:'Mechanic Snap', desc:'کلیک فلزی + زیپ سریع\nنزدیک‌ترین به فیلم',
+    play(ctx,t){
+      /* metallic click */
+      const cb=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*.018),ctx.sampleRate);
+      const cd=cb.getChannelData(0);
+      for(let i=0;i<cd.length;i++) cd[i]=(Math.random()*2-1)*Math.exp(-i/(ctx.sampleRate*.004));
+      const csrc=ctx.createBufferSource(); csrc.buffer=cb;
+      const cf=ctx.createBiquadFilter(); cf.type='highpass'; cf.frequency.value=3500;
+      const cg=ctx.createGain(); cg.gain.setValueAtTime(.55,t); cg.gain.exponentialRampToValueAtTime(.001,t+.018);
+      csrc.connect(cf); cf.connect(cg); cg.connect(ctx.destination); csrc.start(t);
+
+      /* hi zip */
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type='sine';
+      o.frequency.setValueAtTime(4200,t+.012);
+      o.frequency.exponentialRampToValueAtTime(800,t+.14);
+      g.gain.setValueAtTime(.001,t+.012); g.gain.linearRampToValueAtTime(.2,t+.025);
+      g.gain.exponentialRampToValueAtTime(.001,t+.15);
+      o.connect(g); g.connect(ctx.destination); o.start(t+.012); o.stop(t+.15);
+
+      /* web air noise */
+      const nb=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*.12),ctx.sampleRate);
+      const nd=nb.getChannelData(0); for(let i=0;i<nd.length;i++) nd[i]=Math.random()*2-1;
+      const ns=ctx.createBufferSource(); ns.buffer=nb;
+      const nf=ctx.createBiquadFilter(); nf.type='bandpass'; nf.frequency.setValueAtTime(5000,t+.015); nf.frequency.exponentialRampToValueAtTime(1800,t+.14); nf.Q.value=.6;
+      const ng=ctx.createGain(); ng.gain.setValueAtTime(.001,t+.015); ng.gain.linearRampToValueAtTime(.14,t+.03); ng.gain.exponentialRampToValueAtTime(.001,t+.14);
+      ns.connect(nf); nf.connect(ng); ng.connect(ctx.destination); ns.start(t+.015);
+    }
+  },
+  {
+    id:2, name:'Wrist Trigger', desc:'کلیک مچ + رشته‌ی تار',
+    play(ctx,t){
+      /* mechanical trigger thud */
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type='triangle';
+      o.frequency.setValueAtTime(280,t); o.frequency.exponentialRampToValueAtTime(60,t+.04);
+      g.gain.setValueAtTime(.35,t); g.gain.exponentialRampToValueAtTime(.001,t+.05);
+      o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t+.05);
+
+      /* string zip */
+      const o2=ctx.createOscillator(),g2=ctx.createGain();
+      o2.type='sawtooth';
+      o2.frequency.setValueAtTime(3800,t+.03); o2.frequency.exponentialRampToValueAtTime(500,t+.18);
+      g2.gain.setValueAtTime(.001,t+.03); g2.gain.linearRampToValueAtTime(.18,t+.05); g2.gain.exponentialRampToValueAtTime(.001,t+.2);
+      o2.connect(g2); g2.connect(ctx.destination); o2.start(t+.03); o2.stop(t+.2);
+    }
+  },
+  {
+    id:3, name:'Double Shot', desc:'دو شلیک پشت سر هم',
+    play(ctx,t){
+      function shot(at){
+        const cb=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*.015),ctx.sampleRate);
+        const cd=cb.getChannelData(0);
+        for(let i=0;i<cd.length;i++) cd[i]=(Math.random()*2-1)*Math.exp(-i/(ctx.sampleRate*.003));
+        const cs=ctx.createBufferSource(); cs.buffer=cb;
+        const cf=ctx.createBiquadFilter(); cf.type='highpass'; cf.frequency.value=4000;
+        const cg=ctx.createGain(); cg.gain.setValueAtTime(.45,at); cg.gain.exponentialRampToValueAtTime(.001,at+.015);
+        cs.connect(cf); cf.connect(cg); cg.connect(ctx.destination); cs.start(at);
+
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.type='sine'; o.frequency.setValueAtTime(3500,at+.01); o.frequency.exponentialRampToValueAtTime(600,at+.12);
+        g.gain.setValueAtTime(.16,at+.01); g.gain.exponentialRampToValueAtTime(.001,at+.13);
+        o.connect(g); g.connect(ctx.destination); o.start(at+.01); o.stop(at+.13);
+      }
+      shot(t); shot(t+.17);
+    }
+  },
+  {
+    id:4, name:'Sticky Web', desc:'صدای چسبیدن تار به دیوار',
+    play(ctx,t){
+      /* shoot */
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type='sine'; o.frequency.setValueAtTime(3000,t); o.frequency.exponentialRampToValueAtTime(700,t+.1);
+      g.gain.setValueAtTime(.001,t); g.gain.linearRampToValueAtTime(.2,t+.015); g.gain.exponentialRampToValueAtTime(.001,t+.12);
+      o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t+.12);
+
+      /* stick thud */
+      const o2=ctx.createOscillator(),g2=ctx.createGain();
+      o2.type='triangle'; o2.frequency.setValueAtTime(180,t+.1); o2.frequency.exponentialRampToValueAtTime(40,t+.18);
+      g2.gain.setValueAtTime(.3,t+.1); g2.gain.exponentialRampToValueAtTime(.001,t+.2);
+      o2.connect(g2); g2.connect(ctx.destination); o2.start(t+.1); o2.stop(t+.2);
+
+      /* web tension */
+      const nb=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*.08),ctx.sampleRate);
+      const nd=nb.getChannelData(0); for(let i=0;i<nd.length;i++) nd[i]=Math.random()*2-1;
+      const ns=ctx.createBufferSource(); ns.buffer=nb;
+      const nf=ctx.createBiquadFilter(); nf.type='bandpass'; nf.frequency.value=2200; nf.Q.value=2;
+      const ng=ctx.createGain(); ng.gain.setValueAtTime(.12,t+.1); ng.gain.exponentialRampToValueAtTime(.001,t+.18);
+      ns.connect(nf); nf.connect(ng); ng.connect(ctx.destination); ns.start(t+.1);
+    }
+  },
+  {
+    id:5, name:'Rapid Fire', desc:'سه تیر سریع پشت هم',
+    play(ctx,t){
+      [0,.12,.22].forEach(delay=>{
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.type='sine'; o.frequency.setValueAtTime(2800,t+delay); o.frequency.exponentialRampToValueAtTime(500,t+delay+.08);
+        g.gain.setValueAtTime(.14,t+delay); g.gain.exponentialRampToValueAtTime(.001,t+delay+.1);
+        o.connect(g); g.connect(ctx.destination); o.start(t+delay); o.stop(t+delay+.1);
+
+        const cb=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*.01),ctx.sampleRate);
+        const cd=cb.getChannelData(0); for(let i=0;i<cd.length;i++) cd[i]=(Math.random()*2-1)*Math.exp(-i/(ctx.sampleRate*.002));
+        const cs=ctx.createBufferSource(); cs.buffer=cb;
+        const cf=ctx.createBiquadFilter(); cf.type='highpass'; cf.frequency.value=5000;
+        const cg=ctx.createGain(); cg.gain.setValueAtTime(.4,t+delay);
+        cs.connect(cf); cf.connect(cg); cg.connect(ctx.destination); cs.start(t+delay);
+      });
+    }
+  },
+  {
+    id:6, name:'Cinematic Web', desc:'سینمایی، با اکو',
+    play(ctx,t){
+      /* main shoot */
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type='sawtooth'; o.frequency.setValueAtTime(5000,t); o.frequency.exponentialRampToValueAtTime(300,t+.2);
+      g.gain.setValueAtTime(.001,t); g.gain.linearRampToValueAtTime(.22,t+.008); g.gain.exponentialRampToValueAtTime(.001,t+.22);
+      o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t+.22);
+
+      /* echo 1 */
+      const o2=ctx.createOscillator(),g2=ctx.createGain();
+      o2.type='sawtooth'; o2.frequency.setValueAtTime(4000,t+.1); o2.frequency.exponentialRampToValueAtTime(300,t+.28);
+      g2.gain.setValueAtTime(.08,t+.1); g2.gain.exponentialRampToValueAtTime(.001,t+.3);
+      o2.connect(g2); g2.connect(ctx.destination); o2.start(t+.1); o2.stop(t+.3);
+
+      /* click */
+      const cb=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*.02),ctx.sampleRate);
+      const cd=cb.getChannelData(0); for(let i=0;i<cd.length;i++) cd[i]=(Math.random()*2-1)*Math.exp(-i/(ctx.sampleRate*.004));
+      const cs=ctx.createBufferSource(); cs.buffer=cb;
+      const cf=ctx.createBiquadFilter(); cf.type='bandpass'; cf.frequency.value=6000; cf.Q.value=1;
+      const cg=ctx.createGain(); cg.gain.setValueAtTime(.5,t);
+      cs.connect(cf); cf.connect(cg); cg.connect(ctx.destination); cs.start(t);
+    }
+  }
+];
+
+let _ctx=null;
+function getCtx(){
+  if(!_ctx) _ctx=new(window.AudioContext||window.webkitAudioContext)();
+  if(_ctx.state==='suspended') _ctx.resume();
+  return _ctx;
+}
+
+const grid=document.getElementById('grid');
+SOUNDS.forEach(s=>{
+  const card=document.createElement('div');
+  card.className='card';
+  card.innerHTML=`<div class="num">0${s.id}</div><div class="name">${s.name}</div><div class="desc">${s.desc}</div><div class="play-row"><div class="play-icon"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div><span class="play-lbl">پخش</span></div>`;
+  card.addEventListener('click',()=>{
+    try{ const c=getCtx(); s.play(c,c.currentTime+.01); }catch(e){ console.error(e); }
+    card.classList.add('playing');
+    setTimeout(()=>card.classList.remove('playing'),450);
+  });
+  grid.appendChild(card);
+});
+</script>
+</body>
+</html>
