@@ -3010,27 +3010,22 @@ function makeBlockEl(block, proj) {
       };
       inner.appendChild(muteBtn);
 
-      // Hide the mute toggle for videos that have no audio track. Detection is
-      // heuristic and browser-specific, so we only hide once we're confident
-      // there's no audio — never hide a video that might actually have sound.
-      let _audioResolved = false;
+      // Hide mute button for videos with no audio track.
+      // audioTracks reflects file tracks (not playback), so works even when muted.
+      // Chrome 37+, Firefox 53+, Safari 7+ all support it.
+      // mozHasAudio is checked first for older Firefox builds.
       const resolveAudio = () => {
-        if (_audioResolved) return;
-        let has = null; // null = can't tell yet
+        let has;
         if (typeof vid.mozHasAudio === 'boolean') {
           has = vid.mozHasAudio;
-        } else if (vid.audioTracks && typeof vid.audioTracks.length === 'number'
-                   && !('webkitAudioDecodedByteCount' in vid)) {
+        } else if (vid.audioTracks) {
           has = vid.audioTracks.length > 0;
-        } else if ('webkitAudioDecodedByteCount' in vid) {
-          if (vid.webkitAudioDecodedByteCount > 0) has = true;
-          else if (vid.currentTime > 0.6) has = false; // played enough, still no audio bytes
         } else {
-          has = true; // unknown engine — keep the button
+          return; // can't tell yet — wait for next event
         }
-        if (has === null) return;
-        _audioResolved = true;
         muteBtn.hidden = !has;
+        vid.removeEventListener('loadedmetadata', resolveAudio);
+        vid.removeEventListener('timeupdate', resolveAudio);
       };
       vid.addEventListener('loadedmetadata', resolveAudio);
       vid.addEventListener('timeupdate', resolveAudio);
