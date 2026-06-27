@@ -1427,13 +1427,10 @@ function spiderSense(x, y) {
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
 })();
 
-/* ─── Web-shooter sound — plays wherever a web is shot (any click) ── */
+/* ─── Web-shooter sound — synthesized via Web Audio API (no file fetch) ── */
 (function() {
-  // Web Audio API — unlike <audio>, it never registers a system media session,
-  // so no playback notification appears on the phone. Overlapping taps work
-  // natively since each shot is its own BufferSource.
-  var _ctx = null, _gain = null, _buf = null, _last = 0;
-  var SHOT_OFFSET = 1.55, SHOT_DUR = 0.35, VOL = 0.35;
+  var _ctx = null, _gain = null, _last = 0;
+  var VOL = 0.32;
 
   function _getCtx() {
     if (!_ctx) {
@@ -1445,33 +1442,11 @@ function spiderSense(x, y) {
     return _ctx;
   }
 
-  var _loading = false;
-  function _load() {
-    if (_buf || _loading) return;
-    _loading = true;
-    fetch('web-shot.mp3')
-      .then(function(r) { return r.arrayBuffer(); })
-      .then(function(ab) {
-        // Use the callback form — the promise form of decodeAudioData isn't
-        // supported on older Safari/iOS and would fail silently.
-        _getCtx().decodeAudioData(ab,
-          function(b) { _buf = b; _loading = false; },
-          function() { _loading = false; });
-      })
-      .catch(function() { _loading = false; });
-  }
-  // Decode doesn't need a user gesture — start fetching immediately so the
-  // buffer is ready by the first tap.
-  _load();
-
-  // Resume the context on the first interaction (iOS requires a gesture for that).
-  function unlock() {
-    var ctx = _getCtx();
-    if (ctx.state === 'suspended') ctx.resume();
-    _load();
-  }
   ['pointerdown', 'touchstart', 'keydown'].forEach(function(ev) {
-    document.addEventListener(ev, unlock, { once: true, passive: true });
+    document.addEventListener(ev, function() {
+      var ctx = _getCtx();
+      if (ctx.state === 'suspended') ctx.resume();
+    }, { once: true, passive: true });
   });
 
   function playShot() {
@@ -1480,12 +1455,44 @@ function spiderSense(x, y) {
     _last = now;
     var ctx = _getCtx();
     if (ctx.state === 'suspended') ctx.resume();
-    if (!_buf) { _load(); return; }
-    var src = ctx.createBufferSource();
-    src.buffer = _buf;
-    src.connect(_gain);
-    src.start(0, SHOT_OFFSET, SHOT_DUR);
+    var t = ctx.currentTime;
+
+    // Envelope
+    var env = ctx.createGain();
+    env.connect(_gain);
+    env.gain.setValueAtTime(0.001, t);
+    env.gain.linearRampToValueAtTime(1.0, t + 0.01);
+    env.gain.exponentialRampToValueAtTime(0.001, t + 0.30);
+
+    // Noise "whoosh"
+    var bufLen = Math.floor(ctx.sampleRate * 0.32);
+    var nb = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+    var d = nb.getChannelData(0);
+    for (var i = 0; i < bufLen; i++) d[i] = Math.random() * 2 - 1;
+    var noise = ctx.createBufferSource();
+    noise.buffer = nb;
+    var nf = ctx.createBiquadFilter();
+    nf.type = 'bandpass'; nf.Q.value = 2.5;
+    nf.frequency.setValueAtTime(1800, t);
+    nf.frequency.exponentialRampToValueAtTime(300, t + 0.28);
+    var ng = ctx.createGain(); ng.gain.value = 0.45;
+    noise.connect(nf); nf.connect(ng); ng.connect(env);
+    noise.start(t); noise.stop(t + 0.32);
+
+    // Tonal "zip"
+    var osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(520, t);
+    osc.frequency.exponentialRampToValueAtTime(55, t + 0.28);
+    var of = ctx.createBiquadFilter();
+    of.type = 'lowpass';
+    of.frequency.setValueAtTime(700, t);
+    of.frequency.exponentialRampToValueAtTime(180, t + 0.28);
+    var og = ctx.createGain(); og.gain.value = 0.55;
+    osc.connect(of); of.connect(og); og.connect(env);
+    osc.start(t); osc.stop(t + 0.32);
   }
+
   window._webShotMuted = false;
   window._playWebShot = function() {
     if (typeof editMode !== 'undefined' && editMode) return;
