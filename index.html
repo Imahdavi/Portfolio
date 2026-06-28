@@ -163,10 +163,9 @@
     .card-grid {
       display:grid;
       grid-template-columns:repeat(3,1fr);
-      column-gap:10px; row-gap:20px;
+      gap:12px;
       margin-bottom:40px;
-      margin-left:-22px; margin-right:-22px;
-      padding:6px 0;
+      padding:6px 4px;
     }
 
     .proj-card { position:relative; cursor:pointer; transition:opacity .25s, filter .25s, transform .55s cubic-bezier(.34,1.56,.64,1); }
@@ -174,7 +173,7 @@
     /* white-lift overlay on non-hovered cards */
     .proj-card::after {
       content:''; position:absolute; top:0; left:0; right:0;
-      height:calc(100% - 43px); border-radius:16px;
+      height:calc(100% - 34px); border-radius:16px;
       background:rgba(255,255,255,0); pointer-events:none;
       transition:background .25s;
     }
@@ -198,7 +197,7 @@
       width:100%; aspect-ratio:1/1;
       border-radius:16px; overflow:hidden;
       display:flex; align-items:center; justify-content:center;
-      margin-bottom:14px;
+      margin-bottom:9px;
       transition:box-shadow .22s;
     }
     .card-grid:has(.proj-card:hover) .proj-card:hover .proj-thumb {
@@ -217,7 +216,7 @@
     .proj-card:hover .proj-thumb::after { opacity:.9; transform:scale(1); }
     #view-home.home-edit .proj-thumb::after { display:none; }
 
-    .proj-title { font-family:var(--font-title); font-size:15px; font-weight:600; margin-bottom:2px; }
+    .proj-title { font-family:var(--font-title); font-size:13.5px; font-weight:600; margin-bottom:2px; }
     .proj-sub   { font-size:11px; color:#777; line-height:1.35; }
     .d-title    { display:none !important; }
     .d-subtitle { display:none !important; }
