@@ -283,9 +283,56 @@
     .brand-text { font-size:13px; font-weight:600; color:rgba(0,0,0,.22); letter-spacing:-.01em; transition:color .28s; cursor:default; line-height:38px; }
     .brand-text:hover { color:rgba(0,0,0,.82); }
 
-    /* ─────────────────── SOON PAGE ─────────────────── */
-    .soon-wrap { display:flex; align-items:center; justify-content:center; min-height:calc(100dvh - 160px); }
-    .soon-word { font-family:var(--font-heading); font-size:52px; font-weight:600; animation:fadeUp .6s ease both; }
+    /* ─────────────────── NOTE PAGE ─────────────────── */
+    .note-title { font-family:var(--font-heading); font-size:27px; font-weight:600; margin-bottom:10px; line-height:1.2; }
+    .note-desc  { font-size:14px; color:#888; line-height:1.6; margin-bottom:28px; }
+    .note-card  { background:#F5F4F2; border-radius:20px; padding:18px 18px 14px; }
+    .note-msg   { width:100%; min-height:100px; background:none; border:none; outline:none; resize:none; font-size:15px; font-family:inherit; color:#111; line-height:1.55; padding:0; margin-bottom:14px; display:block; }
+    .note-msg::placeholder { color:#c0bdb8; }
+    @keyframes noteShake { 0%,100%{transform:none} 30%{transform:translateX(-5px)} 70%{transform:translateX(5px)} }
+    .note-msg.shake { animation:noteShake .25s ease; }
+    .note-sep   { height:1px; background:rgba(0,0,0,.07); margin-bottom:12px; }
+    .note-fields { display:flex; flex-direction:column; gap:2px; margin-bottom:14px; }
+    .note-field { display:flex; align-items:center; gap:8px; height:34px; border-bottom:1px solid rgba(0,0,0,.045); }
+    .note-field:last-child { border-bottom:none; }
+    .note-field-ico { width:18px; text-align:center; flex-shrink:0; color:#c8c5c0; font-size:13px; line-height:1; }
+    .note-field-ico svg { width:13px; height:13px; display:block; margin:auto; }
+    .note-field input { flex:1; background:none; border:none; outline:none; font-size:13.5px; font-family:inherit; color:#222; }
+    .note-field input::placeholder { color:#c8c5c0; }
+    .note-field input.error::placeholder { color:rgba(200,60,60,.55); }
+    .note-bottom { display:flex; justify-content:flex-end; align-items:center; padding-top:2px; }
+    /* 3-D Enter key wrapper */
+    .key-3d {
+      position:relative; display:inline-block;
+      width:82px; height:58px; /* 52 face + 6 depth */
+    }
+    /* dark side/base of the key */
+    .key-3d::after {
+      content:''; position:absolute;
+      width:82px; height:52px; top:6px; left:0;
+      clip-path:path('M 7 0 L 75 0 Q 82 0 82 7 L 82 19 Q 82 26 75 26 L 54 26 L 54 45 Q 54 52 47 52 L 7 52 Q 0 52 0 45 L 0 7 Q 0 0 7 0 Z');
+      background:#000;
+    }
+    .note-send {
+      position:absolute; top:0; left:0; z-index:1;
+      display:inline-flex; align-items:flex-start; justify-content:center; gap:5px;
+      width:82px; height:52px; padding-top:10px;
+      clip-path:path('M 7 0 L 75 0 Q 82 0 82 7 L 82 19 Q 82 26 75 26 L 54 26 L 54 45 Q 54 52 47 52 L 7 52 Q 0 52 0 45 L 0 7 Q 0 0 7 0 Z');
+      background:linear-gradient(to bottom, #3a3836 0%, #161412 100%);
+      color:rgba(255,255,255,.85); border:none;
+      font-size:12.5px; font-weight:500; cursor:pointer; letter-spacing:.04em;
+      transition:top .07s; user-select:none;
+    }
+    .note-send:hover { background:linear-gradient(to bottom,#444240,#1e1c1a); }
+    .note-send:active { top:4px; }
+    .note-send:disabled { opacity:.45; cursor:default; pointer-events:none; }
+    .note-send-ico { font-size:13px; opacity:.55; line-height:1; }
+    .note-success { display:none; flex-direction:column; align-items:flex-start; gap:10px; padding-top:4px; }
+    .note-success.show { display:flex; animation:fadeUp .4s ease both; }
+    .note-bubble { background:#1a1a1a; color:#fff; border-radius:16px 16px 16px 4px; padding:14px 18px; font-size:14.5px; line-height:1.45; }
+    .note-bubble-sub { margin-top:4px; font-size:12.5px; opacity:.5; }
+    #view-soon.note-edit .note-title,
+    #view-soon.note-edit .note-desc { outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px; padding:2px 8px; cursor:text; min-width:30px; display:inline-block; }
 
     /* ─────────────────── ANALYTICS PAGE ─────────────────── */
     .an-nav-btn { display:none !important; }
@@ -376,7 +423,8 @@
     /* Edit nav button — admin only, home or project view */
     .edit-nav-btn { display:none !important; }
     body.is-admin #app:has(#view-home.active) ~ #bottom-nav .edit-nav-btn,
-    body.is-admin #app:has(#view-project.active) ~ #bottom-nav .edit-nav-btn { display:flex !important; }
+    body.is-admin #app:has(#view-project.active) ~ #bottom-nav .edit-nav-btn,
+    body.is-admin #app:has(#view-soon.active) ~ #bottom-nav .edit-nav-btn { display:flex !important; }
     #editBtn.on { color:#111; }
 
     /* Home edit mode */
@@ -1083,9 +1131,48 @@
   </div><!-- /view-exp -->
 
 
-  <!-- ══════════════════════════════ SOON ══════════════════════════════ -->
+  <!-- ══════════════════════════════ NOTE ══════════════════════════════ -->
   <div class="view" id="view-soon">
-    <div class="soon-wrap"><span class="soon-word">Soon</span></div>
+    <div class="note-title" id="note-title">Drop me a note</div>
+    <div class="note-desc" id="note-desc">Whether you're a designer or motion artist looking to collab, or a client with a project in mind — I'd love to hear from you.</div>
+
+    <div class="note-card" id="note-card">
+      <textarea class="note-msg" id="note-msg" placeholder="What's on your mind..."></textarea>
+      <div class="note-sep"></div>
+      <div class="note-fields">
+        <div class="note-field">
+          <span class="note-field-ico">@</span>
+          <input type="email" id="note-email" placeholder="Email *" autocomplete="email"/>
+        </div>
+        <div class="note-field">
+          <span class="note-field-ico">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+          </span>
+          <input type="text" id="note-instagram" placeholder="Instagram (optional)" autocomplete="off"/>
+        </div>
+        <div class="note-field">
+          <span class="note-field-ico">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+          </span>
+          <input type="text" id="note-telegram" placeholder="Telegram (optional)" autocomplete="off"/>
+        </div>
+      </div>
+      <div class="note-bottom">
+        <div class="key-3d">
+          <button class="note-send" id="note-send-btn" onclick="submitNote()">
+            <span id="note-send-txt">Send</span>
+            <span class="note-send-ico" id="note-send-ico">↵</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="note-success" id="note-success">
+      <div class="note-bubble">
+        Got it — thanks for reaching out.
+        <div class="note-bubble-sub">I'll get back to you soon.</div>
+      </div>
+    </div>
   </div><!-- /view-soon -->
 
 
@@ -2600,6 +2687,7 @@ function toggleEdit() {
   editMode = !editMode;
   if (current === 'view-home') updateHomeEditUI();
   else if (current === 'view-exp') updateExpEditUI();
+  else if (current === 'view-soon') updateNoteEditUI();
   else updateEditUI();
 }
 
@@ -2661,6 +2749,119 @@ function addExpItem() {
   window.getSelection().removeAllRanges();
   window.getSelection().addRange(range);
 }
+
+function updateNoteEditUI() {
+  const btn = document.getElementById('editBtn');
+  btn.classList.toggle('on', editMode);
+  document.getElementById('editLabel').textContent = editMode ? 'Done' : 'Edit';
+  const view = document.getElementById('view-soon');
+  view.classList.toggle('note-edit', editMode);
+  const titleEl = document.getElementById('note-title');
+  const descEl  = document.getElementById('note-desc');
+  titleEl.contentEditable = editMode ? 'true' : 'false';
+  descEl.contentEditable  = editMode ? 'true' : 'false';
+  if (!editMode) {
+    localStorage.setItem('note_title', titleEl.textContent.trim());
+    localStorage.setItem('note_desc',  descEl.textContent.trim());
+  }
+}
+
+/* ─── Note form submission ──────────────────────────── */
+/* Supabase table needed:
+   CREATE TABLE notes (
+     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+     created_at timestamptz DEFAULT now(),
+     message text NOT NULL, email text NOT NULL,
+     instagram text, telegram text
+   );
+   ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
+   CREATE POLICY "anon insert" ON notes FOR INSERT TO anon WITH CHECK (true);
+*/
+function playKeyClick() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const sr = ctx.sampleRate;
+    // Short noise burst — the "click"
+    const buf = ctx.createBuffer(1, Math.floor(sr * 0.055), sr);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) {
+      const t = i / sr;
+      d[i] = (Math.random() * 2 - 1) * Math.exp(-t * 90) * 0.28;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    // Bandpass: key-click character around 2–4 kHz
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 2800; bp.Q.value = 0.7;
+    // Low thud — the "thock"
+    const osc = ctx.createOscillator();
+    const og  = ctx.createGain();
+    osc.frequency.value = 90;
+    og.gain.setValueAtTime(0.18, ctx.currentTime);
+    og.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+    const master = ctx.createGain();
+    master.gain.value = 0.9;
+    src.connect(bp); bp.connect(master);
+    osc.connect(og); og.connect(master);
+    master.connect(ctx.destination);
+    src.start(); osc.start();
+    src.stop(ctx.currentTime + 0.055);
+    osc.stop(ctx.currentTime + 0.045);
+    setTimeout(() => ctx.close(), 300);
+  } catch(e) {}
+}
+
+async function submitNote() {
+  playKeyClick();
+  const msg      = document.getElementById('note-msg').value.trim();
+  const emailVal = document.getElementById('note-email').value.trim();
+  const igVal    = document.getElementById('note-instagram').value.trim();
+  const tgVal    = document.getElementById('note-telegram').value.trim();
+
+  let ok = true;
+  if (!msg) {
+    const ta = document.getElementById('note-msg');
+    ta.classList.add('shake');
+    setTimeout(() => ta.classList.remove('shake'), 300);
+    ta.focus(); ok = false;
+  }
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
+  if (!emailOk) {
+    const el = document.getElementById('note-email');
+    el.classList.add('error'); el.focus(); ok = false;
+  } else { document.getElementById('note-email').classList.remove('error'); }
+  if (!ok) return;
+
+  const btn = document.getElementById('note-send-btn');
+  const txt = document.getElementById('note-send-txt');
+  const ico = document.getElementById('note-send-ico');
+  btn.disabled = true; txt.textContent = 'Sending…'; ico.style.display = 'none';
+
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/notes`, {
+      method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`,
+                 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ message: msg, email: emailVal,
+        instagram: igVal || null, telegram: tgVal || null })
+    });
+    if (!res.ok) throw new Error(res.status);
+    document.getElementById('note-card').style.display = 'none';
+    document.getElementById('note-success').classList.add('show');
+  } catch(e) {
+    btn.disabled = false; txt.textContent = 'Send'; ico.style.display = '';
+    const body = encodeURIComponent(`${msg}\n\n---\nEmail: ${emailVal}${igVal ? '\nInstagram: ' + igVal : ''}${tgVal ? '\nTelegram: ' + tgVal : ''}`);
+    window.location.href = `mailto:halirezamahdavi@gmail.com?subject=Portfolio note&body=${body}`;
+  }
+}
+
+// Load saved note page text
+(function(){
+  var t = localStorage.getItem('note_title');
+  var d = localStorage.getItem('note_desc');
+  if (t) { var el = document.getElementById('note-title'); if (el) el.textContent = t; }
+  if (d) { var el = document.getElementById('note-desc');  if (el) el.textContent = d; }
+})();
 
 function updateEditUI() {
   const btn   = document.getElementById('editBtn');
