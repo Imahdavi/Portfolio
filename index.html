@@ -4040,32 +4040,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!wrap) return;
   var angle = 0, vel = 0;
   var damping = 0.93, stiffness = 0.022;
-  var mouseTarget = 0, t = 0;
+  var t = 0;
 
   function tick() {
     t += 0.016;
-    var idle = Math.sin(t * 0.4) * 0.006; // barely-perceptible micro-sway
-    vel += (mouseTarget - angle) * stiffness + idle;
+    var idle = Math.sin(t * 0.4) * 0.006;
+    vel += -angle * stiffness + idle; // spring always pulls back to center
     vel *= damping;
     angle += vel;
     wrap.style.transform = 'rotate(' + angle.toFixed(4) + 'deg)';
     requestAnimationFrame(tick);
   }
 
-  document.addEventListener('mousemove', function(e) {
-    var r = wrap.getBoundingClientRect();
-    var cx = r.left + r.width / 2;
-    var dx = e.clientX - cx;
-    var dy = e.clientY - r.top;
-    var dist = Math.sqrt(dx * dx + dy * dy);
-    mouseTarget = dist < 300 ? (dx / 300) * 9 : 0;
+  // Nudge only when mouse actually moves across the avatar
+  var prevMX = null;
+  wrap.addEventListener('mousemove', function(e) {
+    if (prevMX !== null) vel += (e.clientX - prevMX) * 0.012;
+    prevMX = e.clientX;
   });
+  wrap.addEventListener('mouseleave', function() { prevMX = null; });
 
   var lastY = 0;
   var homeEl = document.getElementById('view-home');
   if (homeEl) homeEl.addEventListener('scroll', function() {
     var sy = homeEl.scrollTop;
-    vel += (sy - lastY) * 0.04;
+    vel += (sy - lastY) * 0.008;
     lastY = sy;
   }, { passive: true });
 
