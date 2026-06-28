@@ -283,6 +283,10 @@
     .brand-text { font-size:13px; font-weight:600; color:rgba(0,0,0,.22); letter-spacing:-.01em; transition:color .28s; cursor:default; line-height:38px; }
     .brand-text:hover { color:rgba(0,0,0,.82); }
 
+    /* ─────────────────── SOON PLACEHOLDER ─────────────────── */
+    .soon-wrap { display:flex; align-items:center; justify-content:center; height:60vh; }
+    .soon-word  { font-family:var(--font-heading); font-size:52px; font-weight:700; color:#e8e4df; letter-spacing:-.02em; }
+
     /* ─────────────────── NOTE PAGE ─────────────────── */
     .note-title { font-family:var(--font-heading); font-size:27px; font-weight:600; margin-bottom:10px; line-height:1.2; }
     .note-desc  { font-size:14px; color:#888; line-height:1.6; margin-bottom:28px; }
@@ -1133,6 +1137,8 @@
 
   <!-- ══════════════════════════════ NOTE ══════════════════════════════ -->
   <div class="view" id="view-soon">
+    <!-- NOTE CONTENT HIDDEN — unhide when ready -->
+    <div style="display:none" id="note-content-wrap">
     <div class="note-title" id="note-title">Drop me a note</div>
     <div class="note-desc" id="note-desc">Whether you're a designer or motion artist looking to collab, or a client with a project in mind — I'd love to hear from you.</div>
 
@@ -1173,6 +1179,8 @@
         <div class="note-bubble-sub">I'll get back to you soon.</div>
       </div>
     </div>
+    </div><!-- /note-content-wrap -->
+    <div class="soon-wrap" id="soon-placeholder"><span class="soon-word">Soon</span></div>
   </div><!-- /view-soon -->
 
 
