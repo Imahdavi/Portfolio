@@ -1662,7 +1662,7 @@ const SVG_MUTED   = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"
 const SVG_UNMUTED = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2V15H6L11 19V5Z" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.54 8.46C16.477 9.398 17.004 10.669 17.004 11.995c0 1.326-.527 2.597-1.464 3.535" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19.07 4.93C20.945 6.805 21.998 9.348 21.998 12c0 2.652-1.053 5.195-2.928 7.07" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const SVG_RESIZE  = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 3V21H3M21 21L9 9" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const SVG_LINK    = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>`;
-const SVG_MOVE    = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 11l5 5 5-5"/><path d="M4 21h16"/></svg>`;
+const SVG_MOVE    = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4l7 8-7 8"/><path d="M2 12h17"/></svg>`;
 const SVG_AL = `<svg viewBox="0 0 14 10" width="14" height="10"><rect x="0" y="0" width="7" height="2" fill="currentColor" rx="1"/><rect x="0" y="4" width="10" height="2" fill="currentColor" rx="1"/><rect x="0" y="8" width="7" height="2" fill="currentColor" rx="1"/></svg>`;
 const SVG_AC = `<svg viewBox="0 0 14 10" width="14" height="10"><rect x="3.5" y="0" width="7" height="2" fill="currentColor" rx="1"/><rect x="2" y="4" width="10" height="2" fill="currentColor" rx="1"/><rect x="3.5" y="8" width="7" height="2" fill="currentColor" rx="1"/></svg>`;
 const SVG_AR = `<svg viewBox="0 0 14 10" width="14" height="10"><rect x="7" y="0" width="7" height="2" fill="currentColor" rx="1"/><rect x="4" y="4" width="10" height="2" fill="currentColor" rx="1"/><rect x="7" y="8" width="7" height="2" fill="currentColor" rx="1"/></svg>`;
@@ -3229,6 +3229,7 @@ function makeBlockEl(block, proj) {
   const body = document.createElement('div');
   body.className = 'block-body';
 
+  let mw = null, inner = null;
   if (block.type === 'text') {
     const handle = document.createElement('div');
     handle.className = 'block-drag-handle';
@@ -3244,11 +3245,11 @@ function makeBlockEl(block, proj) {
     body.appendChild(t);
   } else {
     // image or video — shared media-wrap with overlay controls
-    const mw = document.createElement('div');
+    mw = document.createElement('div');
     mw.className = 'media-wrap';
 
     // inner clip container
-    const inner = document.createElement('div');
+    inner = document.createElement('div');
     inner.className = 'media-inner';
 
     if (block.type === 'image') {
@@ -3508,20 +3509,26 @@ function makeBlockEl(block, proj) {
 
   wrap.appendChild(body);
 
-  // move-to-board button — top-right of the block wrapper, left of delete
+  // move/delete live inside the actual visible box (inner for media, wrap for text)
+  // so they sit on the real thumbnail instead of the full grid-column width —
+  // narrower/portrait media would otherwise leave them floating off to the side.
+  const moveMenuAnchor = mw || wrap;
+  const btnHost = inner || wrap;
+
+  // move-to-board button — top-right of the visible box, left of delete
   const move = document.createElement('button');
   move.className = 'block-move';
   move.innerHTML = SVG_MOVE;
   move.title = 'Move to board';
-  move.onclick = (e) => { e.stopPropagation(); openMoveMenu(wrap, block.id); };
-  wrap.appendChild(move);
+  move.onclick = (e) => { e.stopPropagation(); openMoveMenu(moveMenuAnchor, block.id); };
+  btnHost.appendChild(move);
 
-  // delete button — top-right of the block wrapper
+  // delete button — top-right of the visible box
   const del = document.createElement('button');
   del.className = 'block-del';
   del.textContent = '×';
   del.onclick = () => deleteBlock(block.id);
-  wrap.appendChild(del);
+  btnHost.appendChild(del);
 
   // migrate old layout data and apply grid position
   migrateBlockLayout(block);
