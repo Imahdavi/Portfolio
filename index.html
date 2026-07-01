@@ -2510,29 +2510,29 @@ async function loadProjects() {
 /* ─── Default sections (shown when Supabase has no sections saved) ── */
 const DEFAULT_SECTIONS = [
   { title: 'Works', cards: [
-    { key: 'lina',   name: 'Lina',        sub: 'Lina Industrial Group',    thumb: '' },
-    { key: 'tosan',  name: 'Tosan',       sub: 'Tosan Tools 2024–2025',    thumb: '' },
-    { key: 'vam30',  name: 'Vam30',       sub: 'Vam30 2022–2024',          thumb: '' },
+    { key: 'lina',   name: 'Lina',        sub: 'Food & snacks brand', thumb: '' },
+    { key: 'tosan',  name: 'Tosan',       sub: 'Industrial tools', thumb: '' },
+    { key: 'vam30',  name: 'Vam30',       sub: 'Fintech company',          thumb: '' },
   ]},
   { title: 'Projects', cards: [
-    { key: 'logo',   name: 'Logo Motion', sub: 'Intro and Brand Logo Motion', thumb: '' },
-    { key: 'social', name: 'Social Media',sub: 'Instagram Content',           thumb: '' },
-    { key: 'ui',     name: 'Ui Design',   sub: 'Interaction, Web, App',       thumb: '' },
+    { key: 'logo',   name: 'Logo Motion', sub: 'Brand intros & logo animations', thumb: '' },
+    { key: 'social', name: 'Social Media',sub: 'Instagram, X Content',        thumb: '' },
+    { key: 'ui',     name: 'Ui Motion',   sub: 'Interaction, Web, App',       thumb: '' },
     { key: 'edit',   name: 'Documentary', sub: 'Thesis & personal documentaries', thumb: '' },
-    { key: 'web',    name: 'Banners & Ads', sub: 'Digikala & LED banner motion', thumb: '' },
+    { key: 'web',    name: 'Banners & Ads', sub: 'Banners & LED display', thumb: '' },
   ]},
 ];
 
 /* ─── Project data ─────────────────────────────────────── */
 const PROJECTS = {
-  lina:   { name:'Lina',         sub:'Lina Industrial Group 2025 – 2026',        blocks:[{ id:uid(), type:'text', content:'Lina Industrial and Food Group has been operating since 2001 and is active in the field of puffed chips.' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Portfolio/Lina_LM.mp4' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Logo%20Motion/Chillix%20Logo%20Type.mp4' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Logo%20Motion/Chillix%20Logo.mp4' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Logo%20Motion/Logo-Type%20-%20%20Full%20.mp4' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Portfolio/Chips%20cock.mp4' }] },
-  tosan:  { name:'Tosan',        sub:'Tosan Tools 2024 – 2025',                  blocks:[{ id:uid(), type:'text', content:'Motion Designer & Editor for Tosan industrial tools brand — brand identity motion graphics and promotional content.' }] },
-  vam30:  { name:'Vam30',        sub:'Vam30 2022 – 2024',                         blocks:[{ id:uid(), type:'text', content:'Visual & Motion Designer for Vam30 — a consumer financing platform. UI motion, onboarding animations, and social media content.' }] },
-  logo:   { name:'Logo Motion',  sub:'Intro and Brand Logo Motion',               blocks:[{ id:uid(), type:'text', content:'Logo animation and brand motion graphics — creating engaging intro animations for brands and companies.' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Logo%20Motion/Chillix%20Logo%20Type.mp4' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Logo%20Motion/Chillix%20Logo.mp4' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Logo%20Motion/Logo-Type%20-%20%20Full%20.mp4' }] },
-  social: { name:'Social Media', sub:'Instagram Content',                         blocks:[{ id:uid(), type:'text', content:'Motion graphics, reels, and story animations for Instagram and other social media platforms.' }] },
-  ui:     { name:'Ui Design',    sub:'Interaction, Web, App',                     blocks:[{ id:uid(), type:'text', content:'UI/UX design for web and mobile — interaction design, prototyping, and design systems.' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Ui/3%20engine%20-%20Instagram.mp4' }] },
+  lina:   { name:'Lina',         sub:'Food & snacks brand',                      blocks:[{ id:uid(), type:'text', content:'Lina Industrial and Food Group has been operating since 2001 and is active in the field of puffed chips.' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Portfolio/Lina_LM.mp4' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Logo%20Motion/Chillix%20Logo%20Type.mp4' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Logo%20Motion/Chillix%20Logo.mp4' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Logo%20Motion/Logo-Type%20-%20%20Full%20.mp4' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Portfolio/Chips%20cock.mp4' }] },
+  tosan:  { name:'Tosan',        sub:'Industrial tools',                         blocks:[{ id:uid(), type:'text', content:'Motion Designer & Editor for Tosan industrial tools brand — brand identity motion graphics and promotional content.' }] },
+  vam30:  { name:'Vam30',        sub:'Fintech company',                          blocks:[{ id:uid(), type:'text', content:'Visual & Motion Designer for Vam30 — a consumer financing platform. UI motion, onboarding animations, and social media content.' }] },
+  logo:   { name:'Logo Motion',  sub:'Brand intros & logo animations',           blocks:[{ id:uid(), type:'text', content:'Logo animation and brand motion graphics — creating engaging intro animations for brands and companies.' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Logo%20Motion/Chillix%20Logo%20Type.mp4' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Logo%20Motion/Chillix%20Logo.mp4' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Logo%20Motion/Logo-Type%20-%20%20Full%20.mp4' }] },
+  social: { name:'Social Media', sub:'Instagram, X Content',                      blocks:[{ id:uid(), type:'text', content:'Motion graphics, reels, and story animations for Instagram and other social media platforms.' }] },
+  ui:     { name:'Ui Motion',    sub:'Interaction, Web, App',                     blocks:[{ id:uid(), type:'text', content:'UI/UX design for web and mobile — interaction design, prototyping, and design systems.' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Ui/3%20engine%20-%20Instagram.mp4' }] },
   edit:   { name:'Documentary',  sub:'Thesis & personal documentaries',          blocks:[{ id:uid(), type:'text', content:'Documentary edits made for academic and personal projects — dynamic cuts and motion-synced storytelling.' }] },
-  web:    { name:'Banners & Ads',sub:'Digikala & LED banner motion',             blocks:[{ id:uid(), type:'text', content:'Animated banners and LED display motion for brand campaigns and digital storefronts.' }] },
+  web:    { name:'Banners & Ads',sub:'Banners & LED display',                    blocks:[{ id:uid(), type:'text', content:'Animated banners and LED display motion for brand campaigns and digital storefronts.' }] },
 };
 
 function uid() { return Math.random().toString(36).slice(2,9); }
