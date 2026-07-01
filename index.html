@@ -4014,58 +4014,44 @@ document.getElementById('avatarInput').addEventListener('change', async function
   }
 });
 
-async function tusUpload(file, bucket, path, onProgress) {
-  const CHUNK = 6 * 1024 * 1024; // 6 MB per chunk
-  const meta = [
-    `bucketName ${btoa(bucket)}`,
-    `objectName ${btoa(path)}`,
-    `contentType ${btoa(file.type || 'application/octet-stream')}`,
-    `cacheControl ${btoa('3600')}`,
-  ].join(',');
-
-  // Create upload session
-  const initRes = await fetch(`${SB_URL}/storage/v1/upload/resumable`, {
-    method: 'POST',
-    headers: {
-      'apikey': SB_KEY,
-      'Authorization': `Bearer ${SB_KEY}`,
-      'Content-Length': '0',
-      'Upload-Length': String(file.size),
-      'Upload-Metadata': meta,
-      'Tus-Resumable': '1.0.0',
-    },
-  });
-  if (!initRes.ok) {
-    const t = await initRes.text().catch(() => '');
-    let msg = `Init ${initRes.status}`;
-    try { msg = JSON.parse(t).message || msg; } catch {}
-    throw new Error(msg);
+function _bufToB64(buf) {
+  // chunked approach avoids call-stack overflow on large buffers
+  const bytes = new Uint8Array(buf);
+  let out = '', i = 0;
+  while (i < bytes.length) {
+    out += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+    i += 8192;
   }
-  const loc = initRes.headers.get('Location');
-  if (!loc) throw new Error('No TUS location');
-  const uploadUrl = loc.startsWith('http') ? loc : `${SB_URL}${loc}`;
+  return btoa(out);
+}
 
-  // Upload in chunks
+async function tusUpload(file, bucket, path, onProgress) {
+  const CHUNK  = 2 * 1024 * 1024; // 2 MB binary → ~2.7 MB base64, well under 6 MB EF limit
+  const EF_URL = `${SB_URL}/functions/v1/upload-chunk`;
+  const hdrs   = { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` };
+
+  // 1. Create TUS session via Edge Function (JSON → no binary on the wire)
+  const initRes = await fetch(EF_URL, {
+    method: 'POST',
+    headers: hdrs,
+    body: JSON.stringify({ action: 'create', bucket, path, mime: file.type || 'application/octet-stream', total: file.size }),
+  });
+  const initJson = await initRes.json();
+  if (!initRes.ok || initJson.error) throw new Error(initJson.error || `Init ${initRes.status}`);
+  const uploadUrl = initJson.upload_url;
+
+  // 2. Upload chunks as base64 JSON (text → no binary on the wire)
   for (let off = 0; off < file.size; off += CHUNK) {
-    const chunk = file.slice(off, Math.min(off + CHUNK, file.size));
-    const patchRes = await fetch(uploadUrl, {
-      method: 'PATCH',
-      headers: {
-        'apikey': SB_KEY,
-        'Authorization': `Bearer ${SB_KEY}`,
-        'Content-Type': 'application/offset+octet-stream',
-        'Content-Length': String(chunk.size),
-        'Upload-Offset': String(off),
-        'Tus-Resumable': '1.0.0',
-      },
-      body: chunk,
+    const slice  = file.slice(off, Math.min(off + CHUNK, file.size));
+    const buf    = await slice.arrayBuffer();
+    const b64    = _bufToB64(buf);
+    const patchRes = await fetch(EF_URL, {
+      method: 'POST',
+      headers: hdrs,
+      body: JSON.stringify({ action: 'patch', upload_url: uploadUrl, offset: off, chunk_b64: b64 }),
     });
-    if (!patchRes.ok) {
-      const t = await patchRes.text().catch(() => '');
-      let msg = `Chunk ${patchRes.status}`;
-      try { msg = JSON.parse(t).message || msg; } catch {}
-      throw new Error(msg);
-    }
+    const patchJson = await patchRes.json();
+    if (!patchRes.ok || patchJson.error) throw new Error(patchJson.error || `Chunk ${patchRes.status}`);
     if (onProgress) onProgress(Math.min(off + CHUNK, file.size), file.size);
   }
 
