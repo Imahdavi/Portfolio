@@ -757,7 +757,7 @@
     .block-move svg { width:13px; height:13px; }
 
     .move-menu {
-      display:none; position:absolute; top:34px; right:36px; z-index:20;
+      display:none; position:fixed; z-index:1000;
       min-width:150px; max-height:220px; overflow-y:auto;
       background:rgba(26,23,20,.94); backdrop-filter:blur(8px);
       border-radius:10px; padding:5px; flex-direction:column; gap:1px;
@@ -3464,7 +3464,6 @@ function makeBlockEl(block, proj) {
   // move/delete live inside the actual visible box (inner for media, wrap for text)
   // so they sit on the real thumbnail instead of the full grid-column width —
   // narrower/portrait media would otherwise leave them floating off to the side.
-  const moveMenuAnchor = mw || wrap;
   const btnHost = inner || wrap;
 
   // move-to-board button — top-right of the visible box, left of delete
@@ -3472,7 +3471,7 @@ function makeBlockEl(block, proj) {
   move.className = 'block-move';
   move.innerHTML = SVG_MOVE;
   move.title = 'Move to board';
-  move.onclick = (e) => { e.stopPropagation(); openMoveMenu(moveMenuAnchor, block.id); };
+  move.onclick = (e) => { e.stopPropagation(); openMoveMenu(move, block.id); };
   btnHost.appendChild(move);
 
   // delete button — top-right of the visible box
@@ -3813,15 +3812,28 @@ function deleteBlock(id) {
 }
 
 /* ─── Move a block to a different board (project) ────────── */
-function openMoveMenu(wrap, blockId) {
-  document.querySelectorAll('.move-menu.open, .resize-menu.open, .link-popover.open').forEach(m => m.classList.remove('open'));
+// Single shared menu appended to <body> — a per-block menu nested inside a
+// card/gallery with overflow:hidden would get clipped by that ancestor no
+// matter what z-index or position it had, so this positions itself via the
+// trigger button's viewport rect instead of living inside the block's DOM.
+let _moveMenuEl = null;
+function getMoveMenu() {
+  if (!_moveMenuEl) {
+    _moveMenuEl = document.createElement('div');
+    _moveMenuEl.className = 'move-menu';
+    _moveMenuEl.addEventListener('click', e => e.stopPropagation());
+    document.body.appendChild(_moveMenuEl);
+  }
+  return _moveMenuEl;
+}
 
-  let menu = wrap.querySelector('.move-menu');
-  if (!menu) {
-    menu = document.createElement('div');
-    menu.className = 'move-menu';
-    menu.addEventListener('click', e => e.stopPropagation());
-    wrap.appendChild(menu);
+function openMoveMenu(anchorBtn, blockId) {
+  document.querySelectorAll('.resize-menu.open, .link-popover.open').forEach(m => m.classList.remove('open'));
+
+  const menu = getMoveMenu();
+  if (menu.classList.contains('open') && menu._anchor === anchorBtn) {
+    menu.classList.remove('open');
+    return;
   }
 
   const targets = Object.keys(PROJECTS).filter(k => k !== activeKey);
@@ -3839,7 +3851,18 @@ function openMoveMenu(wrap, blockId) {
     menu.appendChild(opt);
   });
 
-  menu.classList.toggle('open');
+  menu.style.visibility = 'hidden';
+  menu.classList.add('open');
+  const r = anchorBtn.getBoundingClientRect();
+  const mh = menu.offsetHeight, mw = menu.offsetWidth;
+  let top  = r.bottom + 6;
+  if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 6);
+  let left = r.right - mw;
+  if (left < 8) left = 8;
+  menu.style.top  = top + 'px';
+  menu.style.left = left + 'px';
+  menu.style.visibility = '';
+  menu._anchor = anchorBtn;
 }
 
 function moveBlockToProject(blockId, targetKey) {
