@@ -603,25 +603,6 @@
     .edit-on .media-inner .resize-corner { display:flex; }
     .resize-corner svg { width:16px; height:16px; pointer-events:none; }
 
-    /* Align bar — top-center of media-inner, visible in edit mode */
-    .align-bar {
-      position:absolute; top:8px; left:50%; transform:translateX(-50%);
-      display:none; flex-direction:row; gap:2px;
-      background:rgba(26,23,20,.84); border-radius:9px;
-      padding:3px; z-index:16; backdrop-filter:blur(4px);
-      box-shadow:0 2px 8px rgba(0,0,0,.22);
-    }
-    .edit-on .media-inner .align-bar { display:flex; }
-    .align-btn {
-      width:28px; height:22px; border-radius:6px; border:none;
-      background:transparent; cursor:pointer;
-      color:rgba(255,255,255,.5);
-      display:flex; align-items:center; justify-content:center;
-      transition:background .1s, color .1s;
-    }
-    .align-btn:hover { background:rgba(255,255,255,.12); color:rgba(255,255,255,.9); }
-    .align-btn.on    { background:rgba(255,255,255,.22); color:#fff; }
-
     /* Snap label */
     .snap-label {
       position:absolute; bottom:10px; left:50%;
@@ -1279,7 +1260,7 @@
     <div class="d-subtitle" id="d-sub" data-ph="Subtitle"></div>
 
     <div class="edit-hint" id="editHint">
-      ↕ Drag up/down to reorder &nbsp;·&nbsp; ↔ Drag left/right to reposition &nbsp;·&nbsp; ← ⊕ → align buttons on each block
+      ↕ Drag up/down to reorder &nbsp;·&nbsp; ↔ Drag left/right to reposition
     </div>
 
     <div class="block-list" id="block-list"></div>
@@ -1663,9 +1644,6 @@ const SVG_UNMUTED = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"
 const SVG_RESIZE  = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 3V21H3M21 21L9 9" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const SVG_LINK    = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>`;
 const SVG_MOVE    = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4l7 8-7 8"/><path d="M2 12h17"/></svg>`;
-const SVG_AL = `<svg viewBox="0 0 14 10" width="14" height="10"><rect x="0" y="0" width="7" height="2" fill="currentColor" rx="1"/><rect x="0" y="4" width="10" height="2" fill="currentColor" rx="1"/><rect x="0" y="8" width="7" height="2" fill="currentColor" rx="1"/></svg>`;
-const SVG_AC = `<svg viewBox="0 0 14 10" width="14" height="10"><rect x="3.5" y="0" width="7" height="2" fill="currentColor" rx="1"/><rect x="2" y="4" width="10" height="2" fill="currentColor" rx="1"/><rect x="3.5" y="8" width="7" height="2" fill="currentColor" rx="1"/></svg>`;
-const SVG_AR = `<svg viewBox="0 0 14 10" width="14" height="10"><rect x="7" y="0" width="7" height="2" fill="currentColor" rx="1"/><rect x="4" y="4" width="10" height="2" fill="currentColor" rx="1"/><rect x="7" y="8" width="7" height="2" fill="currentColor" rx="1"/></svg>`;
 
 /* ─── Layout presets ───────────────────────────────────── */
 // Aspect-ratio presets (height shape only — width set via POS_PRESETS)
@@ -3343,32 +3321,6 @@ function makeBlockEl(block, proj) {
     corner.innerHTML = SVG_RESIZE;
     inner.appendChild(corner);
 
-    // align bar — top-center of inner, edit mode only
-    const alignBar = document.createElement('div');
-    alignBar.className = 'align-bar';
-    [
-      { v:'left',   icon:SVG_AL, title:'Left'   },
-      { v:'center', icon:SVG_AC, title:'Center' },
-      { v:'right',  icon:SVG_AR, title:'Right'  },
-    ].forEach(a => {
-      const ab = document.createElement('button');
-      ab.className = 'align-btn' + ((block._align || 'left') === a.v ? ' on' : '');
-      ab.innerHTML = a.icon;
-      ab.title = a.title;
-      ab.addEventListener('mousedown', ev => ev.stopPropagation());
-      ab.onclick = ev => {
-        ev.stopPropagation();
-        block._align = a.v;
-        applyBlockGrid(wrap, block);
-        alignBar.querySelectorAll('.align-btn').forEach(b => b.classList.remove('on'));
-        ab.classList.add('on');
-        requestAnimationFrame(() => setBlockRowSpan(wrap));
-        if (activeKey) saveProject(activeKey);
-      };
-      alignBar.appendChild(ab);
-    });
-    inner.appendChild(alignBar);
-
     // link button — bottom-right, hover visible in view mode
     const linkBtn = document.createElement('a');
     linkBtn.className = 'media-link-btn' + (block._link ? ' has-link' : '');
@@ -3537,7 +3489,7 @@ function makeBlockEl(block, proj) {
   // Free 2D drag: left/right = column position, up/down = order
   wrap.addEventListener('mousedown', (e) => {
     if (!editMode) return;
-    if (e.target.closest('button, video, [contenteditable], .resize-corner, .media-mute-btn, .align-btn')) return;
+    if (e.target.closest('button, video, [contenteditable], .resize-corner, .media-mute-btn')) return;
     e.preventDefault();
     startFreeDrag(e, wrap);
   });
@@ -3567,13 +3519,6 @@ function startFreeDrag(e, wrap) {
   let hasMoved  = false;
   const startX  = e.clientX, startY = e.clientY;
 
-  function updateAlignBar(align) {
-    const bar = wrap.querySelector('.align-bar');
-    if (!bar) return;
-    const idx = align === 'center' ? 1 : align === 'right' ? 2 : 0;
-    bar.querySelectorAll('.align-btn').forEach((btn, i) => btn.classList.toggle('on', i === idx));
-  }
-
   function onMove(ev) {
     // Don't start until cursor has actually moved (prevents click-jump)
     if (!hasMoved) {
@@ -3592,7 +3537,6 @@ function startFreeDrag(e, wrap) {
         lastAlign = 'center';
         block._align = 'center';
         applyBlockGrid(wrap, block);
-        updateAlignBar('center');
       }
     } else {
       // Normal column snapping
@@ -3606,7 +3550,6 @@ function startFreeDrag(e, wrap) {
         lastCS = newCS;
         block._colStart = newCS;
         applyBlockGrid(wrap, block);
-        updateAlignBar('left');
       }
     }
 
@@ -3768,10 +3711,6 @@ function onDragEnd(e) {
     if (dragData) {
       dragData._align = 'center';
       applyBlockGrid(dragEl, dragData);
-      const bar = dragEl.querySelector('.align-bar');
-      if (bar) bar.querySelectorAll('.align-btn').forEach((btn, i) => {
-        btn.classList.toggle('on', i === 1);
-      });
     }
   } else {
     // 'between' — reorder only, keep existing alignment
