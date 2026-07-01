@@ -4014,6 +4014,64 @@ document.getElementById('avatarInput').addEventListener('change', async function
   }
 });
 
+async function tusUpload(file, bucket, path, onProgress) {
+  const CHUNK = 6 * 1024 * 1024; // 6 MB per chunk
+  const meta = [
+    `bucketName ${btoa(bucket)}`,
+    `objectName ${btoa(path)}`,
+    `contentType ${btoa(file.type || 'application/octet-stream')}`,
+    `cacheControl ${btoa('3600')}`,
+  ].join(',');
+
+  // Create upload session
+  const initRes = await fetch(`${SB_URL}/storage/v1/upload/resumable`, {
+    method: 'POST',
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': `Bearer ${SB_KEY}`,
+      'Content-Length': '0',
+      'Upload-Length': String(file.size),
+      'Upload-Metadata': meta,
+      'Tus-Resumable': '1.0.0',
+    },
+  });
+  if (!initRes.ok) {
+    const t = await initRes.text().catch(() => '');
+    let msg = `Init ${initRes.status}`;
+    try { msg = JSON.parse(t).message || msg; } catch {}
+    throw new Error(msg);
+  }
+  const loc = initRes.headers.get('Location');
+  if (!loc) throw new Error('No TUS location');
+  const uploadUrl = loc.startsWith('http') ? loc : `${SB_URL}${loc}`;
+
+  // Upload in chunks
+  for (let off = 0; off < file.size; off += CHUNK) {
+    const chunk = file.slice(off, Math.min(off + CHUNK, file.size));
+    const patchRes = await fetch(uploadUrl, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': `Bearer ${SB_KEY}`,
+        'Content-Type': 'application/offset+octet-stream',
+        'Content-Length': String(chunk.size),
+        'Upload-Offset': String(off),
+        'Tus-Resumable': '1.0.0',
+      },
+      body: chunk,
+    });
+    if (!patchRes.ok) {
+      const t = await patchRes.text().catch(() => '');
+      let msg = `Chunk ${patchRes.status}`;
+      try { msg = JSON.parse(t).message || msg; } catch {}
+      throw new Error(msg);
+    }
+    if (onProgress) onProgress(Math.min(off + CHUNK, file.size), file.size);
+  }
+
+  return `${SB_URL}/storage/v1/object/public/${bucket}/${path}`;
+}
+
 async function uploadFiles(files) {
   const list = document.getElementById('block-list');
   if (!list) { showUploadToast('Error: open a project first', true); return; }
@@ -4022,30 +4080,21 @@ async function uploadFiles(files) {
   for (const file of files) {
     const placeholderEl = document.createElement('div');
     placeholderEl.className = 'block block-uploading';
-    placeholderEl.innerHTML = `<div class="block-body"><div class="media-wrap"><div class="media-inner"><div class="upload-spinner"></div><div class="upload-progress-lbl">Uploading…</div></div></div></div>`;
+    placeholderEl.innerHTML = `<div class="block-body"><div class="media-wrap"><div class="media-inner"><div class="upload-spinner"></div><div class="upload-progress-lbl">0%</div></div></div></div>`;
     list.appendChild(placeholderEl);
     requestAnimationFrame(() => setBlockRowSpan(placeholderEl));
+    const lbl = placeholderEl.querySelector('.upload-progress-lbl');
 
     const ext  = (file.name.split('.').pop() || 'bin').toLowerCase();
     const path = `uploads/${Date.now()}_${uid()}.${ext}`;
     let uploadOk = false;
     try {
       console.log('[upload] starting', file.name, file.type, file.size, 'path:', path);
-      const res = await fetch(`${SB_URL}/storage/v1/object/${SB_MEDIA_BUCKET}/${path}`, {
-        method: 'POST',
-        headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': file.type || 'application/octet-stream' },
-        body: file,
+      const url = await tusUpload(file, SB_MEDIA_BUCKET, path, (done, total) => {
+        if (lbl) lbl.textContent = Math.round(done / total * 100) + '%';
       });
-      console.log('[upload] status:', res.status);
-      if (!res.ok) {
-        const txt = await res.text().catch(() => '');
-        let msg = `HTTP ${res.status}`;
-        try { msg = JSON.parse(txt).message || msg; } catch {}
-        throw new Error(msg);
-      }
       uploadOk = true;
 
-      const url  = `${SB_URL}/storage/v1/object/public/${SB_MEDIA_BUCKET}/${path}`;
       const proj = PROJECTS[activeKey];
       const type = file.type.startsWith('video') ? 'video' : 'image';
       const b    = { id: uid(), type, content: url };
