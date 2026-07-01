@@ -1862,7 +1862,8 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
 /* ─── Supabase config ──────────────────────────────────── */
 const SB_URL    = 'https://jbdirevxdgcffpaeizcd.supabase.co';
 const SB_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiZGlyZXZ4ZGdjZmZwYWVpemNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NzAwNjgsImV4cCI6MjA5NjU0NjA2OH0._09c4ViKGJvDQXDUGOFEmVWyCg9scPMb6VBGV7DJvoI';
-const SB_BUCKET = 'Portfolio';
+const SB_BUCKET       = 'Portfolio';
+const SB_MEDIA_BUCKET = 'Media';
 
 /* ─── Analytics ────────────────────────────────────────── */
 function _mkId() {
@@ -4030,7 +4031,7 @@ async function uploadFiles(files) {
     let uploadOk = false;
     try {
       console.log('[upload] starting', file.name, file.type, file.size, 'path:', path);
-      const res = await fetch(`${SB_URL}/storage/v1/object/${SB_BUCKET}/${path}`, {
+      const res = await fetch(`${SB_URL}/storage/v1/object/${SB_MEDIA_BUCKET}/${path}`, {
         method: 'POST',
         headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': file.type || 'application/octet-stream' },
         body: file,
@@ -4044,7 +4045,7 @@ async function uploadFiles(files) {
       }
       uploadOk = true;
 
-      const url  = `${SB_URL}/storage/v1/object/public/${SB_BUCKET}/${path}`;
+      const url  = `${SB_URL}/storage/v1/object/public/${SB_MEDIA_BUCKET}/${path}`;
       const proj = PROJECTS[activeKey];
       const type = file.type.startsWith('video') ? 'video' : 'image';
       const b    = { id: uid(), type, content: url };
