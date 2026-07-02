@@ -277,8 +277,8 @@
     .brand-grid-wrap { margin-top:36px; padding-top:28px; border-top:1px solid rgba(0,0,0,.07); }
     .brand-grid-label { font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:#ccc; text-align:center; margin-bottom:22px; }
     .brand-grid { display:flex; flex-wrap:wrap; gap:18px 24px; justify-content:center; align-items:center; }
-    .brand-cell { display:flex; align-items:center; justify-content:center; height:38px; }
-    .brand-logo { max-height:100%; max-width:110px; object-fit:contain; filter:grayscale(1) opacity(.35); transition:filter .28s ease; }
+    .brand-cell { display:flex; align-items:center; justify-content:center; height:38px; width:72px; }
+    .brand-logo { width:100%; height:auto; max-height:100%; object-fit:contain; filter:grayscale(1) opacity(.35); transition:filter .28s ease; }
     .brand-logo:hover { filter:grayscale(0) opacity(1); }
     .brand-text { font-size:13px; font-weight:600; color:rgba(0,0,0,.22); letter-spacing:-.01em; transition:color .28s; cursor:default; line-height:38px; }
     .brand-text:hover { color:rgba(0,0,0,.82); }
@@ -2431,8 +2431,6 @@ function renderWorkExp(items) {
       img.className = 'brand-logo';
       img.alt = b.name;
       img.title = b.name;
-      img.style.height = (b.h||32)+'px';
-      if (b.mw) img.style.maxWidth = b.mw+'px';
       if (b.svg) {
         img.src = su(b.svg);
       } else {
