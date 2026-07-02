@@ -2411,8 +2411,8 @@ function renderWorkExp(items) {
     { name:'Lina',        svg:SLINA, h:50 },
     { name:'Qlean',       svg:SQLEAN, h:26 },
     { name:'Danone',      svg:SDANONE, h:28 },
-    { name:'Fanta',       img:'/fanta-logo.svg', h:40 },
-    { name:'Irancell',    img:'/irancell-logo.svg', h:42 },
+    { name:'Fanta',       img:'/fanta-logo.svg', h:48, ch:52 },
+    { name:'Irancell',    img:'/irancell-logo.svg', h:56, ch:60 },
   ];
 
   const grid = document.getElementById('brand-grid');
@@ -2420,6 +2420,7 @@ function renderWorkExp(items) {
   BRANDS.forEach(b => {
     const cell = document.createElement('div');
     cell.className = 'brand-cell';
+    if (b.ch) cell.style.height = b.ch+'px';
     if (b.text) {
       const el = document.createElement('span');
       el.className = 'brand-text';
