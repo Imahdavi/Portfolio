@@ -552,11 +552,18 @@
     .block-text:focus { outline:none; }
     .edit-on .block-text:empty:before { content:attr(data-ph); color:#aaa; pointer-events:none; display:block; }
 
-    /* Divider block — sagging thread */
-    .block-divider { display:flex; align-items:center; justify-content:center; width:100%; height:22px; padding:5px 0; }
-    .block-divider svg { width:100%; height:12px; overflow:visible; display:block; }
-    .block-divider path { fill:none; stroke:rgba(0,0,0,.16); stroke-width:1.2; stroke-linecap:round; }
-    .block-divider circle { fill:rgba(0,0,0,.22); }
+    /* Divider block — spider web */
+    .block-divider { display:flex; align-items:center; justify-content:center; width:100%; height:56px; padding:4px 0; }
+    .block-divider svg { width:100%; height:100%; overflow:visible; display:block; pointer-events:none; transform-origin:50% 40%; will-change:transform; }
+    .block-divider svg line { stroke:rgba(0,0,0,.32); stroke-width:0.9; }
+
+    /* Divider block — star sparkles */
+    .block-divider-star { display:flex; align-items:center; justify-content:center; width:100%; height:56px; padding:4px 0; }
+    .block-divider-star svg { width:72px; height:auto; overflow:visible; display:block; cursor:pointer; }
+    .block-divider-star .star-big  { fill:rgba(0,0,0,.85); transition:transform .5s cubic-bezier(.34,1.56,.64,1); transform-box:fill-box; transform-origin:center; }
+    .block-divider-star .star-small { fill:rgba(0,0,0,.85); transition:transform .6s cubic-bezier(.34,1.56,.64,1); transform-box:fill-box; transform-origin:center; }
+    .block-divider-star:hover .star-big   { transform:rotate(18deg); }
+    .block-divider-star:hover .star-small { transform:rotate(-30deg); }
 
     /* ── Format toolbar (bold / italic) ── */
     #fmt-toolbar {
@@ -1287,6 +1294,10 @@
       <button class="add-btn" onclick="addDivider()">
         <svg viewBox="0 0 24 24"><path d="M3 12 Q12 19 21 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="3" cy="12" r="1.4" fill="currentColor"/><circle cx="21" cy="12" r="1.4" fill="currentColor"/></svg>
         Add divider
+      </button>
+      <button class="add-btn" onclick="addStarDivider()">
+        <svg viewBox="0 0 24 24"><path d="M12 2L13.5 9.5 20 8l-5.5 3.5L18 18l-6-3.5L6 18l3.5-6.5L4 8l6.5 1.5Z" fill="currentColor"/></svg>
+        Add star divider
       </button>
     </div>
   </div><!-- /view-project -->
@@ -3210,6 +3221,94 @@ function renderBlocks(animate) {
   });
 }
 
+/* ─── Divider block — a taut top thread with one or two cobwebs hanging from it ── */
+function generateWebSVG() {
+  const W = 500, H = 90;
+  const topY = 6;
+  let lines = '';
+
+  // taut top thread, slightly irregular
+  const segs = 26;
+  let prevX = 0, prevY = topY;
+  for (let i = 1; i <= segs; i++) {
+    const x = (W / segs) * i;
+    const y = topY + (Math.random() - 0.5) * 2.4;
+    lines += `<line x1="${prevX.toFixed(1)}" y1="${prevY.toFixed(1)}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`;
+    prevX = x; prevY = y;
+  }
+
+  // one or two hanging fans
+  const fans = [];
+  if (Math.random() < 0.55) {
+    fans.push({ cx: W * (0.35 + Math.random() * 0.3), spread: W * (0.5 + Math.random() * 0.25) });
+  } else {
+    fans.push({ cx: W * (0.1 + Math.random() * 0.06), spread: W * (0.2 + Math.random() * 0.1) });
+    fans.push({ cx: W * (0.84 + Math.random() * 0.06), spread: W * (0.2 + Math.random() * 0.1) });
+  }
+
+  fans.forEach(fan => {
+    const cx = fan.cx;
+    const cy = topY + H * (0.55 + Math.random() * 0.35);
+    const spokeCount = 7 + Math.floor(Math.random() * 4);
+    const halfSpread = fan.spread / 2;
+    const spokes = [];
+    for (let i = 0; i < spokeCount; i++) {
+      const t = spokeCount === 1 ? 0.5 : i / (spokeCount - 1);
+      const x = Math.max(0, Math.min(W, cx - halfSpread + t * fan.spread));
+      spokes.push({ x, y: topY });
+      lines += `<line x1="${cx.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${x.toFixed(1)}" y2="${topY.toFixed(1)}"/>`;
+    }
+    const rings = [0.25, 0.5, 0.72, 0.9];
+    rings.forEach(frac => {
+      const ringPts = spokes.map(p => {
+        const f = frac * (1 + (Math.random() - 0.5) * 0.12);
+        return { x: cx + (p.x - cx) * f, y: cy + (p.y - cy) * f };
+      });
+      for (let i = 0; i < ringPts.length - 1; i++) {
+        if (Math.random() < 0.06) continue; // occasional torn strand
+        const a = ringPts[i], b = ringPts[i + 1];
+        lines += `<line x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}"/>`;
+      }
+    });
+  });
+
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${lines}</svg>`;
+}
+
+/* ─── Spider-web dividers sway subtly with scroll momentum ── */
+(function() {
+  let sway = 0, velocity = 0, lastTop = 0;
+  function bindScroll() {
+    const container = document.getElementById('view-project');
+    if (!container || container._webSwayBound) return;
+    container._webSwayBound = true;
+    lastTop = container.scrollTop;
+    container.addEventListener('scroll', () => {
+      const top = container.scrollTop;
+      const delta = top - lastTop;
+      lastTop = top;
+      velocity = Math.max(-2.2, Math.min(2.2, velocity + delta * 0.025));
+    });
+  }
+  function tick() {
+    sway += (velocity - sway) * 0.1;
+    velocity *= 0.9;
+    if (Math.abs(sway) > 0.01 || Math.abs(velocity) > 0.01) {
+      document.querySelectorAll('.block-divider svg').forEach(svg => {
+        svg.style.transform = `rotate(${sway.toFixed(2)}deg)`;
+      });
+    }
+    requestAnimationFrame(tick);
+  }
+  document.addEventListener('DOMContentLoaded', bindScroll);
+  requestAnimationFrame(tick);
+})();
+
+/* ─── Star divider — single elongated 4-pt star + small companion ── */
+function generateStarSVG() {
+  return `<svg viewBox="0 0 166.46 107.09" xmlns="http://www.w3.org/2000/svg"><path class="star-big" d="M161.24,53.35c-14.46,3.72-29.9,4.84-42.64,13.31-14.46,9.61-21.64,25.92-29.95,40.43,1.15-9.62,6.54-34.2-3.08-40.84-4.35-3-15.47-4.7-20.86-5.61-21.42-3.61-43.16-5.7-64.71-7.49,22.86-2.01,46.45-1.69,69.49-4.98,10.21-1.46,23.14-4.63,31.19-11.46,11.06-9.39,18.95-24.6,24.86-36.7-1.93,11.74-6.08,29.6,1.51,40,6.74,9.23,23.79,11.02,34.18,13.35Z"/><path class="star-small" d="M166.46,28.48c-3.79.71-6.49,1.61-9.73,2.9-6.77,2.69-8.73,8.37-12.53,13.94,1.99-10.12.65-15.79-10.31-16.7,4.77-.76,6.65-1.1,9.92-2.54,5.93-2.6,8.54-8.4,11.62-13.65-1.45,10.08-.22,15.31,11.03,16.05Z"/></svg>`;
+}
+
 function makeBlockEl(block, proj) {
   const wrap = document.createElement('div');
   wrap.className = 'block';
@@ -3236,8 +3335,14 @@ function makeBlockEl(block, proj) {
     body.appendChild(t);
   } else if (block.type === 'divider') {
     const dv = document.createElement('div');
-    dv.className = 'block-divider';
-    dv.innerHTML = '<svg viewBox="0 0 100 16" preserveAspectRatio="none"><path d="M2,4 Q50,13 98,4"/><circle cx="2" cy="4" r="1.6"/><circle cx="98" cy="4" r="1.6"/></svg>';
+    if (block.dividerStyle === 'star') {
+      dv.className = 'block-divider-star';
+      if (!block.content) block.content = generateStarSVG();
+    } else {
+      dv.className = 'block-divider';
+      if (!block.content) block.content = generateWebSVG();
+    }
+    dv.innerHTML = block.content;
     body.appendChild(dv);
   } else {
     // image or video — shared media-wrap with overlay controls
@@ -3771,6 +3876,18 @@ function addMedia() {
 function addDivider() {
   const proj = PROJECTS[activeKey];
   const b = { id: uid(), type: 'divider', content: '' };
+  proj.blocks.push(b);
+  const list = document.getElementById('block-list');
+  const el = makeBlockEl(b, proj);
+  el.classList.add('block-enter');
+  list.appendChild(el);
+  requestAnimationFrame(() => setBlockRowSpan(el));
+  saveProject(activeKey);
+}
+
+function addStarDivider() {
+  const proj = PROJECTS[activeKey];
+  const b = { id: uid(), type: 'divider', dividerStyle: 'star', content: '' };
   proj.blocks.push(b);
   const list = document.getElementById('block-list');
   const el = makeBlockEl(b, proj);
