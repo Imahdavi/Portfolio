@@ -46,6 +46,9 @@
       overflow: hidden;
       transition: max-width .35s ease;
     }
+    @media (min-width: 768px) {
+      #app { max-width: 925px; }
+    }
     /* project view keeps same width as home */
 
     /* ─────────────────── VIEWS ─────────────────── */
@@ -166,6 +169,9 @@
       gap:12px;
       margin-bottom:40px;
       padding:6px 4px;
+    }
+    @media (min-width: 768px) {
+      .card-grid { grid-template-columns: repeat(5, 1fr); gap: 10px; }
     }
 
     .proj-card { position:relative; cursor:pointer; transition:opacity .25s, filter .25s, transform .55s cubic-bezier(.34,1.56,.64,1); }
