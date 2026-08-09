@@ -46,9 +46,6 @@
       overflow: hidden;
       transition: max-width .35s ease;
     }
-    @media (min-width: 768px) {
-      #app { max-width: 925px; }
-    }
     /* project view keeps same width as home */
 
     /* ─────────────────── VIEWS ─────────────────── */
@@ -169,9 +166,6 @@
       gap:12px;
       margin-bottom:40px;
       padding:6px 4px;
-    }
-    @media (min-width: 768px) {
-      .card-grid { grid-template-columns: repeat(5, 1fr); gap: 10px; }
     }
 
     .proj-card { position:relative; cursor:pointer; transition:opacity .25s, filter .25s, transform .55s cubic-bezier(.34,1.56,.64,1); }
@@ -415,9 +409,6 @@
       top:48px;
       z-index:200;
     }
-    @media (min-width: 768px) {
-      #app:has(#view-project.active) .back-btn { left: max(10px, calc(50vw - 482px)); }
-    }
     .back-btn:hover  { background:rgba(245,245,245,0.95); border-color:rgba(0,0,0,0.22); transform:translateX(-2px); box-shadow:0 3px 14px rgba(0,0,0,0.14); }
     .back-btn:active { transform:scale(.88); }
     .back-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
@@ -516,43 +507,6 @@
 
     /* Block list */
     .block-list { display:grid; grid-template-columns:repeat(6,1fr); column-gap:10px; row-gap:0; grid-auto-rows:1px; margin-bottom:20px; align-items:start; }
-
-    /* ── Bento board (per-project) ──────────────────────────
-       Square-unit tiles on a 4-col grid, kasbu-style. Tile size is
-       discrete (--bw × --bh units); media is contained, never cropped.
-       --bunit is measured in JS so rows stay square.                */
-    .block-list.bento {
-      grid-template-columns:repeat(4,1fr);
-      grid-auto-rows:var(--bunit,160px); grid-auto-flow:row dense;
-      column-gap:var(--bgap,12px); row-gap:var(--bgap,12px);
-      align-items:stretch;
-    }
-    .block-list.bento .block {
-      grid-column:span var(--bw,2) !important;
-      grid-row:span var(--bh,2) !important;
-      align-items:stretch;
-    }
-    .block-list.bento .block-body { display:flex; min-height:0; height:100%; }
-    /* text + dividers: full width, rounded up to whole units like kasbu does */
-    .block-list.bento .block.bento-auto { align-items:start; }
-    .block-list.bento .block.bento-auto .block-body { display:block; height:auto; }
-    .block-list.bento .media-wrap {
-      width:100% !important; height:100%;
-      margin-left:0 !important; margin-right:0 !important;
-      max-width:none !important;
-    }
-    .block-list.bento .media-wrap .media-inner {
-      width:100%; height:100%;
-      aspect-ratio:auto !important;
-    }
-    /* contain, not cover — the whole frame stays visible */
-    .block-list.bento .media-wrap img,
-    .block-list.bento .media-wrap video { object-fit:contain; }
-    /* freehand corner is meaningless on fixed tiles */
-    .block-list.bento .resize-corner { display:none !important; }
-    @media (max-width: 767px) {
-      .block-list.bento { grid-template-columns:repeat(2,1fr); }
-    }
 
     .block {
       position:relative;
@@ -921,9 +875,6 @@
     #scroll-top-btn.show { opacity:1; pointer-events:auto; }
     #scroll-top-btn:hover { transform:translateY(-2px); box-shadow:0 4px 18px rgba(0,0,0,.16); }
     #scroll-top-btn:active { transform:scale(.9); }
-    @media (min-width: 768px) {
-      #scroll-top-btn { right: max(10px, calc(50vw - 482px)); }
-    }
     #scroll-top-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
 
     /* Block enter animation */
@@ -1348,10 +1299,6 @@
         <svg viewBox="0 0 24 24"><path d="M12 2L13.5 9.5 20 8l-5.5 3.5L18 18l-6-3.5L6 18l3.5-6.5L4 8l6.5 1.5Z" fill="currentColor"/></svg>
         Add star divider
       </button>
-      <button class="add-btn" id="bentoToggleBtn" onclick="toggleBento()">
-        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="4" rx="1.5"/><rect x="13" y="9" width="8" height="12" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg>
-        <span id="bentoToggleLbl">Bento board</span>
-      </button>
     </div>
   </div><!-- /view-project -->
 
@@ -1746,137 +1693,8 @@ function makePosIcon(vis) {
   return `<svg viewBox="0 0 29 11" width="36" height="14" xmlns="http://www.w3.org/2000/svg">${cells}</svg>`;
 }
 
-/* ─── Bento board ───────────────────────────────────────────
-   kasbu uses an 80px square unit on a 4-col grid, so every tile is a
-   whole number of units in both axes. We keep the square unit and the
-   tile sizes; the gutter stays close to the site's existing 10px rhythm
-   (kasbu's 35px is tuned for a 495px column — ours is nearly twice that). */
-const BENTO_GAP = 12;
-const BENTO_SIZES = [
-  { key:'1x1', w:1, h:1 },
-  { key:'2x1', w:2, h:1 },
-  { key:'1x2', w:1, h:2 },
-  { key:'2x2', w:2, h:2 },
-  { key:'2x3', w:2, h:3 },
-  { key:'3x2', w:3, h:2 },
-  { key:'4x2', w:4, h:2 },
-  { key:'4x3', w:4, h:3 },
-  { key:'4x4', w:4, h:4 },
-];
-
-function makeBentoIcon(w, h) {
-  // 4x4 proof sheet with the tile drawn filled in the corner
-  const u = 6, g = 1.5;
-  const cells = [];
-  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
-    const on = x < w && y < h;
-    cells.push(`<rect x="${x*(u+g)}" y="${y*(u+g)}" width="${u}" height="${u}" rx="1.4" fill="${on ? '#fff' : 'rgba(255,255,255,.18)'}"/>`);
-  }
-  const side = 4*u + 3*g;
-  return `<svg viewBox="0 0 ${side} ${side}" width="26" height="26" xmlns="http://www.w3.org/2000/svg">${cells.join('')}</svg>`;
-}
-
-// Give a block sensible tile dimensions the first time it enters bento mode,
-// inferred from the width it already had and the shape of its media.
-function isBentoAuto(block) { return block.type === 'text' || block.type === 'divider'; }
-
-function ensureBentoSize(block) {
-  // Text and dividers aren't tiles — they run full width and keep their own height
-  if (isBentoAuto(block)) { block._bw = 4; block._bh = 1; return; }
-  if (block._bw && block._bh) return;
-  // _cols must be on the 6-col scale before we can read a width off it
-  migrateBlockLayout(block);
-  const cols = block._cols || 6;
-  block._bw = Math.max(1, Math.min(4, Math.round(cols / 6 * 4)));
-  const aspect = block._freeAspect ||
-    ({ '16-9':16/9, '4-3':4/3, '1-1':1, '3-4':3/4, '9-16':9/16, '21-9':21/9 })[block.preset] || 16/9;
-  block._bh = Math.max(1, Math.min(4, Math.round(block._bw / aspect)));
-}
-
-function applyBentoGrid(el, block) {
-  ensureBentoSize(block);
-  el.classList.toggle('bento-auto', isBentoAuto(block));
-  el.style.gridColumn = '';
-  el.style.gridRow    = '';
-  syncBentoTile(el, block);
-}
-
-// Resolve a block's tile span for the current breakpoint.
-function syncBentoTile(el, block) {
-  const list = document.getElementById('block-list');
-  if (!list) return;
-  const cs   = getComputedStyle(list);
-  const unit = parseFloat(cs.getPropertyValue('--bunit')) || 0;
-  const gap  = parseFloat(cs.getPropertyValue('--bgap'))  || 0;
-  const cols = window.innerWidth < 768 ? 2 : 4;
-  const bw   = Math.min(block._bw || 2, cols);
-  el.style.setProperty('--bw', bw);
-
-  if (isBentoAuto(block)) {
-    // height comes from the content, rounded up to whole units
-    const inner = el.querySelector('.block-text, .block-divider, .block-divider-star');
-    const h = inner ? inner.scrollHeight : 0;
-    el.style.setProperty('--bh', unit ? Math.max(1, Math.ceil((h + gap) / (unit + gap))) : 1);
-  } else {
-    // a 4-wide tile becomes 2-wide on mobile; scale its height so it keeps its shape
-    el.style.setProperty('--bh',
-      Math.max(1, Math.round((block._bh || 2) * bw / (block._bw || 2))));
-  }
-}
-
-function syncBentoTiles() {
-  const list = document.getElementById('block-list');
-  if (!list || !list.classList.contains('bento')) return;
-  const proj = PROJECTS[activeKey];
-  if (!proj) return;
-  Array.from(list.querySelectorAll('.block')).forEach((el, i) => {
-    if (proj.blocks[i]) syncBentoTile(el, proj.blocks[i]);
-  });
-}
-
-// Measure the list once and derive a unit that keeps tiles square.
-function syncBentoUnit() {
-  const list = document.getElementById('block-list');
-  if (!list || !list.classList.contains('bento')) return;
-  const cols = window.innerWidth < 768 ? 2 : 4;
-  const gap  = window.innerWidth < 768 ? 8 : BENTO_GAP;
-  const w    = list.clientWidth;
-  if (!w) return;
-  // square unit: w = cols*unit + (cols-1)*gap
-  const unit = (w - (cols - 1) * gap) / cols;
-  list.style.setProperty('--bunit', unit.toFixed(2) + 'px');
-  list.style.setProperty('--bgap',  gap + 'px');
-}
-window.addEventListener('resize', () => { syncBentoUnit(); syncBentoTiles(); });
-
-function isBento() { return !!(PROJECTS[activeKey] && PROJECTS[activeKey].bento); }
-
-// Per-project switch. The old _cols/_colStart values are left untouched, so
-// turning bento off restores the previous layout exactly.
-function toggleBento() {
-  const proj = PROJECTS[activeKey];
-  if (!proj) return;
-  proj.bento = proj.bento ? 0 : 1;
-  if (proj.bento) proj.blocks.forEach(ensureBentoSize);
-  renderBlocks(false);
-  syncBentoToggleLabel();
-  saveProject(activeKey);
-}
-
-function syncBentoToggleLabel() {
-  const lbl = document.getElementById('bentoToggleLbl');
-  if (lbl) lbl.textContent = isBento() ? 'Bento: on' : 'Bento board';
-}
-
 function migrateBlockLayout(block) {
   if (block._half) { block._cols = 1; delete block._half; }
-  // Undo the 12-col experiment: fold those blocks back onto the 6-col grid
-  if (block._g12) {
-    block._cols     = Math.max(1, Math.min(6, Math.round((block._cols || 12) / 2)));
-    block._colStart = Math.max(1, Math.min(7 - block._cols,
-                        Math.round(((block._colStart || 1) - 1) / 2) + 1));
-    delete block._g12;
-  }
   if (block._colStart === undefined) {
     const oldCols = block._cols || 3;
     const oldCol  = block._col;
@@ -1894,7 +1712,6 @@ function migrateBlockLayout(block) {
 }
 
 function applyBlockGrid(el, block) {
-  if (isBento()) { applyBentoGrid(el, block); return; }
   const cols  = block._cols || 6;
   const cs    = block._colStart || 1;
   const align = block._align || 'left';
@@ -2333,7 +2150,7 @@ async function saveProject(key) {
       'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`,
       'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'
     },
-    body: JSON.stringify({ key, data: { name: proj.name, sub: proj.sub, bento: proj.bento ? 1 : 0, blocks: clean }, updated_at: new Date().toISOString() })
+    body: JSON.stringify({ key, data: { name: proj.name, sub: proj.sub, blocks: clean }, updated_at: new Date().toISOString() })
   });
 }
 
@@ -2709,10 +2526,7 @@ async function loadProjects() {
     });
     const rows = await res.json();
     if (Array.isArray(rows)) rows.forEach(row => {
-      if (PROJECTS[row.key]) {
-        PROJECTS[row.key].blocks = row.data.blocks;
-        PROJECTS[row.key].bento  = row.data.bento ? 1 : 0;
-      }
+      if (PROJECTS[row.key]) PROJECTS[row.key].blocks = row.data.blocks;
     });
   } catch(e) { console.warn('Supabase load failed, using defaults'); }
 }
@@ -3369,8 +3183,6 @@ function saveHomeEdits() {
 
 /* ─── Row span for masonry layout ─────────────────────── */
 function setBlockRowSpan(el) {
-  // In bento mode the row span comes from the tile size, not the content height
-  if (el.parentElement && el.parentElement.classList.contains('bento')) return;
   const h = el.offsetHeight;
   if (!h) return;
   el.style.gridRow = 'span ' + (h + 10);
@@ -3384,14 +3196,9 @@ function renderBlocks(animate) {
   if (proj0) proj0.blocks.forEach(b => { if (b._lottieInst) { try { b._lottieInst.destroy(); } catch(e){} b._lottieInst = null; } });
   list.innerHTML = '';
   const proj = PROJECTS[activeKey];
-  list.classList.toggle('bento', !!proj.bento);
-  syncBentoToggleLabel();
-  syncBentoUnit();
   proj.blocks.forEach(b => list.appendChild(makeBlockEl(b, proj)));
 
   requestAnimationFrame(() => {
-    syncBentoUnit();
-    syncBentoTiles();
     list.querySelectorAll('.block').forEach(setBlockRowSpan);
     setupLazyVideos();
     if (!animate) return;
@@ -3699,37 +3506,6 @@ function makeBlockEl(block, proj) {
     const menu = document.createElement('div');
     menu.className = 'resize-menu';
 
-    if (proj.bento) {
-      // — Tile section (bento board) —
-      const tileLbl = document.createElement('div');
-      tileLbl.className = 'rsz-section-lbl';
-      tileLbl.textContent = 'Tile';
-      menu.appendChild(tileLbl);
-
-      const tileGrid = document.createElement('div');
-      tileGrid.className = 'rsz-pos-grid';
-      ensureBentoSize(block);
-      BENTO_SIZES.forEach(s => {
-        const btn = document.createElement('button');
-        const on  = block._bw === s.w && block._bh === s.h;
-        btn.className = 'pos-opt' + (on ? ' active' : '');
-        btn.innerHTML = makeBentoIcon(s.w, s.h) + `<span>${s.w}×${s.h}</span>`;
-        btn.title = `${s.w}×${s.h}`;
-        btn.onclick = (e) => {
-          e.stopPropagation();
-          block._bw = s.w; block._bh = s.h;
-          applyBentoGrid(wrap, block);
-          requestAnimationFrame(syncBentoTiles);
-          tileGrid.querySelectorAll('.pos-opt').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          if (activeKey) saveProject(activeKey);
-          menu.classList.remove('open');
-        };
-        tileGrid.appendChild(btn);
-      });
-      menu.appendChild(tileGrid);
-    } else {
-
     // — Width section —
     const posLbl = document.createElement('div');
     posLbl.className = 'rsz-section-lbl';
@@ -3746,10 +3522,7 @@ function makeBlockEl(block, proj) {
       btn.onclick = (e) => {
         e.stopPropagation();
         block._cols = p.cols;
-        if ((block._align || 'left') !== 'center') {
-          const maxCS = Math.max(1, 7 - p.cols);
-          block._colStart = Math.min(block._colStart || 1, maxCS);
-        }
+        if ((block._align || 'left') !== 'center') block._colStart = 1;
         applyBlockGrid(wrap, block);
         posGrid.querySelectorAll('.pos-opt').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -3787,8 +3560,6 @@ function makeBlockEl(block, proj) {
       };
       menu.appendChild(opt);
     });
-
-    }
 
     resizeBtn.onclick = (e) => {
       e.stopPropagation();
