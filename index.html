@@ -516,6 +516,9 @@
 
     /* Block list */
     .block-list { display:grid; grid-template-columns:repeat(12,1fr); column-gap:6px; row-gap:0; grid-auto-rows:1px; margin-bottom:20px; align-items:start; }
+    @media (max-width: 767px) {
+      .block-list .block { grid-column: 1 / -1 !important; }
+    }
 
     .block {
       position:relative;
