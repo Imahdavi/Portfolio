@@ -515,13 +515,13 @@
     .edit-hint.show { display:block; animation:fadeUp .2s ease both; }
 
     /* Block list */
-    .block-list { display:grid; grid-template-columns:repeat(6,1fr); column-gap:10px; row-gap:0; grid-auto-rows:1px; margin-bottom:20px; align-items:start; }
+    .block-list { display:grid; grid-template-columns:repeat(12,1fr); column-gap:6px; row-gap:0; grid-auto-rows:1px; margin-bottom:20px; align-items:start; }
 
     .block {
       position:relative;
       display:flex; align-items:flex-start; gap:8px;
       background:transparent; border-radius:20px; padding:0;
-      grid-column:1 / span 6; transition:box-shadow .2s;
+      grid-column:1 / span 12; transition:box-shadow .2s;
       box-sizing:border-box;
     }
     .edit-on .block { padding:0; cursor:grab; }
@@ -1692,17 +1692,17 @@ const LAYOUT_PRESETS = [
 
 // Width presets (6-col grid) — position is set via the align buttons (← center →)
 const POS_PRESETS = [
-  { key:'full', label:'Full', cols:6, vis:[1,1,1,1,1,1] },
-  { key:'w4',   label:'2/3',  cols:4, vis:[1,1,1,1,0,0] },
-  { key:'w3',   label:'1/2',  cols:3, vis:[1,1,1,0,0,0] },
-  { key:'w2',   label:'1/3',  cols:2, vis:[1,1,0,0,0,0] },
+  { key:'full', label:'Full', cols:12 },
+  { key:'w8',   label:'2/3',  cols:8  },
+  { key:'w6',   label:'1/2',  cols:6  },
+  { key:'w4',   label:'1/3',  cols:4  },
+  { key:'w3',   label:'1/4',  cols:3  },
+  { key:'w2',   label:'1/6',  cols:2  },
 ];
 
-function makePosIcon(vis) {
-  const cells = vis.map((on, i) =>
-    `<rect x="${i*5}" y="0" width="4" height="11" fill="${on ? '#fff' : 'rgba(255,255,255,.2)'}" rx="1"/>`
-  ).join('');
-  return `<svg viewBox="0 0 29 11" width="36" height="14" xmlns="http://www.w3.org/2000/svg">${cells}</svg>`;
+function makePosIcon(cols) {
+  const w = Math.round(cols / 12 * 28);
+  return `<svg viewBox="0 0 30 11" width="36" height="14" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="30" height="11" fill="rgba(255,255,255,.15)" rx="1"/><rect x="0" y="0" width="${w}" height="11" fill="#fff" rx="1"/></svg>`;
 }
 
 function migrateBlockLayout(block) {
@@ -1714,24 +1714,30 @@ function migrateBlockLayout(block) {
     block._colStart = oldCol ? (oldCol - 1) * 2 + 1 : 1;
     delete block._col;
   }
+  // Migrate 6-col → 12-col grid
+  if (!block._g12) {
+    block._cols     = (block._cols || 6) * 2;
+    block._colStart = block._colStart ? (block._colStart - 1) * 2 + 1 : 1;
+    block._g12 = 1;
+  }
   // Migrate pixel-based freeH to aspect ratio
   if (block._freeH && !block._freeAspect) {
-    // Use saved _freeW if available, otherwise estimate from _cols
-    // (block-list is always 496px on desktop: max-width:540 − 44px padding)
-    const refW = block._freeW || ((block._cols || 6) / 6 * 496);
+    const list = document.getElementById('block-list');
+    const listW = (list && list.offsetWidth) || 881;
+    const refW = block._freeW || ((block._cols || 12) / 12 * listW);
     block._freeAspect = +(refW / block._freeH).toFixed(4);
   }
 }
 
 function applyBlockGrid(el, block) {
-  const cols  = block._cols || 6;
+  const cols  = block._cols || 12;
   const cs    = block._colStart || 1;
   const align = block._align || 'left';
 
   if (align === 'center') {
-    el.style.gridColumn = '1 / span 6';
+    el.style.gridColumn = '1 / span 12';
   } else if (align === 'right') {
-    el.style.gridColumn = `${Math.max(1, 7 - cols)} / span ${cols}`;
+    el.style.gridColumn = `${Math.max(1, 13 - cols)} / span ${cols}`;
   } else {
     el.style.gridColumn = `${cs} / span ${cols}`;
   }
@@ -1739,7 +1745,7 @@ function applyBlockGrid(el, block) {
   const mw = el.querySelector('.media-wrap');
   if (mw) {
     if (align === 'center') {
-      mw.style.width       = (cols / 6 * 100).toFixed(2) + '%';
+      mw.style.width       = (cols / 12 * 100).toFixed(2) + '%';
       mw.style.marginLeft  = 'auto';
       mw.style.marginRight = 'auto';
     } else {
@@ -1795,15 +1801,17 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
     const startY    = e.clientY;
     const startX    = e.clientX;
     const startH    = inner ? inner.offsetHeight : mw.offsetHeight;
-    const startSpan = block._cols || 6;
+    const startSpan = block._cols || 12;
     const startCS   = block._colStart || 1;
     const list      = wrap ? wrap.parentElement : null;
 
     const COL_SNAPS = [
-      { span:2, label:'1/3' },
-      { span:3, label:'1/2' },
-      { span:4, label:'2/3' },
-      { span:6, label:'Full'},
+      { span:2,  label:'1/6' },
+      { span:3,  label:'1/4' },
+      { span:4,  label:'1/3' },
+      { span:6,  label:'1/2' },
+      { span:8,  label:'2/3' },
+      { span:12, label:'Full'},
     ];
 
     function onMove(e) {
@@ -1811,7 +1819,7 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
 
       // ── Horizontal: update column span immediately ─────────────
       if (list) {
-        const colW    = list.offsetWidth / 6;
+        const colW    = list.offsetWidth / 12;
         const startW  = colW * startSpan;
         const rawSpan = Math.max(0.6, (startW + (e.clientX - startX)) / colW);
         let best = COL_SNAPS[0];
@@ -1821,13 +1829,13 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
         const align = block._align || 'left';
         let newSpan;
         if (align === 'center') {
-          newSpan = best.span; // centered: any width OK, applyBlockGrid updates mw.style.width
+          newSpan = best.span;
         } else if (align === 'right') {
-          newSpan = Math.min(best.span, 6);
+          newSpan = Math.min(best.span, 12);
         } else {
-          newSpan = Math.min(best.span, 7 - startCS); // left: clamp so block doesn't overflow
+          newSpan = Math.min(best.span, 13 - startCS);
         }
-        if (newSpan !== (block._cols || 6)) {
+        if (newSpan !== (block._cols || 12)) {
           block._cols = newSpan;
           applyBlockGrid(wrap, block);
         }
@@ -3529,13 +3537,13 @@ function makeBlockEl(block, proj) {
     POS_PRESETS.forEach(p => {
       const btn = document.createElement('button');
       btn.className = 'pos-opt' + (block._cols === p.cols ? ' active' : '');
-      btn.innerHTML = makePosIcon(p.vis) + `<span>${p.label}</span>`;
+      btn.innerHTML = makePosIcon(p.cols) + `<span>${p.label}</span>`;
       btn.title = p.label;
       btn.onclick = (e) => {
         e.stopPropagation();
         block._cols = p.cols;
         if ((block._align || 'left') !== 'center') {
-          const maxCS = Math.max(1, 7 - p.cols);
+          const maxCS = Math.max(1, 13 - p.cols);
           block._colStart = Math.min(block._colStart || 1, maxCS);
         }
         applyBlockGrid(wrap, block);
@@ -3646,8 +3654,8 @@ function startFreeDrag(e, wrap) {
   const list = wrap.parentElement;
   if (!list) return;
 
-  const cols  = block._cols || 6;
-  const maxCS = Math.max(1, 7 - cols);
+  const cols  = block._cols || 12;
+  const maxCS = Math.max(1, 13 - cols);
 
   wrap.classList.add('col-dragging');
 
@@ -3663,7 +3671,7 @@ function startFreeDrag(e, wrap) {
       hasMoved = true;
     }
     const lr   = list.getBoundingClientRect();
-    const colW = lr.width / 6;
+    const colW = lr.width / 12;
     const relX = ev.clientX - lr.left;
 
     // ── X → column position (with center snap zone) ──────────────────────────────
@@ -3835,12 +3843,12 @@ function onDragEnd(e) {
 
   if (dropSide === 'left') {
     list.insertBefore(dragEl, dropTarget);
-    setGrid(dragEl,     proj.blocks.find(b => b.id === dragEl.dataset.id),     3, 1);
-    setGrid(dropTarget, proj.blocks.find(b => b.id === dropTarget.dataset.id), 3, 4);
+    setGrid(dragEl,     proj.blocks.find(b => b.id === dragEl.dataset.id),     6, 1);
+    setGrid(dropTarget, proj.blocks.find(b => b.id === dropTarget.dataset.id), 6, 7);
   } else if (dropSide === 'right') {
     dropTarget.after(dragEl);
-    setGrid(dropTarget, proj.blocks.find(b => b.id === dropTarget.dataset.id), 3, 1);
-    setGrid(dragEl,     proj.blocks.find(b => b.id === dragEl.dataset.id),     3, 4);
+    setGrid(dropTarget, proj.blocks.find(b => b.id === dropTarget.dataset.id), 6, 1);
+    setGrid(dragEl,     proj.blocks.find(b => b.id === dragEl.dataset.id),     6, 7);
   } else if (dropSide === 'center') {
     // Drop on center of a block — center the dragged block
     list.insertBefore(dragEl, dropTarget);
