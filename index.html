@@ -3689,8 +3689,8 @@ function startFreeDrag(e, wrap) {
         lastAlign = 'left';
         block._align = 'left';
       }
-      const rawCS = Math.round((relX - (cols * colW) / 2) / colW) + 1;
-      const newCS = Math.max(1, Math.min(maxCS, rawCS));
+      const slot  = Math.round((relX - (cols * colW) / 2) / (cols * colW));
+      const newCS = Math.max(1, Math.min(maxCS, slot * cols + 1));
       if (newCS !== lastCS) {
         lastCS = newCS;
         block._colStart = newCS;
