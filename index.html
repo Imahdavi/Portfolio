@@ -517,7 +517,7 @@
     /* Block list */
     .block-list { display:grid; grid-template-columns:repeat(12,1fr); column-gap:6px; row-gap:0; grid-auto-rows:1px; margin-bottom:20px; align-items:start; }
     @media (max-width: 767px) {
-      .block-list .block { grid-column: 1 / -1 !important; }
+      .block-list { grid-template-columns: repeat(2, 1fr); }
     }
 
     .block {
@@ -1737,7 +1737,10 @@ function applyBlockGrid(el, block) {
   const cs    = block._colStart || 1;
   const align = block._align || 'left';
 
-  if (align === 'center') {
+  if (window.innerWidth < 768) {
+    const mSpan = cols >= 10 ? 2 : 1;
+    el.style.gridColumn = `auto / span ${mSpan}`;
+  } else if (align === 'center') {
     el.style.gridColumn = '1 / span 12';
   } else if (align === 'right') {
     el.style.gridColumn = `${Math.max(1, 13 - cols)} / span ${cols}`;
