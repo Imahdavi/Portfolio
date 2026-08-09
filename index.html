@@ -415,6 +415,9 @@
       top:48px;
       z-index:200;
     }
+    @media (min-width: 768px) {
+      #app:has(#view-project.active) .back-btn { left: max(10px, calc(50vw - 482px)); }
+    }
     .back-btn:hover  { background:rgba(245,245,245,0.95); border-color:rgba(0,0,0,0.22); transform:translateX(-2px); box-shadow:0 3px 14px rgba(0,0,0,0.14); }
     .back-btn:active { transform:scale(.88); }
     .back-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
@@ -881,6 +884,9 @@
     #scroll-top-btn.show { opacity:1; pointer-events:auto; }
     #scroll-top-btn:hover { transform:translateY(-2px); box-shadow:0 4px 18px rgba(0,0,0,.16); }
     #scroll-top-btn:active { transform:scale(.9); }
+    @media (min-width: 768px) {
+      #scroll-top-btn { right: max(10px, calc(50vw - 482px)); }
+    }
     #scroll-top-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
 
     /* Block enter animation */
@@ -1158,7 +1164,7 @@
     <div class="sg" id="sg-exp"></div>
     <button id="exp-add-btn" class="exp-add-btn" onclick="addExpItem()">+ Add experience</button>
     <div class="brand-grid-wrap">
-      <div class="brand-grid-label">brands & clients</div>
+      <div class="brand-grid-label">trusted by</div>
       <div class="brand-grid" id="brand-grid"></div>
     </div>
   </div><!-- /view-exp -->
@@ -3528,7 +3534,10 @@ function makeBlockEl(block, proj) {
       btn.onclick = (e) => {
         e.stopPropagation();
         block._cols = p.cols;
-        if ((block._align || 'left') !== 'center') block._colStart = 1;
+        if ((block._align || 'left') !== 'center') {
+          const maxCS = Math.max(1, 7 - p.cols);
+          block._colStart = Math.min(block._colStart || 1, maxCS);
+        }
         applyBlockGrid(wrap, block);
         posGrid.querySelectorAll('.pos-opt').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
