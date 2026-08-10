@@ -1545,9 +1545,40 @@ function spiderSense(x, y) {
 (function() {
   const cur = document.getElementById('site-cursor');
   if (!cur || !matchMedia('(pointer:fine)').matches) return;
+
+  /* Movement/rotation physics ported from the Originkit "Spin Cursor"
+     component (https://www.originkit.dev/components/spin-cursor) — the
+     exponential follow, the velocity smoothing, the direction-facing
+     rotation (shortest-arc, only once speed clears the jitter floor),
+     and the speed-based stretch/squash are the original's rAF loop,
+     unchanged. Retargeted only: instead of driving its own frame-scoped
+     arrow and hiding the native cursor within that frame, it drives
+     this page's existing #site-cursor element, which already owns
+     page-wide native-cursor-hiding via .pf-cursor-on — the site's own
+     arrow artwork and press-dip (.pressing) are kept as they were. The
+     component's own cursorSize/press-dip scale factor is left out of
+     the transform since this cursor is already sized via its SVG's own
+     width/height and already has a separate press effect. */
+  const FOLLOW_TAU = 0.02;
+  const VELOCITY_TAU = 0.05;
+  const ARROW_REST = Math.atan2(-15, -12);
+  function angleDelta(from, to) {
+    let d = (to - from) % (Math.PI * 2);
+    if (d > Math.PI) d -= Math.PI * 2;
+    if (d < -Math.PI) d += Math.PI * 2;
+    return d;
+  }
+
+  let targetX = -9999, targetY = -9999;
+  let x = targetX, y = targetY;
+  let vx = 0, vy = 0, angle = 0, seen = false;
+  let last = performance.now();
+
   document.addEventListener('mousemove', e => {
     document.documentElement.classList.add('pf-cursor-on');
-    cur.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
+    targetX = e.clientX;
+    targetY = e.clientY;
+    if (!seen) { x = targetX; y = targetY; seen = true; }
     cur.style.opacity = '1';
   });
   document.addEventListener('mouseleave', () => {
@@ -1564,6 +1595,38 @@ function spiderSense(x, y) {
     if (!e.target.closest('#sound-toggle-btn') && window._playWebShot) window._playWebShot();
   });
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
+
+  function frame(now) {
+    // Clamp dt so a backgrounded tab does not fling the cursor.
+    const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+    last = now;
+
+    const followEase = 1 - Math.exp(-dt / FOLLOW_TAU);
+    const prevX = x, prevY = y;
+    x += (targetX - x) * followEase;
+    y += (targetY - y) * followEase;
+
+    if (dt > 0) {
+      const vEase = 1 - Math.exp(-dt / VELOCITY_TAU);
+      vx += ((x - prevX) / dt - vx) * vEase;
+      vy += ((y - prevY) / dt - vy) * vEase;
+    }
+
+    const speed = Math.hypot(vx, vy);
+    if (speed > 40) {
+      const target = Math.atan2(vy, vx) - ARROW_REST;
+      angle += angleDelta(angle, target) * (1 - Math.exp(-dt / 0.06));
+    }
+
+    const stretch = 1 + Math.min(speed / 3000, 0.35);
+    const squash = 1 / Math.sqrt(stretch);
+
+    if (seen) {
+      cur.style.transform = `translate(${x}px, ${y}px) rotate(${angle}rad) scale(${squash}, ${stretch})`;
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
 })();
 
 /* ─── Web-shooter sound — original mp3 embedded as base64 (no network request, IDM cannot grab it) ── */
