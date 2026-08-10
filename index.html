@@ -1071,7 +1071,9 @@
     #font-picker-close { display:none; }
 
     /* ─────────────────── CUSTOM CURSOR ─────────────────── */
-    #site-cursor { position:fixed; top:0; left:0; pointer-events:none; z-index:99999; display:none; }
+    /* origin pinned to the arrow tip so rotate()/scale() spin around the
+       real pointer position instead of the middle of the 28x33 box */
+    #site-cursor { position:fixed; top:0; left:0; pointer-events:none; z-index:99999; display:none; transform-origin:0 0; }
     @media (pointer:fine) {
       .pf-cursor-on * { cursor: none !important; }
       #site-cursor {
@@ -1548,10 +1550,13 @@ function spiderSense(x, y) {
 
   /* Movement/rotation physics ported from the Originkit "Spin Cursor"
      component (https://www.originkit.dev/components/spin-cursor) — the
-     exponential follow, the velocity smoothing, the direction-facing
-     rotation (shortest-arc, only once speed clears the jitter floor),
-     and the speed-based stretch/squash are the original's rAF loop,
-     unchanged. Retargeted only: instead of driving its own frame-scoped
+     velocity smoothing, the direction-facing rotation (shortest-arc,
+     only once speed clears the jitter floor), and the speed-based
+     stretch/squash are the original's rAF loop, unchanged. The
+     component's exponential position follow (FOLLOW_TAU) was dropped:
+     it left the drawn arrow trailing behind the real pointer, so the
+     tip did not sit on the point being clicked. Position is now exact
+     and only the rotation/stretch are eased. Retargeted only: instead of driving its own frame-scoped
      arrow and hiding the native cursor within that frame, it drives
      this page's existing #site-cursor element, which already owns
      page-wide native-cursor-hiding via .pf-cursor-on — the site's own
@@ -1559,7 +1564,6 @@ function spiderSense(x, y) {
      component's own cursorSize/press-dip scale factor is left out of
      the transform since this cursor is already sized via its SVG's own
      width/height and already has a separate press effect. */
-  const FOLLOW_TAU = 0.02;
   const VELOCITY_TAU = 0.05;
   const ARROW_REST = Math.atan2(-15, -12);
   function angleDelta(from, to) {
@@ -1601,10 +1605,12 @@ function spiderSense(x, y) {
     const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
     last = now;
 
-    const followEase = 1 - Math.exp(-dt / FOLLOW_TAU);
     const prevX = x, prevY = y;
-    x += (targetX - x) * followEase;
-    y += (targetY - y) * followEase;
+    // Position tracks the pointer exactly: the arrow tip has to sit on the
+    // real click point. The smoothed velocity below still drives the
+    // rotation and the stretch, so the spin survives without the lag.
+    x = targetX;
+    y = targetY;
 
     if (dt > 0) {
       const vEase = 1 - Math.exp(-dt / VELOCITY_TAU);
