@@ -920,6 +920,11 @@
     }
     #cosmic-orb canvas { display:block; width:100%; height:100%; border-radius:50%; }
 
+    /* Emoji Burst (Originkit) — nav slot; the component's own container
+       is sized much larger and centered on this via absolute positioning
+       so the burst has room to fly, without disturbing the nav's flex row. */
+    #emojiburst-mount { position:relative; width:25px; height:25px; flex:0 0 auto; }
+
     .nav-btn {
       position:relative;
       background:none; border:none; cursor:pointer;
@@ -1382,6 +1387,8 @@
     <line x1="20" y1="9" x2="14" y2="15"/>
   </svg>
   </button>
+  <span class="nav-sep"></span>
+  <div id="emojiburst-mount" aria-hidden="false"></div>
 </nav>
 
 <!-- hidden file input -->
@@ -4940,6 +4947,210 @@ void main() {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   };
   requestAnimationFrame(tick);
+})();
+</script>
+
+<script>
+/* ── Emoji Burst (Originkit) ──────────────────────────────
+   Ported from the Originkit "Emoji Burst" React component
+   (https://www.originkit.dev/components/emojiburst). The particle
+   physics (step/burst), the shake nudge, and every tuning constant are
+   the original's, unchanged — only the React shell (useRef / useEffect /
+   useCallback / JSX) became plain DOM calls + closures, since this page
+   has no build step. Props are supplied via CONFIG below in place of
+   JSX props; the only values tuned away from the component's own
+   defaults are the ones needed to fit a 25px nav icon (label, padding,
+   colors, position/size, autoBurst off) — burstCount/power/spread/
+   gravity/emojiSize/emojis keep the original defaults exactly. */
+(function () {
+  const mount = document.getElementById('emojiburst-mount');
+  if (!mount) return;
+
+  // Extract "r,g,b" from a hex or rgb(a) color string (alpha ignored).
+  function toRGB(c) {
+    if (!c) return "0,0,0";
+    const s = c.trim();
+    const m = s.match(/rgba?\(([^)]+)\)/i);
+    if (m) {
+      const p = m[1].split(",").map((x) => x.trim());
+      return `${p[0]},${p[1]},${p[2]}`;
+    }
+    let h = s.replace("#", "");
+    if (h.length === 3) h = h.split("").map((x) => x + x).join("");
+    if (h.length >= 6) {
+      return `${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)}`;
+    }
+    return "0,0,0";
+  }
+
+  const CONFIG = {
+    label: "🎉",
+    paddingX: 0,
+    paddingY: 0,
+    emojis: "🎉,✨,😄,🔥,💥,⭐,💖,🤩,👍,🥳,🎊,😎",
+    burstCount: 16,
+    power: 12,
+    spread: 55,
+    gravity: 4,
+    emojiSize: 20,
+    objectColor: "transparent",
+    textColor: "#bbb",
+    radius: 20,
+    shakeIntensity: 4,
+    shadowEnabled: false,
+    shadowIntensity: 5,
+    shadowOpacity: 50,
+    shadowColor: "rgba(0,0,0,0.25)",
+    autoBurst: false,
+    autoBurstInterval: 2.2,
+  };
+
+  // Gravity 1–10 → physics value.
+  const gravityVal = CONFIG.gravity * 0.15;
+  // Radius 0–20 → px: 0 boxy, 20 fully rounded (pill).
+  const radiusPx = (Math.max(0, Math.min(20, CONFIG.radius)) / 20) * 30;
+
+  // container (240x240, centered on the 25px nav slot, overflow visible
+  // so the burst has room) → layer (particle canvas) → object (button)
+  const container = document.createElement('div');
+  container.style.cssText = `
+    position:absolute; left:50%; top:50%; width:240px; height:240px;
+    transform:translate(-50%,-50%); display:flex; align-items:center;
+    justify-content:center; overflow:visible; pointer-events:none;
+  `;
+
+  const layer = document.createElement('div');
+  layer.setAttribute('aria-hidden', 'true');
+  layer.style.cssText = 'position:absolute; inset:0; z-index:3; pointer-events:none;';
+
+  const obj = document.createElement('button');
+  obj.type = 'button';
+  obj.className = 'nav-btn';
+  obj.setAttribute('aria-label', 'Emoji Burst');
+  obj.style.cssText = `
+    position:relative; z-index:2; display:inline-flex; align-items:center;
+    justify-content:center; gap:8px; width:25px; height:25px;
+    padding:${CONFIG.paddingY}px ${CONFIG.paddingX}px; border:none;
+    border-radius:${radiusPx}px; background:${CONFIG.objectColor};
+    color:${CONFIG.textColor}; cursor:pointer; font-size:15px; line-height:1;
+    letter-spacing:-0.01em; white-space:nowrap; pointer-events:auto;
+    box-shadow:${CONFIG.shadowEnabled
+      ? `0px ${CONFIG.shadowIntensity * 1.5}px ${CONFIG.shadowIntensity * 2}px rgba(${toRGB(CONFIG.shadowColor)}, ${(Math.max(0, Math.min(100, CONFIG.shadowOpacity)) / 100).toFixed(2)})`
+      : 'none'};
+    touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+  `;
+  obj.textContent = CONFIG.label;
+  const navTip = document.createElement('span');
+  navTip.className = 'nav-tip';
+  navTip.textContent = 'Confetti';
+  obj.appendChild(navTip);
+
+  container.appendChild(layer);
+  container.appendChild(obj);
+  mount.appendChild(container);
+
+  const particles = [];
+  let rafId = 0;
+  let lastTs = 0;
+
+  function step(ts) {
+    let dt = lastTs ? (ts - lastTs) / 16.6667 : 1;
+    lastTs = ts;
+    if (dt > 3) dt = 3;
+    const H = container.clientHeight;
+    const W = container.clientWidth;
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.vy += gravityVal * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.rot += p.vrot * dt;
+      // No walls/floor — particles fly out freely.
+      p.life -= dt;
+      if (p.life <= 0 || p.y > H + p.size * 2.5 || p.x < -p.size * 3 || p.x > W + p.size * 3) {
+        p.el.remove();
+        particles.splice(i, 1);
+        continue;
+      }
+      const fade = p.life < 22 ? Math.max(0, p.life / 22) : 1;
+      p.el.style.opacity = String(fade);
+      p.el.style.transform = `translate(${p.x}px, ${p.y}px) rotate(${p.rot}deg)`;
+    }
+    if (particles.length > 0) {
+      rafId = requestAnimationFrame(step);
+    } else {
+      rafId = 0;
+      lastTs = 0;
+    }
+  }
+
+  function burst() {
+    const list = CONFIG.emojis.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
+    const safe = list.length ? list : ["🎉"];
+
+    // Origin = centre of the nudged object, relative to the container.
+    const cr = container.getBoundingClientRect();
+    const or = obj.getBoundingClientRect();
+    const ox = or.left - cr.left + or.width / 2;
+    const oy = or.top - cr.top + or.height / 2;
+
+    // The "nudge": quick shake of the object.
+    if (typeof obj.animate === 'function') {
+      const s = CONFIG.shakeIntensity;
+      obj.animate([
+        { transform: 'translate(0px, 0px) rotate(0deg)' },
+        { transform: `translate(${s}px, ${-s * 0.6}px) rotate(-2.5deg)` },
+        { transform: `translate(${-s}px, ${s * 0.3}px) rotate(2.5deg)` },
+        { transform: `translate(${s * 0.5}px, 0px) rotate(-1deg)` },
+        { transform: 'translate(0px, 0px) rotate(0deg)' },
+      ], { duration: 260, easing: 'cubic-bezier(.36,.07,.19,.97)' });
+    }
+
+    const MAX = 140;
+    const size = CONFIG.emojiSize;
+    for (let k = 0; k < CONFIG.burstCount; k++) {
+      if (particles.length >= MAX) break;
+      const el = document.createElement('span');
+      el.textContent = safe[(Math.random() * safe.length) | 0];
+      el.style.position = 'absolute';
+      el.style.left = '0px';
+      el.style.top = '0px';
+      el.style.fontSize = `${size}px`;
+      el.style.lineHeight = '1';
+      el.style.willChange = 'transform, opacity';
+      el.style.pointerEvents = 'none';
+      el.style.userSelect = 'none';
+      el.setAttribute('aria-hidden', 'true');
+      layer.appendChild(el);
+      // Angle biased straight up (-90°) with random left/right spread.
+      const ang = ((-90 + (Math.random() * 2 - 1) * CONFIG.spread) * Math.PI) / 180;
+      const speed = CONFIG.power * (0.65 + Math.random() * 0.8);
+      particles.push({
+        el,
+        x: ox - size / 2,
+        y: oy - size / 2,
+        vx: Math.cos(ang) * speed,
+        vy: Math.sin(ang) * speed,
+        rot: Math.random() * 360,
+        vrot: (Math.random() * 2 - 1) * 14,
+        size,
+        bounces: 2,
+        life: 260,
+      });
+    }
+    if (!rafId) {
+      lastTs = 0;
+      rafId = requestAnimationFrame(step);
+    }
+  }
+
+  obj.addEventListener('pointerdown', burst);
+
+  // Optional auto-burst loop for demos / showcase pages (off by default here).
+  if (CONFIG.autoBurst) {
+    const ms = Math.max(0.3, CONFIG.autoBurstInterval) * 1000;
+    setInterval(burst, ms);
+  }
 })();
 </script>
 </body>
