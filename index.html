@@ -4958,10 +4958,11 @@ void main() {
    the original's, unchanged — only the React shell (useRef / useEffect /
    useCallback / JSX) became plain DOM calls + closures, since this page
    has no build step. Props are supplied via CONFIG below in place of
-   JSX props; the only values tuned away from the component's own
-   defaults are the ones needed to fit a 25px nav icon (label, padding,
-   colors, position/size, autoBurst off) — burstCount/power/spread/
-   gravity/emojiSize/emojis keep the original defaults exactly. */
+   JSX props. label/emojis use the spider/web preset pulled from the
+   Originkit MCP itself (tweaks: label "🕷️", emojis "🕷️,🕸️,🕷️,🕸️,🕷️,🕸️");
+   padding/colors/position/size/autoBurst are tuned to fit a 25px nav
+   icon; burstCount/power/spread/gravity/emojiSize keep the component's
+   own defaults exactly. */
 (function () {
   const mount = document.getElementById('emojiburst-mount');
   if (!mount) return;
@@ -4984,10 +4985,10 @@ void main() {
   }
 
   const CONFIG = {
-    label: "🎉",
+    label: "🕷️",
     paddingX: 0,
     paddingY: 0,
-    emojis: "🎉,✨,😄,🔥,💥,⭐,💖,🤩,👍,🥳,🎊,😎",
+    emojis: "🕷️,🕸️,🕷️,🕸️,🕷️,🕸️",
     burstCount: 16,
     power: 12,
     spread: 55,
@@ -5042,7 +5043,7 @@ void main() {
   obj.textContent = CONFIG.label;
   const navTip = document.createElement('span');
   navTip.className = 'nav-tip';
-  navTip.textContent = 'Confetti';
+  navTip.textContent = 'Spider Burst';
   obj.appendChild(navTip);
 
   container.appendChild(layer);
