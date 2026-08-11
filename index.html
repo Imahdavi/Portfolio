@@ -1696,13 +1696,22 @@ function spiderSense(x, y) {
 })();
 
 /* ─── Mobile touch: web animation + sound ───────────────── */
-document.addEventListener('touchstart', function(e) {
-  if (typeof editMode !== 'undefined' && editMode) return;
-  if (e.target.closest('#sound-toggle-btn')) return;
-  var t = e.changedTouches[0];
-  spiderSense(t.clientX, t.clientY);
-  if (window._playWebShot) window._playWebShot();
-}, {passive: true});
+(function() {
+  var stx = 0, sty = 0;
+  document.addEventListener('touchstart', function(e) {
+    var t = e.touches[0];
+    stx = t.clientX; sty = t.clientY;
+  }, {passive: true});
+  document.addEventListener('touchend', function(e) {
+    if (typeof editMode !== 'undefined' && editMode) return;
+    if (e.target.closest('#sound-toggle-btn')) return;
+    var t = e.changedTouches[0];
+    var dx = t.clientX - stx, dy = t.clientY - sty;
+    if (dx * dx + dy * dy > 12 * 12) return; // was a scroll, not a tap
+    spiderSense(t.clientX, t.clientY);
+    if (window._playWebShot) window._playWebShot();
+  }, {passive: true});
+})();
 
 /* ─── Sound toggle ───────────────────────────────────────── */
 function toggleWebSound() {
