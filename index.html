@@ -437,6 +437,10 @@
       padding:2px 8px; cursor:text; min-width:30px;
     }
     #view-home.home-edit .profile-age { display:inline-block; }
+    #view-home.home-edit .contact-lbl {
+      outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px;
+      padding:2px 8px; cursor:text; min-width:16px;
+    }
     #view-home.home-edit .sec-label {
       display:inline-block;
       outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px;
@@ -1124,7 +1128,7 @@
       </div>
     </div>
     <div class="contact-row">
-      <span class="contact-lbl">Contact me:</span>
+      <span class="contact-lbl" id="contactLblBefore">Contact me:</span>
           <a class="pill" id="link-linkedin" href="https://linkedin.com/in/imahdavi" target="_blank">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M11.1117 0H0.885937C0.396094 0 0 0.386719 0 0.864844V11.1328C0 11.6109 0.396094 12 0.885937 12H11.1117C11.6016 12 12 11.6109 12 11.1352V0.864844C12 0.386719 11.6016 0 11.1117 0ZM3.56016 10.2258H1.77891V4.49766H3.56016V10.2258ZM2.66953 3.71719C2.09766 3.71719 1.63594 3.25547 1.63594 2.68594C1.63594 2.11641 2.09766 1.65469 2.66953 1.65469C3.23906 1.65469 3.70078 2.11641 3.70078 2.68594C3.70078 3.25312 3.23906 3.71719 2.66953 3.71719ZM10.2258 10.2258H8.44687V7.44141C8.44687 6.77813 8.43516 5.92266 7.52109 5.92266C6.59531 5.92266 6.45469 6.64688 6.45469 7.39453V10.2258H4.67813V4.49766H6.38437V5.28047H6.40781C6.64453 4.83047 7.22578 4.35469 8.09063 4.35469C9.89297 4.35469 10.2258 5.54063 10.2258 7.08281V10.2258V10.2258Z"/></svg>
           </a>
@@ -1141,7 +1145,7 @@
           <a class="pill" id="link-twitter" href="https://x.com/imahdvi" target="_blank">
             <svg width="11" height="9.94298" viewBox="0 0 11 9.94298" fill="none"><path d="M8.66314 0H10.3499L6.66486 4.21175L11 9.94298H7.60562L4.94702 6.46702L1.90497 9.94298H0.217216L4.15872 5.43805L0 0H3.48055L5.8837 3.17717L8.66314 0ZM8.07115 8.93339H9.00579L2.9727 0.956566H1.96973L8.07115 8.93339Z"/></svg>
           </a>
-          <span class="contact-lbl">or leave a</span>
+          <span class="contact-lbl" id="contactLblAfter">or leave a</span>
           <button class="nav-btn" onclick="goView('view-soon',document.getElementById('nb-soon'))">
             <span class="nav-tip">Note</span>
             <svg viewBox="0 0 24 24" fill="none">
@@ -2449,6 +2453,8 @@ async function loadSettings() {
         document.querySelector('.pbc-avatar img').src = s.profile.photo_url;
         localStorage.setItem('pf_avatar', s.profile.photo_url);
       }
+      if (s.profile.contactLabel) document.getElementById('contactLblBefore').textContent = s.profile.contactLabel;
+      if (s.profile.noteLabel)    document.getElementById('contactLblAfter').textContent  = s.profile.noteLabel;
     }
     revealProfileName();
 
@@ -3052,6 +3058,8 @@ function updateHomeEditUI() {
     document.querySelector('.profile-name'),
     document.querySelector('.profile-role'),
     document.querySelector('.profile-age'),
+    document.getElementById('contactLblBefore'),
+    document.getElementById('contactLblAfter'),
   ];
   homeEl.querySelectorAll('.sec-label, .proj-title, .proj-sub').forEach(el => editables.push(el));
 
@@ -3242,6 +3250,11 @@ function saveHomeEdits() {
   if (nameEl) _cachedSettings.profile.name  = nameEl.textContent.trim();
   if (roleEl) _cachedSettings.profile.title = roleEl.innerText.trim();
   if (ageEl)  _cachedSettings.profile.age   = ageEl.textContent.trim();
+
+  const contactLblBeforeEl = document.getElementById('contactLblBefore');
+  const contactLblAfterEl  = document.getElementById('contactLblAfter');
+  if (contactLblBeforeEl) _cachedSettings.profile.contactLabel = contactLblBeforeEl.textContent.trim();
+  if (contactLblAfterEl)  _cachedSettings.profile.noteLabel    = contactLblAfterEl.textContent.trim();
 
   // build a lookup of previously-saved thumbs so a render glitch can never wipe them
   const _prevThumbs = {};
