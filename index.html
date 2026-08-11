@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link id="gfonts-link" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <style>
     :root {
       --font-body: 'Inter', sans-serif;
@@ -273,12 +274,27 @@
     .exp-add-btn:hover { border-color:rgba(0,0,0,.3); color:#555; }
     .exp-add-btn.show { display:block; }
     .brand-grid-wrap { margin-top:36px; padding-top:28px; }
-    .brand-grid-label { font-size:16px; letter-spacing:.12em; text-transform:uppercase; color:#ccc; text-align:center; margin-bottom:22px; }
-    .brand-grid { display:flex; flex-wrap:wrap; gap:14px 18px; justify-content:center; align-items:center; }
-    .brand-cell { display:flex; align-items:center; justify-content:center; height:36px; }
-    .brand-logo { height:100%; width:auto; max-width:100px; object-fit:contain; filter:grayscale(1) opacity(.35); transition:filter .28s ease; }
+    .brand-grid-label { font-size:16px; letter-spacing:.12em; text-transform:uppercase; color:#ccc; text-align:center; margin-bottom:22px; position:relative; z-index:2; }
+    /* full-bleed: breaks out of .view's 22px side padding + reaches
+       further down than a normal in-flow block, so the tunnel reads as
+       an immersive section rather than a small boxed-in widget */
+    .brand-tunnel-frame {
+      position:relative; width:100vw; margin-left:calc(50% - 50vw);
+      height:70vh; min-height:420px;
+      overflow:hidden; background:#fff;
+    }
+    .brand-tunnel-frame canvas { display:block; width:100%; height:100%; }
+    /* the actual brand logos, sitting still and legible in the middle
+       of the frame while the tunnel animates around them */
+    .brand-tunnel-overlay {
+      position:absolute; inset:0; z-index:2;
+      display:flex; flex-wrap:wrap; align-content:center; justify-content:center;
+      gap:16px 22px; padding:0 40px; pointer-events:none;
+    }
+    .brand-cell { display:flex; align-items:center; justify-content:center; height:36px; pointer-events:auto; }
+    .brand-logo { height:100%; width:auto; max-width:100px; object-fit:contain; filter:grayscale(1) opacity(.45); transition:filter .28s ease; }
     .brand-logo:hover { filter:grayscale(0) opacity(1); }
-    .brand-text { font-size:13px; font-weight:600; color:rgba(0,0,0,.22); letter-spacing:-.01em; transition:color .28s; cursor:default; line-height:38px; }
+    .brand-text { font-size:13px; font-weight:600; color:rgba(0,0,0,.3); letter-spacing:-.01em; transition:color .28s; cursor:default; line-height:38px; pointer-events:auto; }
     .brand-text:hover { color:rgba(0,0,0,.82); }
 
     /* ─────────────────── SOON PLACEHOLDER ─────────────────── */
@@ -1170,7 +1186,9 @@
     <button id="exp-add-btn" class="exp-add-btn" onclick="addExpItem()">+ Add experience</button>
     <div class="brand-grid-wrap">
       <div class="brand-grid-label">trusted by</div>
-      <div class="brand-grid" id="brand-grid"></div>
+      <div class="brand-tunnel-frame" id="brand-tunnel-frame">
+        <div class="brand-tunnel-overlay" id="brand-tunnel-overlay"></div>
+      </div>
     </div>
   </div><!-- /view-exp -->
 
@@ -2534,33 +2552,438 @@ function renderWorkExp(items) {
     { name:'Irancell',    img:'/irancell-logo.svg', ch:62 },
   ];
 
-  const grid = document.getElementById('brand-grid');
-  if (!grid) return;
-  BRANDS.forEach(b => {
-    const cell = document.createElement('div');
-    cell.className = 'brand-cell';
-    if (b.ch) cell.style.height = b.ch+'px';
-    if (b.text) {
-      const el = document.createElement('span');
-      el.className = 'brand-text';
-      el.textContent = b.name;
-      cell.appendChild(el);
-    } else {
-      const img = document.createElement('img');
-      img.className = 'brand-logo';
-      img.alt = b.name;
-      img.title = b.name;
-      if (b.mw) img.style.maxWidth = b.mw+'px';
-      if (b.svg) {
-        img.src = su(b.svg);
+  // The actual, legible brand logos — same markup/behavior as the old
+  // static grid — sitting still in the middle of the tunnel frame
+  // while the tunnel itself animates as a full-page backdrop around it.
+  const overlay = document.getElementById('brand-tunnel-overlay');
+  if (overlay) {
+    BRANDS.forEach(b => {
+      const cell = document.createElement('div');
+      cell.className = 'brand-cell';
+      if (b.ch) cell.style.height = b.ch + 'px';
+      if (b.text) {
+        const el = document.createElement('span');
+        el.className = 'brand-text';
+        el.textContent = b.name;
+        cell.appendChild(el);
       } else {
-        img.src = b.img;
-        img.onerror = function(){ this.outerHTML='<span class="brand-text">'+b.name+'</span>'; };
+        const img = document.createElement('img');
+        img.className = 'brand-logo';
+        img.alt = b.name;
+        img.title = b.name;
+        if (b.mw) img.style.maxWidth = b.mw + 'px';
+        if (b.svg) {
+          img.src = su(b.svg);
+        } else {
+          img.src = b.img;
+          img.onerror = function () { this.outerHTML = '<span class="brand-text">' + b.name + '</span>'; };
+        }
+        cell.appendChild(img);
       }
-      cell.appendChild(img);
+      overlay.appendChild(cell);
+    });
+  }
+
+  /* ── Gallery Tunnel (Originkit) ────────────────────────
+     Ported from the Originkit "Gallery Tunnel" component
+     (https://www.originkit.dev/components/gallery-tunnel). The whole
+     three.js scene — segment/slot layout, the populate() slab dealing,
+     fog falloff, per-image cover-fit cropping, the recycle loop, and
+     the pointer press-to-boost + cursor pill — is the original's,
+     unchanged. Only the React shell (useRef/useEffect/useMemo/JSX)
+     became plain DOM calls + closures, since this page has no build
+     step (three.js loads from a CDN <script> tag, same as lottie
+     already does). The only customization is the `images` config:
+     instead of the component's own demo photography, it's fed this
+     page's own BRANDS logos — same array and su() data-URI helper the
+     static grid used — so the tunnel walls carry the "trusted by"
+     logos instead of stock photos. That's the ask, not a rewrite. */
+  const tunnelFrame = document.getElementById('brand-tunnel-frame');
+  if (tunnelFrame && typeof THREE !== 'undefined') (function () {
+    const DEFAULT_IMAGES = [
+      "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/f8b3688c-11d0-425c-0b6f-66f133322c00/w=800",
+      "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/c083d83a-f5a4-4434-989f-4eaa9bbe7500/w=800",
+      "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/12e8b0be-f114-4134-1ab7-53116bfc2800/w=800",
+      "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/b14ae2a2-1116-4a7f-0a18-1d74c4a46f00/w=800",
+      "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/babdb603-8b5b-4520-58d6-240a34463c00/w=800",
+    ];
+    const COMPONENT_DEFAULTS = {
+      background: "#000000",
+      lineColor: "#B0B0B0",
+      lineOpacity: 50,
+      colors: ["#FF6A00", "#AB54F7", "#EA3737", "#0072E3", "#00AA3C", "#FFB200"],
+      grid: 4,
+      cellMode: "stretched",
+      tunnelSize: 1,
+      speed: 100,
+      boost: 100,
+      fade: 100,
+      label: true,
+      labelText: "Press to Start",
+      labelFill: "#FFFFFF",
+      labelColor: "#000000",
+      labelFont: { fontFamily: "Inter", fontSize: "14px", fontWeight: 500 },
+    };
+
+    // Customization: brand logos in place of stock demo photos, and a
+    // label matching what the interaction actually does here.
+    const brandImages = BRANDS
+      .filter(b => !b.text)
+      .map(b => (b.svg ? su(b.svg) : b.img))
+      .filter(Boolean);
+    const props = Object.assign({}, COMPONENT_DEFAULTS, {
+      images: brandImages,
+      labelText: "Hold to speed up",
+      // No black box: white to match the page, with a dark (not the
+      // default light-grey) grid so the lines still read on white.
+      background: "#ffffff",
+      lineColor: "#1a1714",
+      lineOpacity: 22,
+    });
+
+    const TUNNEL_WIDTH = 2;
+    const TUNNEL_HEIGHT = 1.8;
+    const BASE_SEGMENT_DEPTH = 1;
+    const TUNNEL_LENGTH = 15;
+    const LINE_RADIUS = 0.003;
+    const SCROLL_TO_Z = 0.05;
+    const CAMERA_CHASE = 0.1;
+    const FADE_IN = 1;
+    const fogFarFor = (segCount, segDepth) => segCount * segDepth * 0.95;
+
+    const slideOf = (entry) => {
+      const raw = entry && entry.image != null ? entry.image : entry;
+      const url = typeof raw === "string" ? raw : (raw && raw.src) || "";
+      const y = entry && typeof entry.y === "number" ? entry.y : 50;
+      return { url, y };
+    };
+
+    const {
+      images, colors,
+      background, lineColor, lineOpacity, grid: gridDiv, cellMode,
+      tunnelSize, speed, boost, fade,
+      label, labelText, labelFill, labelColor, labelFont,
+    } = props;
+
+    const rawSlides = (images || []).map(slideOf).filter(s => s.url);
+    const slides = rawSlides.length ? rawSlides : DEFAULT_IMAGES.map(url => ({ url, y: 50 }));
+    const paletteList = (colors || []).filter(Boolean);
+    const palette = paletteList.length ? paletteList : COMPONENT_DEFAULTS.colors;
+
+    const cfg = { speed: Math.max(0, speed) / 100, boost: Math.max(0, boost) / 10 };
+
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'display:block; width:100%; height:100%;';
+    tunnelFrame.appendChild(canvas);
+    tunnelFrame.style.cursor = label ? 'none' : 'default';
+
+    let cursorEl = null;
+    if (label) {
+      cursorEl = document.createElement('div');
+      cursorEl.style.cssText = `
+        position:absolute; top:0; left:0; transform:translate(0%,-100%) scale(1);
+        pointer-events:none; opacity:0; background:${labelFill}; border-radius:9999px;
+        padding:10px 20px; transition:transform .1s ease, opacity .2s ease;
+        white-space:nowrap; user-select:none; color:${labelColor};
+        font-family:${labelFont.fontFamily}; font-size:${labelFont.fontSize}; font-weight:${labelFont.fontWeight};
+      `;
+      cursorEl.textContent = labelText;
+      tunnelFrame.appendChild(cursorEl);
     }
-    grid.appendChild(cell);
-  });
+
+    let pressed = false;
+    let alive = true;
+
+    const sizeUi = Math.max(1, Math.min(20, Math.round(tunnelSize)));
+    const sizeK = 1 + ((sizeUi - 1) * 2) / 19;
+
+    const rows = Math.max(1, Math.round(gridDiv));
+    let cols, colW, rowH, cellDepth, depthCells, segDepth, tunnelW, tunnelH;
+
+    if (cellMode === "square") {
+      const cell = (TUNNEL_HEIGHT * sizeK) / rows;
+      cols = Math.max(1, Math.round((TUNNEL_WIDTH * sizeK) / cell));
+      depthCells = Math.max(1, Math.round(BASE_SEGMENT_DEPTH / cell));
+      cellDepth = cell;
+      segDepth = depthCells * cell;
+      tunnelH = cell * rows;
+      tunnelW = cell * cols;
+      colW = cell;
+      rowH = cell;
+    } else {
+      cols = rows;
+      depthCells = 1;
+      segDepth = BASE_SEGMENT_DEPTH;
+      cellDepth = BASE_SEGMENT_DEPTH;
+      tunnelW = TUNNEL_WIDTH * sizeK;
+      tunnelH = TUNNEL_HEIGHT * sizeK;
+      colW = tunnelW / cols;
+      rowH = tunnelH / rows;
+    }
+
+    const segCount = Math.max(6, Math.round(TUNNEL_LENGTH / segDepth));
+
+    const perimeterCells = 2 * cols + 2 * rows;
+    const countMatched = Math.min(0.5, (2 * rows * cellDepth) / perimeterCells);
+    const fillChance = cellMode === "square" ? (countMatched + 0.5) / 2 : 0.5;
+    const fogFar = fogFarFor(segCount, segDepth);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(background);
+
+    const fogNear = Math.min(
+      fogFar * (1 - Math.min(100, Math.max(0, fade)) / 100),
+      fogFar - 0.01
+    );
+    scene.fog = new THREE.Fog(new THREE.Color(background), fogNear, fogFar);
+
+    const camera = new THREE.PerspectiveCamera(45, 1, 1, 1000);
+    camera.position.set(0, 0, 0);
+
+    const renderer = new THREE.WebGLRenderer({
+      canvas, antialias: true, alpha: false, powerPreference: "high-performance",
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+    const loader = new THREE.TextureLoader();
+    loader.setCrossOrigin("anonymous");
+
+    const lineMaterial = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(lineColor),
+      transparent: true,
+      opacity: Math.max(0, Math.min(100, lineOpacity)) / 100,
+    });
+
+    const hw = tunnelW / 2;
+    const hh = tunnelH / 2;
+
+    const geoFloor = new THREE.PlaneGeometry(colW, cellDepth);
+    const geoWall = new THREE.PlaneGeometry(cellDepth, rowH);
+
+    const railLength = segCount * segDepth + segDepth;
+    const geoTubeZ = new THREE.TubeGeometry(
+      new THREE.LineCurve3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -railLength)),
+      1, LINE_RADIUS, 8
+    );
+    const geoTubeX = new THREE.TubeGeometry(
+      new THREE.LineCurve3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(tunnelW, 0, 0)),
+      1, LINE_RADIUS, 8
+    );
+    const geoTubeY = new THREE.TubeGeometry(
+      new THREE.LineCurve3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, tunnelH, 0)),
+      1, LINE_RADIUS, 8
+    );
+
+    const colorMats = palette.map(hex => new THREE.MeshBasicMaterial({
+      color: new THREE.Color(hex), side: THREE.DoubleSide,
+    }));
+
+    const fading = [];
+    const imageMats = slides.map(({ url, y }) => {
+      const mat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, side: THREE.DoubleSide });
+      loader.load(
+        url,
+        (tex) => {
+          if (!alive) { tex.dispose(); return; }
+          tex.minFilter = THREE.LinearFilter;
+          tex.generateMipmaps = false;
+          tex.colorSpace = THREE.SRGBColorSpace;
+
+          const iw = (tex.image && tex.image.width) || 1;
+          const ih = (tex.image && tex.image.height) || 1;
+          const aspect = iw / ih;
+          if (aspect > 1) {
+            tex.repeat.set(1 / aspect, 1);
+            tex.offset.set((1 - 1 / aspect) / 2, 0);
+          } else {
+            const rY = aspect;
+            const anchor = Math.max(0, Math.min(100, y)) / 100;
+            tex.repeat.set(1, rY);
+            tex.offset.set(0, (1 - rY) * (1 - anchor));
+          }
+
+          mat.map = tex;
+          mat.needsUpdate = true;
+          fading.push(mat);
+        },
+        undefined,
+        () => {}
+      );
+      return mat;
+    });
+
+    let populateIndex = 0, colorIndex = 0, imageIndex = 0;
+
+    const tube = (geo, x, y, z) => {
+      const m = new THREE.Mesh(geo, lineMaterial);
+      m.position.set(x, y, z || 0);
+      return m;
+    };
+
+    const SLOTS = [];
+    for (let d = 0; d < depthCells; d++) {
+      const z = -(d + 0.5) * cellDepth;
+      for (let i = 0; i < cols; i++) {
+        const x = -hw + i * colW + colW / 2;
+        SLOTS.push({ geo: geoFloor, pos: new THREE.Vector3(x, -hh, z), rot: new THREE.Euler(-Math.PI / 2, 0, 0), d });
+        SLOTS.push({ geo: geoFloor, pos: new THREE.Vector3(x, hh, z), rot: new THREE.Euler(Math.PI / 2, 0, 0), d });
+      }
+      for (let i = 0; i < rows; i++) {
+        const y = -hh + i * rowH + rowH / 2;
+        SLOTS.push({ geo: geoWall, pos: new THREE.Vector3(-hw, y, z), rot: new THREE.Euler(0, Math.PI / 2, 0), d });
+        SLOTS.push({ geo: geoWall, pos: new THREE.Vector3(hw, y, z), rot: new THREE.Euler(0, -Math.PI / 2, 0), d });
+      }
+    }
+
+    function populate(group) {
+      const baseRow = populateIndex;
+      populateIndex += depthCells;
+      const slabs = group.userData.slabs;
+
+      for (let i = 0; i < slabs.length; i++) {
+        const slab = slabs[i];
+        const takesSlabs = (baseRow + SLOTS[i].d) % 2 === 0;
+        if (!takesSlabs || Math.random() > fillChance) {
+          slab.visible = false;
+          continue;
+        }
+        slab.visible = true;
+        if (Math.random() > 0.5) {
+          slab.material = colorMats[(5 * colorIndex) % colorMats.length];
+          colorIndex++;
+        } else {
+          slab.material = imageMats[(3 * imageIndex) % imageMats.length];
+          imageIndex++;
+        }
+      }
+    }
+
+    function createSegment(z) {
+      const group = new THREE.Group();
+      group.position.z = z;
+
+      for (let d = 0; d < depthCells; d++) {
+        const zz = -d * cellDepth;
+        group.add(tube(geoTubeX, -hw, -hh, zz));
+        group.add(tube(geoTubeX, -hw, hh, zz));
+        group.add(tube(geoTubeY, -hw, -hh, zz));
+        group.add(tube(geoTubeY, hw, -hh, zz));
+      }
+
+      const slabs = SLOTS.map(slot => {
+        const m = new THREE.Mesh(slot.geo, colorMats[0]);
+        m.position.copy(slot.pos);
+        m.rotation.copy(slot.rot);
+        m.visible = false;
+        group.add(m);
+        return m;
+      });
+      group.userData.slabs = slabs;
+
+      populate(group);
+      return group;
+    }
+
+    const rails = new THREE.Group();
+    for (let i = 0; i <= cols; i++) {
+      const x = -hw + i * colW;
+      rails.add(tube(geoTubeZ, x, -hh));
+      rails.add(tube(geoTubeZ, x, hh));
+    }
+    for (let i = 1; i < rows; i++) {
+      const y = -hh + i * rowH;
+      rails.add(tube(geoTubeZ, -hw, y));
+      rails.add(tube(geoTubeZ, hw, y));
+    }
+    scene.add(rails);
+
+    const segments = [];
+    for (let i = 0; i < segCount; i++) {
+      const g = createSegment(-i * segDepth);
+      scene.add(g);
+      segments.push(g);
+    }
+
+    const resize = () => {
+      const w = Math.max(1, tunnelFrame.clientWidth);
+      const h = Math.max(1, tunnelFrame.clientHeight);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h, false);
+    };
+    const ro = new ResizeObserver(resize);
+    ro.observe(tunnelFrame);
+    resize();
+
+    let scrollPos = 0, raf = 0, last = 0;
+
+    const animate = (now) => {
+      if (!alive) return;
+      raf = requestAnimationFrame(animate);
+      const dt = last ? Math.min((now - last) / 1000, 1 / 30) : 1 / 60;
+      last = now;
+
+      scrollPos += pressed ? cfg.boost : cfg.speed;
+
+      const want = -SCROLL_TO_Z * scrollPos;
+      camera.position.z += CAMERA_CHASE * (want - camera.position.z);
+
+      rails.position.z = camera.position.z;
+
+      const span = segCount * segDepth;
+      const z = camera.position.z;
+      for (const seg of segments) {
+        if (seg.position.z > z + segDepth) {
+          let min = 0;
+          for (const s of segments) min = Math.min(min, s.position.z);
+          seg.position.z = min - segDepth;
+          populate(seg);
+        } else if (seg.position.z < z - span - segDepth) {
+          let max = -999999;
+          for (const s of segments) max = Math.max(max, s.position.z);
+          seg.position.z = max + segDepth;
+          populate(seg);
+        }
+      }
+
+      for (let i = fading.length - 1; i >= 0; i--) {
+        const m = fading[i];
+        m.opacity = Math.min(1, m.opacity + dt / FADE_IN);
+        if (m.opacity >= 1) fading.splice(i, 1);
+      }
+
+      renderer.render(scene, camera);
+    };
+    raf = requestAnimationFrame(animate);
+
+    const onMove = (e) => {
+      if (!cursorEl) return;
+      const rect = tunnelFrame.getBoundingClientRect();
+      const sx = rect.width > 0 ? tunnelFrame.clientWidth / rect.width : 1;
+      const sy = rect.height > 0 ? tunnelFrame.clientHeight / rect.height : 1;
+      cursorEl.style.left = ((e.clientX - rect.left) * sx) + 'px';
+      cursorEl.style.top = ((e.clientY - rect.top) * sy) + 'px';
+    };
+    const onEnter = () => { if (cursorEl) cursorEl.style.opacity = '1'; };
+    const onLeave = () => {
+      pressed = false;
+      if (cursorEl) { cursorEl.style.opacity = '0'; cursorEl.style.transform = 'translate(0%, -100%) scale(1)'; }
+    };
+    const onDown = () => {
+      pressed = true;
+      if (cursorEl) cursorEl.style.transform = 'translate(0%, -100%) scale(0.85)';
+    };
+    const onUp = () => {
+      pressed = false;
+      if (cursorEl) cursorEl.style.transform = 'translate(0%, -100%) scale(1)';
+    };
+
+    tunnelFrame.addEventListener('pointermove', onMove);
+    tunnelFrame.addEventListener('pointerenter', onEnter);
+    tunnelFrame.addEventListener('pointerleave', onLeave);
+    tunnelFrame.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointerup', onUp);
+  })();
 })();
 
 function _makeSecDelBtn(label, grid) {
