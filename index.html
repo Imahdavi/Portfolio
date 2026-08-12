@@ -567,6 +567,34 @@
     .block-divider-star:hover .star-big   { transform:rotate(18deg); }
     .block-divider-star:hover .star-small { transform:rotate(-30deg); }
 
+    /* Magnetic Carousel block (Originkit trial) — caption reuses
+       .block-text as-is, same as every other text block in a board. */
+    .block-carousel { width:100%; display:flex; align-items:center; justify-content:center; overflow-x:auto; overflow-y:visible; -webkit-overflow-scrolling:touch; margin-bottom:8px; }
+    .mc-item-del {
+      display:none; position:absolute; top:5px; right:5px; z-index:4;
+      width:18px; height:18px; border-radius:50%;
+      background:#ff4444; border:none; cursor:pointer;
+      color:#fff; font-size:12px; line-height:1;
+      align-items:center; justify-content:center;
+    }
+    .edit-on .mc-item-del { display:flex; }
+    .mc-add-tile {
+      display:none; flex:none; align-items:center; justify-content:center;
+      border:1.5px dashed #bbb; border-radius:10px; background:transparent;
+      color:#999; cursor:pointer; transition:border-color .2s, color .2s;
+    }
+    .edit-on .mc-add-tile { display:flex; }
+    .mc-add-tile:hover { border-color:#555; color:#333; }
+    .mc-add-tile svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+    .mc-empty-prompt {
+      display:none; width:100%; align-items:center; justify-content:center;
+      padding:28px 10px; border-radius:12px; border:1.5px dashed #bbb;
+      background:transparent; cursor:pointer; font-size:13px; font-weight:500;
+      color:#666; transition:border-color .2s, color .2s, background .2s;
+    }
+    .edit-on .mc-empty-prompt { display:flex; }
+    .mc-empty-prompt:hover { border-color:#555; color:#333; background:rgba(0,0,0,.04); }
+
     /* ── Format toolbar (bold / italic) ── */
     #fmt-toolbar {
       position:fixed; z-index:9999;
@@ -1307,6 +1335,10 @@
       <button class="add-btn" onclick="addStarDivider()">
         <svg viewBox="0 0 24 24"><path d="M12 2L13.5 9.5 20 8l-5.5 3.5L18 18l-6-3.5L6 18l3.5-6.5L4 8l6.5 1.5Z" fill="currentColor"/></svg>
         Add star divider
+      </button>
+      <button class="add-btn" onclick="addMagneticCarousel()" title="Trial: Originkit Magnetic Carousel">
+        <svg viewBox="0 0 24 24"><rect x="2" y="6" width="5" height="12" rx="1.5"/><rect x="9.5" y="4" width="5" height="16" rx="1.5"/><rect x="17" y="6" width="5" height="12" rx="1.5"/></svg>
+        Add carousel (test)
       </button>
     </div>
   </div><!-- /view-project -->
@@ -3440,6 +3472,21 @@ function makeBlockEl(block, proj) {
     }
     dv.innerHTML = block.content;
     body.appendChild(dv);
+  } else if (block.type === 'carousel') {
+    // Originkit Magnetic Carousel, trial block type — see
+    // buildMagneticCarousel()/renderCarouselBlock() near addMagneticCarousel().
+    if (!block.items) block.items = [];
+    const mc = document.createElement('div');
+    mc.className = 'block-carousel';
+
+    const caption = document.createElement('div');
+    caption.className = 'block-text mc-block-caption';
+    caption.contentEditable = editMode ? 'true' : 'false';
+    caption.dataset.ph = 'Caption for the focused image…';
+
+    body.appendChild(mc);
+    body.appendChild(caption);
+    renderCarouselBlock(block, mc, caption);
   } else {
     // image or video — shared media-wrap with overlay controls
     mw = document.createElement('div');
@@ -3949,6 +3996,271 @@ function onDragEnd(e) {
 
   dropTarget = null; dropSide = null; dragEl = null;
   saveProject(activeKey);
+}
+
+/* ── Magnetic Carousel (Originkit) — trial block type ──────
+   Ported from the Originkit "Magnetic Carousel" React component
+   (https://www.originkit.dev/components/magneticcarousel). The magnetic
+   hover-grow (smoothstep falloff over `influence`, a continuous
+   lerp-toward-target rAF loop instead of a CSS transition, so growth
+   tracks the cursor smoothly) and the click-to-open-as-a-big-square
+   -with-blurred-neighbours-and-backdrop-close interaction — including
+   sizeFor() and the Transition-object parsing — are the original's,
+   unchanged. Everything else here (the empty-state upload prompt, the
+   per-image delete button, the trailing "+" tile, and the caption pair)
+   is this page's own wiring: a carousel block stores its own
+   `items: [{src, caption}]`, and the caption — the site's own
+   .block-text, same as every other text block in a board — tracks
+   whichever bar currently has the highest magnify factor, unless the
+   caption is actively focused for editing (then it holds still so
+   hovering elsewhere doesn't yank text out from under you mid-type). */
+const MC_EASE_PRESETS = { linear:'linear', easeIn:'ease-in', easeOut:'ease-out', easeInOut:'ease-in-out' };
+function mcParseTransition(t) {
+  const dur = Math.max(0.05, (t && t.duration) || 0.5);
+  let ease = 'cubic-bezier(0.44, 0, 0.56, 1)';
+  if (t && Array.isArray(t.ease) && t.ease.length === 4) ease = `cubic-bezier(${t.ease.join(', ')})`;
+  else if (t && typeof t.ease === 'string' && MC_EASE_PRESETS[t.ease]) ease = MC_EASE_PRESETS[t.ease];
+  else if (t && t.type === 'spring') ease = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
+  return { dur, ease };
+}
+
+function addMagneticCarousel() {
+  const proj = PROJECTS[activeKey];
+  const b = { id: uid(), type: 'carousel', items: [] };
+  proj.blocks.push(b);
+  const list = document.getElementById('block-list');
+  const el = makeBlockEl(b, proj);
+  el.classList.add('block-enter');
+  list.appendChild(el);
+  requestAnimationFrame(() => setBlockRowSpan(el));
+  saveProject(activeKey);
+}
+
+function _mcFilePicker(onFiles) {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+  inp.onchange = () => { const files = [...inp.files]; if (files.length) onFiles(files); };
+  inp.click();
+}
+
+// Uploads files straight into an existing carousel block's items array
+// (unlike uploadFiles(), which creates one new block per file).
+async function mcUploadInto(block, files, onDone) {
+  for (const file of files) {
+    if (!file.type.startsWith('image')) continue; // bars are background-image only, like the component's own DEFAULT_IMAGES
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `uploads/${Date.now()}_${uid()}.${ext}`;
+    try {
+      const url = await tusUpload(file, SB_MEDIA_BUCKET, path, () => {});
+      block.items.push({ src: url, caption: '' });
+    } catch (e) {
+      showUploadToast('Upload failed: ' + e.message, true);
+    }
+  }
+  if (activeKey) await saveProject(activeKey);
+  onDone();
+}
+
+function renderCarouselBlock(block, mount, captionEl) {
+  mount.innerHTML = '';
+
+  if (!block.items || !block.items.length) {
+    if (captionEl) captionEl.style.display = 'none';
+    const prompt = document.createElement('button');
+    prompt.type = 'button';
+    prompt.className = 'mc-empty-prompt';
+    prompt.textContent = '+ Add images for the carousel';
+    prompt.onclick = () => _mcFilePicker(files => {
+      prompt.disabled = true;
+      prompt.textContent = 'Uploading…';
+      mcUploadInto(block, files, () => renderCarouselBlock(block, mount, captionEl));
+    });
+    mount.appendChild(prompt);
+    return;
+  }
+  if (captionEl) captionEl.style.display = '';
+
+  const items = block.items;
+  const count = items.length;
+
+  const collapsedWidth = 84, hoverWidth = 132, collapsedHeight = 210, hoverHeight = 258;
+  const openSize = 300, gap = 10, influence = 130, blur = 4;
+  const transition = { type:'tween', duration:0.3, delay:0, ease:'easeInOut' };
+  const { dur, ease } = mcParseTransition(transition);
+  const openEase = `width ${dur}s ${ease}, height ${dur}s ${ease}, filter ${dur}s ${ease}, opacity ${dur}s ${ease}`;
+
+  mount.style.height = hoverHeight + 'px';
+  mount.style.gap = gap + 'px';
+
+  // `stage` holds ONLY the backdrop + item bars, matching the ported
+  // component's own container shape exactly — setTargetFromCursor()'s
+  // slot-center math assumes stage.getBoundingClientRect().width is
+  // just the items, so the "+" tile is appended to `mount` instead,
+  // as stage's sibling, not its child.
+  const stage = document.createElement('div');
+  stage.style.cssText = `flex:none;display:flex;align-items:center;justify-content:center;gap:${gap}px;position:relative;overflow:visible;`;
+  mount.appendChild(stage);
+
+  // Plain <button>, not <div> — the block's own free-drag wiring already
+  // excludes `button` from starting a whole-block drag, so bars stay
+  // clickable without extra changes to that shared code.
+  const backdrop = document.createElement('button');
+  backdrop.type = 'button';
+  backdrop.style.cssText = 'position:absolute;inset:0;z-index:1;pointer-events:none;border:none;padding:0;background:none;cursor:default;';
+  stage.appendChild(backdrop);
+
+  const targets = items.map(() => 0);
+  const cur = items.map(() => 0);
+  let openIdx = null;
+  let closing = false;
+  let rafId = 0;
+  let closeTimer = 0;
+  let shownIdx = 0;
+
+  function captionFocused() { return captionEl && document.activeElement === captionEl; }
+  function updateCaption(i) {
+    if (captionFocused()) return;
+    shownIdx = i;
+    if (captionEl) captionEl.innerHTML = (items[i] && items[i].caption) || '';
+  }
+
+  const bars = items.map((item, i) => {
+    const bar = document.createElement('button');
+    bar.type = 'button';
+    bar.style.cssText = 'flex:none;overflow:hidden;position:relative;will-change:width,height;border-radius:10px;background-size:cover;background-position:center;background-repeat:no-repeat;border:none;padding:0;cursor:pointer;';
+    if (item.src) { bar.style.backgroundImage = `url(${item.src})`; bar.style.backgroundColor = 'transparent'; }
+    else bar.style.backgroundColor = `hsl(${(i * 360) / count}, 70%, 58%)`;
+    bar.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (openIdx === i) close(); else openBar(i);
+    });
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'mc-item-del';
+    del.textContent = '×';
+    del.onclick = (e) => {
+      e.stopPropagation();
+      items.splice(i, 1);
+      saveProject(activeKey);
+      renderCarouselBlock(block, mount, captionEl);
+    };
+    bar.appendChild(del);
+
+    stage.appendChild(bar);
+    return bar;
+  });
+
+  const addTile = document.createElement('button');
+  addTile.type = 'button';
+  addTile.className = 'mc-add-tile';
+  addTile.style.width = collapsedWidth + 'px';
+  addTile.style.height = collapsedHeight + 'px';
+  addTile.innerHTML = '<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+  addTile.onclick = (e) => {
+    e.stopPropagation();
+    _mcFilePicker(files => mcUploadInto(block, files, () => renderCarouselBlock(block, mount, captionEl)));
+  };
+  mount.appendChild(addTile);
+
+  updateCaption(0);
+
+  function sizeFor(i) {
+    if (openIdx !== null) {
+      return i === openIdx
+        ? { width: openSize, height: openSize }
+        : { width: collapsedWidth, height: collapsedHeight };
+    }
+    const f = cur[i] || 0;
+    return {
+      width: collapsedWidth + (hoverWidth - collapsedWidth) * f,
+      height: collapsedHeight + (hoverHeight - collapsedHeight) * f,
+    };
+  }
+
+  function render() {
+    let peak = -1, peakVal = 0.15;
+    bars.forEach((bar, i) => {
+      const { width, height } = sizeFor(i);
+      bar.style.width = width + 'px';
+      bar.style.height = height + 'px';
+      bar.style.transition = (openIdx !== null || closing) ? openEase : 'none';
+      bar.style.zIndex = openIdx === i ? 3 : 2;
+      const blurred = openIdx !== null && i !== openIdx;
+      bar.style.filter = blurred ? `blur(${blur}px)` : 'none';
+      bar.style.opacity = blurred ? '0.6' : '1';
+      if (openIdx === null && (cur[i] || 0) > peakVal) { peakVal = cur[i]; peak = i; }
+    });
+    if (openIdx === null) updateCaption(peak >= 0 ? peak : 0);
+  }
+  render();
+
+  function startLoop() {
+    if (rafId) return;
+    const step = () => {
+      let moving = false;
+      for (let i = 0; i < cur.length; i++) {
+        const d = (targets[i] || 0) - cur[i];
+        if (Math.abs(d) > 0.001) { cur[i] += d * 0.2; moving = true; }
+        else cur[i] = targets[i] || 0;
+      }
+      render();
+      rafId = moving ? requestAnimationFrame(step) : 0;
+    };
+    rafId = requestAnimationFrame(step);
+  }
+
+  function setTargetFromCursor(clientX) {
+    const rect = stage.getBoundingClientRect();
+    const cx = clientX - rect.left;
+    const n = items.length;
+    const totalBase = n * collapsedWidth + (n - 1) * gap;
+    const startX = (rect.width - totalBase) / 2;
+    for (let i = 0; i < n; i++) {
+      const center = startX + i * (collapsedWidth + gap) + collapsedWidth / 2;
+      const dist = Math.abs(cx - center);
+      const f = Math.max(0, 1 - dist / influence);
+      targets[i] = f * f * (3 - 2 * f);
+    }
+    startLoop();
+  }
+
+  function openBar(i) {
+    openIdx = i;
+    backdrop.style.pointerEvents = 'auto';
+    backdrop.style.cursor = 'pointer';
+    render();
+    updateCaption(i);
+  }
+
+  function close() {
+    for (let i = 0; i < targets.length; i++) { targets[i] = 0; cur[i] = 0; }
+    closing = true;
+    backdrop.style.pointerEvents = 'none';
+    backdrop.style.cursor = 'default';
+    clearTimeout(closeTimer);
+    closeTimer = setTimeout(() => { closing = false; render(); }, dur * 1000);
+    openIdx = null;
+    render();
+  }
+
+  stage.addEventListener('mousemove', (e) => { if (openIdx === null) setTargetFromCursor(e.clientX); });
+  stage.addEventListener('mouseleave', () => {
+    if (openIdx !== null) return;
+    for (let i = 0; i < targets.length; i++) targets[i] = 0;
+    startLoop();
+  });
+  backdrop.addEventListener('click', close);
+
+  if (captionEl && !captionEl._mcWired) {
+    captionEl._mcWired = true;
+    let saveTimer;
+    captionEl.addEventListener('input', () => {
+      if (items[shownIdx]) items[shownIdx].caption = captionEl.innerHTML;
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => saveProject(activeKey), 1500);
+    });
+  }
 }
 
 /* ─── Add blocks ───────────────────────────────────────── */
