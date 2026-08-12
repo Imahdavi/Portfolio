@@ -276,7 +276,7 @@
     /* "trusted by" now renders via the Originkit Mesh Text Hover canvas
        (see script near end of body) instead of plain text, so the label
        stays keyboard/screen-reader accessible via the .sr-only sibling. */
-    .brand-grid-label-wrap { width:190px; height:34px; margin:0 auto 22px; }
+    .brand-grid-label-wrap { width:190px; height:26px; margin:0 auto 22px; }
     .brand-grid-label-wrap canvas { display:block; width:100%; height:100%; }
     .sr-only {
       position:absolute; width:1px; height:1px; padding:0; margin:-1px;
@@ -4862,9 +4862,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const CONFIG = {
     text: 'TRUSTED BY',
     color: '#cccccc',
-    fontWeight: 500,
+    fontWeight: 400,
     fontStyle: 'normal',
-    fontSize: 22,
+    fontSize: 16,
+    // Matches the original label's CSS letter-spacing (.12em), which a
+    // canvas can't pick up from a stylesheet the way real DOM text does.
+    letterSpacingEm: 0.12,
     colorSplit: true,
     // A small duotone accent for the chroma-split fringe — not tied to
     // any other component on the page.
@@ -4956,7 +4959,7 @@ void main() {
     return [1, 1, 1];
   }
 
-  function renderTextToCanvas(text, color, fontFamily, fontWeight, fontStyle, fontSize, width, height) {
+  function renderTextToCanvas(text, color, fontFamily, fontWeight, fontStyle, fontSize, width, height, letterSpacingPx) {
     const c = document.createElement('canvas');
     c.width = width;
     c.height = height;
@@ -4966,11 +4969,14 @@ void main() {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}, sans-serif`;
+    // Canvas text has no stylesheet to inherit letter-spacing from, so the
+    // original label's tracking (.12em) is passed through explicitly here.
+    if (letterSpacingPx && 'letterSpacing' in ctx) ctx.letterSpacing = letterSpacingPx + 'px';
     ctx.fillText(text, width / 2, height / 2);
     return c;
   }
 
-  const { text, color, fontWeight, fontStyle, fontSize, colorSplit, customColors, force } = CONFIG;
+  const { text, color, fontWeight, fontStyle, fontSize, letterSpacingEm, colorSplit, customColors, force } = CONFIG;
   let fontFamily = siteBodyFont('Inter');
   const customColorsParsed = customColors.map(parseColor);
   const forcePx = force / 10;
@@ -5072,7 +5078,7 @@ void main() {
         if (document.fonts && document.fonts.ready) await document.fonts.ready;
       }
     } catch (e) { /* ignore */ }
-    const c2 = renderTextToCanvas(String(text ?? ''), color ?? '#ffffff', fontFamily, fontWeight, fontStyle, realSize, w, h);
+    const c2 = renderTextToCanvas(String(text ?? ''), color ?? '#ffffff', fontFamily, fontWeight, fontStyle, realSize, w, h, letterSpacingEm * realSize);
     gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c2);
