@@ -4835,7 +4835,11 @@ document.addEventListener('DOMContentLoaded', async () => {
    it is the component's own colour parsing, not Framer scaffolding.
    Mounted onto the "trusted by" label: the real text lives in the
    .sr-only span right after the mount div so the label stays in the
-   accessibility tree, and the canvas is aria-hidden. */
+   accessibility tree, and the canvas is aria-hidden. fontFamily is
+   deliberately left out of CONFIG below and read from the site's own
+   --font-body variable instead — this page has a "Change fonts" panel
+   that lets the user swap their body font at any time, and a font
+   baked into the ported component would fall out of sync with it. */
 (function () {
   const mount = document.getElementById('trusted-by-mesh');
   if (!mount) return;
@@ -4847,17 +4851,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   const DT = 0.1;
   const CHROMA = 0.005;
 
+  // Reads the page's own body-font variable (set by openFontPanel/applyFonts)
+  // instead of a hardcoded family name, e.g. `'Inter', sans-serif` -> `Inter`.
+  function siteBodyFont(fallback) {
+    const raw = getComputedStyle(document.documentElement).getPropertyValue('--font-body');
+    const first = (raw || '').split(',')[0].trim().replace(/^['"]|['"]$/g, '');
+    return first || fallback;
+  }
+
   const CONFIG = {
     text: 'TRUSTED BY',
     color: '#cccccc',
-    fontFamily: 'Inter',
     fontWeight: 500,
     fontStyle: 'normal',
     fontSize: 22,
     colorSplit: true,
-    // Reuses this page's own Cosmic Orb accent hues instead of the
-    // component's default hot-pink/green, so the two Originkit
-    // components read as one palette.
+    // A small duotone accent for the chroma-split fringe — not tied to
+    // any other component on the page.
     customColors: ['#3CE0FF', '#FF5EA8'],
     force: 18,
   };
@@ -4960,7 +4970,8 @@ void main() {
     return c;
   }
 
-  const { text, color, fontFamily, fontWeight, fontStyle, fontSize, colorSplit, customColors, force } = CONFIG;
+  const { text, color, fontWeight, fontStyle, fontSize, colorSplit, customColors, force } = CONFIG;
+  let fontFamily = siteBodyFont('Inter');
   const customColorsParsed = customColors.map(parseColor);
   const forcePx = force / 10;
 
@@ -5083,6 +5094,14 @@ void main() {
   new ResizeObserver(resize).observe(mount);
   resize();
   rebuildTex();
+
+  // Re-bake the texture if the user picks a different body font from the
+  // "Change fonts" panel while this label is on screen — applyFonts()
+  // writes the new family onto documentElement's inline style.
+  new MutationObserver(() => {
+    const fam = siteBodyFont('Inter');
+    if (fam !== fontFamily) { fontFamily = fam; rebuildTex(); }
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
 
   // ── Mouse tracking ──────────────────────────────────────────────
   const cursor = { x: 99, y: 99, px: 99, py: 99, vx: 0, vy: 0, inside: false };
