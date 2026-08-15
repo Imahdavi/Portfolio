@@ -925,6 +925,24 @@
     #scroll-top-btn:active { transform:scale(.9); }
     #scroll-top-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
 
+    /* Radial fill hover — ported from Iconiq UI's "Radial Button": a circle
+       grows from the pointer's entry point until it covers the whole button
+       (same cover-diameter math as the source), and the icon inverts to
+       white on top of it. Applied to round icon buttons like back-btn and
+       scroll-top-btn. */
+    .icon-radial-btn { position:relative; overflow:hidden; }
+    .icon-radial-btn .radial-fill {
+      position:absolute; left:0; top:0; width:0; height:0;
+      border-radius:50%; background:#1a1a1a;
+      transform:translate(-50%,-50%) scale(0);
+      transform-origin:center; pointer-events:none;
+      transition:transform .5s cubic-bezier(.16,1,.3,1);
+      z-index:0;
+    }
+    .icon-radial-btn.radial-active .radial-fill { transform:translate(-50%,-50%) scale(1); }
+    .icon-radial-btn svg { position:relative; z-index:1; transition:color .3s cubic-bezier(.16,1,.3,1); }
+    .icon-radial-btn.radial-active svg { color:#fff; }
+
     /* Block enter animation */
     @keyframes blockIn {
       from { opacity:0; transform:translateY(36px); filter:blur(10px); }
@@ -1335,7 +1353,8 @@
   <!-- ══════════════════════════════ PROJECT DETAIL (shared) ══════════════════════════════ -->
   <div class="view" id="view-project">
     <div class="detail-bar">
-      <button class="back-btn" onclick="closeProject()">
+      <button class="back-btn icon-radial-btn" onclick="closeProject()">
+        <span class="radial-fill" aria-hidden="true"></span>
         <svg viewBox="0 0 24 24"><path d="M15.5 19C15.5 19 8.5 14.856 8.5 12C8.5 9.145 15.5 5 15.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <div class="d-title" id="d-title" data-ph="Title"></div>
@@ -1387,7 +1406,8 @@
   <span>Drop to upload</span>
 </div>
 
-<button id="scroll-top-btn" aria-label="Scroll to top" onclick="document.getElementById('view-project').scrollTo({top:0,behavior:'smooth'})">
+<button id="scroll-top-btn" class="icon-radial-btn" aria-label="Scroll to top" onclick="document.getElementById('view-project').scrollTo({top:0,behavior:'smooth'})">
+  <span class="radial-fill" aria-hidden="true"></span>
   <svg viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
 </button>
 
@@ -4685,6 +4705,33 @@ async function uploadFiles(files) {
     }
   }
 }
+
+/* ─── Radial fill hover (Iconiq UI "Radial Button" port) ──
+   Grows a circle from the pointer's entry point to fully cover the
+   button — same cover-diameter formula as the source component. */
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.icon-radial-btn').forEach(btn => {
+    const fill = btn.querySelector('.radial-fill');
+    if (!fill) return;
+    const setOrigin = (x, y) => {
+      const r = btn.getBoundingClientRect();
+      const d = Math.ceil(2 * Math.max(
+        Math.hypot(x, y), Math.hypot(r.width - x, y),
+        Math.hypot(x, r.height - y), Math.hypot(r.width - x, r.height - y)
+      ));
+      fill.style.left = x + 'px';
+      fill.style.top = y + 'px';
+      fill.style.width = d + 'px';
+      fill.style.height = d + 'px';
+    };
+    btn.addEventListener('pointerenter', (e) => {
+      const r = btn.getBoundingClientRect();
+      setOrigin(e.clientX - r.left, e.clientY - r.top);
+      btn.classList.add('radial-active');
+    });
+    btn.addEventListener('pointerleave', () => btn.classList.remove('radial-active'));
+  });
+});
 
 /* ─── Scroll-to-top ────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
