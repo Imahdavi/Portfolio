@@ -649,32 +649,41 @@
     .avg-align-btn.active { border-color:#1a1a1a; background:#1a1a1a; color:#fff; }
     .avg-toolbar-sep { width:1px; height:18px; background:#e2e2e2; margin:0 2px; }
 
-    .avg-row { display:flex; align-items:flex-start; flex-wrap:wrap; gap:14px 4px; }
+    .avg-row { display:flex; align-items:center; flex-wrap:wrap; gap:6px 6px; }
     .avg-row.avg-align-left   { justify-content:flex-start; }
     .avg-row.avg-align-center { justify-content:center; }
     .avg-row.avg-align-right  { justify-content:flex-end; }
 
     .avg-seg { position:relative; display:flex; align-items:center; }
-    .avg-seg-del {
-      display:none; position:absolute; top:-9px; right:-9px; z-index:60;
-      width:17px; height:17px; border-radius:50%;
-      background:#ff4444; border:2px solid #fff; cursor:pointer;
-      color:#fff; font-size:11px; line-height:1;
-      align-items:center; justify-content:center;
+    /* Segment toolbar: reorder + delete, shown as one dark pill on hover
+       (same look as #fmt-toolbar), instead of a single fixed-corner ×,
+       so segments can be reordered without dragging. */
+    .avg-seg-ctrls {
+      display:none; position:absolute; bottom:calc(100% + 6px); left:50%;
+      transform:translateX(-50%); z-index:60;
+      align-items:center; gap:1px; background:#1a1a1a; border-radius:7px; padding:3px;
     }
-    .edit-on .avg-seg-del { display:flex; }
+    .edit-on .avg-seg:hover .avg-seg-ctrls { display:flex; }
+    .avg-seg-ctrls button {
+      width:20px; height:20px; border-radius:4px; border:none; background:none;
+      color:rgba(255,255,255,.8); cursor:pointer; font-size:12px; line-height:1;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .avg-seg-ctrls button:hover { background:rgba(255,255,255,.15); color:#fff; }
+    .avg-seg-ctrls button.avg-seg-del-btn:hover { background:#ff4444; color:#fff; }
+    .avg-seg-ctrls button:disabled { opacity:.3; pointer-events:none; }
 
     /* text segment — reuses .block-text so the sitewide bold/italic
        toolbar (which triggers off that class) works on it for free */
     .avg-text-seg {
-      align-self:center; font-size:14px; color:#333; white-space:nowrap;
+      font-size:14px; color:#333; white-space:nowrap;
       outline:none; min-height:1em; border-radius:4px; padding:4px 2px;
     }
     .edit-on .avg-text-seg { cursor:text; }
     .edit-on .avg-text-seg:empty:before { content:attr(data-ph); color:#aaa; pointer-events:none; }
 
     /* avatar group segment */
-    .avg-stack { display:flex; align-items:center; padding:6px 14px; }
+    .avg-stack { display:flex; align-items:center; padding:8px 2px; }
     .avg-item {
       position:relative; display:flex; flex-direction:column; align-items:center; gap:7px;
       margin-left:-14px; z-index:var(--z, 0);
@@ -4686,23 +4695,60 @@ function avgRenderAvatarItem(a, idx, avatars, block, mount) {
   return item;
 }
 
-function avgRenderGroupSegment(seg, block, mount) {
-  const wrap = document.createElement('div');
-  wrap.className = 'avg-seg avg-seg-group';
+// Reorder (‹ ›) + delete (×) for one segment, as a single dark pill
+// (same look as #fmt-toolbar) shown on hover — lets text/avatar-group
+// segments be repositioned in the row without drag-and-drop.
+function avgSegControls(block, seg, mount) {
+  const ctrls = document.createElement('div');
+  ctrls.className = 'avg-seg-ctrls';
+  const idx = () => block.segments.indexOf(seg);
+  const swap = (a, b) => { const t = block.segments[a]; block.segments[a] = block.segments[b]; block.segments[b] = t; };
+
+  const left = document.createElement('button');
+  left.type = 'button';
+  left.textContent = '‹';
+  left.title = 'Move left';
+  left.onclick = (e) => {
+    e.stopPropagation();
+    const i = idx();
+    if (i > 0) { swap(i, i - 1); saveProject(activeKey); renderAvatarsBlock(block, mount); }
+  };
+  if (idx() === 0) left.disabled = true;
 
   const del = document.createElement('button');
   del.type = 'button';
-  del.className = 'avg-seg-del';
+  del.className = 'avg-seg-del-btn';
   del.textContent = '×';
-  del.title = 'Remove this avatar group';
+  del.title = 'Remove';
   del.onclick = (e) => {
     e.stopPropagation();
-    const i = block.segments.indexOf(seg);
+    const i = idx();
     if (i > -1) block.segments.splice(i, 1);
     saveProject(activeKey);
     renderAvatarsBlock(block, mount);
   };
-  wrap.appendChild(del);
+
+  const right = document.createElement('button');
+  right.type = 'button';
+  right.textContent = '›';
+  right.title = 'Move right';
+  right.onclick = (e) => {
+    e.stopPropagation();
+    const i = idx();
+    if (i < block.segments.length - 1) { swap(i, i + 1); saveProject(activeKey); renderAvatarsBlock(block, mount); }
+  };
+  if (idx() === block.segments.length - 1) right.disabled = true;
+
+  ctrls.appendChild(left);
+  ctrls.appendChild(del);
+  ctrls.appendChild(right);
+  return ctrls;
+}
+
+function avgRenderGroupSegment(seg, block, mount) {
+  const wrap = document.createElement('div');
+  wrap.className = 'avg-seg avg-seg-group';
+  wrap.appendChild(avgSegControls(block, seg, mount));
 
   const stack = document.createElement('div');
   stack.className = 'avg-stack';
@@ -4725,20 +4771,7 @@ function avgRenderGroupSegment(seg, block, mount) {
 function avgRenderTextSegment(seg, block, mount) {
   const wrap = document.createElement('div');
   wrap.className = 'avg-seg avg-seg-text';
-
-  const del = document.createElement('button');
-  del.type = 'button';
-  del.className = 'avg-seg-del';
-  del.textContent = '×';
-  del.title = 'Remove this text';
-  del.onclick = (e) => {
-    e.stopPropagation();
-    const i = block.segments.indexOf(seg);
-    if (i > -1) block.segments.splice(i, 1);
-    saveProject(activeKey);
-    renderAvatarsBlock(block, mount);
-  };
-  wrap.appendChild(del);
+  wrap.appendChild(avgSegControls(block, seg, mount));
 
   const t = document.createElement('div');
   t.className = 'avg-text-seg block-text';
