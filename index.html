@@ -967,20 +967,11 @@
     .nav-btn {
       position:relative;
       background:none; border:none; cursor:pointer;
-      color:#999; display:flex; align-items:center; justify-content:center;
+      color:#6f6f6f; display:flex; align-items:center; justify-content:center;
       width:25px; height:25px;
       transition:color .2s, transform .15s;
     }
-    /* halo behind each icon so it stays legible over any color the
-       liquid glass is blurring, not just a plain background */
-    .nav-btn svg {
-      width:25px; height:25px; fill:none; stroke:currentColor; stroke-width:2;
-      stroke-linecap:round; stroke-linejoin:round; display:block;
-      filter:
-        drop-shadow(0 0 3px rgba(255,255,255,.95))
-        drop-shadow(0 0 5px rgba(255,255,255,.7))
-        drop-shadow(0 1px 1px rgba(255,255,255,.9));
-    }
+    .nav-btn svg { width:25px; height:25px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; display:block; }
     .nav-btn.active { color:#111; }
     .nav-btn:hover  { color:#444; transform:translateY(-2px); }
     .nav-btn:active { transform:scale(.86); }
