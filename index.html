@@ -292,8 +292,14 @@
       0%, 90%, 100% { background-position:calc(-100% - var(--shiny-width)) 0; }
       30%, 60%      { background-position:calc(100% + var(--shiny-width)) 0; }
     }
-    .brand-grid { display:flex; flex-wrap:wrap; gap:14px 18px; justify-content:center; align-items:center; }
-    .brand-cell { display:flex; align-items:center; justify-content:center; height:36px; }
+    /* Rotating logo sphere — ported from 21st.dev's "Img Sphere" concept
+       (Fibonacci sphere distribution + auto-rotation) but reimplemented as
+       manual per-frame projection instead of CSS 3D transforms, so each
+       logo stays flat/billboarded toward the viewer. Colors and the
+       grayscale→color hover are untouched (.brand-logo below); nothing
+       here is clickable. */
+    .brand-grid { position:relative; width:300px; max-width:82vw; height:280px; margin:0 auto; }
+    .brand-cell { position:absolute; left:50%; top:50%; display:flex; align-items:center; justify-content:center; height:36px; will-change:transform, opacity; }
     .brand-logo { height:100%; width:auto; max-width:100px; object-fit:contain; filter:grayscale(1) opacity(.35); transition:filter .28s ease; }
     .brand-logo:hover { filter:grayscale(0) opacity(1); }
     .brand-text { font-size:13px; font-weight:600; color:rgba(0,0,0,.22); letter-spacing:-.01em; transition:color .28s; cursor:default; line-height:38px; }
@@ -2637,6 +2643,37 @@ function renderWorkExp(items) {
     }
     grid.appendChild(cell);
   });
+
+  /* Rotating sphere: Fibonacci sphere distribution for even coverage,
+     projected by hand each frame (perspective divide) so logos stay
+     flat toward the viewer instead of tumbling with a CSS 3D transform.
+     Continuous auto-rotation around the vertical axis, no drag/click. */
+  const cells = [...grid.children];
+  const N = cells.length;
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+  const points = cells.map((_, i) => {
+    const y = N > 1 ? 1 - (i / (N - 1)) * 2 : 0;
+    const r = Math.sqrt(Math.max(0, 1 - y * y));
+    const theta = goldenAngle * i;
+    return { x: Math.cos(theta) * r, y, z: Math.sin(theta) * r };
+  });
+  const R = 118, P = 420;
+  let rotY = 0;
+  (function spin() {
+    rotY += 0.0028;
+    const cosA = Math.cos(rotY), sinA = Math.sin(rotY);
+    cells.forEach((cell, i) => {
+      const p = points[i];
+      const rx = p.x * cosA - p.z * sinA;
+      const rz = p.x * sinA + p.z * cosA;
+      const X = rx * R, Y = p.y * R, Z = rz * R;
+      const scale = P / (P + Z);
+      cell.style.transform = `translate(${X.toFixed(1)}px,${Y.toFixed(1)}px) translate(-50%,-50%) scale(${scale.toFixed(3)})`;
+      cell.style.zIndex = Math.round((Z + R) * 10);
+      cell.style.opacity = Math.max(.35, Math.min(1, (scale - .58) / .55));
+    });
+    requestAnimationFrame(spin);
+  })();
 })();
 
 function _makeSecDelBtn(label, grid) {
