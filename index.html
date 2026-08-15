@@ -273,7 +273,25 @@
     .exp-add-btn:hover { border-color:rgba(0,0,0,.3); color:#555; }
     .exp-add-btn.show { display:block; }
     .brand-grid-wrap { margin-top:36px; padding-top:28px; }
-    .brand-grid-label { font-size:16px; letter-spacing:.12em; text-transform:uppercase; color:#ccc; text-align:center; margin-bottom:22px; }
+    /* Magic UI "Animated Shiny Text", ported straight from its Tailwind
+       classes/keyframes to plain CSS (no Tailwind in this project):
+       a soft gray label with an animated bright band sweeping through
+       via background-clip:text + an animated background-position. */
+    .brand-grid-label {
+      --shiny-width: 100px;
+      font-size:16px; letter-spacing:.12em; text-transform:uppercase;
+      text-align:center; margin-bottom:22px;
+      color:rgba(82,82,82,.7);
+      background-image:linear-gradient(90deg, transparent, rgba(0,0,0,.8) 50%, transparent);
+      background-clip:text; -webkit-background-clip:text;
+      background-repeat:no-repeat; background-position:0 0;
+      background-size:var(--shiny-width) 100%;
+      animation:shiny-text 8s infinite;
+    }
+    @keyframes shiny-text {
+      0%, 90%, 100% { background-position:calc(-100% - var(--shiny-width)) 0; }
+      30%, 60%      { background-position:calc(100% + var(--shiny-width)) 0; }
+    }
     .brand-grid { display:flex; flex-wrap:wrap; gap:14px 18px; justify-content:center; align-items:center; }
     .brand-cell { display:flex; align-items:center; justify-content:center; height:36px; }
     .brand-logo { height:100%; width:auto; max-width:100px; object-fit:contain; filter:grayscale(1) opacity(.35); transition:filter .28s ease; }
