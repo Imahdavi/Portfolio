@@ -296,13 +296,19 @@
        (Fibonacci sphere distribution + auto-rotation) but reimplemented as
        manual per-frame projection instead of CSS 3D transforms, so each
        logo stays flat/billboarded toward the viewer. Colors and the
-       grayscale→color hover are untouched (.brand-logo below); nothing
-       here is clickable. */
-    .brand-grid { position:relative; width:300px; max-width:82vw; height:280px; margin:0 auto; }
-    .brand-cell { position:absolute; left:50%; top:50%; display:flex; align-items:center; justify-content:center; height:36px; will-change:transform, opacity; }
-    .brand-logo { height:100%; width:auto; max-width:100px; object-fit:contain; filter:grayscale(1) opacity(.35); transition:filter .28s ease; }
+       grayscale→color hover are untouched (.brand-logo below); it's
+       grab-to-spin (with momentum) but never clickable — see the JS below
+       for the drag/auto-rotate loop. */
+    .brand-grid { position:relative; width:300px; max-width:82vw; height:280px; margin:0 auto; cursor:grab; }
+    .brand-grid::before {
+      content:''; position:absolute; left:50%; top:50%; width:262px; height:262px;
+      transform:translate(-50%,-50%); border-radius:50%;
+      border:1px solid rgba(0,0,0,.14); pointer-events:none;
+    }
+    .brand-cell { position:absolute; left:50%; top:50%; display:flex; align-items:center; justify-content:center; will-change:transform, opacity; user-select:none; }
+    .brand-logo { height:100%; width:auto; max-width:100px; object-fit:contain; filter:grayscale(1) opacity(.35); transition:filter .28s ease; -webkit-user-drag:none; user-select:none; }
     .brand-logo:hover { filter:grayscale(0) opacity(1); }
-    .brand-text { font-size:13px; font-weight:600; color:rgba(0,0,0,.22); letter-spacing:-.01em; transition:color .28s; cursor:default; line-height:38px; }
+    .brand-text { font-size:13px; font-weight:600; color:rgba(0,0,0,.22); letter-spacing:-.01em; transition:color .28s; cursor:inherit; line-height:1; user-select:none; }
     .brand-text:hover { color:rgba(0,0,0,.82); }
 
     /* ─────────────────── SOON PLACEHOLDER ─────────────────── */
@@ -2618,10 +2624,12 @@ function renderWorkExp(items) {
 
   const grid = document.getElementById('brand-grid');
   if (!grid) return;
+  const SPHERE_R = 118; // also drives the ring diameter + uniform logo size below
+  const UNIFORM_H = Math.round(SPHERE_R * 0.255); // same size for every logo, scaled to the sphere/ring
   BRANDS.forEach(b => {
     const cell = document.createElement('div');
     cell.className = 'brand-cell';
-    if (b.ch) cell.style.height = b.ch+'px';
+    cell.style.height = UNIFORM_H + 'px';
     if (b.text) {
       const el = document.createElement('span');
       el.className = 'brand-text';
@@ -2632,6 +2640,7 @@ function renderWorkExp(items) {
       img.className = 'brand-logo';
       img.alt = b.name;
       img.title = b.name;
+      img.draggable = false;
       if (b.mw) img.style.maxWidth = b.mw+'px';
       if (b.svg) {
         img.src = su(b.svg);
@@ -2647,7 +2656,8 @@ function renderWorkExp(items) {
   /* Rotating sphere: Fibonacci sphere distribution for even coverage,
      projected by hand each frame (perspective divide) so logos stay
      flat toward the viewer instead of tumbling with a CSS 3D transform.
-     Continuous auto-rotation around the vertical axis, no drag/click. */
+     Auto-rotates continuously, but can also be grabbed and spun by hand
+     (drag on either axis, with momentum that decays back to auto-rotate). */
   const cells = [...grid.children];
   const N = cells.length;
   const goldenAngle = Math.PI * (3 - Math.sqrt(5));
@@ -2657,16 +2667,56 @@ function renderWorkExp(items) {
     const theta = goldenAngle * i;
     return { x: Math.cos(theta) * r, y, z: Math.sin(theta) * r };
   });
-  const R = 118, P = 420;
-  let rotY = 0;
+  const R = SPHERE_R, P = 420;
+  const AUTO_SPEED = 0.0028, DRAG_SENS = 0.0062, MOMENTUM_DECAY = 0.94, MAX_ROT_X = 1.15;
+  let rotY = 0, rotX = 0, velY = 0, velX = 0;
+  let dragging = false, lastX = 0, lastY = 0, lastT = 0;
+
+  grid.style.cursor = 'grab';
+  grid.style.touchAction = 'none';
+  grid.style.userSelect = 'none';
+  grid.style.webkitUserSelect = 'none';
+
+  grid.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    grid.setPointerCapture(e.pointerId);
+    grid.style.cursor = 'grabbing';
+    lastX = e.clientX; lastY = e.clientY; lastT = performance.now();
+    velX = 0; velY = 0;
+  });
+  grid.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const now = performance.now();
+    const dt = Math.max(1, now - lastT);
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    rotY += dx * DRAG_SENS;
+    rotX = Math.max(-MAX_ROT_X, Math.min(MAX_ROT_X, rotX - dy * DRAG_SENS));
+    velY = (dx * DRAG_SENS) / dt * 16;
+    velX = (-dy * DRAG_SENS) / dt * 16;
+    lastX = e.clientX; lastY = e.clientY; lastT = now;
+  });
+  const endDrag = () => { dragging = false; grid.style.cursor = 'grab'; };
+  grid.addEventListener('pointerup', endDrag);
+  grid.addEventListener('pointercancel', endDrag);
+
   (function spin() {
-    rotY += 0.0028;
-    const cosA = Math.cos(rotY), sinA = Math.sin(rotY);
+    if (!dragging) {
+      rotY += AUTO_SPEED + velY;
+      rotX = Math.max(-MAX_ROT_X, Math.min(MAX_ROT_X, rotX + velX));
+      velY *= MOMENTUM_DECAY;
+      velX *= MOMENTUM_DECAY;
+      if (Math.abs(velY) < 0.00006) velY = 0;
+      if (Math.abs(velX) < 0.00006) velX = 0;
+    }
+    const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+    const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
     cells.forEach((cell, i) => {
       const p = points[i];
-      const rx = p.x * cosA - p.z * sinA;
-      const rz = p.x * sinA + p.z * cosA;
-      const X = rx * R, Y = p.y * R, Z = rz * R;
+      const rx = p.x * cosY - p.z * sinY;
+      const rz1 = p.x * sinY + p.z * cosY;
+      const ry = p.y * cosX - rz1 * sinX;
+      const rz = p.y * sinX + rz1 * cosX;
+      const X = rx * R, Y = ry * R, Z = rz * R;
       const scale = P / (P + Z);
       cell.style.transform = `translate(${X.toFixed(1)}px,${Y.toFixed(1)}px) translate(-50%,-50%) scale(${scale.toFixed(3)})`;
       cell.style.zIndex = Math.round((Z + R) * 10);
