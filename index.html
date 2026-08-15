@@ -937,11 +937,26 @@
     #bottom-nav {
       position:fixed; bottom:50px; left:50%;
       transform:translateX(-50%);
-      background:#fff; border-radius:999px;
+      background:rgba(253,251,248,.45);
+      -webkit-backdrop-filter:blur(22px) saturate(190%);
+      backdrop-filter:blur(22px) saturate(190%);
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.65);
       padding:17px 28px;
       display:flex; align-items:center; gap:28px;
-      box-shadow:0 6px 28px rgba(0,0,0,.13);
+      box-shadow:
+        0 10px 34px rgba(0,0,0,.14),
+        0 2px 6px rgba(0,0,0,.06),
+        inset 0 1px 0 rgba(255,255,255,.9),
+        inset 0 -1.5px 2px rgba(0,0,0,.045);
       z-index:200;
+    }
+    /* soft specular sheen — the "liquid" highlight catching light across
+       the glass, sitting behind the nav buttons */
+    #bottom-nav::before {
+      content:''; position:absolute; inset:0; border-radius:inherit;
+      background:linear-gradient(120deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.08) 30%, rgba(255,255,255,0) 55%);
+      pointer-events:none;
     }
 
     /* Emoji Burst (Originkit) — nav slot; the component's own container
