@@ -634,20 +634,51 @@
        of the source's hover tooltip, since the whole point here is to
        show credits (e.g. brand + collaborator) inline, not on hover. */
     .block-avatars { width:100%; display:flex; justify-content:center; margin-bottom:8px; }
-    .avg-stack { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:22px 26px; }
-    .avg-item { position:relative; display:flex; flex-direction:column; align-items:center; gap:7px; width:76px; }
+    /* Overlapping stack + spring-ish lift + hover tooltip, matching the
+       21st.dev/Animate UI "Avatar Group" reference (radix Tooltip +
+       framer-motion translateY(-30%) on hover) as closely as plain
+       CSS allows: negative margin overlap, background-colored border,
+       transform lift on :hover with a bouncy cubic-bezier standing in
+       for the spring, and a tooltip bubble reusing this site's own
+       .nav-tip look (dark pill + arrow, fade + slide). */
+    .avg-stack { display:flex; align-items:center; padding:6px 14px; }
+    .avg-item {
+      position:relative; display:flex; flex-direction:column; align-items:center; gap:7px;
+      margin-left:-14px; z-index:var(--z, 0);
+    }
+    .avg-item:first-child { margin-left:0; }
+    .avg-item:hover { z-index:50; }
     .avg-avatar {
-      position:relative; width:56px; height:56px; border-radius:50%;
+      position:relative; width:48px; height:48px; border-radius:50%;
       background-size:cover; background-position:center; background-repeat:no-repeat;
       background-color:#eee; border:3px solid #fff;
-      box-shadow:0 0 0 1px rgba(0,0,0,.1); cursor:default;
+      box-shadow:0 0 0 1px rgba(0,0,0,.08); cursor:default;
       display:flex; align-items:center; justify-content:center;
-      color:#999; font-size:16px; font-weight:600; overflow:hidden;
+      color:#999; font-size:15px; font-weight:600; overflow:hidden;
+      transition:transform .35s cubic-bezier(.34,1.56,.64,1);
     }
+    .avg-item:hover .avg-avatar { transform:translateY(-30%); }
     .edit-on .avg-avatar { cursor:pointer; }
-    .avg-name { font-size:12px; text-align:center; max-width:100%; line-height:1.3; }
+    .avg-tip {
+      position:absolute; bottom:calc(100% + 14px); left:50%;
+      transform:translateX(-50%) translateY(4px);
+      background:#1a1a1a; color:#fff;
+      font-size:11px; font-weight:500;
+      padding:4px 9px; border-radius:7px;
+      white-space:nowrap; pointer-events:none;
+      opacity:0; transition:opacity .18s, transform .18s;
+    }
+    .avg-tip::after {
+      content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%);
+      border:5px solid transparent; border-top-color:#1a1a1a;
+    }
+    .avg-tip:empty { display:none; }
+    .avg-item:hover .avg-tip { opacity:1; transform:translateX(-50%) translateY(0); }
+    /* editable name field — edit mode only, this is how the tooltip text above gets set */
+    .avg-name { display:none; font-size:12px; text-align:center; max-width:100%; line-height:1.3; }
+    .edit-on .avg-name { display:block; }
     .avg-item-del {
-      display:none; position:absolute; top:-4px; right:2px; z-index:4;
+      display:none; position:absolute; top:-4px; right:-4px; z-index:4;
       width:18px; height:18px; border-radius:50%;
       background:#ff4444; border:none; cursor:pointer;
       color:#fff; font-size:12px; line-height:1;
@@ -655,13 +686,14 @@
     }
     .edit-on .avg-item-del { display:flex; }
     .avg-add-tile {
-      display:none; width:56px; height:56px; flex:none; align-items:center; justify-content:center;
-      border:1.5px dashed #bbb; border-radius:50%; background:transparent;
+      display:none; width:48px; height:48px; flex:none; align-items:center; justify-content:center;
+      border:1.5px dashed #bbb; border-radius:50%; background:#fff;
       color:#999; cursor:pointer; transition:border-color .2s, color .2s;
+      margin-left:-14px;
     }
     .edit-on .avg-add-tile { display:flex; }
     .avg-add-tile:hover { border-color:#555; color:#333; }
-    .avg-add-tile svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+    .avg-add-tile svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
     .avg-empty-prompt {
       display:none; width:100%; align-items:center; justify-content:center; gap:8px;
       padding:22px 10px; border-radius:12px; border:1.5px dashed #bbb;
@@ -4503,9 +4535,10 @@ function renderAvatarsBlock(block, mount) {
   stack.className = 'avg-stack';
   mount.appendChild(stack);
 
-  avatars.forEach((a) => {
+  avatars.forEach((a, idx) => {
     const item = document.createElement('div');
     item.className = 'avg-item';
+    item.style.setProperty('--z', idx);
 
     const av = document.createElement('div');
     av.className = 'avg-avatar';
@@ -4526,6 +4559,13 @@ function renderAvatarsBlock(block, mount) {
         }).catch(e => showUploadToast('Upload failed: ' + e.message, true));
       });
     };
+
+    // Hover tooltip — reveals the name in normal (non-edit) view, same
+    // dark pill + arrow as the bottom nav's .nav-tip.
+    const tip = document.createElement('div');
+    tip.className = 'avg-tip';
+    tip.textContent = a.name || '';
+    item.appendChild(tip);
 
     const del = document.createElement('button');
     del.type = 'button';
@@ -4548,6 +4588,8 @@ function renderAvatarsBlock(block, mount) {
     let _st;
     name.addEventListener('input', () => {
       a.name = name.innerHTML;
+      tip.textContent = name.textContent || '';
+      if (!a.src) av.textContent = (a.name || '?').trim().slice(0, 1).toUpperCase();
       clearTimeout(_st);
       _st = setTimeout(() => saveProject(activeKey), 1500);
     });
