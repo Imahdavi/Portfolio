@@ -891,14 +891,17 @@
     .move-opt:hover { background:rgba(255,255,255,.12); color:#fff; }
     .move-empty { padding:8px 10px; font-size:12px; color:rgba(255,255,255,.4); }
 
-    /* Add bar */
+    /* Add bar — horizontally scrollable so it doesn't get squeezed
+       unreadable/unreachable as more block types are added. */
     .add-bar {
       display:none;
       gap:10px; margin-bottom:16px;
+      overflow-x:auto; -webkit-overflow-scrolling:touch;
+      scrollbar-width:thin;
     }
     .add-bar.show { display:flex; animation:fadeUp .2s ease both; }
     .add-btn {
-      flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+      flex:0 0 auto; width:104px; display:flex; align-items:center; justify-content:center; gap:6px; text-align:center;
       padding:10px; border-radius:12px;
       border:1.5px dashed #bbb; background:transparent;
       cursor:pointer; font-size:13px; font-weight:500; color:#666;
