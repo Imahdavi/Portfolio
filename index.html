@@ -302,12 +302,11 @@
        chip (same look as .back-btn/#scroll-top-btn elsewhere on the
        site) so every brand reads at the same visual size regardless of
        its own logo's aspect ratio. */
-    .brand-grid { position:relative; width:300px; max-width:82vw; height:280px; margin:0 auto; cursor:grab; }
+    .brand-grid { position:relative; width:340px; max-width:88vw; height:320px; margin:0 auto; cursor:grab; }
     .brand-cell {
       position:absolute; left:50%; top:50%; width:58px; height:58px;
       display:flex; align-items:center; justify-content:center;
-      border-radius:50%; background:rgba(255,255,255,.85);
-      border:1px solid rgba(0,0,0,.12); box-shadow:0 2px 10px rgba(0,0,0,.07);
+      border-radius:50%; border:.75px solid rgba(0,0,0,.16);
       will-change:transform, opacity; user-select:none;
     }
     .brand-logo { height:56%; width:auto; max-width:72%; object-fit:contain; filter:grayscale(1) opacity(.4); transition:filter .28s ease; -webkit-user-drag:none; user-select:none; }
@@ -2628,7 +2627,7 @@ function renderWorkExp(items) {
 
   const grid = document.getElementById('brand-grid');
   if (!grid) return;
-  const SPHERE_R = 118; // sphere radius in px, drives the auto-rotate loop below
+  const SPHERE_R = 145; // sphere radius in px, drives the auto-rotate loop below
   BRANDS.forEach(b => {
     const cell = document.createElement('div');
     cell.className = 'brand-cell';
@@ -2658,18 +2657,22 @@ function renderWorkExp(items) {
      projected by hand each frame (perspective divide) so logos stay
      flat toward the viewer instead of tumbling with a CSS 3D transform.
      Auto-rotates continuously, but can also be grabbed and spun by hand
-     (drag on either axis, with momentum that decays back to auto-rotate). */
+     (drag on either axis, with momentum that decays back to auto-rotate).
+     y uses (2i+1)/N instead of i/(N-1) so no point lands exactly on the
+     poles — the standard i/(N-1) mapping puts the first and last logos
+     dead-center on the rotation axis, where pure Y-axis auto-rotate
+     can't move them at all. */
   const cells = [...grid.children];
   const N = cells.length;
   const goldenAngle = Math.PI * (3 - Math.sqrt(5));
   const points = cells.map((_, i) => {
-    const y = N > 1 ? 1 - (i / (N - 1)) * 2 : 0;
+    const y = 1 - (2 * i + 1) / N;
     const r = Math.sqrt(Math.max(0, 1 - y * y));
     const theta = goldenAngle * i;
     return { x: Math.cos(theta) * r, y, z: Math.sin(theta) * r };
   });
-  const R = SPHERE_R, P = 420;
-  const AUTO_SPEED = 0.0028, DRAG_SENS = 0.0062, MOMENTUM_DECAY = 0.94, MAX_ROT_X = 1.15;
+  const R = SPHERE_R, P = 500;
+  const AUTO_SPEED = 0.0028, DRAG_SENS = 0.0062, MOMENTUM_DECAY = 0.94;
   let rotY = 0, rotX = 0, velY = 0, velX = 0;
   let dragging = false, lastX = 0, lastY = 0, lastT = 0;
 
@@ -2691,7 +2694,7 @@ function renderWorkExp(items) {
     const dt = Math.max(1, now - lastT);
     const dx = e.clientX - lastX, dy = e.clientY - lastY;
     rotY += dx * DRAG_SENS;
-    rotX = Math.max(-MAX_ROT_X, Math.min(MAX_ROT_X, rotX - dy * DRAG_SENS));
+    rotX -= dy * DRAG_SENS;
     velY = (dx * DRAG_SENS) / dt * 16;
     velX = (-dy * DRAG_SENS) / dt * 16;
     lastX = e.clientX; lastY = e.clientY; lastT = now;
@@ -2703,7 +2706,7 @@ function renderWorkExp(items) {
   (function spin() {
     if (!dragging) {
       rotY += AUTO_SPEED + velY;
-      rotX = Math.max(-MAX_ROT_X, Math.min(MAX_ROT_X, rotX + velX));
+      rotX += velX;
       velY *= MOMENTUM_DECAY;
       velX *= MOMENTUM_DECAY;
       if (Math.abs(velY) < 0.00006) velY = 0;
