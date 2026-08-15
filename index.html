@@ -628,6 +628,49 @@
     .edit-on .mc-empty-prompt { display:flex; }
     .mc-empty-prompt:hover { border-color:#555; color:#333; background:rgba(0,0,0,.04); }
 
+    /* Avatar Group block — ported from Animate UI's "Avatar Group"
+       (overlapping circular avatars with a border matching the page
+       background). Each avatar has its own editable name label instead
+       of the source's hover tooltip, since the whole point here is to
+       show credits (e.g. brand + collaborator) inline, not on hover. */
+    .block-avatars { width:100%; display:flex; justify-content:center; margin-bottom:8px; }
+    .avg-stack { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:22px 26px; }
+    .avg-item { position:relative; display:flex; flex-direction:column; align-items:center; gap:7px; width:76px; }
+    .avg-avatar {
+      position:relative; width:56px; height:56px; border-radius:50%;
+      background-size:cover; background-position:center; background-repeat:no-repeat;
+      background-color:#eee; border:3px solid #fff;
+      box-shadow:0 0 0 1px rgba(0,0,0,.1); cursor:default;
+      display:flex; align-items:center; justify-content:center;
+      color:#999; font-size:16px; font-weight:600; overflow:hidden;
+    }
+    .edit-on .avg-avatar { cursor:pointer; }
+    .avg-name { font-size:12px; text-align:center; max-width:100%; line-height:1.3; }
+    .avg-item-del {
+      display:none; position:absolute; top:-4px; right:2px; z-index:4;
+      width:18px; height:18px; border-radius:50%;
+      background:#ff4444; border:none; cursor:pointer;
+      color:#fff; font-size:12px; line-height:1;
+      align-items:center; justify-content:center;
+    }
+    .edit-on .avg-item-del { display:flex; }
+    .avg-add-tile {
+      display:none; width:56px; height:56px; flex:none; align-items:center; justify-content:center;
+      border:1.5px dashed #bbb; border-radius:50%; background:transparent;
+      color:#999; cursor:pointer; transition:border-color .2s, color .2s;
+    }
+    .edit-on .avg-add-tile { display:flex; }
+    .avg-add-tile:hover { border-color:#555; color:#333; }
+    .avg-add-tile svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+    .avg-empty-prompt {
+      display:none; width:100%; align-items:center; justify-content:center; gap:8px;
+      padding:22px 10px; border-radius:12px; border:1.5px dashed #bbb;
+      background:transparent; cursor:pointer; font-size:13px; font-weight:500;
+      color:#666; transition:border-color .2s, color .2s, background .2s;
+    }
+    .edit-on .avg-empty-prompt { display:flex; }
+    .avg-empty-prompt:hover { border-color:#555; color:#333; background:rgba(0,0,0,.04); }
+
     /* ── Format toolbar (bold / italic) ── */
     #fmt-toolbar {
       position:fixed; z-index:9999;
@@ -1406,6 +1449,10 @@
       <button class="add-btn" onclick="addMagneticCarousel()" title="Trial: Originkit Magnetic Carousel">
         <svg viewBox="0 0 24 24"><rect x="2" y="6" width="5" height="12" rx="1.5"/><rect x="9.5" y="4" width="5" height="16" rx="1.5"/><rect x="17" y="6" width="5" height="12" rx="1.5"/></svg>
         Add carousel (test)
+      </button>
+      <button class="add-btn" onclick="addAvatars()" title="Avatar Group — credit a brand, collaborator, etc.">
+        <svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7"/><circle cx="17" cy="8" r="3.2"/></svg>
+        Add avatar
       </button>
     </div>
   </div><!-- /view-project -->
@@ -3631,6 +3678,14 @@ function makeBlockEl(block, proj) {
     body.appendChild(mc);
     body.appendChild(caption);
     renderCarouselBlock(block, mc, caption);
+  } else if (block.type === 'avatars') {
+    // Avatar Group block — see renderAvatarsBlock()/addAvatars() near
+    // addMagneticCarousel(); avatars is [{id, src, name}].
+    if (!block.avatars) block.avatars = [];
+    const av = document.createElement('div');
+    av.className = 'block-avatars';
+    body.appendChild(av);
+    renderAvatarsBlock(block, av);
   } else {
     // image or video — shared media-wrap with overlay controls
     mw = document.createElement('div');
@@ -4407,6 +4462,109 @@ function renderCarouselBlock(block, mount, captionEl) {
   }
 }
 
+// Uploads one avatar image straight into an existing avatars block
+// (mirrors mcUploadInto() above).
+async function avgUploadAvatar(block, file, onDone) {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `uploads/${Date.now()}_${uid()}.${ext}`;
+  try {
+    const url = await tusUpload(file, SB_MEDIA_BUCKET, path, () => {});
+    block.avatars.push({ id: uid(), src: url, name: '' });
+    if (activeKey) await saveProject(activeKey);
+  } catch (e) {
+    showUploadToast('Upload failed: ' + e.message, true);
+  }
+  onDone();
+}
+
+function renderAvatarsBlock(block, mount) {
+  mount.innerHTML = '';
+  const avatars = block.avatars;
+
+  if (!avatars.length) {
+    const prompt = document.createElement('button');
+    prompt.type = 'button';
+    prompt.className = 'avg-empty-prompt';
+    prompt.textContent = '+ Add avatar';
+    prompt.onclick = () => _mcFilePicker(files => {
+      if (!files.length) return;
+      prompt.disabled = true;
+      prompt.textContent = 'Uploading…';
+      avgUploadAvatar(block, files[0], () => renderAvatarsBlock(block, mount));
+    });
+    mount.appendChild(prompt);
+    return;
+  }
+
+  const stack = document.createElement('div');
+  stack.className = 'avg-stack';
+  mount.appendChild(stack);
+
+  avatars.forEach((a) => {
+    const item = document.createElement('div');
+    item.className = 'avg-item';
+
+    const av = document.createElement('div');
+    av.className = 'avg-avatar';
+    if (a.src) { av.style.backgroundImage = `url(${a.src})`; }
+    else { av.textContent = (a.name || '?').trim().slice(0, 1).toUpperCase(); }
+    av.title = editMode ? 'Click to replace image' : '';
+    av.onclick = () => {
+      if (!editMode) return;
+      _mcFilePicker(files => {
+        if (!files.length) return;
+        const f = files[0];
+        const ext = (f.name.split('.').pop() || 'jpg').toLowerCase();
+        const path = `uploads/${Date.now()}_${uid()}.${ext}`;
+        tusUpload(f, SB_MEDIA_BUCKET, path, () => {}).then(url => {
+          a.src = url;
+          saveProject(activeKey);
+          renderAvatarsBlock(block, mount);
+        }).catch(e => showUploadToast('Upload failed: ' + e.message, true));
+      });
+    };
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'avg-item-del';
+    del.textContent = '×';
+    del.onclick = (e) => {
+      e.stopPropagation();
+      const i = avatars.indexOf(a);
+      if (i > -1) avatars.splice(i, 1);
+      saveProject(activeKey);
+      renderAvatarsBlock(block, mount);
+    };
+    av.appendChild(del);
+
+    const name = document.createElement('div');
+    name.className = 'avg-name block-text';
+    name.contentEditable = editMode ? 'true' : 'false';
+    name.dataset.ph = 'Name';
+    name.innerHTML = a.name || '';
+    let _st;
+    name.addEventListener('input', () => {
+      a.name = name.innerHTML;
+      clearTimeout(_st);
+      _st = setTimeout(() => saveProject(activeKey), 1500);
+    });
+
+    item.appendChild(av);
+    item.appendChild(name);
+    stack.appendChild(item);
+  });
+
+  const addTile = document.createElement('button');
+  addTile.type = 'button';
+  addTile.className = 'avg-add-tile';
+  addTile.innerHTML = '<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+  addTile.onclick = () => _mcFilePicker(files => {
+    if (!files.length) return;
+    avgUploadAvatar(block, files[0], () => renderAvatarsBlock(block, mount));
+  });
+  stack.appendChild(addTile);
+}
+
 /* ─── Add blocks ───────────────────────────────────────── */
 function addText() {
   const proj = PROJECTS[activeKey];
@@ -4440,6 +4598,18 @@ function addDivider() {
 function addStarDivider() {
   const proj = PROJECTS[activeKey];
   const b = { id: uid(), type: 'divider', dividerStyle: 'star', content: '' };
+  proj.blocks.push(b);
+  const list = document.getElementById('block-list');
+  const el = makeBlockEl(b, proj);
+  el.classList.add('block-enter');
+  list.appendChild(el);
+  requestAnimationFrame(() => setBlockRowSpan(el));
+  saveProject(activeKey);
+}
+
+function addAvatars() {
+  const proj = PROJECTS[activeKey];
+  const b = { id: uid(), type: 'avatars', avatars: [] };
   proj.blocks.push(b);
   const list = document.getElementById('block-list');
   const el = makeBlockEl(b, proj);
