@@ -704,12 +704,12 @@
     .avg-item:first-child { margin-left:0; }
     .avg-item:hover { z-index:50; }
     .avg-avatar {
-      position:relative; width:48px; height:48px; border-radius:50%;
+      position:relative; width:42px; height:42px; border-radius:50%;
       background-size:cover; background-position:center; background-repeat:no-repeat;
       background-color:#eee; border:3px solid #fff;
       box-shadow:0 0 0 1px rgba(0,0,0,.08); cursor:default;
       display:flex; align-items:center; justify-content:center;
-      color:#999; font-size:15px; font-weight:600; overflow:hidden;
+      color:#999; font-size:13px; font-weight:600; overflow:hidden;
       transition:transform .35s cubic-bezier(.34,1.56,.64,1);
     }
     .avg-item:hover .avg-avatar { transform:translateY(-30%); }
@@ -735,9 +735,42 @@
     .edit-on .avg-fields { display:flex; }
     .avg-name-fld { font-size:11.5px; font-weight:600; text-align:center; max-width:100%; line-height:1.25; }
     .avg-role-fld { font-size:10.5px; color:#999; text-align:center; max-width:100%; line-height:1.25; }
+    /* Avatar image picker — clicking the avatar opens this instead of
+       going straight to the file picker, so an existing "trusted by"
+       brand logo (Experience page) can be reused on an avatar without
+       re-uploading it. Same dark popover as .link-popover/.resize-menu. */
+    .avg-img-popover {
+      position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%);
+      background:rgba(26,23,20,.95); border-radius:12px; padding:10px;
+      display:none; flex-direction:column; gap:8px; z-index:70;
+      width:186px;
+      box-shadow:0 8px 24px rgba(0,0,0,.3);
+    }
+    .avg-img-popover.open { display:flex; animation:fadeUp .15s ease both; }
+    .avg-img-popover-upload {
+      padding:7px 10px; background:rgba(255,255,255,.08); border:none; border-radius:8px;
+      color:#fdfbf8; font-size:12px; font-weight:500; cursor:pointer; text-align:left;
+      display:flex; align-items:center; gap:6px; transition:background .12s;
+    }
+    .avg-img-popover-upload svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+    .avg-img-popover-upload:hover { background:rgba(255,255,255,.16); }
+    .avg-img-popover-lbl {
+      color:rgba(255,255,255,.45); font-size:10.5px; font-weight:600;
+      letter-spacing:.04em; padding:0 2px;
+    }
+    .avg-img-popover-grid {
+      display:grid; grid-template-columns:repeat(5, 1fr); gap:6px;
+      max-height:140px; overflow-y:auto;
+    }
+    .avg-img-popover-grid button {
+      width:28px; height:28px; border-radius:50%; border:1.5px solid rgba(255,255,255,.15);
+      background-size:cover; background-position:center; background-color:#333;
+      cursor:pointer; padding:0; transition:border-color .12s, transform .12s;
+    }
+    .avg-img-popover-grid button:hover { border-color:#fff; transform:scale(1.1); }
     /* Duplicate/delete — a proper spaced-out hover toolbar (same dark
        pill as the segment controls) instead of two tiny overlapping
-       circles crammed onto a 48px avatar, which were nearly impossible
+       circles crammed onto a small avatar, which were nearly impossible
        to click precisely. Tooltip is hidden in edit mode so it doesn't
        fight this toolbar for the same space above the avatar. */
     .edit-on .avg-tip { display:none; }
@@ -756,7 +789,7 @@
     .avg-item-ctrls button:hover { background:rgba(255,255,255,.15); color:#fff; }
     .avg-item-ctrls button.avg-item-del-btn:hover { background:#ff4444; color:#fff; }
     .avg-add-tile {
-      display:none; width:48px; height:48px; flex:none; align-items:center; justify-content:center;
+      display:none; width:42px; height:42px; flex:none; align-items:center; justify-content:center;
       border:1.5px dashed #bbb; border-radius:50%; background:#fff;
       color:#999; cursor:pointer; transition:border-color .2s, color .2s;
       margin-left:-14px;
@@ -2777,6 +2810,10 @@ function renderWorkExp(items) {
     { name:'Irancell',    img:'/irancell-logo.svg', ch:62 },
   ];
 
+  // Exposed so the Avatar Group block's image picker (Experience page)
+  // can offer these same logos without re-uploading them.
+  window.SITE_BRAND_LOGOS = BRANDS.map(b => ({ name: b.name, src: b.svg ? su(b.svg) : b.img })).filter(b => b.src);
+
   const grid = document.getElementById('brand-grid');
   if (!grid) return;
   const SPHERE_R = 145; // sphere radius in px, drives the auto-rotate loop below
@@ -4632,9 +4669,35 @@ function avgRenderAvatarItem(a, idx, avatars, block, mount) {
   av.className = 'avg-avatar';
   if (a.src) { av.style.backgroundImage = `url(${a.src})`; }
   else { av.textContent = (a.name || '?').trim().slice(0, 1).toUpperCase(); }
-  av.title = editMode ? 'Click to replace image' : '';
-  av.onclick = () => {
+  av.title = editMode ? 'Click to change image' : '';
+  av.onclick = (e) => {
     if (!editMode) return;
+    e.stopPropagation();
+    const wasOpen = popover.classList.contains('open');
+    document.querySelectorAll('.resize-menu.open, .link-popover.open, .move-menu.open, .avg-img-popover.open').forEach(m => m.classList.remove('open'));
+    if (!wasOpen) popover.classList.add('open');
+  };
+
+  // Hover tooltip — reveals name/role in normal (non-edit) view, same
+  // dark pill + arrow as the bottom nav's .nav-tip.
+  const tip = document.createElement('div');
+  tip.className = 'avg-tip';
+  avgSetTip(tip, a.name, a.role);
+  item.appendChild(tip);
+
+  // Image picker popover: upload a new file, or reuse one of the
+  // "trusted by" brand logos (Experience page) without re-uploading it.
+  const popover = document.createElement('div');
+  popover.className = 'avg-img-popover';
+  popover.onclick = (e) => e.stopPropagation();
+
+  const uploadBtn = document.createElement('button');
+  uploadBtn.type = 'button';
+  uploadBtn.className = 'avg-img-popover-upload';
+  uploadBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Upload image';
+  uploadBtn.onclick = (e) => {
+    e.stopPropagation();
+    popover.classList.remove('open');
     _mcFilePicker(files => {
       if (!files.length) return;
       const f = files[0];
@@ -4644,16 +4707,38 @@ function avgRenderAvatarItem(a, idx, avatars, block, mount) {
         a.src = url;
         saveProject(activeKey);
         renderAvatarsBlock(block, mount);
-      }).catch(e => showUploadToast('Upload failed: ' + e.message, true));
+      }).catch(err => showUploadToast('Upload failed: ' + err.message, true));
     });
   };
+  popover.appendChild(uploadBtn);
 
-  // Hover tooltip — reveals name/role in normal (non-edit) view, same
-  // dark pill + arrow as the bottom nav's .nav-tip.
-  const tip = document.createElement('div');
-  tip.className = 'avg-tip';
-  avgSetTip(tip, a.name, a.role);
-  item.appendChild(tip);
+  const brandLogos = window.SITE_BRAND_LOGOS || [];
+  if (brandLogos.length) {
+    const lbl = document.createElement('div');
+    lbl.className = 'avg-img-popover-lbl';
+    lbl.textContent = 'Or use a brand logo';
+    popover.appendChild(lbl);
+
+    const grid = document.createElement('div');
+    grid.className = 'avg-img-popover-grid';
+    brandLogos.forEach(logo => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.title = logo.name;
+      b.style.backgroundImage = `url(${logo.src})`;
+      b.onclick = (e) => {
+        e.stopPropagation();
+        a.src = logo.src;
+        popover.classList.remove('open');
+        saveProject(activeKey);
+        renderAvatarsBlock(block, mount);
+      };
+      grid.appendChild(b);
+    });
+    popover.appendChild(grid);
+  }
+
+  item.appendChild(popover);
 
   // Duplicate/delete toolbar — appended to `item`, not `av`, so the
   // buttons aren't clipped by the avatar's overflow:hidden circle.
@@ -5149,6 +5234,7 @@ document.addEventListener('click', () => {
   document.querySelectorAll('.resize-menu.open').forEach(m => m.classList.remove('open'));
   document.querySelectorAll('.link-popover.open').forEach(p => p.classList.remove('open'));
   document.querySelectorAll('.move-menu.open').forEach(m => m.classList.remove('open'));
+  document.querySelectorAll('.avg-img-popover.open').forEach(p => p.classList.remove('open'));
 });
 
 /* ─── Drag-to-upload ───────────────────────────────────── */
