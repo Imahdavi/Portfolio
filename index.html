@@ -735,44 +735,53 @@
     .edit-on .avg-fields { display:flex; }
     .avg-name-fld { font-size:11.5px; font-weight:600; text-align:center; max-width:100%; line-height:1.25; }
     .avg-role-fld { font-size:10.5px; color:#999; text-align:center; max-width:100%; line-height:1.25; }
-    /* Avatar image picker — clicking the avatar opens this instead of
-       going straight to the file picker, so an existing "trusted by"
-       brand logo (Experience page) can be reused on an avatar without
-       re-uploading it. Same dark popover as .link-popover/.resize-menu. */
-    .avg-img-popover {
-      position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%);
-      background:rgba(26,23,20,.95); border-radius:14px; padding:12px;
-      display:none; flex-direction:column; gap:10px; z-index:70;
-      width:236px;
-      box-shadow:0 8px 24px rgba(0,0,0,.3);
+    /* Avatar image picker — a side panel (slides in from the right edge
+       of the viewport, not a small anchored popover) with real room to
+       browse logos, plus a scrim behind it. Each logo is a plain <img>
+       with object-fit:contain inside an unfilled outlined circle — the
+       same look as the trusted-by sphere's own per-logo circles — so it
+       shows at its own natural size/proportions instead of being forced
+       to fill a fixed frame. */
+    .avg-pick-backdrop {
+      position:fixed; inset:0; background:rgba(0,0,0,.28); z-index:499;
+      opacity:0; pointer-events:none; transition:opacity .2s;
     }
-    .avg-img-popover.open { display:flex; animation:fadeUp .15s ease both; }
-    .avg-img-popover-upload {
-      padding:8px 10px; background:rgba(255,255,255,.08); border:none; border-radius:8px;
-      color:#fdfbf8; font-size:12.5px; font-weight:500; cursor:pointer; text-align:left;
-      display:flex; align-items:center; gap:7px; transition:background .12s;
+    .avg-pick-backdrop.open { opacity:1; pointer-events:auto; }
+    .avg-pick-panel {
+      position:fixed; top:0; right:0; bottom:0; width:280px; max-width:88vw;
+      background:#fff; box-shadow:-10px 0 32px rgba(0,0,0,.18); z-index:500;
+      padding:22px 18px; overflow-y:auto;
+      transform:translateX(100%); transition:transform .28s cubic-bezier(.25,.8,.35,1);
     }
-    .avg-img-popover-upload svg { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
-    .avg-img-popover-upload:hover { background:rgba(255,255,255,.16); }
-    .avg-img-popover-lbl {
-      color:rgba(255,255,255,.5); font-size:11px; font-weight:600;
-      letter-spacing:.04em; padding:0 2px;
+    .avg-pick-panel.open { transform:translateX(0); }
+    .avg-pick-panel-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+    .avg-pick-panel-title { font-size:15px; font-weight:700; color:#1a1a1a; }
+    .avg-pick-panel-close {
+      width:28px; height:28px; border-radius:50%; border:none; background:#f2f2f2;
+      color:#666; font-size:17px; line-height:1; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; transition:background .15s;
     }
-    .avg-img-popover-grid {
-      display:grid; grid-template-columns:repeat(4, 1fr); gap:9px;
-      max-height:168px; overflow-y:auto;
+    .avg-pick-panel-close:hover { background:#e5e5e5; color:#333; }
+    .avg-pick-panel-upload {
+      width:100%; padding:11px 14px; background:#1a1a1a; border:none; border-radius:10px;
+      color:#fff; font-size:13px; font-weight:600; cursor:pointer; text-align:left;
+      display:flex; align-items:center; gap:8px; margin-bottom:20px; transition:background .15s;
     }
-    /* Logo sits on a solid white disc (most brand logos are drawn for a
-       light background) and is clipped + shrunk well inside the circle
-       (contain, not cover, at 62%) so it can never poke past the round
-       edge or get cropped illegibly. */
-    .avg-img-popover-grid button {
-      width:40px; height:40px; border-radius:50%; border:1.5px solid rgba(255,255,255,.2);
-      background-color:#fff; background-size:62%; background-position:center;
-      background-repeat:no-repeat; overflow:hidden;
-      cursor:pointer; padding:0; transition:border-color .12s, transform .12s;
+    .avg-pick-panel-upload svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+    .avg-pick-panel-upload:hover { background:#333; }
+    .avg-pick-panel-lbl {
+      font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+      color:#999; margin-bottom:14px;
     }
-    .avg-img-popover-grid button:hover { border-color:#fff; transform:scale(1.12); }
+    .avg-pick-panel-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; }
+    .avg-pick-logo-cell {
+      width:100%; aspect-ratio:1; border-radius:50%; border:1px solid rgba(0,0,0,.14);
+      background:#fff; cursor:pointer; padding:9px;
+      display:flex; align-items:center; justify-content:center;
+      transition:border-color .15s, transform .15s;
+    }
+    .avg-pick-logo-cell:hover { border-color:#1a1a1a; transform:scale(1.06); }
+    .avg-pick-logo-cell img { max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; }
     /* Duplicate/delete — a proper spaced-out hover toolbar (same dark
        pill as the segment controls) instead of two tiny overlapping
        circles crammed onto a small avatar, which were nearly impossible
@@ -4609,66 +4618,102 @@ function renderCarouselBlock(block, mount, captionEl) {
   }
 }
 
-// Shared image-picker popover: "Upload image" or reuse one of the
-// "trusted by" brand logos (Experience page, SITE_BRAND_LOGOS) without
-// re-uploading it. onResolveSrc(src) fires once either path resolves —
-// used for both changing an existing avatar's image and adding a new
-// one (empty-prompt, add-tile). Caller must position:relative its own
-// anchor element and append this as a child.
-function avgBuildPickPopover(onResolveSrc) {
-  const popover = document.createElement('div');
-  popover.className = 'avg-img-popover';
-  popover.onclick = (e) => e.stopPropagation();
+// Image picker — a single shared side panel (slides in from the right,
+// like a drawer) instead of a tiny anchored popover, so there's real
+// room to see the brand logos clearly. Each logo is a plain <img> with
+// object-fit:contain inside an outlined (unfilled) circle — the same
+// look as the trusted-by sphere's own per-logo circles — so it shows at
+// its own natural proportions instead of being cropped/force-filled
+// into a fixed frame. Built once and reused; avgOpenImagePicker(cb)
+// swaps in whichever callback the current trigger needs.
+let _avgPickPanel = null, _avgPickBackdrop = null, _avgPickResolve = null;
+
+function avgEnsurePickPanel() {
+  if (_avgPickPanel) return;
+
+  _avgPickBackdrop = document.createElement('div');
+  _avgPickBackdrop.className = 'avg-pick-backdrop';
+  _avgPickBackdrop.onclick = avgCloseImagePicker;
+  document.body.appendChild(_avgPickBackdrop);
+
+  const panel = document.createElement('div');
+  panel.className = 'avg-pick-panel';
+
+  const header = document.createElement('div');
+  header.className = 'avg-pick-panel-header';
+  const title = document.createElement('div');
+  title.className = 'avg-pick-panel-title';
+  title.textContent = 'Choose image';
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'avg-pick-panel-close';
+  closeBtn.textContent = '×';
+  closeBtn.onclick = avgCloseImagePicker;
+  header.appendChild(title);
+  header.appendChild(closeBtn);
+  panel.appendChild(header);
 
   const uploadBtn = document.createElement('button');
   uploadBtn.type = 'button';
-  uploadBtn.className = 'avg-img-popover-upload';
+  uploadBtn.className = 'avg-pick-panel-upload';
   uploadBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Upload image';
-  uploadBtn.onclick = (e) => {
-    e.stopPropagation();
-    popover.classList.remove('open');
+  uploadBtn.onclick = () => {
+    const resolve = _avgPickResolve;
+    avgCloseImagePicker();
     _mcFilePicker(files => {
-      if (!files.length) return;
+      if (!files.length || !resolve) return;
       const f = files[0];
       const ext = (f.name.split('.').pop() || 'jpg').toLowerCase();
       const path = `uploads/${Date.now()}_${uid()}.${ext}`;
-      tusUpload(f, SB_MEDIA_BUCKET, path, () => {}).then(url => {
-        onResolveSrc(url);
-      }).catch(err => showUploadToast('Upload failed: ' + err.message, true));
+      tusUpload(f, SB_MEDIA_BUCKET, path, () => {}).then(url => resolve(url))
+        .catch(err => showUploadToast('Upload failed: ' + err.message, true));
     });
   };
-  popover.appendChild(uploadBtn);
+  panel.appendChild(uploadBtn);
 
   const brandLogos = window.SITE_BRAND_LOGOS || [];
   if (brandLogos.length) {
     const lbl = document.createElement('div');
-    lbl.className = 'avg-img-popover-lbl';
-    lbl.textContent = 'Or use a brand logo';
-    popover.appendChild(lbl);
+    lbl.className = 'avg-pick-panel-lbl';
+    lbl.textContent = 'Or pick a brand logo';
+    panel.appendChild(lbl);
 
     const grid = document.createElement('div');
-    grid.className = 'avg-img-popover-grid';
+    grid.className = 'avg-pick-panel-grid';
     brandLogos.forEach(logo => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.title = logo.name;
-      b.style.backgroundImage = `url(${logo.src})`;
-      b.onclick = (e) => {
-        e.stopPropagation();
-        popover.classList.remove('open');
-        onResolveSrc(logo.src);
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'avg-pick-logo-cell';
+      cell.title = logo.name;
+      const img = document.createElement('img');
+      img.src = logo.src;
+      img.alt = logo.name;
+      cell.appendChild(img);
+      cell.onclick = () => {
+        const resolve = _avgPickResolve;
+        avgCloseImagePicker();
+        if (resolve) resolve(logo.src);
       };
-      grid.appendChild(b);
+      grid.appendChild(cell);
     });
-    popover.appendChild(grid);
+    panel.appendChild(grid);
   }
 
-  return popover;
+  document.body.appendChild(panel);
+  _avgPickPanel = panel;
 }
 
-function avgOpenPopover(popover) {
-  document.querySelectorAll('.resize-menu.open, .link-popover.open, .move-menu.open, .avg-img-popover.open').forEach(m => m.classList.remove('open'));
-  popover.classList.add('open');
+function avgOpenImagePicker(onResolveSrc) {
+  avgEnsurePickPanel();
+  _avgPickResolve = onResolveSrc;
+  _avgPickBackdrop.classList.add('open');
+  _avgPickPanel.classList.add('open');
+}
+
+function avgCloseImagePicker() {
+  if (_avgPickPanel) _avgPickPanel.classList.remove('open');
+  if (_avgPickBackdrop) _avgPickBackdrop.classList.remove('open');
+  _avgPickResolve = null;
 }
 
 // One-time migration: older saves used a flat block.avatars array with a
@@ -4730,18 +4775,14 @@ function avgRenderAvatarItem(a, idx, avatars, block, mount) {
   avgSetTip(tip, a.name, a.role);
   item.appendChild(tip);
 
-  const popover = avgBuildPickPopover(src => {
-    a.src = src;
-    saveProject(activeKey);
-    renderAvatarsBlock(block, mount);
-  });
-  item.appendChild(popover);
-
   av.onclick = (e) => {
     if (!editMode) return;
     e.stopPropagation();
-    if (popover.classList.contains('open')) popover.classList.remove('open');
-    else avgOpenPopover(popover);
+    avgOpenImagePicker(src => {
+      a.src = src;
+      saveProject(activeKey);
+      renderAvatarsBlock(block, mount);
+    });
   };
 
   // Duplicate/delete toolbar — appended to `item`, not `av`, so the
@@ -4926,15 +4967,13 @@ function avgRenderGroupSegment(seg, block, mount) {
   addTile.type = 'button';
   addTile.className = 'avg-add-tile';
   addTile.innerHTML = '<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
-  const addPopover = avgBuildPickPopover(src => {
-    seg.avatars.push({ id: uid(), src, name: '', role: '' });
-    saveProject(activeKey);
-    renderAvatarsBlock(block, mount);
-  });
-  addTile.appendChild(addPopover);
   addTile.onclick = (e) => {
     e.stopPropagation();
-    avgOpenPopover(addPopover);
+    avgOpenImagePicker(src => {
+      seg.avatars.push({ id: uid(), src, name: '', role: '' });
+      saveProject(activeKey);
+      renderAvatarsBlock(block, mount);
+    });
   };
   stack.appendChild(addTile);
 
@@ -4978,16 +5017,13 @@ function renderAvatarsBlock(block, mount) {
     prompt.className = 'avg-empty-prompt';
     prompt.textContent = '+ Add avatar';
 
-    const popover = avgBuildPickPopover(src => {
-      block.segments[0].avatars.push({ id: uid(), src, name: '', role: '' });
-      saveProject(activeKey);
-      renderAvatarsBlock(block, mount);
-    });
-    prompt.appendChild(popover);
-
     prompt.onclick = (e) => {
       e.stopPropagation();
-      avgOpenPopover(popover);
+      avgOpenImagePicker(src => {
+        block.segments[0].avatars.push({ id: uid(), src, name: '', role: '' });
+        saveProject(activeKey);
+        renderAvatarsBlock(block, mount);
+      });
     };
     mount.appendChild(prompt);
     if (migrated && activeKey) saveProject(activeKey);
@@ -5250,7 +5286,6 @@ document.addEventListener('click', () => {
   document.querySelectorAll('.resize-menu.open').forEach(m => m.classList.remove('open'));
   document.querySelectorAll('.link-popover.open').forEach(p => p.classList.remove('open'));
   document.querySelectorAll('.move-menu.open').forEach(m => m.classList.remove('open'));
-  document.querySelectorAll('.avg-img-popover.open').forEach(p => p.classList.remove('open'));
 });
 
 /* ─── Drag-to-upload ───────────────────────────────────── */
