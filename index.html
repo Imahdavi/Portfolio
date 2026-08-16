@@ -117,9 +117,25 @@
          drop it back into normal flow underneath while editing. */
       position:static; transform:none; margin:10px 0 0;
     }
+    /* Liquid-glass ring: a real frosted panel (not just a solid-white
+       box-shadow ring) so it actually blurs whatever's behind it — the
+       page background, and the bold letters it overlaps. Padding here
+       is what gives the avatar its "floating in glass" margin; the
+       pendulum script rotates this whole element, so the glass tilts
+       together with the photo instead of the photo spinning inside a
+       static frame. */
     .avatar-swing-wrap {
       display:flex; flex-direction:column; align-items:center;
       transform-origin:center center; will-change:transform;
+      padding:6px; border-radius:19px;
+      background:linear-gradient(155deg, rgba(255,255,255,.55), rgba(255,255,255,.22));
+      -webkit-backdrop-filter:blur(14px) saturate(160%);
+      backdrop-filter:blur(14px) saturate(160%);
+      border:1px solid rgba(255,255,255,.65);
+      box-shadow:
+        0 10px 28px rgba(0,0,0,.16),
+        inset 0 1px 1px rgba(255,255,255,.9),
+        inset 0 -6px 10px rgba(255,255,255,.18);
     }
 
     /* Avatar — same rounded-square shape as before, just smaller
@@ -127,7 +143,7 @@
     .pbc-avatar {
       width:58px; height:58px; border-radius:13px; overflow:hidden; flex-shrink:0;
       cursor:pointer; background:#b5a090; position:relative;
-      box-shadow:0 10px 24px rgba(0,0,0,.22), 0 0 0 4px #fff;
+      box-shadow:0 6px 16px rgba(0,0,0,.18);
     }
     .pbc-avatar img { width:100%; height:100%; object-fit:cover; display:block; color:transparent; font-size:0; }
     .avatar-edit-btn {
