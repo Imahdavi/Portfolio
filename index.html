@@ -139,13 +139,19 @@
     }
 
     /* Avatar — same rounded-square shape as before, just smaller
-       (78px→58px) so two lines of 56px bold type can read around it. */
+       (78px→58px) so two lines of 56px bold type can read around it.
+       Background dropped to transparent and its own light blur added
+       so the "hole" in the middle of the glass ring frosts the same as
+       the ring itself, instead of being an opaque tan square sitting
+       in the middle of it; the photo is see-through on top of that so
+       the letters it overlaps stay legible underneath. */
     .pbc-avatar {
       width:58px; height:58px; border-radius:13px; overflow:hidden; flex-shrink:0;
-      cursor:pointer; background:#b5a090; position:relative;
+      cursor:pointer; background:transparent; position:relative;
       box-shadow:0 6px 16px rgba(0,0,0,.18);
+      -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
     }
-    .pbc-avatar img { width:100%; height:100%; object-fit:cover; display:block; color:transparent; font-size:0; }
+    .pbc-avatar img { width:100%; height:100%; object-fit:cover; display:block; color:transparent; font-size:0; opacity:.62; }
     .avatar-edit-btn {
       position:absolute; inset:0; display:none; align-items:center; justify-content:center;
       background:rgba(0,0,0,.42); border:none; cursor:pointer; color:#fff; border-radius:13px;
