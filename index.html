@@ -963,6 +963,17 @@
       align-items:center; justify-content:center;
     }
     .tools-edit-on .tool-del-btn { display:flex; }
+    .tool-drag-handle {
+      display:none; position:absolute; top:-8px; left:-8px; z-index:5;
+      width:19px; height:19px; border-radius:50%;
+      background:#fff; border:1.5px solid rgba(0,0,0,.15); cursor:grab;
+      color:#999; font-size:11px; line-height:1; letter-spacing:-1px;
+      align-items:center; justify-content:center;
+    }
+    .tools-edit-on .tool-drag-handle { display:flex; }
+    .tool-drag-handle:active { cursor:grabbing; }
+    .tool-card.dragging { opacity:.4; }
+    .tool-card.drag-over { outline:2px dashed rgba(0,0,0,.35); outline-offset:2px; }
     .tool-size-row { display:none; align-items:center; gap:6px; margin-top:4px; padding-left:35px; }
     .tools-edit-on .tool-size-row { display:flex; }
     .tool-size-lbl { font-size:10px; font-weight:700; color:#aaa; width:9px; flex-shrink:0; }
@@ -3357,6 +3368,42 @@ function toolsBuildCard(t, i, tools, stack) {
       renderToolsStack();
     };
     card.appendChild(del);
+
+    // Drag reordering: only the handle is draggable (not the whole
+    // card), so dragging doesn't fight with text editing, the icon
+    // picker, or the size sliders living inside the same card. The
+    // handle carries the source index via dataTransfer; every card is
+    // a drop target that reads that index back out on drop.
+    const handle = document.createElement('span');
+    handle.className = 'tool-drag-handle';
+    handle.title = 'Drag to reorder';
+    handle.draggable = true;
+    handle.textContent = '⠿';
+    handle.addEventListener('dragstart', (e) => {
+      e.stopPropagation();
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(i));
+      card.classList.add('dragging');
+    });
+    handle.addEventListener('dragend', () => card.classList.remove('dragging'));
+    card.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      card.classList.add('drag-over');
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', (e) => {
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      const fromIdx = Number(e.dataTransfer.getData('text/plain'));
+      const toIdx = i;
+      if (Number.isNaN(fromIdx) || fromIdx === toIdx) return;
+      const [moved] = tools.splice(fromIdx, 1);
+      tools.splice(toIdx, 0, moved);
+      saveToolsEdits();
+      renderToolsStack();
+    });
+    card.appendChild(handle);
     card.appendChild(wCtl.row);
     card.appendChild(hCtl.row);
   }
