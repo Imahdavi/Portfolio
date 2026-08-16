@@ -497,11 +497,12 @@
     .d-title:empty:before  { content:attr(data-ph); color:#bbb; }
     .d-subtitle:empty:before { content:attr(data-ph); color:#bbb; }
 
-    /* Edit nav button — admin only, home or project view */
+    /* Edit nav button — admin only, home/project/soon/experience view */
     .edit-nav-btn { display:none !important; }
     body.is-admin #app:has(#view-home.active) ~ #bottom-nav .edit-nav-btn,
     body.is-admin #app:has(#view-project.active) ~ #bottom-nav .edit-nav-btn,
-    body.is-admin #app:has(#view-soon.active) ~ #bottom-nav .edit-nav-btn { display:flex !important; }
+    body.is-admin #app:has(#view-soon.active) ~ #bottom-nav .edit-nav-btn,
+    body.is-admin #app:has(#view-exp.active) ~ #bottom-nav .edit-nav-btn { display:flex !important; }
     #editBtn.on { color:#111; }
 
     /* Home edit mode */
@@ -1487,16 +1488,6 @@
           <a class="pill" id="link-twitter" href="https://x.com/imahdvi" target="_blank">
             <svg width="11" height="9.94298" viewBox="0 0 11 9.94298" fill="none"><path d="M8.66314 0H10.3499L6.66486 4.21175L11 9.94298H7.60562L4.94702 6.46702L1.90497 9.94298H0.217216L4.15872 5.43805L0 0H3.48055L5.8837 3.17717L8.66314 0ZM8.07115 8.93339H9.00579L2.9727 0.956566H1.96973L8.07115 8.93339Z"/></svg>
           </a>
-          <span class="contact-lbl" id="contactLblAfter">or leave a</span>
-          <button class="nav-btn" onclick="goView('view-soon',document.getElementById('nb-soon'))">
-            <span class="nav-tip">Note</span>
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M14.3053 15.4498H8.90527" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M12.2604 11.4385H8.90442" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M20.1598 8.29988L14.4898 2.89988C13.7598 2.79988 12.9398 2.74988 12.0398 2.74988C5.74978 2.74988 3.64978 5.06988 3.64978 11.9999C3.64978 18.9399 5.74978 21.2499 12.0398 21.2499C18.3398 21.2499 20.4398 18.9399 20.4398 11.9999C20.4398 10.5799 20.3498 9.34988 20.1598 8.29988Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M13.9342 2.83252V5.49352C13.9342 7.35152 15.4402 8.85652 17.2982 8.85652H20.2492" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
     </div>
 
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
@@ -2812,7 +2803,6 @@ async function loadSettings() {
         localStorage.setItem('pf_avatar', s.profile.photo_url);
       }
       if (s.profile.contactLabel) document.getElementById('contactLblBefore').textContent = s.profile.contactLabel;
-      if (s.profile.noteLabel)    document.getElementById('contactLblAfter').textContent  = s.profile.noteLabel;
     }
     revealProfileName();
 
@@ -3517,7 +3507,6 @@ function updateHomeEditUI() {
     document.querySelector('.profile-role'),
     document.querySelector('.profile-age'),
     document.getElementById('contactLblBefore'),
-    document.getElementById('contactLblAfter'),
   ];
   homeEl.querySelectorAll('.sec-label, .proj-title, .proj-sub').forEach(el => editables.push(el));
 
@@ -3710,9 +3699,7 @@ function saveHomeEdits() {
   if (ageEl)  _cachedSettings.profile.age   = ageEl.textContent.trim();
 
   const contactLblBeforeEl = document.getElementById('contactLblBefore');
-  const contactLblAfterEl  = document.getElementById('contactLblAfter');
   if (contactLblBeforeEl) _cachedSettings.profile.contactLabel = contactLblBeforeEl.textContent.trim();
-  if (contactLblAfterEl)  _cachedSettings.profile.noteLabel    = contactLblAfterEl.textContent.trim();
 
   // build a lookup of previously-saved thumbs so a render glitch can never wipe them
   const _prevThumbs = {};
