@@ -1578,6 +1578,22 @@
     }
     .nav-btn.active::after { opacity:1; }
 
+    /* Shrink the whole bottom-nav pill on phones — at full size it was
+       wide enough (up to ~354px, edge to edge on a 375px phone) that
+       #scroll-top-btn's fixed desktop offset (meant to clear a much
+       narrower pill) had nowhere to sit without overlapping it. The
+       actual reposition logic lives in JS (positionScrollTopBtn, near
+       the scroll-to-top wiring) since it needs the nav's real measured
+       width, which this shrink also feeds into automatically. */
+    @media (max-width:539px) {
+      #bottom-nav { padding:12px 18px; gap:18px; }
+      .nav-btn, #emojiburst-mount { width:20px; height:20px; }
+      .nav-btn svg { width:20px; height:20px; }
+      .nav-sep { height:14px; }
+      #sound-toggle-btn { width:21px; height:21px; }
+      #sound-toggle-btn svg { width:18px; height:18px; }
+    }
+
     /* ─────────────────── LOTTIE PICKER ─────────────────── */
     #lottie-picker-overlay {
       display:none; position:fixed; inset:0; z-index:5000;
@@ -6602,6 +6618,48 @@ document.addEventListener('DOMContentLoaded', () => {
   proj.addEventListener('scroll', () => {
     btn.classList.toggle('show', proj.scrollTop > 200);
   });
+});
+
+/* On phones the bottom-nav pill runs nearly edge to edge, so the
+   desktop CSS position for #scroll-top-btn (a fixed offset that
+   assumes a much narrower, centered pill) lands right on top of it.
+   Below 768px, measure the pill's actual rect and place the button
+   beside it — same vertical center — if there's room, or stacked just
+   above it (gapped, never touching) if there isn't. At 768px+ the
+   inline overrides are cleared so the original stylesheet position
+   (which already has plenty of clearance there) takes back over. */
+function positionScrollTopBtn() {
+  const btn = document.getElementById('scroll-top-btn');
+  const nav = document.getElementById('bottom-nav');
+  if (!btn || !nav) return;
+
+  if (window.innerWidth >= 768) {
+    btn.style.left = btn.style.right = btn.style.top = btn.style.bottom = '';
+    return;
+  }
+
+  const GAP = 10, SAFE_EDGE = 10;
+  const navRect = nav.getBoundingClientRect();
+  const btnSize = btn.offsetWidth || 40;
+  const besideX = navRect.right + GAP;
+
+  if (besideX + btnSize <= window.innerWidth - SAFE_EDGE) {
+    btn.style.left   = besideX + 'px';
+    btn.style.right  = 'auto';
+    btn.style.top    = (navRect.top + navRect.height / 2 - btnSize / 2) + 'px';
+    btn.style.bottom = 'auto';
+  } else {
+    btn.style.right  = Math.max(SAFE_EDGE, window.innerWidth - navRect.right) + 'px';
+    btn.style.left   = 'auto';
+    btn.style.bottom = (window.innerHeight - navRect.top + GAP) + 'px';
+    btn.style.top    = 'auto';
+  }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  positionScrollTopBtn();
+  window.addEventListener('resize', positionScrollTopBtn);
+  const nav = document.getElementById('bottom-nav');
+  if (nav) new ResizeObserver(positionScrollTopBtn).observe(nav);
 });
 
 /* ─── Init ─────────────────────────────────────────────── */
