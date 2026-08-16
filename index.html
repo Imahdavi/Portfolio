@@ -106,16 +106,25 @@
        via .avatar-overlay-slot) lands on the seam between them. */
     .profile-name-block { position:relative; }
 
+    /* --avatar-dx/--avatar-dy: user-draggable offset from dead-center
+       (see the drag-to-reposition script), on top of the base
+       centering translate. */
     .avatar-overlay-slot {
-      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      position:absolute; top:50%; left:50%;
+      transform:translate(calc(-50% + var(--avatar-dx, 0px)), calc(-50% + var(--avatar-dy, 0px)));
       z-index:2;
     }
     #view-home.home-edit .avatar-overlay-slot {
       /* Editing shows the plain flat name field below instead of the
          two-line display, so an absolutely-centered avatar would just
          float over empty space (or worse, over the text being typed) —
-         drop it back into normal flow underneath while editing. */
-      position:static; transform:none; margin:10px 0 0;
+         drop it back into normal flow underneath while editing, but
+         keep applying the same drag offset (relative to this resting
+         spot instead of the text's center) so dragging still gives
+         live visual feedback right where you're looking. */
+      position:static;
+      transform:translate(var(--avatar-dx, 0px), var(--avatar-dy, 0px));
+      margin:10px 0 0;
     }
     .avatar-swing-wrap {
       display:flex; flex-direction:column; align-items:center;
@@ -129,26 +138,42 @@
        ring+separate-blur combo had so the photo actually reads instead
        of washing out. */
     .pbc-avatar {
-      width:46px; height:46px; border-radius:10px; overflow:hidden; flex-shrink:0;
+      width:calc(46px * var(--avatar-scale, 1)); height:calc(46px * var(--avatar-scale, 1));
+      border-radius:calc(10px * var(--avatar-scale, 1)); overflow:hidden; flex-shrink:0;
       cursor:pointer; position:relative;
-      background:linear-gradient(155deg, rgba(255,255,255,.68), rgba(255,255,255,.4));
-      border:1px solid rgba(255,255,255,.75);
-      -webkit-backdrop-filter:blur(10px) saturate(150%);
-      backdrop-filter:blur(10px) saturate(150%);
+      background:linear-gradient(155deg, rgba(255,255,255,.5), rgba(255,255,255,.24));
+      border:1px solid rgba(255,255,255,.62);
+      -webkit-backdrop-filter:blur(12px) saturate(160%);
+      backdrop-filter:blur(12px) saturate(160%);
       box-shadow:
-        0 8px 20px rgba(0,0,0,.2),
-        inset 0 1px 1px rgba(255,255,255,.9),
+        0 8px 20px rgba(0,0,0,.18),
+        inset 0 1px 1px rgba(255,255,255,.85),
         inset 0 -4px 8px rgba(255,255,255,.15);
     }
-    .pbc-avatar img { width:100%; height:100%; object-fit:cover; display:block; color:transparent; font-size:0; opacity:.78; }
+    #view-home.home-edit .pbc-avatar { cursor:grab; }
+    .pbc-avatar img { width:100%; height:100%; object-fit:cover; display:block; color:transparent; font-size:0; opacity:.6; }
     .avatar-edit-btn {
       position:absolute; inset:0; display:none; align-items:center; justify-content:center;
-      background:rgba(0,0,0,.42); border:none; cursor:pointer; color:#fff; border-radius:10px;
+      background:rgba(0,0,0,.42); border:none; cursor:pointer; color:#fff;
+      border-radius:calc(10px * var(--avatar-scale, 1));
       transition:background .15s;
     }
     .avatar-edit-btn:hover { background:rgba(0,0,0,.55); }
     .avatar-edit-btn svg { width:15px; height:15px; }
     #view-home.home-edit .avatar-edit-btn { display:flex; }
+
+    /* Size slider — reuses the exact .tool-size-row control built for
+       the tool cards (buildToolSizeRow), just outside its normal
+       .tools-edit-on wrapper, so it needs its own visibility + spacing
+       override here instead of inheriting theirs. */
+    .avatar-size-ctrl {
+      display:none; align-items:center; gap:8px;
+      margin:8px auto 0; padding:6px 12px; width:fit-content;
+      background:#fff; border:1px solid rgba(0,0,0,.1); border-radius:10px;
+      box-shadow:0 4px 12px rgba(0,0,0,.08);
+    }
+    #view-home.home-edit .avatar-size-ctrl { display:flex; }
+    .avatar-size-ctrl .tool-size-row { display:flex; padding-left:0; margin-top:0; }
 
     /* Fancy display version: letters blur in via .play (added once the
        webfont is confirmed loaded, see revealProfileName()). Hidden
@@ -160,7 +185,12 @@
       font-weight:700; line-height:.78; letter-spacing:-.02em;
       text-transform:uppercase; text-align:center; color:#1a1a1a;
     }
-    .profile-name-display .ln { display:block; overflow:hidden; white-space:nowrap; }
+    /* No overflow:hidden here on purpose — it was clipping each blurred
+       letter's soft falloff into a hard-edged rectangle as it faded in
+       (looked like the text sitting inside a smudgy gray box instead of
+       individually blurred letters). White-space:nowrap alone is enough
+       to stop the inline-block letters wrapping onto their own lines. */
+    .profile-name-display .ln { display:block; white-space:nowrap; }
     .profile-name-display .ln span {
       display:inline-block; opacity:0; filter:blur(8px); transform:translateY(-14px);
     }
@@ -1675,8 +1705,8 @@
         <div class="profile-name">Alireza Mahdavi</div>
         <div class="avatar-overlay-slot">
           <div class="avatar-swing-wrap" id="avatarSwing">
-            <div class="pbc-avatar" onclick="if(document.getElementById('view-home').classList.contains('home-edit'))document.getElementById('avatarInput').click()">
-              <button class="avatar-edit-btn" title="Change photo" onclick="event.stopPropagation();if(document.getElementById('view-home').classList.contains('home-edit'))document.getElementById('avatarInput').click()">
+            <div class="pbc-avatar" onclick="avatarOpenPicker(event)">
+              <button class="avatar-edit-btn" title="Change photo" onclick="avatarOpenPicker(event)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
               </button>
               <!-- swap src="" with your photo path -->
@@ -1684,6 +1714,7 @@
             </div>
           </div>
         </div>
+        <div class="avatar-size-ctrl" id="avatarSizeCtrl" title="Drag the photo to reposition it"></div>
       </div>
       <div class="profile-role">Visual &amp; Motion Designer · 25 yo ✦</div>
       <div class="profile-age"></div>
@@ -3067,6 +3098,15 @@ async function loadSettings() {
         localStorage.setItem('pf_avatar', s.profile.photo_url);
       }
       if (s.profile.contactLabel) document.getElementById('contactLblBefore').textContent = s.profile.contactLabel;
+      const avatarSlot = document.querySelector('.avatar-overlay-slot');
+      if (avatarSlot) {
+        if (s.profile.avatarDX != null) avatarSlot.style.setProperty('--avatar-dx', s.profile.avatarDX + 'px');
+        if (s.profile.avatarDY != null) avatarSlot.style.setProperty('--avatar-dy', s.profile.avatarDY + 'px');
+        if (s.profile.avatarScale != null) {
+          avatarSlot.style.setProperty('--avatar-scale', (s.profile.avatarScale / 100).toFixed(2));
+          if (_avatarSizeCtl) _avatarSizeCtl.setValue(s.profile.avatarScale);
+        }
+      }
     }
     revealProfileName();
 
@@ -6797,6 +6837,79 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   tick();
 })();
+
+/* ── Avatar drag-to-reposition + size slider ─────────────
+   Freehand drag (same pattern as the tool-card/block dragging
+   elsewhere) writes --avatar-dx/--avatar-dy on .avatar-overlay-slot;
+   a reused buildToolSizeRow() slider writes --avatar-scale. Both
+   persist to settings.profile so they survive a reload. */
+let _avatarJustDragged = false;
+function avatarOpenPicker(e) {
+  e.stopPropagation();
+  if (_avatarJustDragged) { _avatarJustDragged = false; return; }
+  if (document.getElementById('view-home').classList.contains('home-edit')) {
+    document.getElementById('avatarInput').click();
+  }
+}
+
+let _avatarSizeCtl = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  const avatar = document.querySelector('.pbc-avatar');
+  const slot = document.querySelector('.avatar-overlay-slot');
+  const sizeCtrl = document.getElementById('avatarSizeCtrl');
+  if (!avatar || !slot) return;
+
+  avatar.addEventListener('pointerdown', (e) => {
+    if (!editMode || e.button !== 0) return;
+    const startX = e.clientX, startY = e.clientY;
+    const startDX = parseFloat(getComputedStyle(slot).getPropertyValue('--avatar-dx')) || 0;
+    const startDY = parseFloat(getComputedStyle(slot).getPropertyValue('--avatar-dy')) || 0;
+    let dragged = false;
+
+    const onMove = (ev) => {
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      // A small movement threshold before committing to "this is a
+      // drag" — otherwise every plain click (which opens the photo
+      // picker) would register a few sub-pixel pointer jitters as a
+      // drag and silently swallow the click.
+      if (!dragged && Math.hypot(dx, dy) > 4) dragged = true;
+      if (dragged) {
+        slot.style.setProperty('--avatar-dx', (startDX + dx) + 'px');
+        slot.style.setProperty('--avatar-dy', (startDY + dy) + 'px');
+      }
+    };
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      if (!dragged) return;
+      _avatarJustDragged = true;
+      const dxVal = parseFloat(getComputedStyle(slot).getPropertyValue('--avatar-dx')) || 0;
+      const dyVal = parseFloat(getComputedStyle(slot).getPropertyValue('--avatar-dy')) || 0;
+      if (!_cachedSettings) _cachedSettings = {};
+      if (!_cachedSettings.profile) _cachedSettings.profile = {};
+      _cachedSettings.profile.avatarDX = dxVal;
+      _cachedSettings.profile.avatarDY = dyVal;
+      saveSettings();
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  });
+
+  if (sizeCtrl) {
+    const initial = (_cachedSettings && _cachedSettings.profile && _cachedSettings.profile.avatarScale) || 100;
+    _avatarSizeCtl = buildToolSizeRow('Size', initial, (v, committed) => {
+      slot.style.setProperty('--avatar-scale', (v / 100).toFixed(2));
+      if (committed) {
+        if (!_cachedSettings) _cachedSettings = {};
+        if (!_cachedSettings.profile) _cachedSettings.profile = {};
+        _cachedSettings.profile.avatarScale = v;
+        saveSettings();
+      }
+    });
+    sizeCtrl.appendChild(_avatarSizeCtl.row);
+  }
+});
 </script>
 
 <script>
