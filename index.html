@@ -779,6 +779,10 @@
     .edit-on .avg-fields { display:flex; }
     .avg-name-fld { font-size:11.5px; font-weight:600; text-align:center; max-width:100%; line-height:1.25; }
     .avg-role-fld { font-size:10.5px; color:#999; text-align:center; max-width:100%; line-height:1.25; }
+    /* Per-avatar logo-size slider — only on avatars using the logo <img>
+       path (a.isLogo), so a fix that only some logos needed doesn't
+       force a size change onto every avatar. */
+    .avg-size-slider { width:56px; height:3px; margin-top:4px; accent-color:#1a1a1a; cursor:pointer; touch-action:none; }
     /* Avatar image picker — a side panel (slides in from the right edge
        of the viewport, not a small anchored popover) with real room to
        browse logos, plus a scrim behind it. Each logo is a plain <img>
@@ -4850,6 +4854,7 @@ function avgRenderAvatarItem(a, idx, avatars, block, mount) {
 
   const av = document.createElement('div');
   av.className = 'avg-avatar';
+  let logoImgEl = null;
   if (a.src && a.isLogo) {
     // A brand logo's own aspect ratio can be wide/short (e.g. a
     // landscape logotype). CSS background-size:contain only guarantees
@@ -4857,15 +4862,18 @@ function avgRenderAvatarItem(a, idx, avatars, block, mount) {
     // that touches a square's full width/height always has corners
     // outside that square's inscribed circle (pure geometry, worst case
     // at a 1:1 ratio needing the image capped to ~71% to stay clear).
-    // A real <img> with object-fit:contain and a hard max-width/height
-    // cap sidesteps this the same way the brand-logo picker already
-    // does, instead of trying to fake it through background-size.
+    // Most logos are wide enough that the overflow is imperceptible at
+    // 100% (uncapped, same as background-size:contain), so that's the
+    // default — only near-square logos (Digit) or ones with a lot of
+    // internal whitespace (Netbina) actually need capping, done per
+    // avatar via a.logoSize and the slider below, not forced on all.
     av.style.backgroundColor = '#fff';
-    const img = document.createElement('img');
-    img.src = a.src;
-    img.alt = '';
-    img.style.cssText = 'max-width:70%; max-height:70%; width:auto; height:auto; object-fit:contain; pointer-events:none;';
-    av.appendChild(img);
+    logoImgEl = document.createElement('img');
+    logoImgEl.src = a.src;
+    logoImgEl.alt = '';
+    const sz = a.logoSize || 100;
+    logoImgEl.style.cssText = `max-width:${sz}%; max-height:${sz}%; width:auto; height:auto; object-fit:contain; pointer-events:none;`;
+    av.appendChild(logoImgEl);
   } else if (a.src) {
     av.style.backgroundImage = `url(${a.src})`;
   }
@@ -4955,6 +4963,27 @@ function avgRenderAvatarItem(a, idx, avatars, block, mount) {
 
   fields.appendChild(nameFld);
   fields.appendChild(roleFld);
+
+  // Per-avatar logo size — only avatars using the logo <img> path have
+  // one; everything else (uploaded photos, initials) has no such knob.
+  if (a.isLogo) {
+    const sizeSlider = document.createElement('input');
+    sizeSlider.type = 'range';
+    sizeSlider.className = 'avg-size-slider';
+    sizeSlider.min = '30';
+    sizeSlider.max = '100';
+    sizeSlider.step = '1';
+    sizeSlider.value = String(a.logoSize || 100);
+    sizeSlider.title = 'Logo size';
+    sizeSlider.addEventListener('pointerdown', (e) => e.stopPropagation());
+    sizeSlider.addEventListener('input', () => {
+      const sz = +sizeSlider.value;
+      a.logoSize = sz;
+      if (logoImgEl) { logoImgEl.style.maxWidth = sz + '%'; logoImgEl.style.maxHeight = sz + '%'; }
+    });
+    sizeSlider.addEventListener('change', () => saveProject(activeKey));
+    fields.appendChild(sizeSlider);
+  }
 
   item.appendChild(av);
   item.appendChild(fields);
