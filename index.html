@@ -930,6 +930,13 @@
       filter:none; cursor:default;
     }
     .tools-edit-on .tool-card:hover { box-shadow:0 6px 18px rgba(0,0,0,.06); }
+    /* icon-only: card has no name/sub text left, so it's just the icon —
+       .tool-card-top otherwise stretches full-width and left-aligns its
+       row (fine when there's a name next to the icon), which put the
+       icon in the top-left corner instead of dead-center once the text
+       was gone. */
+    .tool-card.icon-only { align-items:center; }
+    .tool-card.icon-only .tool-card-top { justify-content:center; }
     .tool-card-top { display:flex; align-items:center; gap:9px; }
     .tool-icon {
       width:26px; height:26px; border-radius:7px; flex-shrink:0;
@@ -937,7 +944,10 @@
       color:#fff; font-size:10.5px; font-weight:700; letter-spacing:-.02em;
       overflow:hidden;
     }
-    .tool-icon img { width:100%; height:100%; object-fit:cover; }
+    /* contain, not cover: a non-square uploaded logo (e.g. Figma's mark)
+       got its edges sliced off under cover; contain letterboxes instead
+       of cropping, and the icon's own background fills the padding. */
+    .tool-icon img { width:100%; height:100%; object-fit:contain; }
     .tools-edit-on .tool-icon { cursor:pointer; }
     .tools-edit-on .tool-icon:hover { outline:2px solid rgba(0,0,0,.25); outline-offset:1px; }
     .tool-name { font-size:14px; font-weight:600; color:#222; outline:none; }
@@ -3223,6 +3233,8 @@ function toolsBuildCard(t, i, tools, stack) {
   card.className = 'tool-card';
   card.style.setProperty('--sw', ((t.sizeW ?? t.size ?? 100) / 100).toFixed(2));
   card.style.setProperty('--sh', ((t.sizeH ?? t.size ?? 100) / 100).toFixed(2));
+  const isIconOnly = !editMode && !(t.name || '').trim() && !(t.sub || '').trim();
+  card.classList.toggle('icon-only', isIconOnly);
 
   if (!editMode) {
     const center = (tools.length - 1) / 2;
@@ -3282,6 +3294,7 @@ function toolsBuildCard(t, i, tools, stack) {
     sub.dataset.ph = 'Category';
   }
   sub.textContent = t.sub || '';
+  if (isIconOnly) { name.style.display = 'none'; sub.style.display = 'none'; }
 
   card.appendChild(top);
   card.appendChild(sub);
