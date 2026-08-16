@@ -897,26 +897,32 @@
     .tool-card {
       grid-area:stack;
       position:relative;
-      width:194px; height:80px;
+      /* width/height react to --sw/--sh, not a transform:scale() — a
+         scale stretched the icon/text/border-radius along with the box
+         (visibly warping them); calc()-ing the real dimensions instead
+         just changes how big the frame is, and its contents (icon,
+         text) reflow at their normal, undistorted size. */
+      width:calc(194px * var(--sw,1)); height:calc(80px * var(--sh,1));
       display:flex; flex-direction:column; justify-content:center; gap:5px;
       border-radius:14px; border:1px solid rgba(0,0,0,.09);
       background:rgba(250,248,245,.85); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
       box-shadow:0 6px 18px rgba(0,0,0,.06);
       padding:0 16px; cursor:default; user-select:none;
       filter:grayscale(1) opacity(.75);
-      transform:skewY(var(--skew,-8deg)) translate(var(--tx,0px),var(--ty,0px)) scale(var(--sw,1),var(--sh,1));
+      transform:skewY(var(--skew,-8deg)) translate(var(--tx,0px),var(--ty,0px));
       z-index:var(--z,0);
-      transition:transform .6s cubic-bezier(.25,.8,.25,1), filter .5s ease, border-color .3s, box-shadow .3s;
+      transition:width .5s cubic-bezier(.25,.8,.25,1), height .5s cubic-bezier(.25,.8,.25,1), transform .6s cubic-bezier(.25,.8,.25,1), filter .5s ease, border-color .3s, box-shadow .3s;
     }
     .tool-card:hover {
       filter:grayscale(0) opacity(1);
       border-color:rgba(0,0,0,.16);
       box-shadow:0 14px 30px rgba(0,0,0,.12);
-      transform:skewY(var(--skew,-8deg)) translate(var(--tx,0px),calc(var(--ty,0px) - 22px)) scale(var(--sw,1),var(--sh,1));
+      transform:skewY(var(--skew,-8deg)) translate(var(--tx,0px),calc(var(--ty,0px) - 22px));
       z-index:30;
     }
     .tools-edit-on .tool-card {
       --skew:0deg; --tx:0px; --ty:0px;
+      width:194px; height:auto; min-height:80px; padding:12px 16px;
       filter:none; cursor:default;
     }
     .tools-edit-on .tool-card:hover { box-shadow:0 6px 18px rgba(0,0,0,.06); }
@@ -925,7 +931,11 @@
       width:26px; height:26px; border-radius:7px; flex-shrink:0;
       display:flex; align-items:center; justify-content:center;
       color:#fff; font-size:10.5px; font-weight:700; letter-spacing:-.02em;
+      overflow:hidden;
     }
+    .tool-icon img { width:100%; height:100%; object-fit:cover; }
+    .tools-edit-on .tool-icon { cursor:pointer; }
+    .tools-edit-on .tool-icon:hover { outline:2px solid rgba(0,0,0,.25); outline-offset:1px; }
     .tool-name { font-size:14px; font-weight:600; color:#222; outline:none; }
     .tool-sub { font-size:11.5px; color:#999; padding-left:35px; outline:none; }
     .tools-edit-on .tool-name, .tools-edit-on .tool-sub { cursor:text; }
@@ -939,7 +949,6 @@
       align-items:center; justify-content:center;
     }
     .tools-edit-on .tool-del-btn { display:flex; }
-    .tools-edit-on .tool-card { height:auto; min-height:80px; padding:12px 16px; }
     .tool-size-row { display:none; align-items:center; gap:6px; margin-top:4px; padding-left:35px; }
     .tools-edit-on .tool-size-row { display:flex; }
     .tool-size-lbl { font-size:10px; font-weight:700; color:#aaa; width:9px; flex-shrink:0; }
@@ -3217,8 +3226,31 @@ function toolsBuildCard(t, i, tools, stack) {
 
   const icon = document.createElement('span');
   icon.className = 'tool-icon';
-  icon.style.background = t.bg || '#555';
-  icon.textContent = t.badge || (t.name || '?').trim().slice(0, 2).toUpperCase();
+  const renderIconContent = () => {
+    icon.innerHTML = '';
+    if (t.iconSrc) {
+      icon.style.background = '#fff';
+      const img = document.createElement('img');
+      img.src = t.iconSrc;
+      img.alt = '';
+      icon.appendChild(img);
+    } else {
+      icon.style.background = t.bg || '#555';
+      icon.textContent = t.badge || (t.name || '?').trim().slice(0, 2).toUpperCase();
+    }
+  };
+  renderIconContent();
+  if (editMode) {
+    icon.title = 'Click to change icon';
+    icon.onclick = (e) => {
+      e.stopPropagation();
+      avgOpenImagePicker((src) => {
+        t.iconSrc = src;
+        renderIconContent();
+        saveToolsEdits();
+      });
+    };
+  }
   top.appendChild(icon);
 
   const nameTag = editMode ? 'div' : 'span';
@@ -3248,7 +3280,7 @@ function toolsBuildCard(t, i, tools, stack) {
     const scheduleSave = () => { clearTimeout(_st); _st = setTimeout(saveToolsEdits, 1200); };
     name.addEventListener('input', () => {
       t.name = name.textContent;
-      if (!t.badge) icon.textContent = (t.name || '?').trim().slice(0, 2).toUpperCase();
+      if (!t.badge && !t.iconSrc) renderIconContent();
       scheduleSave();
     });
     sub.addEventListener('input', () => { t.sub = sub.textContent; scheduleSave(); });
