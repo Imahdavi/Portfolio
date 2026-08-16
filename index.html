@@ -272,7 +272,21 @@
     .exp-add-btn { display:none; width:100%; margin-top:14px; padding:11px; border:1.5px dashed rgba(0,0,0,.15); border-radius:8px; background:none; font-size:13px; color:#aaa; cursor:pointer; transition:all .2s; }
     .exp-add-btn:hover { border-color:rgba(0,0,0,.3); color:#555; }
     .exp-add-btn.show { display:block; }
-    .brand-grid-wrap { margin-top:36px; padding-top:28px; text-align:center; }
+    .brand-grid-wrap { margin-top:36px; padding-top:28px; text-align:center; --trusted-gap:22px; }
+    /* Drag handle to adjust the gap between the "trusted by" pill and
+       the sphere below it — edit mode only, shown via the same
+       #sg-exp.exp-edit-on toggle the rest of the Experience-page edit
+       UI uses (a general sibling selector, since this handle lives
+       outside #sg-exp as a sibling, not a descendant). */
+    .trusted-gap-handle {
+      display:none; align-items:center; justify-content:center;
+      width:64px; height:16px; margin:2px auto; cursor:ns-resize;
+      border-radius:8px; background:rgba(0,0,0,.05); color:#999;
+      transition:background .15s, color .15s; touch-action:none;
+    }
+    #sg-exp.exp-edit-on ~ .brand-grid-wrap .trusted-gap-handle { display:flex; }
+    .trusted-gap-handle:hover { background:rgba(0,0,0,.1); color:#555; }
+    .trusted-gap-handle svg { width:22px; height:8px; pointer-events:none; }
     /* Magic UI "Animated Shiny Text", ported straight from its Tailwind
        classes/keyframes to plain CSS (no Tailwind in this project):
        a soft gray label with an animated bright band sweeping through
@@ -282,7 +296,7 @@
        editable text) and the label itself editable in edit mode. */
     .brand-grid-label-pill {
       display:inline-flex; align-items:center; gap:7px;
-      margin:0 auto 22px; padding:7px 18px;
+      margin:0 auto var(--trusted-gap, 22px); padding:7px 18px;
       border-radius:999px; border:1px solid rgba(0,0,0,.08);
       background:rgba(0,0,0,.035);
       width:fit-content;
@@ -325,9 +339,14 @@
       will-change:transform, opacity; user-select:none;
     }
     .brand-logo { height:56%; width:auto; max-width:72%; object-fit:contain; filter:grayscale(1) opacity(.4); transition:filter .28s ease; -webkit-user-drag:none; user-select:none; }
-    .brand-logo:hover { filter:grayscale(0) opacity(1); }
+    /* Hover on the whole circle chip, not just the logo's own pixels —
+       since each chip is now a uniform 58px circle with the logo
+       floating smaller/centered inside it (proportional, not filled),
+       hovering the chip's padding used to miss :hover on .brand-logo
+       entirely, so smaller logos never brightened on hover. */
+    .brand-cell:hover .brand-logo { filter:grayscale(0) opacity(1); }
     .brand-text { font-size:10.5px; font-weight:600; color:rgba(0,0,0,.28); letter-spacing:-.01em; transition:color .28s; cursor:inherit; line-height:1.15; user-select:none; text-align:center; padding:0 6px; }
-    .brand-text:hover { color:rgba(0,0,0,.82); }
+    .brand-cell:hover .brand-text { color:rgba(0,0,0,.82); }
 
     /* ─────────────────── SOON PLACEHOLDER ─────────────────── */
     .soon-wrap { display:flex; align-items:center; justify-content:center; min-height:calc(100dvh - 160px); }
@@ -1487,6 +1506,9 @@
       <div class="brand-grid-label-pill">
         <span class="brand-grid-star" aria-hidden="true">✨</span>
         <div class="brand-grid-label" data-ph="trusted by">trusted by</div>
+      </div>
+      <div class="trusted-gap-handle" id="trustedGapHandle" title="Drag to adjust spacing">
+        <svg viewBox="0 0 24 8"><line x1="2" y1="2" x2="22" y2="2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="2" y1="6" x2="22" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </div>
       <div class="brand-grid" id="brand-grid"></div>
     </div>
@@ -2806,10 +2828,14 @@ async function loadSettings() {
     // render work experience
     if (s.experience && s.experience.length) renderWorkExp(s.experience);
 
-    // "trusted by" label
+    // "trusted by" label + its gap above the sphere
     if (s.trustedByLabel) {
       const brandLabel = document.querySelector('.brand-grid-label');
       if (brandLabel) brandLabel.textContent = s.trustedByLabel;
+    }
+    if (s.trustedByGap != null) {
+      const brandWrap = document.querySelector('.brand-grid-wrap');
+      if (brandWrap) brandWrap.style.setProperty('--trusted-gap', s.trustedByGap + 'px');
     }
 
   } catch(e) {
@@ -2852,6 +2878,11 @@ function renderWorkExp(items) {
   const SVAM30 = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 30"><text x="0" y="23" font-family="\'Helvetica Neue\',Arial,sans-serif" font-size="22" font-weight="800" fill="#2D67D2" letter-spacing="-0.5">VAM</text><text x="58" y="23" font-family="\'Helvetica Neue\',Arial,sans-serif" font-size="22" font-weight="800" fill="#1a1a1a">30</text></svg>';
   const SNETBINA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 30"><text x="54" y="21" text-anchor="middle" font-family="\'Helvetica Neue\',Arial,sans-serif" font-size="14" font-weight="700" fill="#1a4b8c" letter-spacing="1.5">NETBINA</text><line x1="0" y1="26" x2="108" y2="26" stroke="#1a4b8c" stroke-width="2" opacity="0.4"/></svg>';
 
+  // Schauma, straight from the user-supplied Schauma_logo.svg (Inkscape
+  // export) — the <g> and <path> transforms are the file's own net-zero
+  // translate/untranslate pair, kept as-is rather than pre-collapsed.
+  const SSCHAUMA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 107.84001 23.463739"><g transform="translate(-163.22285,-460.63031)"><path d="M 29.75,0 C 28.70251,0 27.03125,0.45500004 27.03125,2.4375 L 27.03125,21 C 27.03125,22.96877 28.722509,23.40625 29.78125,23.40625 C 30.84125,23.40625 32.562501,22.953729 32.5625,20.96875 L 32.5625,11.65625 C 32.5625,10.40876 33.038751,10.03125 33.875,10.03125 C 34.715,10.03125 35.187498,10.4775 35.1875,11.65625 L 35.1875,21.03125 C 35.1875,22.96877 36.908761,23.375 37.96875,23.375 C 39.06376,23.375 40.781251,22.958729 40.78125,21 L 40.78125,10.03125 C 40.78125,6.6512 38.94252,4.7187501 36.15625,4.71875 C 34.18875,4.71875 33.048758,5.52375 32.5,6.0625 L 32.5,2.375 C 32.5,0.40876 30.79376,2.4808671e-17 29.75,0 z M 48.90625,4.71875 C 44.6175,4.71875 41.906249,7.5362699 41.90625,9.84375 C 41.90625,11.23626 42.745012,12.3125 44,12.3125 C 44.69876,12.3125 45.199988,11.8225 45.625,11.34375 C 46.57751,10.26999 47.26875,9.4374998 48.90625,9.4375 C 49.86377,9.4375 50.374999,9.9462598 50.375,10.6875 C 50.375,11.7938 49.546281,12.25999 47.59375,12.71875 C 44.48625,13.44876 41.562501,14.621279 41.5625,18.59375 C 41.5625,22.34124 44.555,23.468751 46.65625,23.46875 C 47.99,23.46875 49.345002,23.06627 50.40625,22.25 L 50.5,22.15625 C 50.87874,23.035 51.43876,23.438751 52.53125,23.4375 C 52.87751,23.4375 53.123748,23.437501 53.59375,23.4375 C 55.38125,23.43875 55.656252,22.57124 55.65625,21.1875 L 55.65625,10.875 C 55.65751,7.13123 53.72498,4.7187501 48.90625,4.71875 z M 59.6875,4.71875 C 58.59127,4.71875 56.874999,5.1350102 56.875,7.09375 L 56.875,18.09375 C 56.875,21.4725 58.715019,23.40625 61.5,23.40625 C 62.91251,23.40625 64.373752,22.95375 65.375,21.84375 C 65.83501,22.91125 66.838748,23.406251 68,23.40625 C 69.86125,23.40625 70.656253,22.29 70.65625,20.9375 L 70.65625,7.09375 C 70.65625,5.12501 68.93375,4.71875 67.875,4.71875 C 66.81375,4.71875 65.093751,5.1725399 65.09375,7.15625 L 65.09375,16.46875 C 65.09375,17.71501 64.647501,18.062501 63.8125,18.0625 C 62.96999,18.0625 62.499998,17.646281 62.5,16.46875 L 62.5,7.09375 C 62.5,5.15626 60.746252,4.7187502 59.6875,4.71875 z M 81,4.71875 C 79.57623,4.71875 78.203752,5.23123 77.21875,6.34375 C 76.89124,5.45374 76.178739,4.7499998 74.625,4.75 C 73.03625,4.75 71.968746,5.7312502 71.96875,7.25 L 71.96875,20.875 C 71.96875,22.39877 72.98625,23.4375 74.71875,23.4375 C 76.44875,23.4375 77.468748,22.471239 77.46875,20.9375 L 77.46875,11.875 C 77.46875,10.88375 77.848748,10.46875 78.5625,10.46875 C 79.2225,10.46875 79.687497,10.89749 79.6875,11.875 L 79.6875,20.90625 C 79.6875,22.36747 80.610022,23.44375 82.34375,23.4375 C 84.18625,23.43124 85.125001,22.473749 85.125,20.9375 L 85.125,11.875 C 85.125,10.88753 85.5425,10.46875 86.28125,10.46875 C 86.91375,10.46875 87.437497,10.90874 87.4375,11.875 L 87.4375,20.90625 C 87.4375,22.21248 88.206243,23.43124 90.1875,23.4375 C 91.91375,23.44375 92.843749,22.38499 92.84375,20.9375 L 92.84375,9.5625 C 92.84375,6.79124 91.602498,4.7187502 88.375,4.71875 C 86.96,4.71875 85.601248,5.2662298 84.59375,6.25 L 84.46875,6.375 L 84.40625,6.28125 C 83.6025,5.23873 82.31247,4.71875 81,4.71875 z M 101.09375,4.71875 C 96.805,4.71875 94.093752,7.5362699 94.09375,9.84375 C 94.09375,11.23626 94.930019,12.3125 96.1875,12.3125 C 96.88502,12.3125 97.386252,11.8225 97.8125,11.34375 C 98.76499,10.26999 99.456247,9.4374998 101.09375,9.4375 C 102.05,9.4375 102.5625,9.9462598 102.5625,10.6875 C 102.5625,11.7938 101.73373,12.25999 99.78125,12.71875 C 96.675,13.44876 93.750003,14.621279 93.75,18.59375 C 93.75,22.34124 96.741252,23.468751 98.84375,23.46875 C 100.17624,23.46875 101.5325,23.06627 102.59375,22.25 L 102.6875,22.15625 C 103.06751,23.035 103.62627,23.438751 104.71875,23.4375 C 105.06375,23.4375 105.31001,23.437501 105.78125,23.4375 C 107.56751,23.43875 107.84375,22.57124 107.84375,21.1875 L 107.84375,10.875 C 107.84375,7.13123 105.91252,4.7187501 101.09375,4.71875 z M 6.21875,4.75 C 2.7149968,4.9964155 0.49999999,7.0780879 0.5,10.21875 C 0.5,13.22869 2.2700001,14.53623 4,15.40625 C 4.85125,15.83498 5.7062399,16.16 6.34375,16.53125 C 6.97375,16.8975 7.3125,17.28748 7.3125,17.8125 C 7.3125,18.42747 6.8899899,18.781249 6.1875,18.78125 C 4.445,18.78125 3.5249999,16.500001 2.15625,16.5 C 0.885,16.5 6.1583377e-18,17.531259 0,18.96875 C 0,21.15374 2.3350098,23.40625 6.15625,23.40625 C 10.30001,23.40625 12.78125,20.95626 12.78125,17.4375 C 12.78125,14.49126 11.05625,13.17874 9.375,12.3125 C 8.54877,11.8875 7.7137499,11.58626 7.09375,11.21875 C 6.4825,10.85624 6.1562501,10.48126 6.15625,9.96875 C 6.15625,9.52376 6.5250298,9.0312495 7.25,9.03125 C 8.77626,9.03125 9.1162702,11 10.4375,11 C 11.63373,11 12.46875,10.0363 12.46875,8.6875 C 12.46875,6.76249 10.76876,4.7499998 6.9375,4.75 C 6.69289,4.75 6.4523335,4.7335723 6.21875,4.75 z M 21.15625,4.75 C 17.06125,4.75 13.15625,7.76375 13.15625,14.53125 C 13.15625,21.13125 16.997501,23.468751 20.84375,23.46875 C 23.92375,23.46875 26.281249,21.562511 26.28125,19.40625 C 26.28125,18.17501 25.525,17.343749 24.40625,17.34375 C 23.385,17.34375 22.472501,18.531251 21.09375,18.53125 C 19.65875,18.53125 18.625,17.25375 18.625,14.125 C 18.625,11.43751 19.76251,9.7499995 21.28125,9.75 C 22.69,9.75 23.25251,11 24.375,11 C 25.51,11 26.25,10.02501 26.25,8.6875 C 26.25,6.52625 24.28249,4.7500002 21.15625,4.75 z M 50.28125,15.25 L 50.3125,17.28125 C 50.3125,18.35749 49.815001,19.34375 48.4375,19.34375 C 47.5375,19.34375 46.968748,18.73623 46.96875,17.8125 C 46.96875,16.96751 47.464978,16.56749 48.1875,16.21875 C 48.87873,15.88752 49.62498,15.65878 50.28125,15.25 z M 102.46875,15.25 L 102.5,17.28125 C 102.5,18.35749 102.00251,19.34375 100.625,19.34375 C 99.72503,19.34375 99.156252,18.73623 99.15625,17.8125 C 99.15625,16.96751 99.652501,16.56749 100.375,16.21875 C 101.06751,15.88752 101.81374,15.65878 102.46875,15.25 z " transform="translate(163.22285,460.63031)" style="fill:#13255d;fill-opacity:1;fill-rule:nonzero;stroke:none"/></g></svg>';
+
   const BRANDS = [
     { name:'Tosan Tools', img:'/tosan-logo.webp' },
     { name:'Netbina',     ch:26, img:'data:image/png;base64,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' },
@@ -2866,6 +2897,7 @@ function renderWorkExp(items) {
     { name:'Danone',      svg:SDANONE, ch:26 },
     { name:'Fanta',       img:'/fanta-logo.svg', ch:46 },
     { name:'Irancell',    img:'/irancell-logo.svg', ch:62 },
+    { name:'Schauma',     svg:SSCHAUMA },
   ];
 
   // Exposed so the Avatar Group block's image picker (Experience page)
@@ -5629,6 +5661,39 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     btn.addEventListener('pointerleave', () => btn.classList.remove('radial-active'));
   });
+});
+
+/* ─── Trusted-by gap handle ────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  const handle = document.getElementById('trustedGapHandle');
+  const wrap = document.querySelector('.brand-grid-wrap');
+  if (!handle || !wrap) return;
+  let startY = 0, startGap = 22, dragging = false;
+
+  handle.addEventListener('pointerdown', (e) => {
+    if (!editMode) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragging = true;
+    startY = e.clientY;
+    startGap = parseFloat(getComputedStyle(wrap).getPropertyValue('--trusted-gap')) || 22;
+    handle.setPointerCapture(e.pointerId);
+  });
+  handle.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const gap = Math.max(0, Math.min(120, startGap + (e.clientY - startY)));
+    wrap.style.setProperty('--trusted-gap', gap + 'px');
+  });
+  const endDrag = () => {
+    if (!dragging) return;
+    dragging = false;
+    const gap = parseFloat(getComputedStyle(wrap).getPropertyValue('--trusted-gap')) || 22;
+    if (!_cachedSettings) _cachedSettings = {};
+    _cachedSettings.trustedByGap = gap;
+    saveSettings();
+  };
+  handle.addEventListener('pointerup', endDrag);
+  handle.addEventListener('pointercancel', endDrag);
 });
 
 /* ─── Scroll-to-top ────────────────────────────────────── */
