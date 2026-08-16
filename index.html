@@ -982,6 +982,31 @@
     .tools-edit-on .tool-drag-handle { display:flex; }
     .tool-drag-handle:active { cursor:grabbing; }
     .tool-card.dragging { opacity:.45; box-shadow:0 10px 24px rgba(0,0,0,.16); z-index:20; }
+    .tool-select-chk {
+      display:none; position:absolute; bottom:-8px; left:-8px; z-index:5;
+      width:19px; height:19px; border-radius:50%;
+      background:#fff; border:1.5px solid rgba(0,0,0,.15); cursor:pointer;
+      color:transparent; font-size:11px; line-height:1; font-weight:700;
+      align-items:center; justify-content:center; padding:0;
+      transition:background .15s, border-color .15s, color .15s;
+    }
+    .tools-edit-on .tool-select-chk { display:flex; }
+    .tool-select-chk.checked { background:#2563EB; border-color:#2563EB; color:#fff; }
+    .tool-card.selected { outline:2px solid #2563EB; outline-offset:3px; }
+    .tools-bulk-bar {
+      display:none; align-items:center; gap:12px; flex-wrap:wrap; justify-content:center;
+      margin:0 auto 14px; padding:8px 14px; max-width:400px;
+      background:#fff; border:1px solid rgba(0,0,0,.1); border-radius:12px;
+      box-shadow:0 6px 18px rgba(0,0,0,.08);
+    }
+    .tools-bulk-bar.show { display:flex; }
+    .tools-bulk-bar .tool-size-row { display:flex; padding-left:0; margin-top:0; }
+    .tools-bulk-count { font-size:11.5px; font-weight:600; color:#555; white-space:nowrap; }
+    .tools-bulk-clear {
+      font-size:11px; color:#999; background:none; border:none; cursor:pointer; text-decoration:underline;
+      padding:0; white-space:nowrap;
+    }
+    .tools-bulk-clear:hover { color:#333; }
     .tool-size-row { display:none; align-items:center; gap:6px; margin-top:4px; padding-left:35px; }
     .tools-edit-on .tool-size-row { display:flex; }
     .tool-size-lbl { font-size:10px; font-weight:700; color:#aaa; width:9px; flex-shrink:0; }
@@ -1646,6 +1671,7 @@
 
     <div class="tools-wrap">
       <div class="tools-label" data-ph="tools I use">tools I use</div>
+      <div class="tools-bulk-bar" id="tools-bulk-bar"></div>
       <div class="tools-stack" id="tools-stack"></div>
     </div>
   </div><!-- /view-exp -->
@@ -3171,6 +3197,11 @@ const DEFAULT_TOOLS = [
 ];
 const TOOL_PALETTE = ['#00005B', '#111111', '#D97757', '#2563EB', '#059669', '#7C3AED', '#B91C1C'];
 
+// Multi-select for bulk resizing — a plain id set kept outside the DOM
+// (not classList) so it survives the full re-renders that add/delete/
+// drag-reorder already trigger; cleared whenever edit mode closes.
+let toolsSelection = new Set();
+
 /* Scramble-reveal text (ported from 21st.dev's "SpecialText" React
    component — no React/framer-motion here, so this is a plain
    setInterval doing the same two-phase logic: phase 1 grows a run of
@@ -3323,6 +3354,7 @@ function toolsBuildCard(t, i, tools, stack) {
   card.style.setProperty('--sh', ((t.sizeH ?? t.size ?? 100) / 100).toFixed(2));
   const isIconOnly = !editMode && !(t.name || '').trim() && !(t.sub || '').trim();
   card.classList.toggle('icon-only', isIconOnly);
+  if (editMode) card.classList.toggle('selected', toolsSelection.has(t.id));
 
   if (!editMode) {
     const center = (tools.length - 1) / 2;
@@ -3441,10 +3473,29 @@ function toolsBuildCard(t, i, tools, stack) {
       e.stopPropagation();
       const idx = tools.indexOf(t);
       if (idx > -1) tools.splice(idx, 1);
+      toolsSelection.delete(t.id);
       saveToolsEdits();
       renderToolsStack();
     };
     card.appendChild(del);
+
+    // Select for bulk resize: toggling just needs a class flip + the
+    // bulk bar refresh, not a full re-render (that would rebuild every
+    // card mid-click for no reason).
+    const chk = document.createElement('button');
+    chk.type = 'button';
+    chk.className = 'tool-select-chk' + (toolsSelection.has(t.id) ? ' checked' : '');
+    chk.title = 'Select for bulk resize';
+    chk.textContent = '✓';
+    chk.onclick = (e) => {
+      e.stopPropagation();
+      if (toolsSelection.has(t.id)) toolsSelection.delete(t.id);
+      else toolsSelection.add(t.id);
+      chk.classList.toggle('checked');
+      card.classList.toggle('selected');
+      renderToolsBulkBar();
+    };
+    card.appendChild(chk);
 
     // Drag reordering: freehand, like the whole-block drag elsewhere —
     // the card itself moves live in the DOM as the pointer crosses each
@@ -3527,6 +3578,58 @@ function renderToolsStack() {
     };
     stack.appendChild(addBtn);
   }
+
+  renderToolsBulkBar();
+}
+
+// Bulk-resize bar: shown whenever at least one card is selected, with
+// its own W/H sliders that write into every selected tool at once
+// instead of one at a time. Live dragging just pushes the new size
+// straight onto each card's --sw/--sh (cheap, no re-render, matches
+// the per-card slider's own live-drag behavior); only committing a
+// value (mouseup / typed change) re-renders, which is what re-syncs
+// each affected card's own W/H slider to the new number.
+function renderToolsBulkBar() {
+  const bar = document.getElementById('tools-bulk-bar');
+  if (!bar) return;
+  const tools = getToolsData();
+  const selected = tools.filter(t => toolsSelection.has(t.id));
+  bar.innerHTML = '';
+  if (!editMode || selected.length === 0) { bar.classList.remove('show'); return; }
+  bar.classList.add('show');
+
+  const count = document.createElement('span');
+  count.className = 'tools-bulk-count';
+  count.textContent = selected.length + ' selected';
+  bar.appendChild(count);
+
+  const applyToSelection = (axis, v) => {
+    const cardEls = [...document.querySelectorAll('#tools-stack .tool-card')];
+    selected.forEach(t => {
+      if (axis === 'w') t.sizeW = v; else t.sizeH = v;
+      delete t.size;
+      const card = cardEls.find(el => el.dataset.toolId === t.id);
+      if (card) card.style.setProperty(axis === 'w' ? '--sw' : '--sh', (v / 100).toFixed(2));
+    });
+  };
+
+  const wInit = selected[0].sizeW ?? selected[0].size ?? 100;
+  const hInit = selected[0].sizeH ?? selected[0].size ?? 100;
+  bar.appendChild(buildToolSizeRow('W', wInit, (v, committed) => {
+    applyToSelection('w', v);
+    if (committed) { saveToolsEdits(); renderToolsStack(); }
+  }).row);
+  bar.appendChild(buildToolSizeRow('H', hInit, (v, committed) => {
+    applyToSelection('h', v);
+    if (committed) { saveToolsEdits(); renderToolsStack(); }
+  }).row);
+
+  const clearBtn = document.createElement('button');
+  clearBtn.type = 'button';
+  clearBtn.className = 'tools-bulk-clear';
+  clearBtn.textContent = 'Clear';
+  clearBtn.onclick = () => { toolsSelection.clear(); renderToolsStack(); };
+  bar.appendChild(clearBtn);
 }
 
 function _makeSecDelBtn(label, grid) {
@@ -3818,6 +3921,7 @@ function updateExpEditUI() {
       toolsLabel.textContent = toolsLabel.textContent.trim();
     }
   }
+  if (!editMode) toolsSelection.clear();
   renderToolsStack();
   if (editMode) {
     _wireExpDelBtns();
