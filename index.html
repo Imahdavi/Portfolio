@@ -150,7 +150,13 @@
         inset 0 1px 1px rgba(255,255,255,.85),
         inset 0 -4px 8px rgba(255,255,255,.15);
     }
-    #view-home.home-edit .pbc-avatar { cursor:grab; }
+    /* touch-action:none so a touch-drag on the avatar is claimed
+       entirely by the drag handler — without this, a scroll gesture
+       that happens to start on the avatar fights the browser's own
+       touch-scroll, and the resulting pointer deltas can run way
+       larger than intended (this is how it ended up hundreds of
+       pixels off in a corner). */
+    #view-home.home-edit .pbc-avatar { cursor:grab; touch-action:none; }
     .pbc-avatar img { width:100%; height:100%; object-fit:cover; display:block; color:transparent; font-size:0; opacity:.6; }
     .avatar-edit-btn {
       position:absolute; inset:0; display:none; align-items:center; justify-content:center;
@@ -6867,6 +6873,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const startDY = parseFloat(getComputedStyle(slot).getPropertyValue('--avatar-dy')) || 0;
     let dragged = false;
 
+    // Clamped so a runaway drag (e.g. a touch-scroll gesture that
+    // wasn't properly claimed) can never push the avatar off into a
+    // corner where it's effectively lost — 130px is comfortably past
+    // the edge of the name text but still on-screen either way.
+    const MAX_OFFSET = 130;
     const onMove = (ev) => {
       const dx = ev.clientX - startX, dy = ev.clientY - startY;
       // A small movement threshold before committing to "this is a
@@ -6875,8 +6886,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // drag and silently swallow the click.
       if (!dragged && Math.hypot(dx, dy) > 4) dragged = true;
       if (dragged) {
-        slot.style.setProperty('--avatar-dx', (startDX + dx) + 'px');
-        slot.style.setProperty('--avatar-dy', (startDY + dy) + 'px');
+        const clampedDX = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, startDX + dx));
+        const clampedDY = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, startDY + dy));
+        slot.style.setProperty('--avatar-dx', clampedDX + 'px');
+        slot.style.setProperty('--avatar-dy', clampedDY + 'px');
       }
     };
     const onUp = () => {
