@@ -776,12 +776,15 @@
     .avg-pick-panel-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; }
     .avg-pick-logo-cell {
       width:100%; aspect-ratio:1; border-radius:50%; border:1px solid rgba(0,0,0,.14);
-      background:#fff; cursor:pointer; padding:9px;
-      display:flex; align-items:center; justify-content:center;
+      background:#fff; cursor:pointer; padding:14px;
+      display:flex; align-items:center; justify-content:center; overflow:hidden;
       transition:border-color .15s, transform .15s;
     }
     .avg-pick-logo-cell:hover { border-color:#1a1a1a; transform:scale(1.06); }
-    .avg-pick-logo-cell img { max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; }
+    /* A square image filling its (square) padded box can still poke its
+       corners past the circle's inscribed curve — max 70% keeps every
+       corner safely inside the circle regardless of aspect ratio. */
+    .avg-pick-logo-cell img { max-width:70%; max-height:70%; width:auto; height:auto; object-fit:contain; }
     /* Duplicate/delete — a proper spaced-out hover toolbar (same dark
        pill as the segment controls) instead of two tiny overlapping
        circles crammed onto a small avatar, which were nearly impossible
