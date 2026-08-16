@@ -667,14 +667,24 @@
     }
     .edit-on .avg-seg-handle { display:flex; }
     .avg-seg-handle svg { width:8px; height:14px; display:block; fill:currentColor; pointer-events:none; }
-    .avg-seg-del {
-      display:none; position:absolute; top:-8px; right:-8px; z-index:60;
-      width:17px; height:17px; border-radius:50%;
-      background:#ff4444; border:2px solid #fff; cursor:pointer;
-      color:#fff; font-size:11px; line-height:1;
-      align-items:center; justify-content:center;
+    /* Segment toolbar (duplicate + delete) — a proper spaced-out dark
+       pill on hover, same pattern as .avg-item-ctrls, not a lone corner
+       circle (which was fine solo but would get cramped once a second
+       button joined it — the exact problem already fixed for avatars). */
+    .avg-seg-ctrls {
+      display:none; position:absolute; bottom:calc(100% + 6px); left:50%;
+      transform:translateX(-50%); z-index:60;
+      align-items:center; gap:1px; background:#1a1a1a; border-radius:7px; padding:3px;
     }
-    .edit-on .avg-seg:hover .avg-seg-del { display:flex; }
+    .edit-on .avg-seg:hover .avg-seg-ctrls { display:flex; }
+    .avg-seg-ctrls button {
+      width:24px; height:24px; border-radius:5px; border:none; background:none;
+      color:rgba(255,255,255,.8); cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .avg-seg-ctrls button svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+    .avg-seg-ctrls button:hover { background:rgba(255,255,255,.15); color:#fff; }
+    .avg-seg-ctrls button.avg-seg-del-btn:hover { background:#ff4444; color:#fff; }
 
     /* text segment — reuses .block-text so the sitewide bold/italic
        toolbar (which triggers off that class) works on it for free */
@@ -4768,12 +4778,38 @@ function avgSegDragHandle(block, seg, wrap, mount) {
   return handle;
 }
 
-function avgSegDelBtn(block, seg, mount) {
+// Segment-level toolbar: delete always, duplicate only when the caller
+// passes canDuplicate (avatar-group segments — cloning a whole cluster,
+// not just one avatar in it) — shown as a dark pill on hover, same as
+// avgRenderAvatarItem's per-avatar controls.
+function avgSegCtrls(block, seg, mount, canDuplicate) {
+  const ctrls = document.createElement('div');
+  ctrls.className = 'avg-seg-ctrls';
+
+  if (canDuplicate) {
+    const dup = document.createElement('button');
+    dup.type = 'button';
+    dup.title = 'Duplicate this avatar group';
+    dup.innerHTML = '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+    dup.onclick = (e) => {
+      e.stopPropagation();
+      const i = block.segments.indexOf(seg);
+      const clone = {
+        id: uid(), kind: 'group',
+        avatars: seg.avatars.map(a => ({ ...a, id: uid() })),
+      };
+      block.segments.splice(i + 1, 0, clone);
+      saveProject(activeKey);
+      renderAvatarsBlock(block, mount);
+    };
+    ctrls.appendChild(dup);
+  }
+
   const del = document.createElement('button');
   del.type = 'button';
-  del.className = 'avg-seg-del';
-  del.textContent = '×';
+  del.className = 'avg-seg-del-btn';
   del.title = 'Remove';
+  del.innerHTML = '<svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
   del.onclick = (e) => {
     e.stopPropagation();
     const i = block.segments.indexOf(seg);
@@ -4781,7 +4817,9 @@ function avgSegDelBtn(block, seg, mount) {
     saveProject(activeKey);
     renderAvatarsBlock(block, mount);
   };
-  return del;
+  ctrls.appendChild(del);
+
+  return ctrls;
 }
 
 function avgRenderGroupSegment(seg, block, mount) {
@@ -4789,7 +4827,7 @@ function avgRenderGroupSegment(seg, block, mount) {
   wrap.className = 'avg-seg avg-seg-group';
   wrap._avgSeg = seg;
   wrap.appendChild(avgSegDragHandle(block, seg, wrap, mount));
-  wrap.appendChild(avgSegDelBtn(block, seg, mount));
+  wrap.appendChild(avgSegCtrls(block, seg, mount, true));
 
   const stack = document.createElement('div');
   stack.className = 'avg-stack';
@@ -4814,7 +4852,7 @@ function avgRenderTextSegment(seg, block, mount) {
   wrap.className = 'avg-seg avg-seg-text';
   wrap._avgSeg = seg;
   wrap.appendChild(avgSegDragHandle(block, seg, wrap, mount));
-  wrap.appendChild(avgSegDelBtn(block, seg, mount));
+  wrap.appendChild(avgSegCtrls(block, seg, mount, false));
 
   const t = document.createElement('div');
   t.className = 'avg-text-seg block-text';
