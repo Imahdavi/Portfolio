@@ -354,6 +354,14 @@
     .exp-add-btn:hover { border-color:rgba(0,0,0,.3); color:#555; }
     .exp-add-btn.show { display:block; }
     .brand-grid-wrap { margin-top:36px; padding-top:28px; text-align:center; --trusted-gap:22px; }
+    /* With no experience entries yet, #sg-exp is empty (0 height) and
+       its own 48px view-padding + this wrap's 36+28px stacked on top
+       left a much bigger gap above "trusted by" than home's first
+       content gets — match the view's top padding to #view-home's, and
+       drop the wrap's separator margin when there's nothing above it
+       to separate from (real entries keep the normal gap once added). */
+    #view-exp { padding-top:32px; }
+    #sg-exp:empty ~ .brand-grid-wrap { margin-top:0; }
     /* Drag handle to adjust the gap between the "trusted by" pill and
        the sphere below it — edit mode only, shown via the same
        #sg-exp.exp-edit-on toggle the rest of the Experience-page edit
