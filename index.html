@@ -287,6 +287,20 @@
     #sg-exp.exp-edit-on ~ .brand-grid-wrap .trusted-gap-handle { display:flex; }
     .trusted-gap-handle:hover { background:rgba(0,0,0,.1); color:#555; }
     .trusted-gap-handle svg { width:22px; height:8px; pointer-events:none; }
+    /* Same handle, same drag behavior, but for the gap between the
+       brands section and whatever comes after it (the tools section) —
+       sits between the two as its own sibling, dragging adjusts
+       .tools-wrap's margin-top via --tools-gap instead of the pill's
+       margin. */
+    .section-gap-handle {
+      display:none; align-items:center; justify-content:center;
+      width:64px; height:16px; margin:2px auto; cursor:ns-resize;
+      border-radius:8px; background:rgba(0,0,0,.05); color:#999;
+      transition:background .15s, color .15s; touch-action:none;
+    }
+    #sg-exp.exp-edit-on ~ .section-gap-handle { display:flex; }
+    .section-gap-handle:hover { background:rgba(0,0,0,.1); color:#555; }
+    .section-gap-handle svg { width:22px; height:8px; pointer-events:none; }
     /* Magic UI "Animated Shiny Text", ported straight from its Tailwind
        classes/keyframes to plain CSS (no Tailwind in this project):
        a soft gray label with an animated bright band sweeping through
@@ -883,7 +897,7 @@
        a live preview. No overflow:hidden anywhere in this chain, and
        the hover lift uses a plain ease-out with no overshoot, so the
        rise reads as continuous instead of snapping/popping. */
-    .tools-wrap { margin-top:48px; padding-top:8px; text-align:center; overflow:visible; }
+    .tools-wrap { margin-top:var(--tools-gap, 48px); padding-top:8px; text-align:center; overflow:visible; }
     /* monospace so each character keeps the same width while the
        scramble animation swaps glyphs in and out — a proportional font
        would make the label jitter width every tick. */
@@ -1667,6 +1681,10 @@
         <svg viewBox="0 0 24 8"><line x1="2" y1="2" x2="22" y2="2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="2" y1="6" x2="22" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </div>
       <div class="brand-grid" id="brand-grid"></div>
+    </div>
+
+    <div class="section-gap-handle" id="toolsGapHandle" title="Drag to adjust spacing before this section">
+      <svg viewBox="0 0 24 8"><line x1="2" y1="2" x2="22" y2="2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="2" y1="6" x2="22" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     </div>
 
     <div class="tools-wrap">
@@ -3001,6 +3019,10 @@ async function loadSettings() {
     if (s.toolsLabel) {
       const toolsLabel = document.querySelector('.tools-label');
       if (toolsLabel) toolsLabel.textContent = s.toolsLabel;
+    }
+    if (s.toolsGap != null) {
+      const toolsWrap = document.querySelector('.tools-wrap');
+      if (toolsWrap) toolsWrap.style.setProperty('--tools-gap', s.toolsGap + 'px');
     }
 
     renderToolsStack();
@@ -6359,6 +6381,48 @@ document.addEventListener('DOMContentLoaded', () => {
     const gap = parseFloat(getComputedStyle(wrap).getPropertyValue('--trusted-gap')) || 22;
     if (!_cachedSettings) _cachedSettings = {};
     _cachedSettings.trustedByGap = gap;
+    saveSettings();
+  };
+  handle.addEventListener('pointerup', endDrag);
+  handle.addEventListener('pointercancel', endDrag);
+});
+
+/* ─── Brands→tools section gap handle ─────────────────────
+   Same drag mechanics as the trusted-by gap handle above, just aimed
+   at .tools-wrap's margin-top instead of the pill's margin-bottom. */
+document.addEventListener('DOMContentLoaded', () => {
+  const handle = document.getElementById('toolsGapHandle');
+  const wrap = document.querySelector('.tools-wrap');
+  if (!handle || !wrap) return;
+  let startY = 0, startGap = 48, dragging = false;
+  // `|| 48` would treat a legitimately-collapsed 0px gap as falsy and
+  // silently snap it back to 48 — only fall back when parsing actually
+  // failed (NaN), not when the real value happens to be zero.
+  const readGap = () => {
+    const v = parseFloat(getComputedStyle(wrap).getPropertyValue('--tools-gap'));
+    return Number.isNaN(v) ? 48 : v;
+  };
+
+  handle.addEventListener('pointerdown', (e) => {
+    if (!editMode) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragging = true;
+    startY = e.clientY;
+    startGap = readGap();
+    handle.setPointerCapture(e.pointerId);
+  });
+  handle.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const gap = Math.max(0, Math.min(160, startGap + (e.clientY - startY)));
+    wrap.style.setProperty('--tools-gap', gap + 'px');
+  });
+  const endDrag = () => {
+    if (!dragging) return;
+    dragging = false;
+    const gap = readGap();
+    if (!_cachedSettings) _cachedSettings = {};
+    _cachedSettings.toolsGap = gap;
     saveSettings();
   };
   handle.addEventListener('pointerup', endDrag);
