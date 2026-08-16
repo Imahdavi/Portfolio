@@ -1989,7 +1989,7 @@
     </svg>
   </button>
   <span class="nav-sep"></span>
-  <button id="sound-toggle-btn" onclick="toggleWebSound()" aria-label="Toggle web-shot sound">
+  <button id="sound-toggle-btn" class="muted" onclick="toggleWebSound()" aria-label="Toggle web-shot sound">
   <span class="nav-tip">Web Sound</span>
   <!-- active: speaker + web-ray lines -->
   <svg class="icon-on" viewBox="0 0 24 24">
@@ -2338,7 +2338,7 @@ function spiderSense(x, y) {
     src.start(0, SHOT_OFFSET, SHOT_DUR);
   }
 
-  window._webShotMuted = false;
+  window._webShotMuted = true;
   window._playWebShot = function() {
     if (typeof editMode !== 'undefined' && editMode) return;
     if (window._webShotMuted) return;
