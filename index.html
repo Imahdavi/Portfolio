@@ -4724,9 +4724,18 @@ function avgSegDragHandle(block, seg, wrap, mount) {
   const handle = document.createElement('div');
   handle.className = 'avg-seg-handle';
   handle.innerHTML = '<svg viewBox="0 0 10 16"><circle cx="3" cy="3" r="1.3"/><circle cx="7" cy="3" r="1.3"/><circle cx="3" cy="8" r="1.3"/><circle cx="7" cy="8" r="1.3"/><circle cx="3" cy="13" r="1.3"/><circle cx="7" cy="13" r="1.3"/></svg>';
+  // The enclosing .block has its own mousedown-based whole-block drag
+  // (wired for anything that isn't a button/video/[contenteditable]),
+  // which would otherwise hijack this into moving the entire avatars
+  // block instead of just reordering this segment. preventDefault() on
+  // pointerdown only suppresses compat mouse events for touch/pen — for
+  // an actual mouse, 'mousedown' fires as its own native event on the
+  // same target regardless, so it needs its own stopPropagation().
+  handle.addEventListener('mousedown', (e) => { if (editMode) e.stopPropagation(); });
   handle.addEventListener('pointerdown', (e) => {
     if (!editMode || e.button !== 0) return;
     e.preventDefault();
+    e.stopPropagation();
     const row = wrap.parentElement;
     let dragging = false;
 
