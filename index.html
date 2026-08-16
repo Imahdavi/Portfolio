@@ -4850,16 +4850,24 @@ function avgRenderAvatarItem(a, idx, avatars, block, mount) {
 
   const av = document.createElement('div');
   av.className = 'avg-avatar';
-  if (a.src) {
-    av.style.backgroundImage = `url(${a.src})`;
+  if (a.src && a.isLogo) {
     // A brand logo's own aspect ratio can be wide/short (e.g. a
-    // landscape logotype) — cover would crop it down to an illegible
-    // fragment, so logos get contain + a white backdrop instead of the
-    // default cover crop used for uploaded (roughly square) photos.
-    if (a.isLogo) {
-      av.style.backgroundSize = 'contain';
-      av.style.backgroundColor = '#fff';
-    }
+    // landscape logotype). CSS background-size:contain only guarantees
+    // the image fits the *square* padding-box — an inscribed rectangle
+    // that touches a square's full width/height always has corners
+    // outside that square's inscribed circle (pure geometry, worst case
+    // at a 1:1 ratio needing the image capped to ~71% to stay clear).
+    // A real <img> with object-fit:contain and a hard max-width/height
+    // cap sidesteps this the same way the brand-logo picker already
+    // does, instead of trying to fake it through background-size.
+    av.style.backgroundColor = '#fff';
+    const img = document.createElement('img');
+    img.src = a.src;
+    img.alt = '';
+    img.style.cssText = 'max-width:70%; max-height:70%; width:auto; height:auto; object-fit:contain; pointer-events:none;';
+    av.appendChild(img);
+  } else if (a.src) {
+    av.style.backgroundImage = `url(${a.src})`;
   }
   else { av.textContent = (a.name || '?').trim().slice(0, 1).toUpperCase(); }
   av.title = editMode ? 'Click to change image' : '';
