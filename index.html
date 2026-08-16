@@ -1028,6 +1028,21 @@
     .block-move:hover { transform:scale(1.15); }
     .block-move svg { width:13px; height:13px; }
 
+    /* Duplicate btn (edit mode only) — copies the whole block/section
+       (segments, avatars, text, etc.) as a new block right after it, so
+       it can then be moved to a different board via .block-move. */
+    .block-dup {
+      display:none;
+      position:absolute; top:8px; right:64px;
+      width:22px; height:22px; border-radius:50%;
+      background:rgba(26,23,20,.7); border:none; cursor:pointer;
+      align-items:center; justify-content:center;
+      transition:transform .15s;
+    }
+    .edit-on .block-dup { display:flex; }
+    .block-dup:hover { transform:scale(1.15); }
+    .block-dup svg { width:13px; height:13px; }
+
     .move-menu {
       display:none; position:fixed; z-index:1000;
       min-width:150px; max-height:220px; overflow-y:auto;
@@ -2055,6 +2070,7 @@ const SVG_UNMUTED = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"
 const SVG_RESIZE  = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 3V21H3M21 21L9 9" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const SVG_LINK    = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>`;
 const SVG_MOVE    = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4l7 8-7 8"/><path d="M2 12h17"/></svg>`;
+const SVG_DUP      = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>`;
 
 /* ─── Layout presets ───────────────────────────────────── */
 // Aspect-ratio presets (height shape only — width set via POS_PRESETS)
@@ -4091,6 +4107,14 @@ function makeBlockEl(block, proj) {
   // narrower/portrait media would otherwise leave them floating off to the side.
   const btnHost = inner || wrap;
 
+  // duplicate button — top-right of the visible box, left of move
+  const dup = document.createElement('button');
+  dup.className = 'block-dup';
+  dup.innerHTML = SVG_DUP;
+  dup.title = 'Duplicate section';
+  dup.onclick = (e) => { e.stopPropagation(); duplicateBlock(block.id); };
+  btnHost.appendChild(dup);
+
   // move-to-board button — top-right of the visible box, left of delete
   const move = document.createElement('button');
   move.className = 'block-move';
@@ -5222,6 +5246,46 @@ function deleteBlock(id) {
     el.style.animation = 'fadeUp .2s reverse ease both';
     setTimeout(() => el.remove(), 180);
   }
+  saveProject(activeKey);
+}
+
+// Deep-clones a block (JSON round-trip, stripping transient runtime
+// fields like _lottieInst first) and mints fresh ids for it and any
+// nested pieces that carry one — avatars segments/avatars — so the
+// duplicate is fully independent of the original, not aliased to it.
+function _cloneBlockDeep(block) {
+  const { _muted, _lottieInst, ...clean } = block;
+  const clone = JSON.parse(JSON.stringify(clean));
+  clone.id = uid();
+  if (clone.type === 'avatars' && Array.isArray(clone.segments)) {
+    clone.segments.forEach(seg => {
+      seg.id = uid();
+      if (seg.kind === 'group' && Array.isArray(seg.avatars)) {
+        seg.avatars.forEach(a => { a.id = uid(); });
+      }
+    });
+  }
+  return clone;
+}
+
+// Duplicates a whole block/section (e.g. an Avatar Group with all its
+// segments) as a new block right after the original, so it can then be
+// dragged elsewhere in this board or moved to a different one via the
+// existing "Move to board" button.
+function duplicateBlock(id) {
+  const proj = PROJECTS[activeKey];
+  const idx = proj.blocks.findIndex(b => b.id === id);
+  if (idx === -1) return;
+  const clone = _cloneBlockDeep(proj.blocks[idx]);
+  proj.blocks.splice(idx + 1, 0, clone);
+
+  const el = makeBlockEl(clone, proj);
+  el.classList.add('block-enter');
+  const originalEl = document.querySelector(`[data-id="${id}"]`);
+  if (originalEl) originalEl.after(el);
+  else document.getElementById('block-list').appendChild(el);
+  requestAnimationFrame(() => setBlockRowSpan(el));
+
   saveProject(activeKey);
 }
 
