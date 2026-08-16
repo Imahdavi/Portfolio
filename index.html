@@ -874,17 +874,29 @@
     /* "Tools I use" — ported from 21st.dev/Prism UI's "Display Cards":
        a fanned deck of cards sharing one grid cell (grid-area:stack),
        each offset by its own translate, skewed together as a group,
-       grayscale by default and colorizing + lifting on hover. The
-       source's before-pseudo overlay-fade is folded into the same
-       filter transition here rather than a separate layer. */
-    .tools-wrap { margin-top:48px; padding-top:8px; text-align:center; }
+       grayscale by default and colorizing + lifting on hover. Position/
+       skew/size are all CSS custom properties set per-card from JS
+       (--tx/--ty/--z/--sz) instead of fixed nth-child rules, so the fan
+       still works with any number of cards. In edit mode the container
+       switches to a plain wrapped row (--skew:0, no --tx/--ty) so cards
+       don't overlap while editing; the size var still applies there for
+       a live preview. No overflow:hidden anywhere in this chain, and
+       the hover lift uses a plain ease-out with no overshoot, so the
+       rise reads as continuous instead of snapping/popping. */
+    .tools-wrap { margin-top:48px; padding-top:8px; text-align:center; overflow:visible; }
     .tools-label { font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:rgba(82,82,82,.7); margin-bottom:44px; }
     .tools-stack {
       display:grid; grid-template-areas:"stack"; place-items:center;
       width:100%; max-width:360px; height:210px; margin:0 auto 20px;
+      overflow:visible;
+    }
+    .tools-stack.tools-edit-on {
+      display:flex; flex-wrap:wrap; justify-content:center; align-items:flex-start;
+      gap:16px; max-width:520px; height:auto; padding:4px 0 14px;
     }
     .tool-card {
       grid-area:stack;
+      position:relative;
       width:194px; height:80px;
       display:flex; flex-direction:column; justify-content:center; gap:5px;
       border-radius:14px; border:1px solid rgba(0,0,0,.09);
@@ -892,31 +904,51 @@
       box-shadow:0 6px 18px rgba(0,0,0,.06);
       padding:0 16px; cursor:default; user-select:none;
       filter:grayscale(1) opacity(.75);
-      transition:transform .5s cubic-bezier(.22,1,.36,1), filter .45s ease, border-color .3s, box-shadow .3s;
+      transform:skewY(var(--skew,-8deg)) translate(var(--tx,0px),var(--ty,0px)) scale(var(--sz,1));
+      z-index:var(--z,0);
+      transition:transform .6s cubic-bezier(.25,.8,.25,1), filter .5s ease, border-color .3s, box-shadow .3s;
     }
     .tool-card:hover {
       filter:grayscale(0) opacity(1);
       border-color:rgba(0,0,0,.16);
       box-shadow:0 14px 30px rgba(0,0,0,.12);
+      transform:skewY(var(--skew,-8deg)) translate(var(--tx,0px),calc(var(--ty,0px) - 22px)) scale(var(--sz,1));
+      z-index:30;
     }
-    .tool-card:nth-child(1) { transform:skewY(-8deg) translate(-64px,-52px); z-index:1; }
-    .tool-card:nth-child(2) { transform:skewY(-8deg) translate(-32px,-26px); z-index:2; }
-    .tool-card:nth-child(3) { transform:skewY(-8deg) translate(0,0);        z-index:3; }
-    .tool-card:nth-child(4) { transform:skewY(-8deg) translate(32px,26px);  z-index:4; }
-    .tool-card:nth-child(5) { transform:skewY(-8deg) translate(64px,52px); z-index:5; }
-    .tool-card:nth-child(1):hover { transform:skewY(-8deg) translate(-64px,-68px); z-index:20; }
-    .tool-card:nth-child(2):hover { transform:skewY(-8deg) translate(-32px,-40px); z-index:20; }
-    .tool-card:nth-child(3):hover { transform:skewY(-8deg) translate(0,-14px);      z-index:20; }
-    .tool-card:nth-child(4):hover { transform:skewY(-8deg) translate(32px,12px);   z-index:20; }
-    .tool-card:nth-child(5):hover { transform:skewY(-8deg) translate(64px,38px);   z-index:20; }
+    .tools-edit-on .tool-card {
+      --skew:0deg; --tx:0px; --ty:0px;
+      filter:none; cursor:default;
+    }
+    .tools-edit-on .tool-card:hover { box-shadow:0 6px 18px rgba(0,0,0,.06); }
     .tool-card-top { display:flex; align-items:center; gap:9px; }
     .tool-icon {
       width:26px; height:26px; border-radius:7px; flex-shrink:0;
       display:flex; align-items:center; justify-content:center;
       color:#fff; font-size:10.5px; font-weight:700; letter-spacing:-.02em;
     }
-    .tool-name { font-size:14px; font-weight:600; color:#222; }
-    .tool-sub { font-size:11.5px; color:#999; padding-left:35px; }
+    .tool-name { font-size:14px; font-weight:600; color:#222; outline:none; }
+    .tool-sub { font-size:11.5px; color:#999; padding-left:35px; outline:none; }
+    .tools-edit-on .tool-name, .tools-edit-on .tool-sub { cursor:text; }
+    .tools-edit-on .tool-name:empty:before { content:attr(data-ph); color:#aaa; }
+    .tools-edit-on .tool-sub:empty:before { content:attr(data-ph); color:#bbb; }
+    .tool-del-btn {
+      display:none; position:absolute; top:-8px; right:-8px; z-index:5;
+      width:19px; height:19px; border-radius:50%;
+      background:#ff4444; border:2px solid #fff; cursor:pointer;
+      color:#fff; font-size:11px; line-height:1;
+      align-items:center; justify-content:center;
+    }
+    .tools-edit-on .tool-del-btn { display:flex; }
+    .tool-size-row { display:none; align-items:center; margin-top:4px; padding-left:35px; }
+    .tools-edit-on .tool-size-row { display:flex; }
+    .tool-size-slider { width:100px; height:3px; accent-color:#1a1a1a; cursor:pointer; touch-action:none; }
+    .tools-add-btn {
+      width:100%; max-width:194px; height:80px; margin:0;
+      border:1.5px dashed #bbb; border-radius:14px; background:transparent;
+      color:#999; font-size:13px; font-weight:500; cursor:pointer;
+      transition:border-color .2s, color .2s, background .2s;
+    }
+    .tools-add-btn:hover { border-color:#555; color:#333; background:rgba(0,0,0,.03); }
 
     /* ── Format toolbar (bold / italic) ── */
     #fmt-toolbar {
@@ -2892,9 +2924,12 @@ async function loadSettings() {
       if (brandWrap) brandWrap.style.setProperty('--trusted-gap', s.trustedByGap + 'px');
     }
 
+    renderToolsStack();
+
   } catch(e) {
     console.warn('Settings load failed:', e);
     renderHomeSections(DEFAULT_SECTIONS);
+    renderToolsStack();
   }
 }
 
@@ -3063,48 +3098,152 @@ function renderWorkExp(items) {
   })();
 })();
 
-/* ─── "Tools I use" stacked cards ──────────────────────── */
-(function() {
-  // Monogram badges instead of embedded brand SVGs (like BRANDS'
-  // text-based fallbacks elsewhere) — each bg is that app's own real
-  // primary color where known (Claude's terracotta, Adobe's indigo).
-  const TOOLS = [
-    { name:'After Effects', sub:'Motion',   badge:'Ae', bg:'#00005B' },
-    { name:'Premiere Pro',  sub:'Editing',  badge:'Pr', bg:'#00005B' },
-    { name:'Figma',         sub:'Design',   badge:'Fi', bg:'#111111' },
-    { name:'Claude',        sub:'AI',       badge:'✦',  bg:'#D97757' },
-    { name:'Higgsfield',    sub:'AI video', badge:'H',  bg:'#111111' },
-  ];
+/* ─── "Tools I use" stacked cards ──────────────────────────────────
+   Editable in Experience-page edit mode: text/badge per card, a
+   per-card size slider, add/remove. Persisted as _cachedSettings.tools,
+   same save/load path as the rest of that page (saveExpEdits() /
+   loadSettings()). Position (--tx/--ty/--z) is computed here instead of
+   fixed in CSS so the fan still centers correctly for any card count. */
+const DEFAULT_TOOLS = [
+  { name:'After Effects', sub:'Motion',   badge:'Ae', bg:'#00005B' },
+  { name:'Premiere Pro',  sub:'Editing',  badge:'Pr', bg:'#00005B' },
+  { name:'Figma',         sub:'Design',   badge:'Fi', bg:'#111111' },
+  { name:'Claude',        sub:'AI',       badge:'✦',  bg:'#D97757' },
+  { name:'Higgsfield',    sub:'AI video', badge:'H',  bg:'#111111' },
+];
+const TOOL_PALETTE = ['#00005B', '#111111', '#D97757', '#2563EB', '#059669', '#7C3AED', '#B91C1C'];
 
+function getToolsData() {
+  if (!_cachedSettings) _cachedSettings = {};
+  if (!Array.isArray(_cachedSettings.tools)) {
+    _cachedSettings.tools = DEFAULT_TOOLS.map(t => ({ id: uid(), size: 100, ...t }));
+  }
+  return _cachedSettings.tools;
+}
+
+function saveToolsEdits() {
+  if (!_cachedSettings) _cachedSettings = {};
+  _cachedSettings.tools = getToolsData();
+  saveSettings();
+}
+
+function toolsBuildCard(t, i, tools, stack) {
+  const card = document.createElement('div');
+  card.className = 'tool-card';
+  card.style.setProperty('--sz', ((t.size || 100) / 100).toFixed(2));
+
+  if (!editMode) {
+    const center = (tools.length - 1) / 2;
+    const off = i - center;
+    card.style.setProperty('--tx', (off * 32) + 'px');
+    card.style.setProperty('--ty', (off * 26) + 'px');
+    card.style.setProperty('--z', i);
+  }
+
+  const top = document.createElement('div');
+  top.className = 'tool-card-top';
+
+  const icon = document.createElement('span');
+  icon.className = 'tool-icon';
+  icon.style.background = t.bg || '#555';
+  icon.textContent = t.badge || (t.name || '?').trim().slice(0, 2).toUpperCase();
+  top.appendChild(icon);
+
+  const nameTag = editMode ? 'div' : 'span';
+  const name = document.createElement(nameTag);
+  name.className = 'tool-name' + (editMode ? ' block-text' : '');
+  if (editMode) {
+    name.contentEditable = 'true';
+    name.dataset.ph = 'Tool name';
+  }
+  name.textContent = t.name || '';
+  top.appendChild(name);
+
+  const subTag = editMode ? 'div' : 'span';
+  const sub = document.createElement(subTag);
+  sub.className = 'tool-sub' + (editMode ? ' block-text' : '');
+  if (editMode) {
+    sub.contentEditable = 'true';
+    sub.dataset.ph = 'Category';
+  }
+  sub.textContent = t.sub || '';
+
+  card.appendChild(top);
+  card.appendChild(sub);
+
+  if (editMode) {
+    let _st;
+    const scheduleSave = () => { clearTimeout(_st); _st = setTimeout(saveToolsEdits, 1200); };
+    name.addEventListener('input', () => {
+      t.name = name.textContent;
+      if (!t.badge) icon.textContent = (t.name || '?').trim().slice(0, 2).toUpperCase();
+      scheduleSave();
+    });
+    sub.addEventListener('input', () => { t.sub = sub.textContent; scheduleSave(); });
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'tool-del-btn';
+    del.textContent = '×';
+    del.title = 'Remove';
+    del.onclick = (e) => {
+      e.stopPropagation();
+      const idx = tools.indexOf(t);
+      if (idx > -1) tools.splice(idx, 1);
+      saveToolsEdits();
+      renderToolsStack();
+    };
+    card.appendChild(del);
+
+    const sizeRow = document.createElement('div');
+    sizeRow.className = 'tool-size-row';
+    const sizeSlider = document.createElement('input');
+    sizeSlider.type = 'range';
+    sizeSlider.className = 'tool-size-slider';
+    sizeSlider.min = '60';
+    sizeSlider.max = '150';
+    sizeSlider.step = '2';
+    sizeSlider.value = String(t.size || 100);
+    sizeSlider.title = 'Card size';
+    sizeSlider.addEventListener('pointerdown', (e) => e.stopPropagation());
+    sizeSlider.addEventListener('input', () => {
+      const v = +sizeSlider.value;
+      t.size = v;
+      card.style.setProperty('--sz', (v / 100).toFixed(2));
+    });
+    sizeSlider.addEventListener('change', saveToolsEdits);
+    sizeRow.appendChild(sizeSlider);
+    card.appendChild(sizeRow);
+  }
+
+  return card;
+}
+
+function renderToolsStack() {
   const stack = document.getElementById('tools-stack');
   if (!stack) return;
-  TOOLS.forEach(t => {
-    const card = document.createElement('div');
-    card.className = 'tool-card';
+  const tools = getToolsData();
+  stack.innerHTML = '';
+  stack.classList.toggle('tools-edit-on', editMode);
 
-    const top = document.createElement('div');
-    top.className = 'tool-card-top';
+  tools.forEach((t, i) => stack.appendChild(toolsBuildCard(t, i, tools, stack)));
 
-    const icon = document.createElement('span');
-    icon.className = 'tool-icon';
-    icon.style.background = t.bg;
-    icon.textContent = t.badge;
-    top.appendChild(icon);
-
-    const name = document.createElement('span');
-    name.className = 'tool-name';
-    name.textContent = t.name;
-    top.appendChild(name);
-
-    const sub = document.createElement('span');
-    sub.className = 'tool-sub';
-    sub.textContent = t.sub;
-
-    card.appendChild(top);
-    card.appendChild(sub);
-    stack.appendChild(card);
-  });
-})();
+  if (editMode) {
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'tools-add-btn';
+    addBtn.textContent = '+ Add tool';
+    addBtn.onclick = () => {
+      tools.push({ id: uid(), name: '', sub: '', badge: '', bg: TOOL_PALETTE[tools.length % TOOL_PALETTE.length], size: 100 });
+      saveToolsEdits();
+      renderToolsStack();
+      const names = stack.querySelectorAll('.tool-name');
+      const last = names[names.length - 1];
+      if (last) last.focus();
+    };
+    stack.appendChild(addBtn);
+  }
+}
 
 function _makeSecDelBtn(label, grid) {
   const btn = document.createElement('button');
@@ -3385,10 +3524,12 @@ function updateExpEditUI() {
   });
   const brandLabel = document.querySelector('.brand-grid-label');
   if (brandLabel) brandLabel.contentEditable = editMode ? 'true' : 'false';
+  renderToolsStack();
   if (editMode) {
     _wireExpDelBtns();
   } else {
     saveExpEdits();
+    saveToolsEdits();
   }
 }
 
