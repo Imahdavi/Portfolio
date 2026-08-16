@@ -272,21 +272,36 @@
     .exp-add-btn { display:none; width:100%; margin-top:14px; padding:11px; border:1.5px dashed rgba(0,0,0,.15); border-radius:8px; background:none; font-size:13px; color:#aaa; cursor:pointer; transition:all .2s; }
     .exp-add-btn:hover { border-color:rgba(0,0,0,.3); color:#555; }
     .exp-add-btn.show { display:block; }
-    .brand-grid-wrap { margin-top:36px; padding-top:28px; }
+    .brand-grid-wrap { margin-top:36px; padding-top:28px; text-align:center; }
     /* Magic UI "Animated Shiny Text", ported straight from its Tailwind
        classes/keyframes to plain CSS (no Tailwind in this project):
        a soft gray label with an animated bright band sweeping through
-       via background-clip:text + an animated background-position. */
+       via background-clip:text + an animated background-position.
+       Wrapped in the demo's own pill badge (rounded-full border +
+       tinted bg) with its "✨" left as-is (fixed, not part of the
+       editable text) and the label itself editable in edit mode. */
+    .brand-grid-label-pill {
+      display:inline-flex; align-items:center; gap:7px;
+      margin:0 auto 22px; padding:7px 18px;
+      border-radius:999px; border:1px solid rgba(0,0,0,.08);
+      background:rgba(0,0,0,.035);
+      width:fit-content;
+    }
+    .brand-grid-star { font-size:14px; line-height:1; user-select:none; }
     .brand-grid-label {
       --shiny-width: 100px;
-      font-size:16px; letter-spacing:.12em; text-transform:uppercase;
-      text-align:center; margin-bottom:22px;
+      font-size:13px; letter-spacing:.12em; text-transform:uppercase;
       color:rgba(82,82,82,.7);
       background-image:linear-gradient(90deg, transparent, rgba(0,0,0,.8) 50%, transparent);
       background-clip:text; -webkit-background-clip:text;
       background-repeat:no-repeat; background-position:0 0;
       background-size:var(--shiny-width) 100%;
       animation:shiny-text 8s infinite;
+      outline:none; min-width:10px;
+    }
+    .brand-grid-label[contenteditable="true"] { cursor:text; }
+    .brand-grid-label[contenteditable="true"]:empty:before {
+      content:attr(data-ph); -webkit-text-fill-color:#aaa; color:#aaa;
     }
     @keyframes shiny-text {
       0%, 90%, 100% { background-position:calc(-100% - var(--shiny-width)) 0; }
@@ -1469,7 +1484,10 @@
     <div class="sg" id="sg-exp"></div>
     <button id="exp-add-btn" class="exp-add-btn" onclick="addExpItem()">+ Add experience</button>
     <div class="brand-grid-wrap">
-      <div class="brand-grid-label">trusted by</div>
+      <div class="brand-grid-label-pill">
+        <span class="brand-grid-star" aria-hidden="true">✨</span>
+        <div class="brand-grid-label" data-ph="trusted by">trusted by</div>
+      </div>
       <div class="brand-grid" id="brand-grid"></div>
     </div>
   </div><!-- /view-exp -->
@@ -2788,6 +2806,12 @@ async function loadSettings() {
     // render work experience
     if (s.experience && s.experience.length) renderWorkExp(s.experience);
 
+    // "trusted by" label
+    if (s.trustedByLabel) {
+      const brandLabel = document.querySelector('.brand-grid-label');
+      if (brandLabel) brandLabel.textContent = s.trustedByLabel;
+    }
+
   } catch(e) {
     console.warn('Settings load failed:', e);
     renderHomeSections(DEFAULT_SECTIONS);
@@ -3230,6 +3254,8 @@ function updateExpEditUI() {
   container.querySelectorAll('.exp-co, .exp-role, .exp-y1, .exp-y2').forEach(el => {
     el.contentEditable = editMode ? 'true' : 'false';
   });
+  const brandLabel = document.querySelector('.brand-grid-label');
+  if (brandLabel) brandLabel.contentEditable = editMode ? 'true' : 'false';
   if (editMode) {
     _wireExpDelBtns();
   } else {
@@ -3257,6 +3283,8 @@ function saveExpEdits() {
     });
   });
   _cachedSettings.experience = items;
+  const brandLabel = document.querySelector('.brand-grid-label');
+  if (brandLabel) _cachedSettings.trustedByLabel = brandLabel.textContent.trim();
   saveSettings();
 }
 
