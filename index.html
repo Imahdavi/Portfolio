@@ -901,8 +901,12 @@
          scale stretched the icon/text/border-radius along with the box
          (visibly warping them); calc()-ing the real dimensions instead
          just changes how big the frame is, and its contents (icon,
-         text) reflow at their normal, undistorted size. */
-      width:calc(194px * var(--sw,1)); height:calc(80px * var(--sh,1));
+         text) reflow at their normal, undistorted size. Both axes share
+         the same 140px base (rather than the old 194x80 per-axis
+         bases) specifically so that setting W and H to the same
+         percentage always yields a literal square, not a scaled
+         rectangle. */
+      width:calc(140px * var(--sw,1)); height:calc(140px * var(--sh,1));
       display:flex; flex-direction:column; justify-content:center; gap:5px;
       border-radius:14px; border:1px solid rgba(0,0,0,.09);
       background:rgba(250,248,245,.85); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
@@ -3121,12 +3125,16 @@ function renderWorkExp(items) {
    same save/load path as the rest of that page (saveExpEdits() /
    loadSettings()). Position (--tx/--ty/--z) is computed here instead of
    fixed in CSS so the fan still centers correctly for any card count. */
+// sizeW/sizeH here (139%/57% of the shared 140px base = 194x80) just
+// reproduce the original landscape card proportions as the default —
+// equal W/H values elsewhere always mean a literal square, this is
+// simply what a non-square default looks like expressed that way.
 const DEFAULT_TOOLS = [
-  { name:'After Effects', sub:'Motion',   badge:'Ae', bg:'#00005B' },
-  { name:'Premiere Pro',  sub:'Editing',  badge:'Pr', bg:'#00005B' },
-  { name:'Figma',         sub:'Design',   badge:'Fi', bg:'#111111' },
-  { name:'Claude',        sub:'AI',       badge:'✦',  bg:'#D97757' },
-  { name:'Higgsfield',    sub:'AI video', badge:'H',  bg:'#111111' },
+  { name:'After Effects', sub:'Motion',   badge:'Ae', bg:'#00005B', sizeW:139, sizeH:57 },
+  { name:'Premiere Pro',  sub:'Editing',  badge:'Pr', bg:'#00005B', sizeW:139, sizeH:57 },
+  { name:'Figma',         sub:'Design',   badge:'Fi', bg:'#111111', sizeW:139, sizeH:57 },
+  { name:'Claude',        sub:'AI',       badge:'✦',  bg:'#D97757', sizeW:139, sizeH:57 },
+  { name:'Higgsfield',    sub:'AI video', badge:'H',  bg:'#111111', sizeW:139, sizeH:57 },
 ];
 const TOOL_PALETTE = ['#00005B', '#111111', '#D97757', '#2563EB', '#059669', '#7C3AED', '#B91C1C'];
 
@@ -3204,7 +3212,10 @@ function buildToolSizeRow(label, initial, onChange) {
   row.appendChild(slider);
   row.appendChild(numInput);
   row.appendChild(pct);
-  return row;
+  // setValue() updates the visible controls without firing onChange —
+  // for programmatic resets (e.g. auto-square on empty text) that
+  // already apply their own change + save.
+  return { row, setValue: (v) => { slider.value = String(v); numInput.value = String(v); } };
 }
 
 function toolsBuildCard(t, i, tools, stack) {
@@ -3276,14 +3287,49 @@ function toolsBuildCard(t, i, tools, stack) {
   card.appendChild(sub);
 
   if (editMode) {
+    const wInit = t.sizeW ?? t.size ?? 100;
+    const hInit = t.sizeH ?? t.size ?? 100;
+    const wCtl = buildToolSizeRow('W', wInit, (v, committed) => {
+      t.sizeW = v;
+      delete t.size; // superseded by the split W/H values
+      card.style.setProperty('--sw', (v / 100).toFixed(2));
+      if (committed) saveToolsEdits();
+    });
+    const hCtl = buildToolSizeRow('H', hInit, (v, committed) => {
+      t.sizeH = v;
+      delete t.size;
+      card.style.setProperty('--sh', (v / 100).toFixed(2));
+      if (committed) saveToolsEdits();
+    });
+
+    // With no name/category left, there's nothing to make room for —
+    // snap both axes to the same value (a literal square, per the
+    // shared-base fix above) sized just to hug the icon, instead of
+    // leaving it at whatever rectangle it happened to be.
+    const AUTO_SQUARE_SIZE = 55;
+    const maybeAutoSquare = () => {
+      if (t.name.trim() || t.sub.trim()) return;
+      t.sizeW = t.sizeH = AUTO_SQUARE_SIZE;
+      delete t.size;
+      card.style.setProperty('--sw', (AUTO_SQUARE_SIZE / 100).toFixed(2));
+      card.style.setProperty('--sh', (AUTO_SQUARE_SIZE / 100).toFixed(2));
+      wCtl.setValue(AUTO_SQUARE_SIZE);
+      hCtl.setValue(AUTO_SQUARE_SIZE);
+    };
+
     let _st;
     const scheduleSave = () => { clearTimeout(_st); _st = setTimeout(saveToolsEdits, 1200); };
     name.addEventListener('input', () => {
       t.name = name.textContent;
       if (!t.badge && !t.iconSrc) renderIconContent();
+      maybeAutoSquare();
       scheduleSave();
     });
-    sub.addEventListener('input', () => { t.sub = sub.textContent; scheduleSave(); });
+    sub.addEventListener('input', () => {
+      t.sub = sub.textContent;
+      maybeAutoSquare();
+      scheduleSave();
+    });
 
     const del = document.createElement('button');
     del.type = 'button';
@@ -3298,21 +3344,8 @@ function toolsBuildCard(t, i, tools, stack) {
       renderToolsStack();
     };
     card.appendChild(del);
-
-    const wInit = t.sizeW ?? t.size ?? 100;
-    const hInit = t.sizeH ?? t.size ?? 100;
-    card.appendChild(buildToolSizeRow('W', wInit, (v, committed) => {
-      t.sizeW = v;
-      delete t.size; // superseded by the split W/H values
-      card.style.setProperty('--sw', (v / 100).toFixed(2));
-      if (committed) saveToolsEdits();
-    }));
-    card.appendChild(buildToolSizeRow('H', hInit, (v, committed) => {
-      t.sizeH = v;
-      delete t.size;
-      card.style.setProperty('--sh', (v / 100).toFixed(2));
-      if (committed) saveToolsEdits();
-    }));
+    card.appendChild(wCtl.row);
+    card.appendChild(hCtl.row);
   }
 
   return card;
@@ -3333,7 +3366,7 @@ function renderToolsStack() {
     addBtn.className = 'tools-add-btn';
     addBtn.textContent = '+ Add tool';
     addBtn.onclick = () => {
-      tools.push({ id: uid(), name: '', sub: '', badge: '', bg: TOOL_PALETTE[tools.length % TOOL_PALETTE.length], size: 100 });
+      tools.push({ id: uid(), name: '', sub: '', badge: '', bg: TOOL_PALETTE[tools.length % TOOL_PALETTE.length], sizeW: 100, sizeH: 100 });
       saveToolsEdits();
       renderToolsStack();
       const names = stack.querySelectorAll('.tool-name');
