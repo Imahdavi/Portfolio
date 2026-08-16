@@ -968,12 +968,11 @@
       width:19px; height:19px; border-radius:50%;
       background:#fff; border:1.5px solid rgba(0,0,0,.15); cursor:grab;
       color:#999; font-size:11px; line-height:1; letter-spacing:-1px;
-      align-items:center; justify-content:center;
+      align-items:center; justify-content:center; touch-action:none;
     }
     .tools-edit-on .tool-drag-handle { display:flex; }
     .tool-drag-handle:active { cursor:grabbing; }
-    .tool-card.dragging { opacity:.4; }
-    .tool-card.drag-over { outline:2px dashed rgba(0,0,0,.35); outline-offset:2px; }
+    .tool-card.dragging { opacity:.45; box-shadow:0 10px 24px rgba(0,0,0,.16); z-index:20; }
     .tool-size-row { display:none; align-items:center; gap:6px; margin-top:4px; padding-left:35px; }
     .tools-edit-on .tool-size-row { display:flex; }
     .tool-size-lbl { font-size:10px; font-weight:700; color:#aaa; width:9px; flex-shrink:0; }
@@ -3242,6 +3241,7 @@ function buildToolSizeRow(label, initial, onChange) {
 function toolsBuildCard(t, i, tools, stack) {
   const card = document.createElement('div');
   card.className = 'tool-card';
+  card.dataset.toolId = t.id;
   card.style.setProperty('--sw', ((t.sizeW ?? t.size ?? 100) / 100).toFixed(2));
   card.style.setProperty('--sh', ((t.sizeH ?? t.size ?? 100) / 100).toFixed(2));
   const isIconOnly = !editMode && !(t.name || '').trim() && !(t.sub || '').trim();
@@ -3369,39 +3369,54 @@ function toolsBuildCard(t, i, tools, stack) {
     };
     card.appendChild(del);
 
-    // Drag reordering: only the handle is draggable (not the whole
-    // card), so dragging doesn't fight with text editing, the icon
-    // picker, or the size sliders living inside the same card. The
-    // handle carries the source index via dataTransfer; every card is
-    // a drop target that reads that index back out on drop.
+    // Drag reordering: freehand, like the whole-block drag elsewhere —
+    // the card itself moves live in the DOM as the pointer crosses each
+    // sibling's half, so the rest of the row visibly reflows around it
+    // in real time instead of only showing a drop-target hint that
+    // resolves on release. Only the handle initiates the drag (not the
+    // whole card), so it doesn't fight with text editing, the icon
+    // picker, or the size sliders living inside the same card.
     const handle = document.createElement('span');
     handle.className = 'tool-drag-handle';
     handle.title = 'Drag to reorder';
-    handle.draggable = true;
     handle.textContent = '⠿';
-    handle.addEventListener('dragstart', (e) => {
+    handle.addEventListener('mousedown', (e) => e.stopPropagation());
+    handle.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
       e.stopPropagation();
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', String(i));
-      card.classList.add('dragging');
-    });
-    handle.addEventListener('dragend', () => card.classList.remove('dragging'));
-    card.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      card.classList.add('drag-over');
-    });
-    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
-    card.addEventListener('drop', (e) => {
-      e.preventDefault();
-      card.classList.remove('drag-over');
-      const fromIdx = Number(e.dataTransfer.getData('text/plain'));
-      const toIdx = i;
-      if (Number.isNaN(fromIdx) || fromIdx === toIdx) return;
-      const [moved] = tools.splice(fromIdx, 1);
-      tools.splice(toIdx, 0, moved);
-      saveToolsEdits();
-      renderToolsStack();
+      let dragging = false;
+
+      const onMove = (ev) => {
+        if (!dragging) { dragging = true; card.classList.add('dragging'); }
+        const siblings = [...stack.children].filter(c => c !== card && c.classList.contains('tool-card'));
+        let closest = null, closestDist = Infinity;
+        for (const sib of siblings) {
+          const r = sib.getBoundingClientRect();
+          const dist = Math.hypot(ev.clientX - (r.left + r.width / 2), ev.clientY - (r.top + r.height / 2));
+          if (dist < closestDist) { closestDist = dist; closest = sib; }
+        }
+        if (!closest) return;
+        const r = closest.getBoundingClientRect();
+        const sameRow = ev.clientY >= r.top - 4 && ev.clientY <= r.bottom + 4;
+        const before = sameRow ? (ev.clientX < r.left + r.width / 2) : (ev.clientY < r.top + r.height / 2);
+        stack.insertBefore(card, before ? closest : closest.nextSibling);
+      };
+      const onUp = () => {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        card.classList.remove('dragging');
+        if (dragging) {
+          const newOrder = [...stack.querySelectorAll('.tool-card')]
+            .map(el => tools.find(x => x.id === el.dataset.toolId))
+            .filter(Boolean);
+          tools.splice(0, tools.length, ...newOrder);
+          saveToolsEdits();
+          renderToolsStack();
+        }
+      };
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
     });
     card.appendChild(handle);
     card.appendChild(wCtl.row);
