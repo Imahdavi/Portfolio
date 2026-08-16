@@ -871,6 +871,53 @@
     .edit-on .avg-empty-prompt { display:flex; }
     .avg-empty-prompt:hover { border-color:#555; color:#333; background:rgba(0,0,0,.04); }
 
+    /* "Tools I use" — ported from 21st.dev/Prism UI's "Display Cards":
+       a fanned deck of cards sharing one grid cell (grid-area:stack),
+       each offset by its own translate, skewed together as a group,
+       grayscale by default and colorizing + lifting on hover. The
+       source's before-pseudo overlay-fade is folded into the same
+       filter transition here rather than a separate layer. */
+    .tools-wrap { margin-top:48px; padding-top:8px; text-align:center; }
+    .tools-label { font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:rgba(82,82,82,.7); margin-bottom:44px; }
+    .tools-stack {
+      display:grid; grid-template-areas:"stack"; place-items:center;
+      width:100%; max-width:360px; height:210px; margin:0 auto 20px;
+    }
+    .tool-card {
+      grid-area:stack;
+      width:194px; height:80px;
+      display:flex; flex-direction:column; justify-content:center; gap:5px;
+      border-radius:14px; border:1px solid rgba(0,0,0,.09);
+      background:rgba(250,248,245,.85); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+      box-shadow:0 6px 18px rgba(0,0,0,.06);
+      padding:0 16px; cursor:default; user-select:none;
+      filter:grayscale(1) opacity(.75);
+      transition:transform .5s cubic-bezier(.22,1,.36,1), filter .45s ease, border-color .3s, box-shadow .3s;
+    }
+    .tool-card:hover {
+      filter:grayscale(0) opacity(1);
+      border-color:rgba(0,0,0,.16);
+      box-shadow:0 14px 30px rgba(0,0,0,.12);
+    }
+    .tool-card:nth-child(1) { transform:skewY(-8deg) translate(-64px,-52px); z-index:1; }
+    .tool-card:nth-child(2) { transform:skewY(-8deg) translate(-32px,-26px); z-index:2; }
+    .tool-card:nth-child(3) { transform:skewY(-8deg) translate(0,0);        z-index:3; }
+    .tool-card:nth-child(4) { transform:skewY(-8deg) translate(32px,26px);  z-index:4; }
+    .tool-card:nth-child(5) { transform:skewY(-8deg) translate(64px,52px); z-index:5; }
+    .tool-card:nth-child(1):hover { transform:skewY(-8deg) translate(-64px,-68px); z-index:20; }
+    .tool-card:nth-child(2):hover { transform:skewY(-8deg) translate(-32px,-40px); z-index:20; }
+    .tool-card:nth-child(3):hover { transform:skewY(-8deg) translate(0,-14px);      z-index:20; }
+    .tool-card:nth-child(4):hover { transform:skewY(-8deg) translate(32px,12px);   z-index:20; }
+    .tool-card:nth-child(5):hover { transform:skewY(-8deg) translate(64px,38px);   z-index:20; }
+    .tool-card-top { display:flex; align-items:center; gap:9px; }
+    .tool-icon {
+      width:26px; height:26px; border-radius:7px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      color:#fff; font-size:10.5px; font-weight:700; letter-spacing:-.02em;
+    }
+    .tool-name { font-size:14px; font-weight:600; color:#222; }
+    .tool-sub { font-size:11.5px; color:#999; padding-left:35px; }
+
     /* ── Format toolbar (bold / italic) ── */
     #fmt-toolbar {
       position:fixed; z-index:9999;
@@ -1514,6 +1561,11 @@
         <svg viewBox="0 0 24 8"><line x1="2" y1="2" x2="22" y2="2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="2" y1="6" x2="22" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </div>
       <div class="brand-grid" id="brand-grid"></div>
+    </div>
+
+    <div class="tools-wrap">
+      <div class="tools-label">tools I use</div>
+      <div class="tools-stack" id="tools-stack"></div>
     </div>
   </div><!-- /view-exp -->
 
@@ -3009,6 +3061,49 @@ function renderWorkExp(items) {
     });
     requestAnimationFrame(spin);
   })();
+})();
+
+/* ─── "Tools I use" stacked cards ──────────────────────── */
+(function() {
+  // Monogram badges instead of embedded brand SVGs (like BRANDS'
+  // text-based fallbacks elsewhere) — each bg is that app's own real
+  // primary color where known (Claude's terracotta, Adobe's indigo).
+  const TOOLS = [
+    { name:'After Effects', sub:'Motion',   badge:'Ae', bg:'#00005B' },
+    { name:'Premiere Pro',  sub:'Editing',  badge:'Pr', bg:'#00005B' },
+    { name:'Figma',         sub:'Design',   badge:'Fi', bg:'#111111' },
+    { name:'Claude',        sub:'AI',       badge:'✦',  bg:'#D97757' },
+    { name:'Higgsfield',    sub:'AI video', badge:'H',  bg:'#111111' },
+  ];
+
+  const stack = document.getElementById('tools-stack');
+  if (!stack) return;
+  TOOLS.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'tool-card';
+
+    const top = document.createElement('div');
+    top.className = 'tool-card-top';
+
+    const icon = document.createElement('span');
+    icon.className = 'tool-icon';
+    icon.style.background = t.bg;
+    icon.textContent = t.badge;
+    top.appendChild(icon);
+
+    const name = document.createElement('span');
+    name.className = 'tool-name';
+    name.textContent = t.name;
+    top.appendChild(name);
+
+    const sub = document.createElement('span');
+    sub.className = 'tool-sub';
+    sub.textContent = t.sub;
+
+    card.appendChild(top);
+    card.appendChild(sub);
+    stack.appendChild(card);
+  });
 })();
 
 function _makeSecDelBtn(label, grid) {
