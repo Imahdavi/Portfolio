@@ -876,7 +876,7 @@
        each offset by its own translate, skewed together as a group,
        grayscale by default and colorizing + lifting on hover. Position/
        skew/size are all CSS custom properties set per-card from JS
-       (--tx/--ty/--z/--sz) instead of fixed nth-child rules, so the fan
+       (--tx/--ty/--z/--sw/--sh) instead of fixed nth-child rules, so the fan
        still works with any number of cards. In edit mode the container
        switches to a plain wrapped row (--skew:0, no --tx/--ty) so cards
        don't overlap while editing; the size var still applies there for
@@ -904,7 +904,7 @@
       box-shadow:0 6px 18px rgba(0,0,0,.06);
       padding:0 16px; cursor:default; user-select:none;
       filter:grayscale(1) opacity(.75);
-      transform:skewY(var(--skew,-8deg)) translate(var(--tx,0px),var(--ty,0px)) scale(var(--sz,1));
+      transform:skewY(var(--skew,-8deg)) translate(var(--tx,0px),var(--ty,0px)) scale(var(--sw,1),var(--sh,1));
       z-index:var(--z,0);
       transition:transform .6s cubic-bezier(.25,.8,.25,1), filter .5s ease, border-color .3s, box-shadow .3s;
     }
@@ -912,7 +912,7 @@
       filter:grayscale(0) opacity(1);
       border-color:rgba(0,0,0,.16);
       box-shadow:0 14px 30px rgba(0,0,0,.12);
-      transform:skewY(var(--skew,-8deg)) translate(var(--tx,0px),calc(var(--ty,0px) - 22px)) scale(var(--sz,1));
+      transform:skewY(var(--skew,-8deg)) translate(var(--tx,0px),calc(var(--ty,0px) - 22px)) scale(var(--sw,1),var(--sh,1));
       z-index:30;
     }
     .tools-edit-on .tool-card {
@@ -939,9 +939,16 @@
       align-items:center; justify-content:center;
     }
     .tools-edit-on .tool-del-btn { display:flex; }
-    .tool-size-row { display:none; align-items:center; margin-top:4px; padding-left:35px; }
+    .tools-edit-on .tool-card { height:auto; min-height:80px; padding:12px 16px; }
+    .tool-size-row { display:none; align-items:center; gap:6px; margin-top:4px; padding-left:35px; }
     .tools-edit-on .tool-size-row { display:flex; }
-    .tool-size-slider { width:100px; height:3px; accent-color:#1a1a1a; cursor:pointer; touch-action:none; }
+    .tool-size-lbl { font-size:10px; font-weight:700; color:#aaa; width:9px; flex-shrink:0; }
+    .tool-size-slider { flex:1; width:64px; height:3px; accent-color:#1a1a1a; cursor:pointer; touch-action:none; }
+    .tool-size-input {
+      width:36px; flex-shrink:0; font-size:10.5px; text-align:right; padding:2px 3px;
+      border:1px solid rgba(0,0,0,.16); border-radius:5px; background:#fff; color:#333;
+    }
+    .tool-size-pct { font-size:10px; color:#999; flex-shrink:0; }
     .tools-add-btn {
       width:100%; max-width:194px; height:80px; margin:0;
       border:1.5px dashed #bbb; border-radius:14px; background:transparent;
@@ -3099,8 +3106,9 @@ function renderWorkExp(items) {
 })();
 
 /* ─── "Tools I use" stacked cards ──────────────────────────────────
-   Editable in Experience-page edit mode: text/badge per card, a
-   per-card size slider, add/remove. Persisted as _cachedSettings.tools,
+   Editable in Experience-page edit mode: text/badge per card,
+   independent width/height sliders (each typeable too, snapping to
+   50%), add/remove. Persisted as _cachedSettings.tools,
    same save/load path as the rest of that page (saveExpEdits() /
    loadSettings()). Position (--tx/--ty/--z) is computed here instead of
    fixed in CSS so the fan still centers correctly for any card count. */
@@ -3116,7 +3124,7 @@ const TOOL_PALETTE = ['#00005B', '#111111', '#D97757', '#2563EB', '#059669', '#7
 function getToolsData() {
   if (!_cachedSettings) _cachedSettings = {};
   if (!Array.isArray(_cachedSettings.tools)) {
-    _cachedSettings.tools = DEFAULT_TOOLS.map(t => ({ id: uid(), size: 100, ...t }));
+    _cachedSettings.tools = DEFAULT_TOOLS.map(t => ({ id: uid(), sizeW: 100, sizeH: 100, ...t }));
   }
   return _cachedSettings.tools;
 }
@@ -3127,10 +3135,74 @@ function saveToolsEdits() {
   saveSettings();
 }
 
+// Slider + typeable number input for one axis (width or height), with a
+// magnetic snap to 50% while dragging/typing so it's easy to land on
+// exactly half-size. onChange(value, committed) fires live on every
+// input (committed=false) and once more on blur/release (committed=true,
+// when it should actually persist).
+function buildToolSizeRow(label, initial, onChange) {
+  const row = document.createElement('div');
+  row.className = 'tool-size-row';
+
+  const lbl = document.createElement('span');
+  lbl.className = 'tool-size-lbl';
+  lbl.textContent = label;
+  row.appendChild(lbl);
+
+  const snap = (v) => (Math.abs(v - 50) <= 3 ? 50 : v);
+  const clamp = (v) => Math.min(180, Math.max(30, v));
+
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.className = 'tool-size-slider';
+  slider.min = '30'; slider.max = '180'; slider.step = '1';
+  slider.value = String(initial);
+
+  const numInput = document.createElement('input');
+  numInput.type = 'number';
+  numInput.className = 'tool-size-input';
+  numInput.min = '30'; numInput.max = '180';
+  numInput.value = String(initial);
+
+  slider.addEventListener('pointerdown', (e) => e.stopPropagation());
+  slider.addEventListener('input', () => {
+    const v = snap(+slider.value);
+    slider.value = String(v);
+    numInput.value = String(v);
+    onChange(v, false);
+  });
+  slider.addEventListener('change', () => onChange(+slider.value, true));
+
+  numInput.addEventListener('pointerdown', (e) => e.stopPropagation());
+  numInput.addEventListener('input', () => {
+    const raw = +numInput.value;
+    if (Number.isNaN(raw)) return;
+    const v = snap(clamp(raw));
+    slider.value = String(v);
+    onChange(v, false);
+  });
+  numInput.addEventListener('change', () => {
+    const v = snap(clamp(+numInput.value || 100));
+    numInput.value = String(v);
+    slider.value = String(v);
+    onChange(v, true);
+  });
+
+  const pct = document.createElement('span');
+  pct.className = 'tool-size-pct';
+  pct.textContent = '%';
+
+  row.appendChild(slider);
+  row.appendChild(numInput);
+  row.appendChild(pct);
+  return row;
+}
+
 function toolsBuildCard(t, i, tools, stack) {
   const card = document.createElement('div');
   card.className = 'tool-card';
-  card.style.setProperty('--sz', ((t.size || 100) / 100).toFixed(2));
+  card.style.setProperty('--sw', ((t.sizeW ?? t.size ?? 100) / 100).toFixed(2));
+  card.style.setProperty('--sh', ((t.sizeH ?? t.size ?? 100) / 100).toFixed(2));
 
   if (!editMode) {
     const center = (tools.length - 1) / 2;
@@ -3195,25 +3267,20 @@ function toolsBuildCard(t, i, tools, stack) {
     };
     card.appendChild(del);
 
-    const sizeRow = document.createElement('div');
-    sizeRow.className = 'tool-size-row';
-    const sizeSlider = document.createElement('input');
-    sizeSlider.type = 'range';
-    sizeSlider.className = 'tool-size-slider';
-    sizeSlider.min = '60';
-    sizeSlider.max = '150';
-    sizeSlider.step = '2';
-    sizeSlider.value = String(t.size || 100);
-    sizeSlider.title = 'Card size';
-    sizeSlider.addEventListener('pointerdown', (e) => e.stopPropagation());
-    sizeSlider.addEventListener('input', () => {
-      const v = +sizeSlider.value;
-      t.size = v;
-      card.style.setProperty('--sz', (v / 100).toFixed(2));
-    });
-    sizeSlider.addEventListener('change', saveToolsEdits);
-    sizeRow.appendChild(sizeSlider);
-    card.appendChild(sizeRow);
+    const wInit = t.sizeW ?? t.size ?? 100;
+    const hInit = t.sizeH ?? t.size ?? 100;
+    card.appendChild(buildToolSizeRow('W', wInit, (v, committed) => {
+      t.sizeW = v;
+      delete t.size; // superseded by the split W/H values
+      card.style.setProperty('--sw', (v / 100).toFixed(2));
+      if (committed) saveToolsEdits();
+    }));
+    card.appendChild(buildToolSizeRow('H', hInit, (v, committed) => {
+      t.sizeH = v;
+      delete t.size;
+      card.style.setProperty('--sh', (v / 100).toFixed(2));
+      if (committed) saveToolsEdits();
+    }));
   }
 
   return card;
