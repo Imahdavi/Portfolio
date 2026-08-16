@@ -3327,6 +3327,11 @@ let toolsSelection = new Set();
    overwriting textContent every tick would fight contentEditable. */
 const TOOLS_LABEL_SCRAMBLE_CHARS = '_!X$0-+*#';
 let _toolsLabelAnimTimer = null;
+let _toolsLabelAnimStartTO = null;
+// Last text actually handed to playToolsLabelAnim — the DOM itself
+// can't be trusted as "the real text" since for most of a run it's
+// showing scrambled placeholder characters, not the real label.
+let _toolsLabelCurrentText = null;
 
 function _toolsLabelRandomChar(prevChar) {
   let c;
@@ -3338,9 +3343,23 @@ function _toolsLabelRandomChar(prevChar) {
 function playToolsLabelAnim(speed = 25, delay = 150) {
   const el = document.querySelector('.tools-label');
   if (!el || editMode) return;
-  const text = el.textContent.trim();
+  // While a previous run is still in flight (pending start-delay or an
+  // active interval), the DOM is mid-scramble, not real text — trust
+  // the last known-good text instead of re-reading garbage off the
+  // element. Once nothing is in flight the DOM is plain/settled again
+  // (e.g. right after a real edit was saved), so it's the correct
+  // source once more.
+  const animInFlight = !!(_toolsLabelAnimTimer || _toolsLabelAnimStartTO);
+  const text = (animInFlight && _toolsLabelCurrentText) ? _toolsLabelCurrentText : el.textContent.trim();
   if (!text) return;
+  // Cancel BOTH a running interval and a not-yet-started delay from any
+  // earlier call — clearing only the interval left a pending setTimeout
+  // free to fire later and spin up a second, independent tick loop
+  // racing the first one, each overwriting textContent out of sync
+  // with the other and never settling on the real text.
   if (_toolsLabelAnimTimer) { clearInterval(_toolsLabelAnimTimer); _toolsLabelAnimTimer = null; }
+  if (_toolsLabelAnimStartTO) { clearTimeout(_toolsLabelAnimStartTO); _toolsLabelAnimStartTO = null; }
+  _toolsLabelCurrentText = text;
 
   el.textContent = ' '.repeat(text.length);
   let phase = 1;
@@ -3372,7 +3391,8 @@ function playToolsLabelAnim(speed = 25, delay = 150) {
     }
   };
 
-  setTimeout(() => {
+  _toolsLabelAnimStartTO = setTimeout(() => {
+    _toolsLabelAnimStartTO = null;
     if (editMode) { el.textContent = text; return; }
     _toolsLabelAnimTimer = setInterval(tick, speed);
   }, delay);
@@ -3380,6 +3400,7 @@ function playToolsLabelAnim(speed = 25, delay = 150) {
 
 function stopToolsLabelAnim() {
   if (_toolsLabelAnimTimer) { clearInterval(_toolsLabelAnimTimer); _toolsLabelAnimTimer = null; }
+  if (_toolsLabelAnimStartTO) { clearTimeout(_toolsLabelAnimStartTO); _toolsLabelAnimStartTO = null; }
 }
 
 function getToolsData() {
@@ -4032,9 +4053,12 @@ function updateExpEditUI() {
     toolsLabel.contentEditable = editMode ? 'true' : 'false';
     if (editMode) {
       // Editing needs the plain final text, not whatever the scramble
-      // was mid-flight showing when Edit got clicked.
+      // was mid-flight showing when Edit got clicked — the DOM itself
+      // can't be trusted here since for most of a run it's scrambled
+      // placeholder characters, not the real label, so restore from
+      // the last text actually handed to the animation instead.
       stopToolsLabelAnim();
-      toolsLabel.textContent = toolsLabel.textContent.trim();
+      toolsLabel.textContent = _toolsLabelCurrentText || toolsLabel.textContent.trim();
     }
   }
   if (!editMode) toolsSelection.clear();
