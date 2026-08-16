@@ -789,7 +789,7 @@
     .avg-item-ctrls button:hover { background:rgba(255,255,255,.15); color:#fff; }
     .avg-item-ctrls button.avg-item-del-btn:hover { background:#ff4444; color:#fff; }
     .avg-add-tile {
-      display:none; width:42px; height:42px; flex:none; align-items:center; justify-content:center;
+      display:none; position:relative; width:42px; height:42px; flex:none; align-items:center; justify-content:center;
       border:1.5px dashed #bbb; border-radius:50%; background:#fff;
       color:#999; cursor:pointer; transition:border-color .2s, color .2s;
       margin-left:-14px;
@@ -798,7 +798,7 @@
     .avg-add-tile:hover { border-color:#555; color:#333; }
     .avg-add-tile svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
     .avg-empty-prompt {
-      display:none; width:100%; align-items:center; justify-content:center; gap:8px;
+      display:none; position:relative; width:100%; align-items:center; justify-content:center; gap:8px;
       padding:22px 10px; border-radius:12px; border:1.5px dashed #bbb;
       background:transparent; cursor:pointer; font-size:13px; font-weight:500;
       color:#666; transition:border-color .2s, color .2s, background .2s;
@@ -4604,19 +4604,66 @@ function renderCarouselBlock(block, mount, captionEl) {
   }
 }
 
-// Uploads one avatar image straight into a given avatars array
-// (mirrors mcUploadInto() above).
-async function avgUploadAvatar(avatars, file, onDone) {
-  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-  const path = `uploads/${Date.now()}_${uid()}.${ext}`;
-  try {
-    const url = await tusUpload(file, SB_MEDIA_BUCKET, path, () => {});
-    avatars.push({ id: uid(), src: url, name: '', role: '' });
-    if (activeKey) await saveProject(activeKey);
-  } catch (e) {
-    showUploadToast('Upload failed: ' + e.message, true);
+// Shared image-picker popover: "Upload image" or reuse one of the
+// "trusted by" brand logos (Experience page, SITE_BRAND_LOGOS) without
+// re-uploading it. onResolveSrc(src) fires once either path resolves —
+// used for both changing an existing avatar's image and adding a new
+// one (empty-prompt, add-tile). Caller must position:relative its own
+// anchor element and append this as a child.
+function avgBuildPickPopover(onResolveSrc) {
+  const popover = document.createElement('div');
+  popover.className = 'avg-img-popover';
+  popover.onclick = (e) => e.stopPropagation();
+
+  const uploadBtn = document.createElement('button');
+  uploadBtn.type = 'button';
+  uploadBtn.className = 'avg-img-popover-upload';
+  uploadBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Upload image';
+  uploadBtn.onclick = (e) => {
+    e.stopPropagation();
+    popover.classList.remove('open');
+    _mcFilePicker(files => {
+      if (!files.length) return;
+      const f = files[0];
+      const ext = (f.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `uploads/${Date.now()}_${uid()}.${ext}`;
+      tusUpload(f, SB_MEDIA_BUCKET, path, () => {}).then(url => {
+        onResolveSrc(url);
+      }).catch(err => showUploadToast('Upload failed: ' + err.message, true));
+    });
+  };
+  popover.appendChild(uploadBtn);
+
+  const brandLogos = window.SITE_BRAND_LOGOS || [];
+  if (brandLogos.length) {
+    const lbl = document.createElement('div');
+    lbl.className = 'avg-img-popover-lbl';
+    lbl.textContent = 'Or use a brand logo';
+    popover.appendChild(lbl);
+
+    const grid = document.createElement('div');
+    grid.className = 'avg-img-popover-grid';
+    brandLogos.forEach(logo => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.title = logo.name;
+      b.style.backgroundImage = `url(${logo.src})`;
+      b.onclick = (e) => {
+        e.stopPropagation();
+        popover.classList.remove('open');
+        onResolveSrc(logo.src);
+      };
+      grid.appendChild(b);
+    });
+    popover.appendChild(grid);
   }
-  onDone();
+
+  return popover;
+}
+
+function avgOpenPopover(popover) {
+  document.querySelectorAll('.resize-menu.open, .link-popover.open, .move-menu.open, .avg-img-popover.open').forEach(m => m.classList.remove('open'));
+  popover.classList.add('open');
 }
 
 // One-time migration: older saves used a flat block.avatars array with a
@@ -4670,13 +4717,6 @@ function avgRenderAvatarItem(a, idx, avatars, block, mount) {
   if (a.src) { av.style.backgroundImage = `url(${a.src})`; }
   else { av.textContent = (a.name || '?').trim().slice(0, 1).toUpperCase(); }
   av.title = editMode ? 'Click to change image' : '';
-  av.onclick = (e) => {
-    if (!editMode) return;
-    e.stopPropagation();
-    const wasOpen = popover.classList.contains('open');
-    document.querySelectorAll('.resize-menu.open, .link-popover.open, .move-menu.open, .avg-img-popover.open').forEach(m => m.classList.remove('open'));
-    if (!wasOpen) popover.classList.add('open');
-  };
 
   // Hover tooltip — reveals name/role in normal (non-edit) view, same
   // dark pill + arrow as the bottom nav's .nav-tip.
@@ -4685,60 +4725,19 @@ function avgRenderAvatarItem(a, idx, avatars, block, mount) {
   avgSetTip(tip, a.name, a.role);
   item.appendChild(tip);
 
-  // Image picker popover: upload a new file, or reuse one of the
-  // "trusted by" brand logos (Experience page) without re-uploading it.
-  const popover = document.createElement('div');
-  popover.className = 'avg-img-popover';
-  popover.onclick = (e) => e.stopPropagation();
-
-  const uploadBtn = document.createElement('button');
-  uploadBtn.type = 'button';
-  uploadBtn.className = 'avg-img-popover-upload';
-  uploadBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Upload image';
-  uploadBtn.onclick = (e) => {
-    e.stopPropagation();
-    popover.classList.remove('open');
-    _mcFilePicker(files => {
-      if (!files.length) return;
-      const f = files[0];
-      const ext = (f.name.split('.').pop() || 'jpg').toLowerCase();
-      const path = `uploads/${Date.now()}_${uid()}.${ext}`;
-      tusUpload(f, SB_MEDIA_BUCKET, path, () => {}).then(url => {
-        a.src = url;
-        saveProject(activeKey);
-        renderAvatarsBlock(block, mount);
-      }).catch(err => showUploadToast('Upload failed: ' + err.message, true));
-    });
-  };
-  popover.appendChild(uploadBtn);
-
-  const brandLogos = window.SITE_BRAND_LOGOS || [];
-  if (brandLogos.length) {
-    const lbl = document.createElement('div');
-    lbl.className = 'avg-img-popover-lbl';
-    lbl.textContent = 'Or use a brand logo';
-    popover.appendChild(lbl);
-
-    const grid = document.createElement('div');
-    grid.className = 'avg-img-popover-grid';
-    brandLogos.forEach(logo => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.title = logo.name;
-      b.style.backgroundImage = `url(${logo.src})`;
-      b.onclick = (e) => {
-        e.stopPropagation();
-        a.src = logo.src;
-        popover.classList.remove('open');
-        saveProject(activeKey);
-        renderAvatarsBlock(block, mount);
-      };
-      grid.appendChild(b);
-    });
-    popover.appendChild(grid);
-  }
-
+  const popover = avgBuildPickPopover(src => {
+    a.src = src;
+    saveProject(activeKey);
+    renderAvatarsBlock(block, mount);
+  });
   item.appendChild(popover);
+
+  av.onclick = (e) => {
+    if (!editMode) return;
+    e.stopPropagation();
+    if (popover.classList.contains('open')) popover.classList.remove('open');
+    else avgOpenPopover(popover);
+  };
 
   // Duplicate/delete toolbar — appended to `item`, not `av`, so the
   // buttons aren't clipped by the avatar's overflow:hidden circle.
@@ -4922,10 +4921,16 @@ function avgRenderGroupSegment(seg, block, mount) {
   addTile.type = 'button';
   addTile.className = 'avg-add-tile';
   addTile.innerHTML = '<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
-  addTile.onclick = () => _mcFilePicker(files => {
-    if (!files.length) return;
-    avgUploadAvatar(seg.avatars, files[0], () => renderAvatarsBlock(block, mount));
+  const addPopover = avgBuildPickPopover(src => {
+    seg.avatars.push({ id: uid(), src, name: '', role: '' });
+    saveProject(activeKey);
+    renderAvatarsBlock(block, mount);
   });
+  addTile.appendChild(addPopover);
+  addTile.onclick = (e) => {
+    e.stopPropagation();
+    avgOpenPopover(addPopover);
+  };
   stack.appendChild(addTile);
 
   wrap.appendChild(stack);
@@ -4967,12 +4972,18 @@ function renderAvatarsBlock(block, mount) {
     prompt.type = 'button';
     prompt.className = 'avg-empty-prompt';
     prompt.textContent = '+ Add avatar';
-    prompt.onclick = () => _mcFilePicker(files => {
-      if (!files.length) return;
-      prompt.disabled = true;
-      prompt.textContent = 'Uploading…';
-      avgUploadAvatar(block.segments[0].avatars, files[0], () => renderAvatarsBlock(block, mount));
+
+    const popover = avgBuildPickPopover(src => {
+      block.segments[0].avatars.push({ id: uid(), src, name: '', role: '' });
+      saveProject(activeKey);
+      renderAvatarsBlock(block, mount);
     });
+    prompt.appendChild(popover);
+
+    prompt.onclick = (e) => {
+      e.stopPropagation();
+      avgOpenPopover(popover);
+    };
     mount.appendChild(prompt);
     if (migrated && activeKey) saveProject(activeKey);
     return;
