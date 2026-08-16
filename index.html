@@ -741,33 +741,38 @@
        re-uploading it. Same dark popover as .link-popover/.resize-menu. */
     .avg-img-popover {
       position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%);
-      background:rgba(26,23,20,.95); border-radius:12px; padding:10px;
-      display:none; flex-direction:column; gap:8px; z-index:70;
-      width:186px;
+      background:rgba(26,23,20,.95); border-radius:14px; padding:12px;
+      display:none; flex-direction:column; gap:10px; z-index:70;
+      width:236px;
       box-shadow:0 8px 24px rgba(0,0,0,.3);
     }
     .avg-img-popover.open { display:flex; animation:fadeUp .15s ease both; }
     .avg-img-popover-upload {
-      padding:7px 10px; background:rgba(255,255,255,.08); border:none; border-radius:8px;
-      color:#fdfbf8; font-size:12px; font-weight:500; cursor:pointer; text-align:left;
-      display:flex; align-items:center; gap:6px; transition:background .12s;
+      padding:8px 10px; background:rgba(255,255,255,.08); border:none; border-radius:8px;
+      color:#fdfbf8; font-size:12.5px; font-weight:500; cursor:pointer; text-align:left;
+      display:flex; align-items:center; gap:7px; transition:background .12s;
     }
-    .avg-img-popover-upload svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+    .avg-img-popover-upload svg { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
     .avg-img-popover-upload:hover { background:rgba(255,255,255,.16); }
     .avg-img-popover-lbl {
-      color:rgba(255,255,255,.45); font-size:10.5px; font-weight:600;
+      color:rgba(255,255,255,.5); font-size:11px; font-weight:600;
       letter-spacing:.04em; padding:0 2px;
     }
     .avg-img-popover-grid {
-      display:grid; grid-template-columns:repeat(5, 1fr); gap:6px;
-      max-height:140px; overflow-y:auto;
+      display:grid; grid-template-columns:repeat(4, 1fr); gap:9px;
+      max-height:168px; overflow-y:auto;
     }
+    /* Logo sits on a solid white disc (most brand logos are drawn for a
+       light background) and is clipped + shrunk well inside the circle
+       (contain, not cover, at 62%) so it can never poke past the round
+       edge or get cropped illegibly. */
     .avg-img-popover-grid button {
-      width:28px; height:28px; border-radius:50%; border:1.5px solid rgba(255,255,255,.15);
-      background-size:cover; background-position:center; background-color:#333;
+      width:40px; height:40px; border-radius:50%; border:1.5px solid rgba(255,255,255,.2);
+      background-color:#fff; background-size:62%; background-position:center;
+      background-repeat:no-repeat; overflow:hidden;
       cursor:pointer; padding:0; transition:border-color .12s, transform .12s;
     }
-    .avg-img-popover-grid button:hover { border-color:#fff; transform:scale(1.1); }
+    .avg-img-popover-grid button:hover { border-color:#fff; transform:scale(1.12); }
     /* Duplicate/delete — a proper spaced-out hover toolbar (same dark
        pill as the segment controls) instead of two tiny overlapping
        circles crammed onto a small avatar, which were nearly impossible
