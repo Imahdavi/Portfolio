@@ -4628,7 +4628,10 @@ function renderCarouselBlock(block, mount, captionEl) {
 // look as the trusted-by sphere's own per-logo circles — so it shows at
 // its own natural proportions instead of being cropped/force-filled
 // into a fixed frame. Built once and reused; avgOpenImagePicker(cb)
-// swaps in whichever callback the current trigger needs.
+// swaps in whichever callback the current trigger needs. cb(src, isLogo)
+// — isLogo flags a brand-logo pick so the resulting avatar itself
+// renders with background-size:contain (full logo visible) instead of
+// cover (which crops a wide logotype down to an illegible fragment).
 let _avgPickPanel = null, _avgPickBackdrop = null, _avgPickResolve = null;
 
 function avgEnsurePickPanel() {
@@ -4668,7 +4671,7 @@ function avgEnsurePickPanel() {
       const f = files[0];
       const ext = (f.name.split('.').pop() || 'jpg').toLowerCase();
       const path = `uploads/${Date.now()}_${uid()}.${ext}`;
-      tusUpload(f, SB_MEDIA_BUCKET, path, () => {}).then(url => resolve(url))
+      tusUpload(f, SB_MEDIA_BUCKET, path, () => {}).then(url => resolve(url, false))
         .catch(err => showUploadToast('Upload failed: ' + err.message, true));
     });
   };
@@ -4695,7 +4698,7 @@ function avgEnsurePickPanel() {
       cell.onclick = () => {
         const resolve = _avgPickResolve;
         avgCloseImagePicker();
-        if (resolve) resolve(logo.src);
+        if (resolve) resolve(logo.src, true);
       };
       grid.appendChild(cell);
     });
@@ -4767,7 +4770,17 @@ function avgRenderAvatarItem(a, idx, avatars, block, mount) {
 
   const av = document.createElement('div');
   av.className = 'avg-avatar';
-  if (a.src) { av.style.backgroundImage = `url(${a.src})`; }
+  if (a.src) {
+    av.style.backgroundImage = `url(${a.src})`;
+    // A brand logo's own aspect ratio can be wide/short (e.g. a
+    // landscape logotype) — cover would crop it down to an illegible
+    // fragment, so logos get contain + a white backdrop instead of the
+    // default cover crop used for uploaded (roughly square) photos.
+    if (a.isLogo) {
+      av.style.backgroundSize = 'contain';
+      av.style.backgroundColor = '#fff';
+    }
+  }
   else { av.textContent = (a.name || '?').trim().slice(0, 1).toUpperCase(); }
   av.title = editMode ? 'Click to change image' : '';
 
@@ -4781,8 +4794,9 @@ function avgRenderAvatarItem(a, idx, avatars, block, mount) {
   av.onclick = (e) => {
     if (!editMode) return;
     e.stopPropagation();
-    avgOpenImagePicker(src => {
+    avgOpenImagePicker((src, isLogo) => {
       a.src = src;
+      a.isLogo = !!isLogo;
       saveProject(activeKey);
       renderAvatarsBlock(block, mount);
     });
@@ -4972,8 +4986,8 @@ function avgRenderGroupSegment(seg, block, mount) {
   addTile.innerHTML = '<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
   addTile.onclick = (e) => {
     e.stopPropagation();
-    avgOpenImagePicker(src => {
-      seg.avatars.push({ id: uid(), src, name: '', role: '' });
+    avgOpenImagePicker((src, isLogo) => {
+      seg.avatars.push({ id: uid(), src, isLogo: !!isLogo, name: '', role: '' });
       saveProject(activeKey);
       renderAvatarsBlock(block, mount);
     });
@@ -5022,8 +5036,8 @@ function renderAvatarsBlock(block, mount) {
 
     prompt.onclick = (e) => {
       e.stopPropagation();
-      avgOpenImagePicker(src => {
-        block.segments[0].avatars.push({ id: uid(), src, name: '', role: '' });
+      avgOpenImagePicker((src, isLogo) => {
+        block.segments[0].avatars.push({ id: uid(), src, isLogo: !!isLogo, name: '', role: '' });
         saveProject(activeKey);
         renderAvatarsBlock(block, mount);
       });
