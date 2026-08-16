@@ -884,7 +884,16 @@
        the hover lift uses a plain ease-out with no overshoot, so the
        rise reads as continuous instead of snapping/popping. */
     .tools-wrap { margin-top:48px; padding-top:8px; text-align:center; overflow:visible; }
-    .tools-label { font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:rgba(82,82,82,.7); margin-bottom:44px; }
+    /* monospace so each character keeps the same width while the
+       scramble animation swaps glyphs in and out — a proportional font
+       would make the label jitter width every tick. */
+    .tools-label {
+      font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:rgba(82,82,82,.7); margin-bottom:44px;
+      font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight:600;
+      outline:none; min-height:1em;
+    }
+    .tools-label[contenteditable="true"] { cursor:text; }
+    .tools-label[contenteditable="true"]:empty:before { content:attr(data-ph); color:#aaa; }
     .tools-stack {
       display:grid; grid-template-areas:"stack"; place-items:center;
       width:100%; max-width:360px; height:210px; margin:0 auto 20px;
@@ -1636,7 +1645,7 @@
     </div>
 
     <div class="tools-wrap">
-      <div class="tools-label">tools I use</div>
+      <div class="tools-label" data-ph="tools I use">tools I use</div>
       <div class="tools-stack" id="tools-stack"></div>
     </div>
   </div><!-- /view-exp -->
@@ -2963,6 +2972,10 @@ async function loadSettings() {
       const brandWrap = document.querySelector('.brand-grid-wrap');
       if (brandWrap) brandWrap.style.setProperty('--trusted-gap', s.trustedByGap + 'px');
     }
+    if (s.toolsLabel) {
+      const toolsLabel = document.querySelector('.tools-label');
+      if (toolsLabel) toolsLabel.textContent = s.toolsLabel;
+    }
 
     renderToolsStack();
 
@@ -3157,6 +3170,70 @@ const DEFAULT_TOOLS = [
   { name:'Higgsfield',    sub:'AI video', badge:'H',  bg:'#111111', sizeW:139, sizeH:57 },
 ];
 const TOOL_PALETTE = ['#00005B', '#111111', '#D97757', '#2563EB', '#059669', '#7C3AED', '#B91C1C'];
+
+/* Scramble-reveal text (ported from 21st.dev's "SpecialText" React
+   component — no React/framer-motion here, so this is a plain
+   setInterval doing the same two-phase logic: phase 1 grows a run of
+   random characters up to the full length then flickers it a while
+   longer, phase 2 sweeps a "_" cursor left to right revealing the real
+   characters behind it). Runs only outside edit mode — the interval
+   overwriting textContent every tick would fight contentEditable. */
+const TOOLS_LABEL_SCRAMBLE_CHARS = '_!X$0-+*#';
+let _toolsLabelAnimTimer = null;
+
+function _toolsLabelRandomChar(prevChar) {
+  let c;
+  do { c = TOOLS_LABEL_SCRAMBLE_CHARS[Math.floor(Math.random() * TOOLS_LABEL_SCRAMBLE_CHARS.length)]; }
+  while (c === prevChar);
+  return c;
+}
+
+function playToolsLabelAnim(speed = 25, delay = 150) {
+  const el = document.querySelector('.tools-label');
+  if (!el || editMode) return;
+  const text = el.textContent.trim();
+  if (!text) return;
+  if (_toolsLabelAnimTimer) { clearInterval(_toolsLabelAnimTimer); _toolsLabelAnimTimer = null; }
+
+  el.textContent = ' '.repeat(text.length);
+  let phase = 1;
+  let step = 0;
+
+  const tick = () => {
+    if (phase === 1) {
+      const maxSteps = text.length * 2;
+      const currentLength = Math.min(step + 1, text.length);
+      const chars = [];
+      for (let i = 0; i < currentLength; i++) chars.push(_toolsLabelRandomChar(chars[i - 1]));
+      for (let i = currentLength; i < text.length; i++) chars.push(' ');
+      el.textContent = chars.join('');
+      if (step < maxSteps - 1) step++;
+      else { phase = 2; step = 0; }
+    } else {
+      const revealedCount = Math.floor(step / 2);
+      const chars = [];
+      for (let i = 0; i < revealedCount && i < text.length; i++) chars.push(text[i]);
+      if (revealedCount < text.length) chars.push(step % 2 === 0 ? '_' : _toolsLabelRandomChar());
+      for (let i = chars.length; i < text.length; i++) chars.push(_toolsLabelRandomChar());
+      el.textContent = chars.join('');
+      if (step < text.length * 2 - 1) step++;
+      else {
+        el.textContent = text;
+        clearInterval(_toolsLabelAnimTimer);
+        _toolsLabelAnimTimer = null;
+      }
+    }
+  };
+
+  setTimeout(() => {
+    if (editMode) { el.textContent = text; return; }
+    _toolsLabelAnimTimer = setInterval(tick, speed);
+  }, delay);
+}
+
+function stopToolsLabelAnim() {
+  if (_toolsLabelAnimTimer) { clearInterval(_toolsLabelAnimTimer); _toolsLabelAnimTimer = null; }
+}
 
 function getToolsData() {
   if (!_cachedSettings) _cachedSettings = {};
@@ -3614,7 +3691,7 @@ function goView(viewId, btn) {
   setNavActive(btn);
   prevMain = viewId;
   showView(viewId, anim);
-  if (viewId === 'view-exp')       trackView('work-experience');
+  if (viewId === 'view-exp')       { trackView('work-experience'); playToolsLabelAnim(); }
   else if (viewId === 'view-soon') trackView('note');
 }
 
@@ -3731,12 +3808,23 @@ function updateExpEditUI() {
   });
   const brandLabel = document.querySelector('.brand-grid-label');
   if (brandLabel) brandLabel.contentEditable = editMode ? 'true' : 'false';
+  const toolsLabel = document.querySelector('.tools-label');
+  if (toolsLabel) {
+    toolsLabel.contentEditable = editMode ? 'true' : 'false';
+    if (editMode) {
+      // Editing needs the plain final text, not whatever the scramble
+      // was mid-flight showing when Edit got clicked.
+      stopToolsLabelAnim();
+      toolsLabel.textContent = toolsLabel.textContent.trim();
+    }
+  }
   renderToolsStack();
   if (editMode) {
     _wireExpDelBtns();
   } else {
     saveExpEdits();
     saveToolsEdits();
+    playToolsLabelAnim();
   }
 }
 
@@ -3762,6 +3850,8 @@ function saveExpEdits() {
   _cachedSettings.experience = items;
   const brandLabel = document.querySelector('.brand-grid-label');
   if (brandLabel) _cachedSettings.trustedByLabel = brandLabel.textContent.trim();
+  const toolsLabel = document.querySelector('.tools-label');
+  if (toolsLabel) _cachedSettings.toolsLabel = toolsLabel.textContent.trim();
   saveSettings();
 }
 
