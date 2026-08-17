@@ -5457,11 +5457,31 @@ function renderCarouselBlock(block, mount, captionEl) {
   // click handler needed for it.
   const baseHeight = 180; // reference's own w-44/h-44 = 176px
   const aspectMin = 0.55, aspectMax = 1.9; // clamp so one extreme photo can't blow out the stack
-  // Magnitudes generalized from the reference's own PHOTOS array (3
-  // hand-placed cards: rotation -15/-3/12deg ≈ 13.5deg/step, x -90/-10/75px
-  // ≈ 82.5px/step) to a symmetric per-step cascade that works for any
-  // card count instead of exactly 3.
-  const spreadX = 85, spreadY = 12, spreadRot = 13;
+  // Reference magnitudes (3 hand-placed cards: rotation -15/-3/12deg
+  // ≈13.5deg/step, x -90/-10/75px ≈82.5px/step), used as-is up to a
+  // handful of photos. Beyond that, a fixed 85px/step would push the
+  // outermost cards past .mc-stack's own box — .mc-stack itself is
+  // overflow:visible, but .view (the page column around it) is
+  // overflow-x:clip, so those cards would get sliced off left/right
+  // instead of just spilling harmlessly. Scale the whole cascade down
+  // as more photos are added so the outermost card's center never
+  // exceeds a safe reach from the stack's midpoint, however many there
+  // are — stackMaxWidth here must match .mc-stack's own CSS max-width.
+  const refSpreadX = 85, refSpreadY = 12, refSpreadRot = 13;
+  const stackMaxWidth = 460, cardMargin = 16;
+  const worstCaseHalfWidth = (baseHeight * 1.3) / 2; // typical-to-wide card, not the extreme 1.9 clamp — keeps the reference's own spread for ordinary photo mixes
+  const maxOff = count > 1 ? (count - 1) / 2 : 0;
+  let spreadX = refSpreadX, spreadY = refSpreadY, spreadRot = refSpreadRot;
+  if (maxOff > 0) {
+    const maxReach = stackMaxWidth / 2 - worstCaseHalfWidth - cardMargin;
+    const allowedStep = Math.max(6, maxReach / maxOff); // never collapse to a fully overlapping stack
+    if (allowedStep < refSpreadX) {
+      const scale = allowedStep / refSpreadX;
+      spreadX = allowedStep;
+      spreadY = refSpreadY * scale;
+      spreadRot = refSpreadRot * scale;
+    }
+  }
 
   mount.style.cssText = 'width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:visible;margin-bottom:8px;gap:10px;';
 
