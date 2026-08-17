@@ -767,10 +767,15 @@
     /* Magnetic Carousel block (Originkit trial) — caption reuses
        .block-text as-is, same as every other text block in a board.
        Photos stack directly on top of each other (21st.dev's Expandable
-       Gallery reference) rather than sitting side by side — same
+       Gallery reference, ported from its actual source this time — see
+       renderCarouselBlock()) rather than sitting side by side — same
        grid-area:stack + place-items:center trick as the "tools I use"
-       cards on the home page, with a diagonal --tx/--ty/--rot cascade so
-       each photo peeks out from behind the last like a tossed pile.
+       cards on the home page. Sizing/radius/border/shadow and the
+       cascade's rotation+offset magnitudes match the reference's own
+       PHOTOS array (rotation -15/-3/12deg, x -90/-10/75px) generalized
+       to any card count instead of exactly 3; width is this port's own
+       addition (aspect-ratio-driven per card, not the reference's fixed
+       square) so a landscape photo isn't cropped to match the rest.
        Hovering any card (even one mostly hidden behind others) lifts it
        clear of the pile and brings it to front — pure CSS, no click
        handler, nothing here is clickable on purpose. */
@@ -778,19 +783,22 @@
     .mc-stack {
       display:grid; grid-template-areas:"stack"; place-items:center;
       position:relative; overflow:visible;
-      width:100%; max-width:440px; height:320px; margin:0 auto;
+      width:100%; max-width:460px; height:300px; margin:0 auto;
     }
     .mc-bar {
       grid-area:stack; position:relative; overflow:hidden;
-      border-radius:30px; border:5px solid #fff;
-      box-shadow:0 14px 34px rgba(0,0,0,.18);
+      border-radius:38px; border:6px solid #fff;
+      box-shadow:0 20px 50px rgba(0,0,0,.15);
       background:#eee; padding:0; cursor:default; will-change:transform;
       transform:translate(var(--tx,0px), var(--ty,0px)) rotate(var(--rot,0deg));
       z-index:var(--z,0);
-      transition:transform .35s cubic-bezier(.25,.8,.25,1), box-shadow .3s;
+      transition:transform .4s cubic-bezier(.34,1.56,.64,1), box-shadow .3s;
     }
     .mc-bar:hover {
-      transform:translate(var(--tx,0px), calc(var(--ty,0px) - 26px)) rotate(0deg) scale(1.05);
+      /* Reference reduces rotation to 80% on hover rather than fully
+         straightening it (rotate: photo.rotation * 0.8), and lifts by a
+         fixed 15px, not a fraction of the resting offset. */
+      transform:translate(var(--tx,0px), calc(var(--ty,0px) - 15px)) rotate(calc(var(--rot,0deg) * 0.8)) scale(1.05);
       z-index:50;
       box-shadow:0 22px 46px rgba(0,0,0,.24);
     }
@@ -5447,9 +5455,13 @@ function renderCarouselBlock(block, mount, captionEl) {
   // to match everyone else's shape. Hover is the only interaction —
   // .mc-bar:hover in the stylesheet lifts+fronts the card, no JS and no
   // click handler needed for it.
-  const baseHeight = 190;
+  const baseHeight = 180; // reference's own w-44/h-44 = 176px
   const aspectMin = 0.55, aspectMax = 1.9; // clamp so one extreme photo can't blow out the stack
-  const spreadX = 18, spreadY = 14, spreadRot = 2.5; // per-step cascade offset
+  // Magnitudes generalized from the reference's own PHOTOS array (3
+  // hand-placed cards: rotation -15/-3/12deg ≈ 13.5deg/step, x -90/-10/75px
+  // ≈ 82.5px/step) to a symmetric per-step cascade that works for any
+  // card count instead of exactly 3.
+  const spreadX = 85, spreadY = 12, spreadRot = 13;
 
   mount.style.cssText = 'width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:visible;margin-bottom:8px;gap:10px;';
 
