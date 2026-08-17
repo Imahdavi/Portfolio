@@ -167,7 +167,7 @@
        larger than intended (this is how it ended up hundreds of
        pixels off in a corner). */
     #view-home.home-edit .pbc-avatar { cursor:grab; touch-action:none; }
-    .pbc-avatar img { width:100%; height:100%; object-fit:cover; display:block; color:transparent; font-size:0; opacity:.6; }
+    .pbc-avatar img { width:100%; height:100%; object-fit:cover; display:block; color:transparent; font-size:0; opacity:.9; }
     .avatar-edit-btn {
       position:absolute; inset:0; display:none; align-items:center; justify-content:center;
       background:rgba(0,0,0,.42); border:none; cursor:pointer; color:#fff;
@@ -364,6 +364,14 @@
     .exp-add-btn:hover { border-color:rgba(0,0,0,.3); color:#555; }
     .exp-add-btn.show { display:block; }
     .brand-grid-wrap { margin-top:36px; padding-top:28px; text-align:center; --trusted-gap:22px; }
+    /* With no experience entries yet, #sg-exp is empty (0 height) and
+       its own 48px view-padding + this wrap's 36+28px stacked on top
+       left a much bigger gap above "trusted by" than home's first
+       content gets — match the view's top padding to #view-home's, and
+       drop the wrap's separator margin when there's nothing above it
+       to separate from (real entries keep the normal gap once added). */
+    #view-exp { padding-top:32px; }
+    #sg-exp:empty ~ .brand-grid-wrap { margin-top:0; }
     /* Drag handle to adjust the gap between the "trusted by" pill and
        the sphere below it — edit mode only, shown via the same
        #sg-exp.exp-edit-on toggle the rest of the Experience-page edit
@@ -1580,6 +1588,22 @@
     }
     .nav-btn.active::after { opacity:1; }
 
+    /* Shrink the whole bottom-nav pill on phones — at full size it was
+       wide enough (up to ~354px, edge to edge on a 375px phone) that
+       #scroll-top-btn's fixed desktop offset (meant to clear a much
+       narrower pill) had nowhere to sit without overlapping it. The
+       actual reposition logic lives in JS (positionScrollTopBtn, near
+       the scroll-to-top wiring) since it needs the nav's real measured
+       width, which this shrink also feeds into automatically. */
+    @media (max-width:539px) {
+      #bottom-nav { padding:12px 18px; gap:18px; }
+      .nav-btn, #emojiburst-mount { width:20px; height:20px; }
+      .nav-btn svg { width:20px; height:20px; }
+      .nav-sep { height:14px; }
+      #sound-toggle-btn { width:21px; height:21px; }
+      #sound-toggle-btn svg { width:18px; height:18px; }
+    }
+
     /* ─────────────────── LOTTIE PICKER ─────────────────── */
     #lottie-picker-overlay {
       display:none; position:fixed; inset:0; z-index:5000;
@@ -2007,7 +2031,7 @@
     </svg>
   </button>
   <span class="nav-sep"></span>
-  <button id="sound-toggle-btn" onclick="toggleWebSound()" aria-label="Toggle web-shot sound">
+  <button id="sound-toggle-btn" class="muted" onclick="toggleWebSound()" aria-label="Toggle web-shot sound">
   <span class="nav-tip">Web Sound</span>
   <!-- active: speaker + web-ray lines -->
   <svg class="icon-on" viewBox="0 0 24 24">
@@ -2356,7 +2380,7 @@ function spiderSense(x, y) {
     src.start(0, SHOT_OFFSET, SHOT_DUR);
   }
 
-  window._webShotMuted = false;
+  window._webShotMuted = true;
   window._playWebShot = function() {
     if (typeof editMode !== 'undefined' && editMode) return;
     if (window._webShotMuted) return;
@@ -6612,6 +6636,48 @@ document.addEventListener('DOMContentLoaded', () => {
   proj.addEventListener('scroll', () => {
     btn.classList.toggle('show', proj.scrollTop > 200);
   });
+});
+
+/* On phones the bottom-nav pill runs nearly edge to edge, so the
+   desktop CSS position for #scroll-top-btn (a fixed offset that
+   assumes a much narrower, centered pill) lands right on top of it.
+   Below 768px, measure the pill's actual rect and place the button
+   beside it — same vertical center — if there's room, or stacked just
+   above it (gapped, never touching) if there isn't. At 768px+ the
+   inline overrides are cleared so the original stylesheet position
+   (which already has plenty of clearance there) takes back over. */
+function positionScrollTopBtn() {
+  const btn = document.getElementById('scroll-top-btn');
+  const nav = document.getElementById('bottom-nav');
+  if (!btn || !nav) return;
+
+  if (window.innerWidth >= 768) {
+    btn.style.left = btn.style.right = btn.style.top = btn.style.bottom = '';
+    return;
+  }
+
+  const GAP = 10, SAFE_EDGE = 10;
+  const navRect = nav.getBoundingClientRect();
+  const btnSize = btn.offsetWidth || 40;
+  const besideX = navRect.right + GAP;
+
+  if (besideX + btnSize <= window.innerWidth - SAFE_EDGE) {
+    btn.style.left   = besideX + 'px';
+    btn.style.right  = 'auto';
+    btn.style.top    = (navRect.top + navRect.height / 2 - btnSize / 2) + 'px';
+    btn.style.bottom = 'auto';
+  } else {
+    btn.style.right  = Math.max(SAFE_EDGE, window.innerWidth - navRect.right) + 'px';
+    btn.style.left   = 'auto';
+    btn.style.bottom = (window.innerHeight - navRect.top + GAP) + 'px';
+    btn.style.top    = 'auto';
+  }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  positionScrollTopBtn();
+  window.addEventListener('resize', positionScrollTopBtn);
+  const nav = document.getElementById('bottom-nav');
+  if (nav) new ResizeObserver(positionScrollTopBtn).observe(nav);
 });
 
 /* ─── Init ─────────────────────────────────────────────── */
