@@ -591,9 +591,15 @@
       box-shadow:0 2px 10px rgba(0,0,0,0.10);
       backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
     }
+    /* left was hardcoded to `50vw - 290px`, which bakes in the
+       assumption that #app is always exactly 540px wide (290 = 540/2 +
+       20px clearance) — correct at the default width, but left the
+       button stranded at its old spot once --site-width could change
+       (see the site-width slider). Deriving it from --site-width keeps
+       the same 20px clearance at any width. */
     #app:has(#view-project.active) .back-btn {
       position:fixed;
-      left:max(10px, calc(50vw - 290px));
+      left:max(10px, calc(50vw - (var(--site-width, 540px) / 2) - 20px));
       top:48px;
       z-index:200;
     }
@@ -1451,9 +1457,11 @@
     #sound-toggle-btn .nav-tip { bottom:calc(100% + 10px); }
     #sound-toggle-btn:hover .nav-tip { opacity:1; transform:translateX(-50%) translateY(0); }
 
-    /* Scroll-to-top button — mirrors back-btn position on the right */
+    /* Scroll-to-top button — mirrors back-btn position on the right.
+       Same --site-width fix as back-btn: right was hardcoded assuming
+       a fixed 540px #app (280 = 540/2 + 10px clearance). */
     #scroll-top-btn {
-      position:fixed; bottom:96px; right:max(10px, calc(50vw - 280px));
+      position:fixed; bottom:96px; right:max(10px, calc(50vw - (var(--site-width, 540px) / 2) - 10px));
       width:40px; height:40px; border-radius:50%;
       background:rgba(255,255,255,0.88); border:1.5px solid rgba(0,0,0,0.13);
       box-shadow:0 2px 10px rgba(0,0,0,.10);
