@@ -777,7 +777,7 @@
     .edit-on .mc-item-del { display:flex; }
     .mc-add-tile {
       display:none; flex:none; align-items:center; justify-content:center;
-      border:1.5px dashed #bbb; border-radius:10px; background:transparent;
+      border:1.5px dashed #bbb; border-radius:28px; background:transparent;
       color:#999; cursor:pointer; transition:border-color .2s, color .2s;
     }
     .edit-on .mc-add-tile { display:flex; }
@@ -5349,16 +5349,6 @@ function onDragEnd(e) {
    whichever bar currently has the highest magnify factor, unless the
    caption is actively focused for editing (then it holds still so
    hovering elsewhere doesn't yank text out from under you mid-type). */
-const MC_EASE_PRESETS = { linear:'linear', easeIn:'ease-in', easeOut:'ease-out', easeInOut:'ease-in-out' };
-function mcParseTransition(t) {
-  const dur = Math.max(0.05, (t && t.duration) || 0.5);
-  let ease = 'cubic-bezier(0.44, 0, 0.56, 1)';
-  if (t && Array.isArray(t.ease) && t.ease.length === 4) ease = `cubic-bezier(${t.ease.join(', ')})`;
-  else if (t && typeof t.ease === 'string' && MC_EASE_PRESETS[t.ease]) ease = MC_EASE_PRESETS[t.ease];
-  else if (t && t.type === 'spring') ease = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
-  return { dur, ease };
-}
-
 function addMagneticCarousel() {
   const proj = PROJECTS[activeKey];
   const b = { id: uid(), type: 'carousel', items: [] };
@@ -5418,38 +5408,28 @@ function renderCarouselBlock(block, mount, captionEl) {
   const items = block.items;
   const count = items.length;
 
-  const collapsedWidth = 84, hoverWidth = 132, collapsedHeight = 210, hoverHeight = 258;
-  const openSize = 300, gap = 10, influence = 130, blur = 4;
-  const transition = { type:'tween', duration:0.3, delay:0, ease:'easeInOut' };
-  const { dur, ease } = mcParseTransition(transition);
-  const openEase = `width ${dur}s ${ease}, height ${dur}s ${ease}, filter ${dur}s ${ease}, opacity ${dur}s ${ease}`;
+  // Restyled as rounded photo "chips" (21st.dev's Expandable Gallery —
+  // thick border, big radius, soft shadow) instead of thin fixed-portrait
+  // bars, and hover-only now: no click-to-open, no blurred-neighbours
+  // backdrop. Each bar's width is its OWN image's aspect ratio × the row
+  // height (loaded async below), not one fixed shape for every photo, so
+  // a wide/landscape shot gets a wide chip instead of being cropped down
+  // into the same narrow rectangle as a portrait one.
+  const collapsedHeight = 170, hoverHeight = 220, gap = 14, influence = 150;
+  const radius = 30, border = 5;
+  const aspectMin = 0.55, aspectMax = 1.9; // clamp so one extreme photo can't blow out the row
 
   mount.style.height = hoverHeight + 'px';
   mount.style.gap = gap + 'px';
 
-  // `stage` holds ONLY the backdrop + item bars, matching the ported
-  // component's own container shape exactly — setTargetFromCursor()'s
-  // slot-center math assumes stage.getBoundingClientRect().width is
-  // just the items, so the "+" tile is appended to `mount` instead,
-  // as stage's sibling, not its child.
   const stage = document.createElement('div');
   stage.style.cssText = `flex:none;display:flex;align-items:center;justify-content:center;gap:${gap}px;position:relative;overflow:visible;`;
   mount.appendChild(stage);
 
-  // Plain <button>, not <div> — the block's own free-drag wiring already
-  // excludes `button` from starting a whole-block drag, so bars stay
-  // clickable without extra changes to that shared code.
-  const backdrop = document.createElement('button');
-  backdrop.type = 'button';
-  backdrop.style.cssText = 'position:absolute;inset:0;z-index:1;pointer-events:none;border:none;padding:0;background:none;cursor:default;';
-  stage.appendChild(backdrop);
-
   const targets = items.map(() => 0);
   const cur = items.map(() => 0);
-  let openIdx = null;
-  let closing = false;
+  const aspects = items.map(() => 1); // square until each image loads and reports its real ratio
   let rafId = 0;
-  let closeTimer = 0;
   let shownIdx = 0;
 
   function captionFocused() { return captionEl && document.activeElement === captionEl; }
@@ -5459,16 +5439,31 @@ function renderCarouselBlock(block, mount, captionEl) {
     if (captionEl) captionEl.innerHTML = (items[i] && items[i].caption) || '';
   }
 
+  // Plain <button>, not <div> — the block's own free-drag wiring already
+  // excludes `button` from starting a whole-block drag. No click handler
+  // on it though: hover is the only interaction now, on purpose.
   const bars = items.map((item, i) => {
     const bar = document.createElement('button');
     bar.type = 'button';
-    bar.style.cssText = 'flex:none;overflow:hidden;position:relative;will-change:width,height;border-radius:10px;background-size:cover;background-position:center;background-repeat:no-repeat;border:none;padding:0;cursor:pointer;';
-    if (item.src) { bar.style.backgroundImage = `url(${item.src})`; bar.style.backgroundColor = 'transparent'; }
-    else bar.style.backgroundColor = `hsl(${(i * 360) / count}, 70%, 58%)`;
-    bar.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (openIdx === i) close(); else openBar(i);
-    });
+    bar.style.cssText = `flex:none;overflow:hidden;position:relative;will-change:width,height;border-radius:${radius}px;border:${border}px solid #fff;box-shadow:0 14px 34px rgba(0,0,0,.16);background:#eee;padding:0;cursor:default;`;
+    if (item.src) {
+      const img = document.createElement('img');
+      img.src = item.src;
+      img.alt = '';
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;user-select:none;';
+      bar.appendChild(img);
+      const probe = new Image();
+      probe.onload = () => {
+        const raw = probe.naturalWidth / probe.naturalHeight;
+        if (raw > 0) {
+          aspects[i] = Math.max(aspectMin, Math.min(aspectMax, raw));
+          render();
+        }
+      };
+      probe.src = item.src;
+    } else {
+      bar.style.background = `hsl(${(i * 360) / count}, 70%, 58%)`;
+    }
 
     const del = document.createElement('button');
     del.type = 'button';
@@ -5489,7 +5484,7 @@ function renderCarouselBlock(block, mount, captionEl) {
   const addTile = document.createElement('button');
   addTile.type = 'button';
   addTile.className = 'mc-add-tile';
-  addTile.style.width = collapsedWidth + 'px';
+  addTile.style.width = collapsedHeight + 'px';
   addTile.style.height = collapsedHeight + 'px';
   addTile.innerHTML = '<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
   addTile.onclick = (e) => {
@@ -5501,16 +5496,9 @@ function renderCarouselBlock(block, mount, captionEl) {
   updateCaption(0);
 
   function sizeFor(i) {
-    if (openIdx !== null) {
-      return i === openIdx
-        ? { width: openSize, height: openSize }
-        : { width: collapsedWidth, height: collapsedHeight };
-    }
     const f = cur[i] || 0;
-    return {
-      width: collapsedWidth + (hoverWidth - collapsedWidth) * f,
-      height: collapsedHeight + (hoverHeight - collapsedHeight) * f,
-    };
+    const height = collapsedHeight + (hoverHeight - collapsedHeight) * f;
+    return { width: height * aspects[i], height };
   }
 
   function render() {
@@ -5519,14 +5507,9 @@ function renderCarouselBlock(block, mount, captionEl) {
       const { width, height } = sizeFor(i);
       bar.style.width = width + 'px';
       bar.style.height = height + 'px';
-      bar.style.transition = (openIdx !== null || closing) ? openEase : 'none';
-      bar.style.zIndex = openIdx === i ? 3 : 2;
-      const blurred = openIdx !== null && i !== openIdx;
-      bar.style.filter = blurred ? `blur(${blur}px)` : 'none';
-      bar.style.opacity = blurred ? '0.6' : '1';
-      if (openIdx === null && (cur[i] || 0) > peakVal) { peakVal = cur[i]; peak = i; }
+      if ((cur[i] || 0) > peakVal) { peakVal = cur[i]; peak = i; }
     });
-    if (openIdx === null) updateCaption(peak >= 0 ? peak : 0);
+    updateCaption(peak >= 0 ? peak : 0);
   }
   render();
 
@@ -5549,43 +5532,29 @@ function renderCarouselBlock(block, mount, captionEl) {
     const rect = stage.getBoundingClientRect();
     const cx = clientX - rect.left;
     const n = items.length;
-    const totalBase = n * collapsedWidth + (n - 1) * gap;
-    const startX = (rect.width - totalBase) / 2;
+    // Prefix-sum over each bar's own (aspect-based) collapsed width,
+    // since bars are no longer all the same width — same idea as a
+    // justified gallery row, just applied to find hover centers instead
+    // of laying out a static row.
+    const collapsedWidths = aspects.map(a => collapsedHeight * a);
+    const totalBase = collapsedWidths.reduce((s, w) => s + w, 0) + (n - 1) * gap;
+    let x = (rect.width - totalBase) / 2;
     for (let i = 0; i < n; i++) {
-      const center = startX + i * (collapsedWidth + gap) + collapsedWidth / 2;
+      const w = collapsedWidths[i];
+      const center = x + w / 2;
       const dist = Math.abs(cx - center);
       const f = Math.max(0, 1 - dist / influence);
       targets[i] = f * f * (3 - 2 * f);
+      x += w + gap;
     }
     startLoop();
   }
 
-  function openBar(i) {
-    openIdx = i;
-    backdrop.style.pointerEvents = 'auto';
-    backdrop.style.cursor = 'pointer';
-    render();
-    updateCaption(i);
-  }
-
-  function close() {
-    for (let i = 0; i < targets.length; i++) { targets[i] = 0; cur[i] = 0; }
-    closing = true;
-    backdrop.style.pointerEvents = 'none';
-    backdrop.style.cursor = 'default';
-    clearTimeout(closeTimer);
-    closeTimer = setTimeout(() => { closing = false; render(); }, dur * 1000);
-    openIdx = null;
-    render();
-  }
-
-  stage.addEventListener('mousemove', (e) => { if (openIdx === null) setTargetFromCursor(e.clientX); });
+  stage.addEventListener('mousemove', (e) => setTargetFromCursor(e.clientX));
   stage.addEventListener('mouseleave', () => {
-    if (openIdx !== null) return;
     for (let i = 0; i < targets.length; i++) targets[i] = 0;
     startLoop();
   });
-  backdrop.addEventListener('click', close);
 
   if (captionEl && !captionEl._mcWired) {
     captionEl._mcWired = true;
