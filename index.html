@@ -72,21 +72,6 @@
     #view-project { padding: 0 22px 112px; }
     #view-home    { padding-top: 32px; }
 
-    /* #app's extra desktop width (640px vs 540px) must NOT reach the
-       content — the block grid, home cards, everything inside .view is
-       sized off of #app-minus-padding, so if that available width grew
-       by the same 100px, every block would grow with it. Instead the
-       side padding grows by exactly that 100px split in half (22→72),
-       which keeps the actual content column pinned at its original
-       496px and turns 100% of the extra shell width into pure side
-       margin. Placed after .view/#view-project's own rules — same
-       specificity, so an earlier placement would lose the cascade to
-       whichever base rule comes later in the file regardless of the
-       media query matching (bit us once already on the picker sheets). */
-    @media (min-width: 700px) {
-      .view, #view-project { padding-left: 72px; padding-right: 72px; }
-    }
-
     @keyframes slideInR  { from { transform:translateX(52px);  opacity:0 } to { transform:none; opacity:1 } }
     @keyframes slideInL  { from { transform:translateX(-52px); opacity:0 } to { transform:none; opacity:1 } }
     @keyframes fadeUp    { from { transform:translateY(14px);  opacity:0 } to { transform:none; opacity:1 } }
