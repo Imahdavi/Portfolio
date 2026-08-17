@@ -38,10 +38,13 @@
     .view { scrollbar-width: none; -ms-overflow-style: none; }
 
     /* ── App shell ── */
+    /* --site-width defaults to the original 540px — untouched unless the
+       user drags the width slider in home edit mode, so nothing here
+       changes anyone's site until they explicitly opt in. */
     #app {
       position: relative;
       width: 100%;
-      max-width: 540px;
+      max-width: var(--site-width, 540px);
       height: 100dvh;
       overflow: hidden;
       transition: max-width .35s ease;
@@ -240,9 +243,18 @@
     .sec-label { font-family:var(--font-heading); font-size:27px; font-weight:600; margin-bottom:18px; }
 
     /* ─────────────────── CARD GRID ─────────────────── */
+    /* Fixed-size columns (auto-fill), not 3 stretchy fr columns — cards
+       stay pixel-identical at any site width, and a wider #app just
+       fits more 154.67px columns per row (3 at the default 540px
+       shell, more once --site-width grows) instead of the existing 3
+       cards stretching wider. 154.67px = the exact width 3 columns
+       already come out to today: (496px view content − 8px grid
+       padding − 24px for 2 gaps) / 3. justify-content centers the row
+       when the width doesn't divide evenly into whole columns. */
     .card-grid {
       display:grid;
-      grid-template-columns:repeat(3,1fr);
+      grid-template-columns:repeat(auto-fill, 154.67px);
+      justify-content:center;
       gap:12px;
       margin-bottom:40px;
       padding:6px 4px;
@@ -1634,6 +1646,24 @@
     #home-fonts-btn { display:none; margin-top:6px; padding:11px; border:1.5px dashed rgba(0,0,0,.13); border-radius:8px; background:none; font-size:13px; color:#bbb; cursor:pointer; transition:all .2s; width:100%; text-align:center; }
     #home-fonts-btn:hover { border-color:rgba(0,0,0,.28); color:#555; }
     #view-home.home-edit #home-fonts-btn { display:block; }
+
+    /* ── Site width slider (home edit only) ──
+       Manual override for --site-width (consumed by #app's max-width,
+       see the App shell rule) — the only thing this changes directly is
+       the shell; every layout inside either has its own fixed max-width
+       already (tool cards, brand sphere, etc. — unaffected either way)
+       or is a repeating grid built to reflow instead of stretch (see
+       .card-grid's auto-fill comment) or is the free-form block editor,
+       which is meant to use extra room for user-placed content. */
+    .site-width-ctrl {
+      display:none; align-items:center; gap:10px;
+      margin-top:10px; padding:11px 14px;
+      background:none; border:1.5px dashed rgba(0,0,0,.13); border-radius:8px;
+    }
+    #view-home.home-edit .site-width-ctrl { display:flex; }
+    .site-width-lbl { font-size:13px; color:#999; white-space:nowrap; flex-shrink:0; }
+    .site-width-slider { flex:1; height:3px; accent-color:#1a1a1a; cursor:pointer; touch-action:none; }
+    .site-width-val { font-size:12px; color:#555; width:56px; text-align:right; flex-shrink:0; font-variant-numeric:tabular-nums; }
     #font-picker-overlay {
       display:none; position:fixed; inset:0; z-index:5200;
       background:rgba(0,0,0,.4); backdrop-filter:blur(6px);
@@ -1773,6 +1803,11 @@
     <div id="home-sections" style="opacity:0;transition:opacity .3s ease"></div>
     <button id="home-add-sec-btn" onclick="addHomeSection()">+ Add section</button>
     <button id="home-fonts-btn" onclick="openFontPanel()">Aa &nbsp;Change fonts</button>
+    <div class="site-width-ctrl" id="siteWidthCtrl">
+      <span class="site-width-lbl">Site width</span>
+      <input type="range" class="site-width-slider" id="siteWidthSlider" min="540" max="900" step="10" value="540">
+      <span class="site-width-val" id="siteWidthVal">540px</span>
+    </div>
   </div><!-- /view-home -->
 
 
@@ -3113,6 +3148,15 @@ async function loadSettings() {
 
     // fonts
     if (s.fonts) applyFonts(s.fonts);
+
+    // site width (manual override, defaults to 540px if never set)
+    if (s.siteWidth != null) {
+      document.documentElement.style.setProperty('--site-width', s.siteWidth + 'px');
+      const wSlider = document.getElementById('siteWidthSlider');
+      const wVal = document.getElementById('siteWidthVal');
+      if (wSlider) wSlider.value = s.siteWidth;
+      if (wVal) wVal.textContent = s.siteWidth + 'px';
+    }
 
     // profile
     if (s.profile) {
@@ -6988,6 +7032,30 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     sizeCtrl.appendChild(_avatarSizeCtl.row);
   }
+});
+
+/* ── Site width slider (home edit) ─────────────────────
+   Manual override for --site-width, consumed by #app's max-width.
+   Slider drag gives a live preview; the value only persists to
+   settings.siteWidth on release (mousedown→mouseup 'change'), same
+   commit-on-release pattern as the other sliders on this site. */
+document.addEventListener('DOMContentLoaded', () => {
+  const slider = document.getElementById('siteWidthSlider');
+  const val = document.getElementById('siteWidthVal');
+  if (!slider || !val) return;
+
+  const apply = (px) => {
+    document.documentElement.style.setProperty('--site-width', px + 'px');
+    val.textContent = px + 'px';
+  };
+  slider.addEventListener('pointerdown', (e) => e.stopPropagation());
+  slider.addEventListener('input', () => apply(+slider.value));
+  slider.addEventListener('change', () => {
+    const px = +slider.value;
+    if (!_cachedSettings) _cachedSettings = {};
+    _cachedSettings.siteWidth = px;
+    saveSettings();
+  });
 });
 </script>
 
