@@ -6962,32 +6962,24 @@ document.addEventListener('DOMContentLoaded', () => {
     let dragged = false;
 
     const MAX_OFFSET_X = 130; // sideways has no specific content to collide with below it
-    // A fixed ±130 vertical clamp let the avatar overlap .contact-row's
-    // pills underneath the header once dragged far enough down — it
-    // never accounted for how much room is actually there. Compute the
-    // real downward room live instead: .profile-name-display is always
-    // two lines at --font-name-size with line-height .78 (so its own
-    // half-height is deterministic even though it's hidden while
-    // editing), .profile-role sits a fixed 10px below it, and however
-    // tall .profile-role currently renders (it can wrap to 2+ lines for
-    // a long title) plus the gap down to .contact-row is measured live
-    // — .profile-role/.contact-row are always in normal flow and never
-    // move for the avatar's transform, so they're safe to read even
-    // while mid-drag.
+    // Clamping against .contact-row (the previous attempt) missed that
+    // .profile-role sits right after the name — only 10px below it —
+    // and the avatar (46px+ tall) is already bigger than that gap on
+    // its own. Any dy that clears .contact-row still lands squarely on
+    // top of the role text on the way there, which is exactly the "am"
+    // badge sitting on "design a heartbeat" in the screenshot. The name
+    // itself is fair game to overlap (that's the whole design), but the
+    // avatar must never cross past the name-block's own bottom edge —
+    // .profile-name-display is always two lines at --font-name-size
+    // with line-height .78 (deterministic even hidden while editing),
+    // so that edge is computable without touching .profile-role at all.
     const nameSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--font-name-size')) || 56;
     const nameBlockHalf = nameSize * 0.78; // one line's height; two lines stacked = the block's full height
-    const roleMarginTop = 10;
-    const roleEl = document.querySelector('.profile-role');
-    const contactRow = document.querySelector('.contact-row');
     const avatarHalf = avatar.getBoundingClientRect().height / 2;
-    let maxOffsetY = 80;
-    if (roleEl && contactRow) {
-      const roleRect = roleEl.getBoundingClientRect();
-      const gapBelowRole = contactRow.getBoundingClientRect().top - roleRect.bottom;
-      const distanceToContactRow = nameBlockHalf + roleMarginTop + roleRect.height + gapBelowRole;
-      maxOffsetY = Math.max(20, distanceToContactRow - avatarHalf - 20);
-    }
-    const minOffsetY = -70; // upward has no specific content to avoid, but still shouldn't push it toward the header's own top padding edge
+    // A few px of slack floor so there's still *some* downward room even
+    // if the avatar's been scaled up bigger than the name block itself.
+    const maxOffsetY = Math.max(4, nameBlockHalf - avatarHalf);
+    const minOffsetY = -maxOffsetY; // symmetric — nothing sits directly above worth avoiding, so mirror the downward room
 
     const onMove = (ev) => {
       const dx = ev.clientX - startX, dy = ev.clientY - startY;
