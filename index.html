@@ -6974,16 +6974,25 @@ document.addEventListener('DOMContentLoaded', async () => {
    rendered as a mini clickable map — you can only ever land on one of
    these points, plus reveal more of them one at a time with "+". A
    reused buildToolSizeRow() slider still writes --avatar-scale. Both
-   persist to settings.profile so they survive a reload. */
+   persist to settings.profile so they survive a reload.
+
+   dy:0 for the left/right points is deliberate — every other point
+   that moves sideways also nudges up/down, which is what read as
+   "not centered" (it's off the two-line seam). Left/right stay pinned
+   to the seam and get the most horizontal reach since that's what was
+   actually asked for; dx is still clamped live in _avatarSafeDX so the
+   reach can't push the avatar past the app shell's own edge on a
+   narrow viewport. */
 const AVATAR_POINTS = [
-  { dx: 0,   dy: 0   }, // center (original)
-  { dx: -85, dy: -14 }, // upper-left
-  { dx: 85,  dy: -14 }, // upper-right
-  { dx: -60, dy: 14  }, // lower-left
-  { dx: 60,  dy: 14  }, // lower-right
-  { dx: -40, dy: -15 }, // upper-center-left
-  { dx: 40,  dy: -15 }, // upper-center-right
-  { dx: 0,   dy: 15  }, // lower-center
+  { dx: 0,    dy: 0   }, // center (original)
+  { dx: -150, dy: 0   }, // left
+  { dx: 150,  dy: 0   }, // right
+  { dx: -90,  dy: -14 }, // upper-left
+  { dx: 90,   dy: -14 }, // upper-right
+  { dx: -90,  dy: 14  }, // lower-left
+  { dx: 90,   dy: 14  }, // lower-right
+  { dx: -190, dy: 0   }, // far left
+  { dx: 190,  dy: 0   }, // far right
 ];
 const AVATAR_POINTS_DEFAULT_UNLOCKED = 5;
 
@@ -6996,7 +7005,21 @@ function avatarOpenPicker(e) {
 
 let _avatarSizeCtl = null;
 
+// Keeps the avatar's edge inside the app shell itself — the one thing
+// a fixed px offset can't know in advance, since #app's width ranges
+// from a narrow phone viewport up to the site-width slider's max.
+function _avatarSafeDX(dx) {
+  const app = document.getElementById('app');
+  const avatar = document.querySelector('.pbc-avatar');
+  if (!app || !avatar) return dx;
+  const appHalf = app.getBoundingClientRect().width / 2;
+  const avatarHalf = avatar.getBoundingClientRect().width / 2;
+  const max = Math.max(20, appHalf - avatarHalf - 12);
+  return Math.max(-max, Math.min(max, dx));
+}
+
 function _avatarSetPoint(slot, dx, dy, save) {
+  dx = _avatarSafeDX(dx);
   slot.style.setProperty('--avatar-dx', dx + 'px');
   slot.style.setProperty('--avatar-dy', dy + 'px');
   if (save) {
