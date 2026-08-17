@@ -48,6 +48,16 @@
     }
     /* project view keeps same width as home */
 
+    /* Desktop: only the outer shell gets wider (540px→640px, a modest
+       ~18% bump) — the block grid inside is already 1fr columns that
+       fill #app's width, so it scales proportionally on its own without
+       touching a single block/component size directly. 700px min-width
+       keeps every phone (including large ones in portrait) completely
+       untouched — this rule simply doesn't exist for them. */
+    @media (min-width: 700px) {
+      #app { max-width: 640px; }
+    }
+
     /* ─────────────────── VIEWS ─────────────────── */
     .view {
       position: absolute;
@@ -1621,6 +1631,14 @@
       padding:0 0 36px; width:100%; max-width:560px;
       animation:slideInSheet .28s cubic-bezier(.25,.46,.45,.94) both;
       max-height:90vh; overflow-y:auto;
+    }
+    /* Placed after both sheets' base rules on purpose — same
+       specificity as those rules, so an earlier media query would lose
+       the cascade to whichever base rule happens to come later in the
+       file, regardless of whether the query matches. */
+    @media (min-width: 700px) {
+      #lottie-picker-sheet { max-width: 640px; }
+      #font-picker-sheet { max-width: 660px; }
     }
     #font-picker-drag { width:36px; height:4px; background:rgba(0,0,0,.13); border-radius:2px; margin:12px auto 0; }
     #font-picker-header {
