@@ -1662,14 +1662,34 @@
       inset:-12px -10px;
     }
 
-    /* nav active dot */
-    .nav-btn::after {
-      content:''; position:absolute; bottom:-6px; left:50%;
-      transform:translateX(-50%);
-      width:4px; height:4px; border-radius:50%; background:#1a1a1a;
-      opacity:0; transition:opacity .2s;
+    /* Limelight active-tab indicator (ported from 21st.dev's
+       "Limelight Nav", @aliimam-in-terminal) — a bar that slides
+       (left) to sit under whichever .nav-btn is active, with a soft
+       glow beam. Replaces the old static dot for the same purpose:
+       marking which tab is active.
+
+       The source component pins the bar to the TOP of the nav with
+       the beam shining down through a clip-path cone that narrows
+       near the bar and widens as it travels away — flipped here to
+       sit at the BOTTOM with the beam shining up instead: the cone
+       and gradient direction are both mirrored, everything else
+       (slide animation, glow, sizing logic) is a direct port. Hover
+       behavior on .nav-btn is untouched by this — it's a separate,
+       independent layer underneath the icons. */
+    .nav-limelight {
+      position:absolute; bottom:10px; left:-999px; z-index:10;
+      width:30px; height:4px; border-radius:999px;
+      background:#1a1a1a;
+      box-shadow:0 -28px 12px rgba(26,26,26,.3);
+      pointer-events:none;
     }
-    .nav-btn.active::after { opacity:1; }
+    .nav-limelight.ready { transition:left .4s cubic-bezier(.4,0,.2,1); }
+    .nav-limelight-beam {
+      position:absolute; left:-30%; bottom:4px; width:160%; height:34px;
+      clip-path:polygon(5% 0%, 25% 100%, 75% 100%, 95% 0%);
+      background:linear-gradient(to top, rgba(26,26,26,.22), transparent);
+      pointer-events:none;
+    }
 
     /* Shrink the whole bottom-nav pill on phones — at full size it was
        wide enough (up to ~354px, edge to edge on a 375px phone) that
@@ -2131,6 +2151,9 @@
       <path d="M15.009 5.80078L18.604 8.98378" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   </button>
+  <div class="nav-limelight" id="navLimelight">
+    <div class="nav-limelight-beam"></div>
+  </div>
  </div>
  <div class="bottom-nav-group">
   <button id="sound-toggle-btn" class="muted" onclick="toggleWebSound()" aria-label="Toggle web-shot sound">
@@ -4126,7 +4149,29 @@ function goView(viewId, btn) {
 function setNavActive(btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  positionNavLimelight();
 }
+
+/* Slides #navLimelight under whichever .nav-btn is currently .active.
+   instant=true skips the CSS transition (used for the very first
+   placement on load, so it doesn't visibly slide in from off-screen —
+   same trick the source component does via useLayoutEffect running
+   before paint, just done with a class toggle instead). */
+function positionNavLimelight(instant) {
+  const bar = document.getElementById('navLimelight');
+  const activeBtn = document.querySelector('.nav-btn.active');
+  if (!bar || !activeBtn) return;
+  const left = activeBtn.offsetLeft + activeBtn.offsetWidth / 2 - bar.offsetWidth / 2;
+  if (instant) bar.classList.remove('ready');
+  bar.style.left = left + 'px';
+  if (instant) {
+    requestAnimationFrame(() => requestAnimationFrame(() => bar.classList.add('ready')));
+  }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  positionNavLimelight(true);
+  window.addEventListener('resize', () => positionNavLimelight());
+});
 
 /* ─── Project detail ───────────────────────────────────── */
 let activeKey = null;
