@@ -765,8 +765,36 @@
     .block-divider-star:hover .star-small { transform:rotate(-30deg); }
 
     /* Magnetic Carousel block (Originkit trial) — caption reuses
-       .block-text as-is, same as every other text block in a board. */
-    .block-carousel { width:100%; display:flex; align-items:center; justify-content:center; overflow-x:auto; overflow-y:visible; -webkit-overflow-scrolling:touch; margin-bottom:8px; }
+       .block-text as-is, same as every other text block in a board.
+       Photos stack directly on top of each other (21st.dev's Expandable
+       Gallery reference) rather than sitting side by side — same
+       grid-area:stack + place-items:center trick as the "tools I use"
+       cards on the home page, with a diagonal --tx/--ty/--rot cascade so
+       each photo peeks out from behind the last like a tossed pile.
+       Hovering any card (even one mostly hidden behind others) lifts it
+       clear of the pile and brings it to front — pure CSS, no click
+       handler, nothing here is clickable on purpose. */
+    .block-carousel { width:100%; display:flex; align-items:center; justify-content:center; overflow:visible; margin-bottom:8px; }
+    .mc-stack {
+      display:grid; grid-template-areas:"stack"; place-items:center;
+      position:relative; overflow:visible;
+      width:100%; max-width:440px; height:320px; margin:0 auto;
+    }
+    .mc-bar {
+      grid-area:stack; position:relative; overflow:hidden;
+      border-radius:30px; border:5px solid #fff;
+      box-shadow:0 14px 34px rgba(0,0,0,.18);
+      background:#eee; padding:0; cursor:default; will-change:transform;
+      transform:translate(var(--tx,0px), var(--ty,0px)) rotate(var(--rot,0deg));
+      z-index:var(--z,0);
+      transition:transform .35s cubic-bezier(.25,.8,.25,1), box-shadow .3s;
+    }
+    .mc-bar:hover {
+      transform:translate(var(--tx,0px), calc(var(--ty,0px) - 26px)) rotate(0deg) scale(1.05);
+      z-index:50;
+      box-shadow:0 22px 46px rgba(0,0,0,.24);
+    }
+    .mc-bar img { width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; user-select:none; }
     .mc-item-del {
       display:none; position:absolute; top:5px; right:5px; z-index:4;
       width:18px; height:18px; border-radius:50%;
@@ -5334,21 +5362,22 @@ function onDragEnd(e) {
 }
 
 /* ── Magnetic Carousel (Originkit) — trial block type ──────
-   Ported from the Originkit "Magnetic Carousel" React component
-   (https://www.originkit.dev/components/magneticcarousel). The magnetic
-   hover-grow (smoothstep falloff over `influence`, a continuous
-   lerp-toward-target rAF loop instead of a CSS transition, so growth
-   tracks the cursor smoothly) and the click-to-open-as-a-big-square
-   -with-blurred-neighbours-and-backdrop-close interaction — including
-   sizeFor() and the Transition-object parsing — are the original's,
-   unchanged. Everything else here (the empty-state upload prompt, the
-   per-image delete button, the trailing "+" tile, and the caption pair)
-   is this page's own wiring: a carousel block stores its own
+   Started as a port of the Originkit "Magnetic Carousel" React component
+   (https://www.originkit.dev/components/magneticcarousel), then
+   restyled toward 21st.dev's "Expandable Gallery" (0xUrvish) look:
+   photos stacked directly on top of each other (grid-area:stack, same
+   trick as the "tools I use" cards) with a diagonal cascade instead of
+   sitting side by side in a row, pure-CSS hover lift instead of the
+   original's cursor-distance magnetic grow, and no click-to-open
+   interaction at all — see renderCarouselBlock()/.mc-bar for the
+   current implementation. The empty-state upload prompt, the per-image
+   delete button, the trailing "+" tile, and the caption pair are this
+   page's own wiring: a carousel block stores its own
    `items: [{src, caption}]`, and the caption — the site's own
    .block-text, same as every other text block in a board — tracks
-   whichever bar currently has the highest magnify factor, unless the
-   caption is actively focused for editing (then it holds still so
-   hovering elsewhere doesn't yank text out from under you mid-type). */
+   whichever card was last hovered, unless the caption is actively
+   focused for editing (then it holds still so hovering elsewhere
+   doesn't yank text out from under you mid-type). */
 function addMagneticCarousel() {
   const proj = PROJECTS[activeKey];
   const b = { id: uid(), type: 'carousel', items: [] };
@@ -5408,30 +5437,27 @@ function renderCarouselBlock(block, mount, captionEl) {
   const items = block.items;
   const count = items.length;
 
-  // Restyled as rounded photo "chips" (21st.dev's Expandable Gallery —
-  // thick border, big radius, soft shadow) instead of thin fixed-portrait
-  // bars, and hover-only now: no click-to-open, no blurred-neighbours
-  // backdrop. Each bar's width is its OWN image's aspect ratio × the row
-  // height (loaded async below), not one fixed shape for every photo, so
-  // a wide/landscape shot gets a wide chip instead of being cropped down
-  // into the same narrow rectangle as a portrait one.
-  const collapsedHeight = 170, hoverHeight = 220, gap = 14, influence = 150;
-  const radius = 30, border = 5;
-  const aspectMin = 0.55, aspectMax = 1.9; // clamp so one extreme photo can't blow out the row
+  // Photos stacked directly on top of each other (21st.dev's Expandable
+  // Gallery reference), not side by side — same grid-area:stack trick as
+  // the "tools I use" cards, with a diagonal cascade (--tx/--ty/--rot,
+  // symmetric around the middle item) so each one peeks out from behind
+  // the last like a tossed pile. Height is fixed per card; width comes
+  // from that card's OWN image aspect ratio (loaded async below) so a
+  // landscape photo renders as a wide card instead of being cropped down
+  // to match everyone else's shape. Hover is the only interaction —
+  // .mc-bar:hover in the stylesheet lifts+fronts the card, no JS and no
+  // click handler needed for it.
+  const baseHeight = 190;
+  const aspectMin = 0.55, aspectMax = 1.9; // clamp so one extreme photo can't blow out the stack
+  const spreadX = 18, spreadY = 14, spreadRot = 2.5; // per-step cascade offset
 
-  mount.style.height = hoverHeight + 'px';
-  mount.style.gap = gap + 'px';
+  mount.style.cssText = 'width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:visible;margin-bottom:8px;gap:10px;';
 
-  const stage = document.createElement('div');
-  stage.style.cssText = `flex:none;display:flex;align-items:center;justify-content:center;gap:${gap}px;position:relative;overflow:visible;`;
-  mount.appendChild(stage);
+  const stack = document.createElement('div');
+  stack.className = 'mc-stack';
+  mount.appendChild(stack);
 
-  const targets = items.map(() => 0);
-  const cur = items.map(() => 0);
-  const aspects = items.map(() => 1); // square until each image loads and reports its real ratio
-  let rafId = 0;
   let shownIdx = 0;
-
   function captionFocused() { return captionEl && document.activeElement === captionEl; }
   function updateCaption(i) {
     if (captionFocused()) return;
@@ -5441,29 +5467,35 @@ function renderCarouselBlock(block, mount, captionEl) {
 
   // Plain <button>, not <div> — the block's own free-drag wiring already
   // excludes `button` from starting a whole-block drag. No click handler
-  // on it though: hover is the only interaction now, on purpose.
-  const bars = items.map((item, i) => {
+  // on it though: hover is the only interaction, on purpose.
+  items.forEach((item, i) => {
     const bar = document.createElement('button');
     bar.type = 'button';
-    bar.style.cssText = `flex:none;overflow:hidden;position:relative;will-change:width,height;border-radius:${radius}px;border:${border}px solid #fff;box-shadow:0 14px 34px rgba(0,0,0,.16);background:#eee;padding:0;cursor:default;`;
+    bar.className = 'mc-bar';
+    const off = i - (count - 1) / 2;
+    bar.style.setProperty('--tx', (off * spreadX) + 'px');
+    bar.style.setProperty('--ty', (off * spreadY) + 'px');
+    bar.style.setProperty('--rot', (off * spreadRot) + 'deg');
+    bar.style.setProperty('--z', i);
+    bar.style.height = baseHeight + 'px';
+    bar.style.width = baseHeight + 'px'; // square until its real aspect ratio loads in below
+
     if (item.src) {
       const img = document.createElement('img');
       img.src = item.src;
       img.alt = '';
-      img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;user-select:none;';
       bar.appendChild(img);
       const probe = new Image();
       probe.onload = () => {
         const raw = probe.naturalWidth / probe.naturalHeight;
-        if (raw > 0) {
-          aspects[i] = Math.max(aspectMin, Math.min(aspectMax, raw));
-          render();
-        }
+        if (raw > 0) bar.style.width = (baseHeight * Math.max(aspectMin, Math.min(aspectMax, raw))) + 'px';
       };
       probe.src = item.src;
     } else {
       bar.style.background = `hsl(${(i * 360) / count}, 70%, 58%)`;
     }
+
+    bar.addEventListener('mouseenter', () => updateCaption(i));
 
     const del = document.createElement('button');
     del.type = 'button';
@@ -5477,15 +5509,13 @@ function renderCarouselBlock(block, mount, captionEl) {
     };
     bar.appendChild(del);
 
-    stage.appendChild(bar);
-    return bar;
+    stack.appendChild(bar);
   });
 
   const addTile = document.createElement('button');
   addTile.type = 'button';
   addTile.className = 'mc-add-tile';
-  addTile.style.width = collapsedHeight + 'px';
-  addTile.style.height = collapsedHeight + 'px';
+  addTile.style.width = addTile.style.height = '90px';
   addTile.innerHTML = '<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
   addTile.onclick = (e) => {
     e.stopPropagation();
@@ -5493,68 +5523,7 @@ function renderCarouselBlock(block, mount, captionEl) {
   };
   mount.appendChild(addTile);
 
-  updateCaption(0);
-
-  function sizeFor(i) {
-    const f = cur[i] || 0;
-    const height = collapsedHeight + (hoverHeight - collapsedHeight) * f;
-    return { width: height * aspects[i], height };
-  }
-
-  function render() {
-    let peak = -1, peakVal = 0.15;
-    bars.forEach((bar, i) => {
-      const { width, height } = sizeFor(i);
-      bar.style.width = width + 'px';
-      bar.style.height = height + 'px';
-      if ((cur[i] || 0) > peakVal) { peakVal = cur[i]; peak = i; }
-    });
-    updateCaption(peak >= 0 ? peak : 0);
-  }
-  render();
-
-  function startLoop() {
-    if (rafId) return;
-    const step = () => {
-      let moving = false;
-      for (let i = 0; i < cur.length; i++) {
-        const d = (targets[i] || 0) - cur[i];
-        if (Math.abs(d) > 0.001) { cur[i] += d * 0.2; moving = true; }
-        else cur[i] = targets[i] || 0;
-      }
-      render();
-      rafId = moving ? requestAnimationFrame(step) : 0;
-    };
-    rafId = requestAnimationFrame(step);
-  }
-
-  function setTargetFromCursor(clientX) {
-    const rect = stage.getBoundingClientRect();
-    const cx = clientX - rect.left;
-    const n = items.length;
-    // Prefix-sum over each bar's own (aspect-based) collapsed width,
-    // since bars are no longer all the same width — same idea as a
-    // justified gallery row, just applied to find hover centers instead
-    // of laying out a static row.
-    const collapsedWidths = aspects.map(a => collapsedHeight * a);
-    const totalBase = collapsedWidths.reduce((s, w) => s + w, 0) + (n - 1) * gap;
-    let x = (rect.width - totalBase) / 2;
-    for (let i = 0; i < n; i++) {
-      const w = collapsedWidths[i];
-      const center = x + w / 2;
-      const dist = Math.abs(cx - center);
-      const f = Math.max(0, 1 - dist / influence);
-      targets[i] = f * f * (3 - 2 * f);
-      x += w + gap;
-    }
-    startLoop();
-  }
-
-  stage.addEventListener('mousemove', (e) => setTargetFromCursor(e.clientX));
-  stage.addEventListener('mouseleave', () => {
-    for (let i = 0; i < targets.length; i++) targets[i] = 0;
-    startLoop();
-  });
+  updateCaption(Math.floor((count - 1) / 2)); // start on the centered (topmost) card
 
   if (captionEl && !captionEl._mcWired) {
     captionEl._mcWired = true;
