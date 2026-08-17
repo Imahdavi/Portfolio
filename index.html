@@ -6979,12 +6979,14 @@ document.addEventListener('DOMContentLoaded', async () => {
    dy:0 for the left/right points is deliberate — every other point
    that moves sideways also nudges up/down, which is what read as
    "not centered" (it's off the two-line seam). Left/right stay pinned
-   to the seam and get the most horizontal reach since that's what was
-   actually asked for; dx is still clamped live in _avatarSafeDX so the
-   reach can't push the avatar past the app shell's own edge on a
-   narrow viewport. */
+   to the seam and span near→far so there's a close-in option as well
+   as the long-reach one, not just one fixed distance; dx is still
+   clamped live in _avatarSafeDX so the reach can't push the avatar
+   past the app shell's own edge on a narrow viewport. */
 const AVATAR_POINTS = [
   { dx: 0,    dy: 0   }, // center (original)
+  { dx: -60,  dy: 0   }, // near left
+  { dx: 60,   dy: 0   }, // near right
   { dx: -150, dy: 0   }, // left
   { dx: 150,  dy: 0   }, // right
   { dx: -90,  dy: -14 }, // upper-left
