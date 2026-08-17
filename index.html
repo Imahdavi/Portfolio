@@ -1675,19 +1675,24 @@
        and gradient direction are both mirrored, everything else
        (slide animation, glow, sizing logic) is a direct port. Hover
        behavior on .nav-btn is untouched by this — it's a separate,
-       independent layer underneath the icons. */
+       independent layer underneath the icons.
+
+       --nav-limelight-rgb (r,g,b channels, no "rgb()" wrapper so it
+       drops straight into rgba()) drives the glow color — editable in
+       home edit (see .nav-color-ctrl) — while every alpha value below
+       stays exactly as designed; only the color channel is swappable. */
     .nav-limelight {
       position:absolute; bottom:10px; left:-999px; z-index:10;
       width:30px; height:4px; border-radius:999px;
-      background:#1a1a1a;
-      box-shadow:0 -28px 12px rgba(26,26,26,.3);
+      background:rgb(var(--nav-limelight-rgb, 26,26,26));
+      box-shadow:0 -28px 12px rgba(var(--nav-limelight-rgb, 26,26,26),.3);
       pointer-events:none;
     }
     .nav-limelight.ready { transition:left .4s cubic-bezier(.4,0,.2,1); }
     .nav-limelight-beam {
       position:absolute; left:-30%; bottom:4px; width:160%; height:34px;
       clip-path:polygon(5% 0%, 25% 100%, 75% 100%, 95% 0%);
-      background:linear-gradient(to top, rgba(26,26,26,.22), transparent);
+      background:linear-gradient(to top, rgba(var(--nav-limelight-rgb, 26,26,26),.22), transparent);
       pointer-events:none;
     }
 
@@ -1765,6 +1770,24 @@
     .site-width-lbl { font-size:13px; color:#999; white-space:nowrap; flex-shrink:0; }
     .site-width-slider { flex:1; height:3px; accent-color:#1a1a1a; cursor:pointer; touch-action:none; }
     .site-width-val { font-size:12px; color:#555; width:56px; text-align:right; flex-shrink:0; font-variant-numeric:tabular-nums; }
+
+    /* Nav glow color picker — same dashed-box treatment as the site
+       width control above, edits --nav-limelight-rgb only (the alpha
+       values that shape the glow stay put, see .nav-limelight). */
+    .nav-color-ctrl {
+      display:none; align-items:center; gap:10px;
+      margin-top:10px; padding:11px 14px;
+      background:none; border:1.5px dashed rgba(0,0,0,.13); border-radius:8px;
+    }
+    #view-home.home-edit .nav-color-ctrl { display:flex; }
+    .nav-color-lbl { font-size:13px; color:#999; white-space:nowrap; flex-shrink:0; }
+    .nav-color-input {
+      width:34px; height:34px; padding:0; border:1.5px solid rgba(0,0,0,.13);
+      border-radius:8px; cursor:pointer; background:none; flex-shrink:0;
+    }
+    .nav-color-input::-webkit-color-swatch-wrapper { padding:3px; }
+    .nav-color-input::-webkit-color-swatch { border:none; border-radius:5px; }
+    .nav-color-hex { font-size:12px; color:#555; font-variant-numeric:tabular-nums; }
     #font-picker-overlay {
       display:none; position:fixed; inset:0; z-index:5200;
       background:rgba(0,0,0,.4); backdrop-filter:blur(6px);
@@ -1910,6 +1933,11 @@
       <span class="site-width-lbl">Site width</span>
       <input type="range" class="site-width-slider" id="siteWidthSlider" min="540" max="900" step="10" value="540">
       <span class="site-width-val" id="siteWidthVal">540px</span>
+    </div>
+    <div class="nav-color-ctrl" id="navColorCtrl">
+      <span class="nav-color-lbl">Nav glow color</span>
+      <input type="color" class="nav-color-input" id="navColorInput" value="#1a1a1a">
+      <span class="nav-color-hex" id="navColorHex">#1a1a1a</span>
     </div>
   </div><!-- /view-home -->
 
@@ -3264,6 +3292,15 @@ async function loadSettings() {
       const wVal = document.getElementById('siteWidthVal');
       if (wSlider) wSlider.value = s.siteWidth;
       if (wVal) wVal.textContent = s.siteWidth + 'px';
+    }
+
+    // nav limelight glow color (manual override, defaults to #1a1a1a if never set)
+    if (s.navLimelightColor) {
+      document.documentElement.style.setProperty('--nav-limelight-rgb', _hexToRgbTriplet(s.navLimelightColor));
+      const cInput = document.getElementById('navColorInput');
+      const cHex = document.getElementById('navColorHex');
+      if (cInput) cInput.value = s.navLimelightColor;
+      if (cHex) cHex.textContent = s.navLimelightColor;
     }
 
     // profile
@@ -7162,6 +7199,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const px = +slider.value;
     if (!_cachedSettings) _cachedSettings = {};
     _cachedSettings.siteWidth = px;
+    saveSettings();
+  });
+});
+
+/* ── Nav glow color picker (home edit) ─────────────────
+   Only swaps --nav-limelight-rgb (the color channel the glow's rgba()
+   values pull from) — every alpha in .nav-limelight/.nav-limelight-beam
+   stays exactly as designed, so the glow's transparency never changes,
+   only its hue. Same live-preview-then-commit-on-change pattern as the
+   site width slider above. */
+function _hexToRgbTriplet(hex) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+  return `${r},${g},${b}`;
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('navColorInput');
+  const hexLbl = document.getElementById('navColorHex');
+  if (!input || !hexLbl) return;
+
+  const apply = (hex) => {
+    document.documentElement.style.setProperty('--nav-limelight-rgb', _hexToRgbTriplet(hex));
+    hexLbl.textContent = hex;
+  };
+  input.addEventListener('pointerdown', (e) => e.stopPropagation());
+  input.addEventListener('input', () => apply(input.value));
+  input.addEventListener('change', () => {
+    apply(input.value);
+    if (!_cachedSettings) _cachedSettings = {};
+    _cachedSettings.navLimelightColor = input.value;
     saveSettings();
   });
 });
