@@ -283,11 +283,19 @@
        when the width doesn't divide evenly into whole columns. */
     .card-grid {
       display:grid;
-      grid-template-columns:repeat(auto-fill, 154.67px);
-      justify-content:center;
+      /* Always 3 stretchy columns by default — the original mobile
+         behavior, unchanged. The fixed-width auto-fill (below, 540px+)
+         is what lets a widened desktop shell fit more same-size
+         columns; below 540px #app is always the raw viewport width, so
+         forcing that same fixed 154.67px card there could squeeze the
+         row down to 2 columns on an actual phone instead of 3. */
+      grid-template-columns:repeat(3,1fr);
       gap:12px;
       margin-bottom:40px;
       padding:6px 4px;
+    }
+    @media (min-width:540px) {
+      .card-grid { grid-template-columns:repeat(auto-fill, 154.67px); justify-content:center; }
     }
 
     .proj-card { position:relative; cursor:pointer; transition:opacity .25s, filter .25s, transform .55s cubic-bezier(.34,1.56,.64,1); }
