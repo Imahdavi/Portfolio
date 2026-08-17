@@ -124,10 +124,37 @@
          drop it back into normal flow underneath while editing, but
          keep applying the same drag offset (relative to this resting
          spot instead of the text's center) so dragging still gives
-         live visual feedback right where you're looking. */
-      position:static;
+         live visual feedback right where you're looking.
+         position:relative (not static) so it still establishes a
+         containing block for the drag guide lines below. top/left:0
+         override the base rule's top/left:50% — those are inert under
+         position:static (which ignores top/left entirely) but DO take
+         effect as real offsets once position is relative, which was
+         shoving the whole avatar out of the name block sideways. */
+      position:relative; top:0; left:0;
       transform:translate(var(--avatar-dx, 0px), var(--avatar-dy, 0px));
       margin:10px 0 0;
+    }
+    /* Center guide — shown only while actively dragging, marks exactly
+       where dx/dy:0 is so it's obvious where "centered" is instead of
+       having to eyeball it. Each line counter-translates by the exact
+       negative of the current drag offset, which cancels out the
+       parent's own translate(dx,dy)/translate(-50%+dx,-50%+dy) and
+       leaves it sitting at the fixed zero-offset point regardless of
+       where the avatar itself has been dragged to. */
+    .avatar-drag-guide {
+      position:absolute; left:50%; top:50%;
+      background:rgba(26,26,26,.4); pointer-events:none; z-index:1;
+      opacity:0; transition:opacity .12s ease;
+    }
+    .avatar-overlay-slot.dragging .avatar-drag-guide { opacity:1; }
+    .avatar-drag-guide-h {
+      width:220px; height:1px; margin:0 0 0 -110px;
+      transform:translate(calc(-1 * var(--avatar-dx, 0px)), calc(-1 * var(--avatar-dy, 0px)));
+    }
+    .avatar-drag-guide-v {
+      width:1px; height:90px; margin:-45px 0 0 0;
+      transform:translate(calc(-1 * var(--avatar-dx, 0px)), calc(-1 * var(--avatar-dy, 0px)));
     }
     .avatar-swing-wrap {
       display:flex; flex-direction:column; align-items:center;
@@ -1811,6 +1838,8 @@
         <div class="profile-name-display" id="profileNameDisplay" aria-hidden="true"></div>
         <div class="profile-name">Alireza Mahdavi</div>
         <div class="avatar-overlay-slot">
+          <div class="avatar-drag-guide avatar-drag-guide-h"></div>
+          <div class="avatar-drag-guide avatar-drag-guide-v"></div>
           <div class="avatar-swing-wrap" id="avatarSwing">
             <div class="pbc-avatar" onclick="avatarOpenPicker(event)">
               <button class="avatar-edit-btn" title="Change photo" onclick="avatarOpenPicker(event)">
@@ -6971,6 +7000,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const sizeCtrl = document.getElementById('avatarSizeCtrl');
   if (!avatar || !slot) return;
 
+  const SNAP = 6; // px — how close to dead-center before it snaps there
+
   avatar.addEventListener('pointerdown', (e) => {
     if (!editMode || e.button !== 0) return;
     // Capture is a nice-to-have (helps touch), not load-bearing — the
@@ -6982,33 +7013,51 @@ document.addEventListener('DOMContentLoaded', () => {
     const startDY = parseFloat(getComputedStyle(slot).getPropertyValue('--avatar-dy')) || 0;
     let dragged = false;
 
-    const onMove = (ev) => {
-      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+    // Measured once, here, instead of on every pointermove — reading
+    // getBoundingClientRect() that often forces a synchronous layout
+    // recalc on top of the style write from the previous move, which
+    // is what made the drag feel choppy instead of smooth.
+    const app = document.getElementById('app');
+    const nameSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--font-name-size')) || 56;
+    const nameBlockHalf = nameSize * 0.78; // one line's height; two lines stacked = the block's full height
+    const avatarRect = avatar.getBoundingClientRect();
+    const maxOffsetY = Math.max(4, nameBlockHalf - avatarRect.height / 2);
+    const appHalf = app.getBoundingClientRect().width / 2;
+    const maxOffsetX = Math.max(20, appHalf - avatarRect.width / 2 - 12);
+
+    let lastClientX = startX, lastClientY = startY, rafPending = false;
+
+    const applyMove = () => {
+      rafPending = false;
+      const dx = lastClientX - startX, dy = lastClientY - startY;
       // A small movement threshold before committing to "this is a
       // drag" — otherwise every plain click (which opens the photo
       // picker) would register a few sub-pixel pointer jitters as a
       // drag and silently swallow the click.
-      if (!dragged && Math.hypot(dx, dy) > 4) dragged = true;
+      if (!dragged && Math.hypot(dx, dy) > 4) { dragged = true; slot.classList.add('dragging'); }
       if (!dragged) return;
 
-      const app = document.getElementById('app');
-      const nameSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--font-name-size')) || 56;
-      const nameBlockHalf = nameSize * 0.78; // one line's height; two lines stacked = the block's full height
-      const avatarRect = avatar.getBoundingClientRect();
-      const maxOffsetY = Math.max(4, nameBlockHalf - avatarRect.height / 2);
-      const appHalf = app.getBoundingClientRect().width / 2;
-      const maxOffsetX = Math.max(20, appHalf - avatarRect.width / 2 - 12);
-
-      const clampedDX = Math.max(-maxOffsetX, Math.min(maxOffsetX, startDX + dx));
-      const clampedDY = Math.max(-maxOffsetY, Math.min(maxOffsetY, startDY + dy));
-      slot.style.setProperty('--avatar-dx', clampedDX + 'px');
-      slot.style.setProperty('--avatar-dy', clampedDY + 'px');
+      let nx = startDX + dx, ny = startDY + dy;
+      if (Math.abs(nx) < SNAP) nx = 0; // snap onto the center guide line
+      if (Math.abs(ny) < SNAP) ny = 0;
+      nx = Math.max(-maxOffsetX, Math.min(maxOffsetX, nx));
+      ny = Math.max(-maxOffsetY, Math.min(maxOffsetY, ny));
+      slot.style.setProperty('--avatar-dx', nx + 'px');
+      slot.style.setProperty('--avatar-dy', ny + 'px');
+    };
+    // One DOM write per animation frame instead of one per pointermove
+    // event (which can fire far faster than the screen repaints) —
+    // the other half of the smoothness fix.
+    const onMove = (ev) => {
+      lastClientX = ev.clientX; lastClientY = ev.clientY;
+      if (!rafPending) { rafPending = true; requestAnimationFrame(applyMove); }
     };
     const onUp = () => {
       try { avatar.releasePointerCapture(e.pointerId); } catch (_) {}
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
       document.removeEventListener('pointercancel', onUp);
+      slot.classList.remove('dragging');
       if (!dragged) return;
       _avatarJustDragged = true;
       const dxVal = parseFloat(getComputedStyle(slot).getPropertyValue('--avatar-dx')) || 0;
