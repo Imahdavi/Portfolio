@@ -1500,11 +1500,7 @@
     #upload-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
     #upload-toast.error { background:#c0392b; }
 
-    /* Sound toggle button — lives inside bottom-nav, separated by .nav-sep */
-    .nav-sep {
-      width:1px; height:18px; background:rgba(0,0,0,.13);
-      align-self:center; flex-shrink:0;
-    }
+    /* Sound toggle button — lives in its own bottom-nav-group pill */
     #sound-toggle-btn {
       position:relative;
       background:none; border:none; cursor:pointer;
@@ -1587,10 +1583,22 @@
     }
     .drop-indicator.show { opacity:1; }
 
-    /* ─────────────────── BOTTOM NAV ─────────────────── */
+    /* ─────────────────── BOTTOM NAV ───────────────────
+       Two separate glass pills side by side (nav links, then sound +
+       emoji-burst) instead of one long pill with divider lines — reads
+       as two distinct toolbars. #bottom-nav itself is just a
+       positioning/layout wrapper now (fixed + centered + gap between
+       the pills); each .bottom-nav-group carries its own pill look
+       (background, blur, border, shadow, sheen) — previously all of
+       that lived on #bottom-nav directly. */
     #bottom-nav {
       position:fixed; bottom:50px; left:50%;
       transform:translateX(-50%);
+      display:flex; align-items:center; gap:14px;
+      z-index:200;
+    }
+    .bottom-nav-group {
+      position:relative;
       background:rgba(253,251,248,.72);
       -webkit-backdrop-filter:blur(28px) saturate(120%);
       backdrop-filter:blur(28px) saturate(120%);
@@ -1603,11 +1611,10 @@
         0 2px 6px rgba(0,0,0,.06),
         inset 0 1px 0 rgba(255,255,255,.9),
         inset 0 -1.5px 2px rgba(0,0,0,.045);
-      z-index:200;
     }
     /* soft specular sheen — the "liquid" highlight catching light across
        the glass, sitting behind the nav buttons */
-    #bottom-nav::before {
+    .bottom-nav-group::before {
       content:''; position:absolute; inset:0; border-radius:inherit;
       background:linear-gradient(120deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.08) 30%, rgba(255,255,255,0) 55%);
       pointer-events:none;
@@ -1672,10 +1679,10 @@
        the scroll-to-top wiring) since it needs the nav's real measured
        width, which this shrink also feeds into automatically. */
     @media (max-width:539px) {
-      #bottom-nav { padding:12px 18px; gap:18px; }
+      #bottom-nav { gap:10px; }
+      .bottom-nav-group { padding:12px 18px; gap:18px; }
       .nav-btn, #emojiburst-mount { width:20px; height:20px; }
       .nav-btn svg { width:20px; height:20px; }
-      .nav-sep { height:14px; }
       #sound-toggle-btn { width:21px; height:21px; }
       #sound-toggle-btn svg { width:18px; height:18px; }
     }
@@ -2085,6 +2092,7 @@
 
 <!-- ══════════════════════════════ BOTTOM NAV ══════════════════════════════ -->
 <nav id="bottom-nav">
+ <div class="bottom-nav-group">
   <button class="nav-btn active" id="nb-home" onclick="goView('view-home',this)">
     <span class="nav-tip">Home</span>
     <svg viewBox="0 0 24 24" fill="none">
@@ -2123,7 +2131,8 @@
       <path d="M15.009 5.80078L18.604 8.98378" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   </button>
-  <span class="nav-sep"></span>
+ </div>
+ <div class="bottom-nav-group">
   <button id="sound-toggle-btn" class="muted" onclick="toggleWebSound()" aria-label="Toggle web-shot sound">
   <span class="nav-tip">Web Sound</span>
   <!-- active: speaker + web-ray lines -->
@@ -2141,8 +2150,8 @@
     <line x1="20" y1="9" x2="14" y2="15"/>
   </svg>
   </button>
-  <span class="nav-sep"></span>
   <div id="emojiburst-mount" aria-hidden="false"></div>
+ </div>
 </nav>
 
 <!-- hidden file input -->
