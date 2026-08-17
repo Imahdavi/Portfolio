@@ -153,7 +153,16 @@
         inset 0 1px 1px rgba(255,255,255,.85),
         inset 0 -4px 8px rgba(255,255,255,.15);
     }
-    #view-home.home-edit .pbc-avatar { cursor:pointer; }
+    /* touch-action:none so a touch-drag on the avatar is claimed
+       entirely by the drag handler — without this, a scroll gesture
+       that happens to start on the avatar fights the browser's own
+       touch-scroll, and the resulting pointer deltas can run way
+       larger than intended. setPointerCapture (see the drag script)
+       is the other half of that guarantee: once the drag starts, move
+       and up events keep firing on the avatar itself even if the
+       cursor slips off it mid-gesture. */
+    #view-home.home-edit .pbc-avatar { cursor:grab; touch-action:none; }
+    #view-home.home-edit .pbc-avatar:active { cursor:grabbing; }
     .pbc-avatar img { width:100%; height:100%; object-fit:cover; display:block; color:transparent; font-size:0; opacity:.9; }
     .avatar-edit-btn {
       position:absolute; inset:0; display:none; align-items:center; justify-content:center;
@@ -177,37 +186,6 @@
     }
     #view-home.home-edit .avatar-size-ctrl { display:flex; }
     .avatar-size-ctrl .tool-size-row { display:flex; padding-left:0; margin-top:0; }
-
-    /* Position picker — a small mini-map of AVATAR_POINTS (see the
-       script), not a literal overlay on the real name text (which isn't
-       even showing its two-line fancy version while editing). Clicking
-       a dot is the only way to move the avatar now; "+" reveals the
-       next hand-picked point instead of allowing a freehand drag that
-       could land somewhere unsafe. */
-    .avatar-position-ctrl {
-      display:none; flex-direction:column; align-items:center; gap:6px;
-      margin:8px auto 0; padding:8px 12px; width:fit-content;
-      background:#fff; border:1px solid rgba(0,0,0,.1); border-radius:10px;
-      box-shadow:0 4px 12px rgba(0,0,0,.08);
-    }
-    #view-home.home-edit .avatar-position-ctrl { display:flex; }
-    .avatar-position-lbl { font-size:11px; color:#999; }
-    .avatar-position-map { position:relative; width:180px; height:56px; }
-    .avatar-position-dot {
-      position:absolute; width:14px; height:14px; margin:-7px 0 0 -7px;
-      border-radius:50%; background:#fff; border:2px solid rgba(0,0,0,.25);
-      cursor:pointer; padding:0; transition:border-color .15s, background .15s, transform .15s;
-    }
-    .avatar-position-dot:hover { border-color:#1a1a1a; transform:scale(1.2); }
-    .avatar-position-dot.active { background:#1a1a1a; border-color:#1a1a1a; }
-    .avatar-position-add {
-      position:absolute; width:14px; height:14px; margin:-7px 0 0 -7px;
-      border-radius:50%; background:#fff; border:1.5px dashed #bbb; padding:0;
-      display:flex; align-items:center; justify-content:center;
-      font-size:10px; line-height:1; color:#999; cursor:pointer;
-      transition:border-color .15s, color .15s;
-    }
-    .avatar-position-add:hover { border-color:#555; color:#333; }
 
     /* Fancy display version: letters blur in via .play (added once the
        webfont is confirmed loaded, see revealProfileName()). Hidden
@@ -1843,11 +1821,7 @@
             </div>
           </div>
         </div>
-        <div class="avatar-size-ctrl" id="avatarSizeCtrl"></div>
-        <div class="avatar-position-ctrl">
-          <span class="avatar-position-lbl">Position</span>
-          <div class="avatar-position-map" id="avatarPositionMap"></div>
-        </div>
+        <div class="avatar-size-ctrl" id="avatarSizeCtrl" title="Drag the photo to reposition it"></div>
       </div>
       <div class="profile-role">Visual &amp; Motion Designer · 25 yo ✦</div>
       <div class="profile-age"></div>
@@ -3253,7 +3227,6 @@ async function loadSettings() {
           avatarSlot.style.setProperty('--avatar-scale', (s.profile.avatarScale / 100).toFixed(2));
           if (_avatarSizeCtl) _avatarSizeCtl.setValue(s.profile.avatarScale);
         }
-        renderAvatarPositionMap();
       }
     }
     revealProfileName();
@@ -4459,7 +4432,6 @@ function updateHomeEditUI() {
   document.getElementById('editLabel').textContent = editMode ? 'Done' : 'Edit';
   const homeEl = document.getElementById('view-home');
   homeEl.classList.toggle('home-edit', editMode);
-  if (editMode && typeof renderAvatarPositionMap === 'function') renderAvatarPositionMap();
 
   const editables = [
     document.querySelector('.profile-name'),
@@ -6963,133 +6935,94 @@ document.addEventListener('DOMContentLoaded', async () => {
   tick();
 })();
 
-/* ── Avatar position picker + size slider ─────────────────
-   Freehand drag kept producing bad positions no matter how the clamp
-   was computed (overlapping .contact-row, then .profile-role, then a
-   scale change made the same dy unsafe again) — every fix was chasing
-   the next obstacle instead of guaranteeing safety by construction. So
-   position is no longer freehand: AVATAR_POINTS is a small, fixed list
-   of hand-picked dx/dy offsets that are ALL verified to keep the avatar
-   within the name block's own bounds (never reaching .profile-role),
-   rendered as a mini clickable map — you can only ever land on one of
-   these points, plus reveal more of them one at a time with "+". A
-   reused buildToolSizeRow() slider still writes --avatar-scale. Both
-   persist to settings.profile so they survive a reload.
-
-   dy:0 for the left/right points is deliberate — every other point
-   that moves sideways also nudges up/down, which is what read as
-   "not centered" (it's off the two-line seam). Left/right stay pinned
-   to the seam and span near→far so there's a close-in option as well
-   as the long-reach one, not just one fixed distance; dx is still
-   clamped live in _avatarSafeDX so the reach can't push the avatar
-   past the app shell's own edge on a narrow viewport. */
-const AVATAR_POINTS = [
-  { dx: 0,    dy: 0   }, // center (original)
-  { dx: -60,  dy: 0   }, // near left
-  { dx: 60,   dy: 0   }, // near right
-  { dx: -150, dy: 0   }, // left
-  { dx: 150,  dy: 0   }, // right
-  { dx: -90,  dy: -14 }, // upper-left
-  { dx: 90,   dy: -14 }, // upper-right
-  { dx: -90,  dy: 14  }, // lower-left
-  { dx: 90,   dy: 14  }, // lower-right
-  { dx: -190, dy: 0   }, // far left
-  { dx: 190,  dy: 0   }, // far right
-];
-const AVATAR_POINTS_DEFAULT_UNLOCKED = 5;
-
+/* ── Avatar drag-to-reposition + size slider ─────────────
+   Back to freehand dragging — the point-preset picker felt too
+   limiting — but guarded against the two failure modes that broke
+   freehand before:
+   1. Runaway offset ("flies to a corner"): avatar.setPointerCapture()
+      locks pointermove/pointerup to the avatar itself for the whole
+      gesture, so losing the cursor off the element mid-drag can't
+      hand the gesture to something else. touch-action:none (CSS)
+      stops a touch-scroll from fighting the drag in the first place.
+   2. Landing somewhere bad (on .profile-role, or off the app shell
+      on a narrow viewport): the offset is clamped every move, not
+      just at drop, against two live-measured bounds — vertically
+      against the name block's own half-height minus the avatar's
+      current half-height (so it can never cross past the name block,
+      whatever --avatar-scale is set to), horizontally against the
+      app shell's own half-width minus the avatar's half-width (so it
+      can never run off-screen, whatever --site-width or the viewport
+      is). Both track the avatar's *current* rendered size live, so a
+      scale change never re-opens a clamp that used to be safe. */
 function avatarOpenPicker(e) {
   e.stopPropagation();
+  if (_avatarJustDragged) { _avatarJustDragged = false; return; }
   if (document.getElementById('view-home').classList.contains('home-edit')) {
     document.getElementById('avatarInput').click();
   }
 }
 
+let _avatarJustDragged = false;
 let _avatarSizeCtl = null;
 
-// Keeps the avatar's edge inside the app shell itself — the one thing
-// a fixed px offset can't know in advance, since #app's width ranges
-// from a narrow phone viewport up to the site-width slider's max.
-function _avatarSafeDX(dx) {
-  const app = document.getElementById('app');
-  const avatar = document.querySelector('.pbc-avatar');
-  if (!app || !avatar) return dx;
-  const appHalf = app.getBoundingClientRect().width / 2;
-  const avatarHalf = avatar.getBoundingClientRect().width / 2;
-  const max = Math.max(20, appHalf - avatarHalf - 12);
-  return Math.max(-max, Math.min(max, dx));
-}
-
-function _avatarSetPoint(slot, dx, dy, save) {
-  dx = _avatarSafeDX(dx);
-  slot.style.setProperty('--avatar-dx', dx + 'px');
-  slot.style.setProperty('--avatar-dy', dy + 'px');
-  if (save) {
-    if (!_cachedSettings) _cachedSettings = {};
-    if (!_cachedSettings.profile) _cachedSettings.profile = {};
-    _cachedSettings.profile.avatarDX = dx;
-    _cachedSettings.profile.avatarDY = dy;
-    saveSettings();
-  }
-}
-
-function renderAvatarPositionMap() {
-  const map = document.getElementById('avatarPositionMap');
-  const slot = document.querySelector('.avatar-overlay-slot');
-  if (!map || !slot) return;
-  map.innerHTML = '';
-
-  const unlocked = (_cachedSettings && _cachedSettings.profile && _cachedSettings.profile.avatarPointsUnlocked) || AVATAR_POINTS_DEFAULT_UNLOCKED;
-  const curDX = parseFloat(getComputedStyle(slot).getPropertyValue('--avatar-dx')) || 0;
-  const curDY = parseFloat(getComputedStyle(slot).getPropertyValue('--avatar-dy')) || 0;
-  // Scales each preset's real px offset down into the small map's own
-  // coordinate space — a visual mini-layout of the points, not a literal
-  // overlay on the (hidden-while-editing) name text itself.
-  const scaleX = 0.42, scaleY = 1.1;
-
-  AVATAR_POINTS.slice(0, unlocked).forEach((p) => {
-    const dot = document.createElement('button');
-    dot.type = 'button';
-    dot.className = 'avatar-position-dot';
-    if (Math.abs(p.dx - curDX) < 1 && Math.abs(p.dy - curDY) < 1) dot.classList.add('active');
-    dot.style.left = `calc(50% + ${p.dx * scaleX}px)`;
-    dot.style.top = `calc(50% + ${p.dy * scaleY}px)`;
-    dot.title = p.dx === 0 && p.dy === 0 ? 'Center' : 'Move avatar here';
-    dot.onclick = (e) => {
-      e.stopPropagation();
-      _avatarSetPoint(slot, p.dx, p.dy, true);
-      renderAvatarPositionMap();
-    };
-    map.appendChild(dot);
-  });
-
-  if (unlocked < AVATAR_POINTS.length) {
-    const add = document.createElement('button');
-    add.type = 'button';
-    add.className = 'avatar-position-add';
-    add.textContent = '+';
-    add.title = 'Add another position';
-    const next = AVATAR_POINTS[unlocked];
-    add.style.left = `calc(50% + ${next.dx * scaleX}px)`;
-    add.style.top = `calc(50% + ${next.dy * scaleY}px)`;
-    add.onclick = (e) => {
-      e.stopPropagation();
-      if (!_cachedSettings) _cachedSettings = {};
-      if (!_cachedSettings.profile) _cachedSettings.profile = {};
-      _cachedSettings.profile.avatarPointsUnlocked = unlocked + 1;
-      _avatarSetPoint(slot, next.dx, next.dy, true);
-      renderAvatarPositionMap();
-    };
-    map.appendChild(add);
-  }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
+  const avatar = document.querySelector('.pbc-avatar');
   const slot = document.querySelector('.avatar-overlay-slot');
   const sizeCtrl = document.getElementById('avatarSizeCtrl');
-  if (!slot) return;
+  if (!avatar || !slot) return;
 
-  renderAvatarPositionMap();
+  avatar.addEventListener('pointerdown', (e) => {
+    if (!editMode || e.button !== 0) return;
+    // Capture is a nice-to-have (helps touch), not load-bearing — the
+    // actual move/up tracking below is on document, same as it's
+    // always been, so a capture failure can't silently kill the drag.
+    try { avatar.setPointerCapture(e.pointerId); } catch (_) {}
+    const startX = e.clientX, startY = e.clientY;
+    const startDX = parseFloat(getComputedStyle(slot).getPropertyValue('--avatar-dx')) || 0;
+    const startDY = parseFloat(getComputedStyle(slot).getPropertyValue('--avatar-dy')) || 0;
+    let dragged = false;
+
+    const onMove = (ev) => {
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      // A small movement threshold before committing to "this is a
+      // drag" — otherwise every plain click (which opens the photo
+      // picker) would register a few sub-pixel pointer jitters as a
+      // drag and silently swallow the click.
+      if (!dragged && Math.hypot(dx, dy) > 4) dragged = true;
+      if (!dragged) return;
+
+      const app = document.getElementById('app');
+      const nameSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--font-name-size')) || 56;
+      const nameBlockHalf = nameSize * 0.78; // one line's height; two lines stacked = the block's full height
+      const avatarRect = avatar.getBoundingClientRect();
+      const maxOffsetY = Math.max(4, nameBlockHalf - avatarRect.height / 2);
+      const appHalf = app.getBoundingClientRect().width / 2;
+      const maxOffsetX = Math.max(20, appHalf - avatarRect.width / 2 - 12);
+
+      const clampedDX = Math.max(-maxOffsetX, Math.min(maxOffsetX, startDX + dx));
+      const clampedDY = Math.max(-maxOffsetY, Math.min(maxOffsetY, startDY + dy));
+      slot.style.setProperty('--avatar-dx', clampedDX + 'px');
+      slot.style.setProperty('--avatar-dy', clampedDY + 'px');
+    };
+    const onUp = () => {
+      try { avatar.releasePointerCapture(e.pointerId); } catch (_) {}
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+      if (!dragged) return;
+      _avatarJustDragged = true;
+      const dxVal = parseFloat(getComputedStyle(slot).getPropertyValue('--avatar-dx')) || 0;
+      const dyVal = parseFloat(getComputedStyle(slot).getPropertyValue('--avatar-dy')) || 0;
+      if (!_cachedSettings) _cachedSettings = {};
+      if (!_cachedSettings.profile) _cachedSettings.profile = {};
+      _cachedSettings.profile.avatarDX = dxVal;
+      _cachedSettings.profile.avatarDY = dyVal;
+      saveSettings();
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
+  });
 
   if (sizeCtrl) {
     const initial = (_cachedSettings && _cachedSettings.profile && _cachedSettings.profile.avatarScale) || 100;
