@@ -6961,11 +6961,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const startDY = parseFloat(getComputedStyle(slot).getPropertyValue('--avatar-dy')) || 0;
     let dragged = false;
 
-    // Clamped so a runaway drag (e.g. a touch-scroll gesture that
-    // wasn't properly claimed) can never push the avatar off into a
-    // corner where it's effectively lost — 130px is comfortably past
-    // the edge of the name text but still on-screen either way.
-    const MAX_OFFSET = 130;
+    const MAX_OFFSET_X = 130; // sideways has no specific content to collide with below it
+    // A fixed ±130 vertical clamp let the avatar overlap .contact-row's
+    // pills underneath the header once dragged far enough down — it
+    // never accounted for how much room is actually there. Compute the
+    // real downward room live instead: .profile-name-display is always
+    // two lines at --font-name-size with line-height .78 (so its own
+    // half-height is deterministic even though it's hidden while
+    // editing), .profile-role sits a fixed 10px below it, and however
+    // tall .profile-role currently renders (it can wrap to 2+ lines for
+    // a long title) plus the gap down to .contact-row is measured live
+    // — .profile-role/.contact-row are always in normal flow and never
+    // move for the avatar's transform, so they're safe to read even
+    // while mid-drag.
+    const nameSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--font-name-size')) || 56;
+    const nameBlockHalf = nameSize * 0.78; // one line's height; two lines stacked = the block's full height
+    const roleMarginTop = 10;
+    const roleEl = document.querySelector('.profile-role');
+    const contactRow = document.querySelector('.contact-row');
+    const avatarHalf = avatar.getBoundingClientRect().height / 2;
+    let maxOffsetY = 80;
+    if (roleEl && contactRow) {
+      const roleRect = roleEl.getBoundingClientRect();
+      const gapBelowRole = contactRow.getBoundingClientRect().top - roleRect.bottom;
+      const distanceToContactRow = nameBlockHalf + roleMarginTop + roleRect.height + gapBelowRole;
+      maxOffsetY = Math.max(20, distanceToContactRow - avatarHalf - 20);
+    }
+    const minOffsetY = -70; // upward has no specific content to avoid, but still shouldn't push it toward the header's own top padding edge
+
     const onMove = (ev) => {
       const dx = ev.clientX - startX, dy = ev.clientY - startY;
       // A small movement threshold before committing to "this is a
@@ -6974,8 +6997,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // drag and silently swallow the click.
       if (!dragged && Math.hypot(dx, dy) > 4) dragged = true;
       if (dragged) {
-        const clampedDX = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, startDX + dx));
-        const clampedDY = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, startDY + dy));
+        const clampedDX = Math.max(-MAX_OFFSET_X, Math.min(MAX_OFFSET_X, startDX + dx));
+        const clampedDY = Math.max(minOffsetY, Math.min(maxOffsetY, startDY + dy));
         slot.style.setProperty('--avatar-dx', clampedDX + 'px');
         slot.style.setProperty('--avatar-dy', clampedDY + 'px');
       }
