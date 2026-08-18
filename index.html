@@ -141,20 +141,24 @@
       transform-origin:50% 0%; display:block;
     }
     .site-spider .pupil { transition:transform .1s linear; }
-    /* Tiny quip that pops up beside the spider each time the
-       Spider-Man web-shot easter egg fires — see showSpiderQuip(),
-       called from tryShoot(). Anchored to the (non-swinging) container
-       rather than .spider-body so it doesn't jitter along with the
-       sway — just a plain fade/lift toggled by a class. */
+    /* Comic-book sound-effect quip that pops up beside the spider each
+       time the Spider-Man web-shot easter egg fires — see
+       showSpiderQuip(), called from tryShoot(). Anchored to the
+       (non-swinging) container rather than .spider-body so it doesn't
+       jitter along with the sway. rotate() is constant (not part of
+       the transition) so it stays tilted the same way at rest and
+       mid-fade — only opacity toggles, a plain fade in/out with no
+       slide. No box/background on purpose — bare styled text, like a
+       comic sound effect printed straight onto the page. */
     .site-spider .spider-quip {
-      position:absolute; bottom:2px; left:100%; margin-left:6px;
-      font-size:9px; font-weight:600; color:#1a1a1a; white-space:nowrap;
-      background:#fff; border:1px solid rgba(0,0,0,.15); border-radius:6px;
-      padding:2px 6px; opacity:0; pointer-events:none;
-      transition:opacity .2s ease, transform .2s ease;
-      transform:translateY(4px);
+      position:absolute; bottom:6px; right:100%; margin-right:8px;
+      font-family:Impact,'Arial Black',sans-serif; font-size:13px; font-weight:900;
+      font-style:italic; color:#1a1a1a; white-space:nowrap; letter-spacing:-.01em;
+      transform:rotate(-9deg);
+      opacity:0; pointer-events:none;
+      transition:opacity .3s ease;
     }
-    .site-spider .spider-quip.show { opacity:1; transform:translateY(0); }
+    .site-spider .spider-quip.show { opacity:1; }
     /* Positioning root for the avatar overlap — its box height comes
        from .profile-name-display (two lines), so the avatar (centered
        via .avatar-overlay-slot) lands on the seam between them. */
@@ -1974,7 +1978,7 @@
           <circle class="pupil" cx="12.4" cy="10.7" r="1.45" fill="#1a1a1a"/>
           <circle class="pupil" cx="19.6" cy="10.7" r="1.45" fill="#1a1a1a"/>
         </svg>
-        <div class="spider-quip">Pew pew spiderman!</div>
+        <div class="spider-quip">THWIP!</div>
       </div>
       <div class="profile-name-block">
         <div class="profile-name-display" id="profileNameDisplay" aria-hidden="true"></div>
