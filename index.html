@@ -105,42 +105,29 @@
       margin:0 0 18px; padding-top:36px;
       animation:profileIn .5s ease both;
     }
-    /* Little spider that periodically drops in on a thread above the
-       name, swings a few times, then climbs back up — one long looping
-       animation instead of a JS timer, so it just keeps cycling with no
-       script needed. Most of the 24s cycle is the idle/hidden state;
-       the drop+swing+retract only occupies the last ~6s of it. Anchored
-       to .profile-header-wrap (position:relative, above), independent
-       of the avatar's own positioning system.
-
-       A negative animation-delay starts the timeline already most of
-       the way through the idle stretch, so the first drop happens ~2s
-       after the page loads instead of making a visitor wait out a full
-       idle period (up to 24s) with nothing to see — every full loop
-       after that first one still gets the complete ~18s idle gap. */
+    /* Little spider that hangs permanently from a thread above the
+       name — no drop/retract cycle, it just stays down, swaying gently
+       forever (pure CSS). Anchored to .profile-header-wrap
+       (position:relative, above), independent of the avatar's own
+       positioning system. Its eyes track the cursor — see the
+       mousemove handler near the other profile-header scripts, which
+       nudges .pupil circles a fraction of a viewBox unit toward
+       wherever the pointer is. */
     .site-spider {
       position:absolute; top:0; left:50%; width:20px; height:52px;
       margin-left:-10px; transform-origin:50% 0%;
-      pointer-events:none; z-index:3; overflow:hidden;
-      animation-name:spiderCycle; animation-duration:24s;
-      animation-timing-function:ease-in-out; animation-iteration-count:infinite;
-      animation-delay:-15.5s;
+      pointer-events:none; z-index:3;
+      animation:spiderSway 4.5s ease-in-out infinite;
     }
     .site-spider .spider-thread {
       position:absolute; top:0; left:50%; width:1px; height:100%;
       background:rgba(0,0,0,.3); transform:translateX(-50%);
     }
     .site-spider svg { position:absolute; bottom:0; left:50%; transform:translateX(-50%); display:block; }
-    @keyframes spiderCycle {
-      0%, 74%   { height:0; opacity:0; transform:rotate(0deg); }
-      76%       { height:52px; opacity:1; transform:rotate(0deg); }
-      79%       { transform:rotate(16deg); }
-      82%       { transform:rotate(-12deg); }
-      85%       { transform:rotate(8deg); }
-      88%       { transform:rotate(-4deg); }
-      91%       { transform:rotate(2deg); }
-      93%, 96%  { height:52px; opacity:1; transform:rotate(0deg); }
-      100%      { height:0; opacity:0; transform:rotate(0deg); }
+    .site-spider .pupil { transition:transform .1s linear; }
+    @keyframes spiderSway {
+      0%, 100% { transform:rotate(-3deg); }
+      50%      { transform:rotate(3deg); }
     }
     /* Positioning root for the avatar overlap — its box height comes
        from .profile-name-display (two lines), so the avatar (centered
@@ -1956,6 +1943,8 @@
           <ellipse cx="16" cy="13" rx="6.5" ry="6" fill="#1a1a1a"/>
           <ellipse cx="13.4" cy="11.5" rx="1.7" ry="2.1" fill="#fff"/>
           <ellipse cx="18.6" cy="11.5" rx="1.7" ry="2.1" fill="#fff"/>
+          <circle class="pupil" cx="13.4" cy="11.5" r="0.8" fill="#1a1a1a"/>
+          <circle class="pupil" cx="18.6" cy="11.5" r="0.8" fill="#1a1a1a"/>
         </svg>
       </div>
       <div class="profile-name-block">
@@ -7106,6 +7095,40 @@ document.addEventListener('DOMContentLoaded', async () => {
   }, { passive: true });
 
   tick();
+})();
+
+/* ── Site spider eye-tracking ──────────────────────────────
+   Nudges the two pupil circles a fraction of a viewBox unit toward
+   wherever the cursor is. maxOffset (0.8 viewBox units) is deliberately
+   just shy of the white eye's own radius (rx:1.7) so the pupil always
+   stays inside it. rAF-throttled so a rapid mousemove burst still only
+   costs one getBoundingClientRect() + one style write per frame. */
+(function () {
+  const spider = document.querySelector('.site-spider');
+  if (!spider) return;
+  const pupils = spider.querySelectorAll('.pupil');
+  const svg = spider.querySelector('svg');
+  if (!pupils.length || !svg) return;
+
+  const maxOffset = 0.8;
+  let mx = 0, my = 0, rafPending = false;
+
+  function update() {
+    rafPending = false;
+    const rect = svg.getBoundingClientRect();
+    const cx = rect.left + rect.width * 0.5;
+    const cy = rect.top + rect.height * 0.44; // eyes sit slightly above the SVG's own vertical center
+    const dx = mx - cx, dy = my - cy;
+    const dist = Math.hypot(dx, dy) || 1;
+    const ox = (dx / dist) * maxOffset;
+    const oy = (dy / dist) * maxOffset;
+    pupils.forEach(p => p.style.transform = `translate(${ox}px, ${oy}px)`);
+  }
+
+  window.addEventListener('mousemove', (e) => {
+    mx = e.clientX; my = e.clientY;
+    if (!rafPending) { rafPending = true; requestAnimationFrame(update); }
+  });
 })();
 
 /* ── Avatar drag-to-reposition + size slider ─────────────
