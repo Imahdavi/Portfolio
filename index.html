@@ -106,18 +106,22 @@
       animation:profileIn .5s ease both;
     }
     /* Little spider that hangs permanently from a thread above the
-       name — no drop/retract cycle, it just stays down, swaying gently
-       forever (pure CSS). Anchored to .profile-header-wrap
-       (position:relative, above), independent of the avatar's own
-       positioning system. Its eyes track the cursor — see the
-       mousemove handler near the other profile-header scripts, which
-       nudges .pupil circles a fraction of a viewBox unit toward
-       wherever the pointer is. */
+       name — no drop/retract cycle, it just stays down. Anchored to
+       .profile-header-wrap (position:relative, above), independent of
+       the avatar's own positioning system. Its eyes track the cursor
+       — see the mousemove handler near the other profile-header
+       scripts, which nudges .pupil circles a fraction of a viewBox
+       unit toward wherever the pointer is.
+
+       No CSS sway animation here on purpose — the swing is driven by
+       a real spring-physics rAF loop (see "Site spider pendulum
+       physics" further down, same spring/damping shape as the avatar's
+       own idle swing) so it can react organically to scroll instead of
+       just looping a fixed keyframe. */
     .site-spider {
       position:absolute; top:0; left:50%; width:20px; height:30px;
       margin-left:-10px; transform-origin:50% 0%;
       pointer-events:none; z-index:3;
-      animation:spiderSway 4.5s ease-in-out infinite;
     }
     .site-spider .spider-thread {
       position:absolute; top:0; left:50%; width:1px; height:100%;
@@ -125,10 +129,6 @@
     }
     .site-spider svg { position:absolute; bottom:0; left:50%; transform:translateX(-50%); display:block; }
     .site-spider .pupil { transition:transform .1s linear; }
-    @keyframes spiderSway {
-      0%, 100% { transform:rotate(-3deg); }
-      50%      { transform:rotate(3deg); }
-    }
     /* Positioning root for the avatar overlap — its box height comes
        from .profile-name-display (two lines), so the avatar (centered
        via .avatar-overlay-slot) lands on the seam between them. */
@@ -1929,7 +1929,7 @@
     <div class="profile-header-wrap">
       <div class="site-spider" aria-hidden="true">
         <div class="spider-thread"></div>
-        <svg viewBox="0 0 32 26" width="18" height="15">
+        <svg viewBox="0 0 32 26" width="23" height="19">
           <g stroke="#1a1a1a" stroke-width="1.4" stroke-linecap="round" fill="none">
             <path d="M11 10 C6 8, 3 6, 1 4"/>
             <path d="M11 12 C5 11, 2 11, 0 11"/>
@@ -7148,6 +7148,42 @@ document.addEventListener('DOMContentLoaded', () => {
   if (disp && window.ResizeObserver) new ResizeObserver(positionSiteSpider).observe(disp);
   window.addEventListener('resize', positionSiteSpider);
 });
+
+/* ── Site spider pendulum physics ──────────────────────────
+   Same damped-spring shape as the avatar's own idle swing (see
+   "Avatar pendulum physics" above) — a small idle sway plus an
+   impulse added on scroll, instead of the flat CSS keyframe loop this
+   used to have. Scrolling the home view nudges the velocity
+   proportional to scroll delta, and the spring pulls it back toward
+   rest, giving an organic little bounce rather than a fixed animation
+   that's the same every time. */
+(function () {
+  const wrap = document.querySelector('.site-spider');
+  if (!wrap) return;
+  let angle = 0, vel = 0;
+  const damping = 0.92, stiffness = 0.02;
+  let t = 0;
+
+  function tick() {
+    t += 0.016;
+    const idle = Math.sin(t * 0.4) * 0.006;
+    vel += -angle * stiffness + idle;
+    vel *= damping;
+    angle += vel;
+    wrap.style.transform = 'rotate(' + angle.toFixed(4) + 'deg)';
+    requestAnimationFrame(tick);
+  }
+
+  let lastY = 0;
+  const homeEl = document.getElementById('view-home');
+  if (homeEl) homeEl.addEventListener('scroll', () => {
+    const sy = homeEl.scrollTop;
+    vel += (sy - lastY) * 0.01;
+    lastY = sy;
+  }, { passive: true });
+
+  tick();
+})();
 
 /* ── Site spider eye-tracking ──────────────────────────────
    Nudges the two pupil circles a fraction of a viewBox unit toward
