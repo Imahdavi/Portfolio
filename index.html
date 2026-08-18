@@ -4206,6 +4206,14 @@ function showView(toId, anim) {
   to.scrollTop = 0;
   setTimeout(() => to.classList.remove(anim), 400);
 
+  // Replay the spider's drop-in whenever home becomes the active view
+  // again (nav click, back button, project "back" arrow — anything
+  // that routes through here), not just on the very first page load.
+  if (toId === 'view-home' && typeof positionSiteSpider === 'function') {
+    _spiderEntranceDone = false;
+    positionSiteSpider(true);
+  }
+
   to.querySelectorAll('.sg').forEach(sg => {
     sg.classList.remove('run');
     void sg.offsetWidth;
@@ -7136,7 +7144,19 @@ document.addEventListener('DOMContentLoaded', async () => {
    .contact-row's own position rather than a guessed fixed length, so
    it still lands in the right spot if the role text wraps to a
    different number of lines. */
-function positionSiteSpider() {
+// Shared with the pendulum physics tick below (which redraws the rope
+// and repositions the body from this value every frame) so positioning
+// doesn't need a clientHeight read — a forced layout — on every single
+// animation frame. Starts at 0 so the very first entrance has
+// something to grow from instead of popping in already full-length.
+let _spiderThreadLen = 0;
+// Only the *first* successful positioning after a fresh page load (or
+// after showView() resets it on navigating back to view-home) plays
+// the drop-in entrance — later repositions (font size change, window
+// resize) just snap straight to the new length.
+let _spiderEntranceDone = false;
+
+function positionSiteSpider(animate) {
   const spider = document.querySelector('.site-spider');
   const wrap = document.querySelector('.profile-header-wrap');
   const disp = document.getElementById('profileNameDisplay');
@@ -7149,24 +7169,45 @@ function positionSiteSpider() {
   const wrapRect = wrap.getBoundingClientRect();
   spider.style.left = (mRect.left + mRect.width / 2 - wrapRect.left) + 'px';
   spider.style.marginLeft = '-10px';
-  const contactRow = document.querySelector('.contact-row');
-  if (contactRow) {
-    const contactRect = contactRow.getBoundingClientRect();
-    _spiderThreadLen = Math.max(30, contactRect.top - mRect.top - 6);
-    spider.style.height = _spiderThreadLen + 'px';
-  }
   spider.style.top = (mRect.top - wrapRect.top) + 'px';
+
+  const contactRow = document.querySelector('.contact-row');
+  const targetLen = contactRow
+    ? Math.max(30, contactRow.getBoundingClientRect().top - mRect.top - 6)
+    : 30;
+
+  if (animate && !_spiderEntranceDone) {
+    _spiderEntranceDone = true;
+    animateSpiderThreadIn(targetLen);
+  } else {
+    _spiderThreadLen = targetLen;
+  }
 }
-// Shared with the pendulum physics tick below so it doesn't need a
-// clientHeight read (a forced layout) on every single animation frame —
-// positionSiteSpider() is the only thing that changes the thread's
-// length, so it's the only thing that needs to update this.
-let _spiderThreadLen = 30;
+
+// Ramps _spiderThreadLen from 0 up to targetLen over 700ms (eased out,
+// like something dropping and settling rather than a linear reel-out).
+// The physics tick below already redraws the rope/body from
+// _spiderThreadLen every single frame regardless of why it changed, so
+// tweening this one value is all "the thread grows down and the body
+// rides at its end" needs — no separate animation system for it.
+function animateSpiderThreadIn(targetLen) {
+  const duration = 700;
+  const start = performance.now();
+  function step(now) {
+    const p = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - p, 3);
+    _spiderThreadLen = targetLen * eased;
+    if (p < 1) requestAnimationFrame(step);
+    else _spiderThreadLen = targetLen;
+  }
+  requestAnimationFrame(step);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  positionSiteSpider();
+  positionSiteSpider(true);
   const disp = document.getElementById('profileNameDisplay');
-  if (disp && window.ResizeObserver) new ResizeObserver(positionSiteSpider).observe(disp);
-  window.addEventListener('resize', positionSiteSpider);
+  if (disp && window.ResizeObserver) new ResizeObserver(() => positionSiteSpider(true)).observe(disp);
+  window.addEventListener('resize', () => positionSiteSpider(false));
 });
 
 /* ── Site spider pendulum physics ──────────────────────────
@@ -7194,7 +7235,21 @@ document.addEventListener('DOMContentLoaded', () => {
    of the SVG box (legs + the lower half of the body) that sits below
    the body's own top edge, in px at the SVG's current rendered size —
    subtracting it from the thread length lands the curve right at the
-   top of the body instead. */
+   top of the body instead.
+
+   The container's own height is written here too, every tick, instead
+   of once in positionSiteSpider() — during the entrance animation
+   _spiderThreadLen ramps from 0 up on its own timer (see
+   animateSpiderThreadIn), and this tick already runs every frame
+   regardless, so it's the natural place to keep the container in sync
+   with whatever that value currently is. .spider-body's `bottom:0`
+   then rides down with the growing container for free, no separate
+   vertical animation needed. The rope length floors at 0, not some
+   positive minimum — a positive floor would freeze the rope at that
+   length for the entire first stretch of the entrance (while
+   _spiderThreadLen is still smaller than BODY_TOP_GAP plus the floor),
+   which looked like nothing was happening before it suddenly started
+   growing. */
 (function () {
   const wrap = document.querySelector('.site-spider');
   const rope = wrap && wrap.querySelector('.rope-path');
@@ -7212,7 +7267,10 @@ document.addEventListener('DOMContentLoaded', () => {
     vel *= damping;
     angle += vel;
 
-    const h = Math.max(10, _spiderThreadLen - BODY_TOP_GAP);
+    const fullLen = _spiderThreadLen;
+    wrap.style.height = fullLen + 'px';
+
+    const h = Math.max(0, fullLen - BODY_TOP_GAP);
     const offsetX = Math.sin(angle * Math.PI / 180) * h * 0.85;
     const midX = (10 + offsetX * 0.55).toFixed(2);
     const midY = (h * 0.5).toFixed(2);
