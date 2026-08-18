@@ -7097,6 +7097,42 @@ document.addEventListener('DOMContentLoaded', async () => {
   tick();
 })();
 
+/* ── Site spider anchor — attached to the "M" of "Mahdavi" ──
+   .profile-name-display wraps each line in a .ln div and each letter
+   in its own <span> (see renderProfileNameDisplay), so the second
+   line's first span is always the "M". Measuring it live (rather than
+   hardcoding an offset) means this stays correct across any font,
+   size, or name-text change instead of needing to be re-tuned by hand.
+   Only runs when the display text is actually rendered — it's hidden
+   entirely in edit mode (display:none, zero-size span), so a stale
+   measurement there is simply skipped and the spider keeps its last
+   known-good position rather than jumping to some default. A
+   ResizeObserver on the display element re-measures on any layout
+   change (font size, font family, name edits, window resize) instead
+   of needing to be hooked into every individual call site that could
+   affect it. */
+function positionSiteSpider() {
+  const spider = document.querySelector('.site-spider');
+  const wrap = document.querySelector('.profile-header-wrap');
+  const disp = document.getElementById('profileNameDisplay');
+  if (!spider || !wrap || !disp) return;
+  const secondLine = disp.querySelectorAll('.ln')[1];
+  const mSpan = secondLine && secondLine.querySelector('span');
+  if (!mSpan) return;
+  const mRect = mSpan.getBoundingClientRect();
+  if (!mRect.width) return; // hidden (edit mode, or not rendered yet)
+  const wrapRect = wrap.getBoundingClientRect();
+  spider.style.left = (mRect.left + mRect.width / 2 - wrapRect.left) + 'px';
+  spider.style.marginLeft = '-10px';
+  spider.style.height = Math.max(24, mRect.top - wrapRect.top + mRect.height * 0.2) + 'px';
+}
+document.addEventListener('DOMContentLoaded', () => {
+  positionSiteSpider();
+  const disp = document.getElementById('profileNameDisplay');
+  if (disp && window.ResizeObserver) new ResizeObserver(positionSiteSpider).observe(disp);
+  window.addEventListener('resize', positionSiteSpider);
+});
+
 /* ── Site spider eye-tracking ──────────────────────────────
    Nudges the two pupil circles a fraction of a viewBox unit toward
    wherever the cursor is. maxOffset (0.8 viewBox units) is deliberately
