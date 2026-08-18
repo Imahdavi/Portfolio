@@ -114,7 +114,7 @@
        nudges .pupil circles a fraction of a viewBox unit toward
        wherever the pointer is. */
     .site-spider {
-      position:absolute; top:0; left:50%; width:20px; height:52px;
+      position:absolute; top:0; left:50%; width:20px; height:30px;
       margin-left:-10px; transform-origin:50% 0%;
       pointer-events:none; z-index:3;
       animation:spiderSway 4.5s ease-in-out infinite;
@@ -7097,7 +7097,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   tick();
 })();
 
-/* ── Site spider anchor — attached to the "M" of "Mahdavi" ──
+/* ── Site spider anchor — thread starts at the "M" of "Mahdavi" ──
    .profile-name-display wraps each line in a .ln div and each letter
    in its own <span> (see renderProfileNameDisplay), so the second
    line's first span is always the "M". Measuring it live (rather than
@@ -7110,7 +7110,12 @@ document.addEventListener('DOMContentLoaded', async () => {
    ResizeObserver on the display element re-measures on any layout
    change (font size, font family, name edits, window resize) instead
    of needing to be hooked into every individual call site that could
-   affect it. */
+   affect it.
+
+   The thread's own top (not just the spider) sits at the M's top edge
+   — .site-spider's `top` is set here instead of the CSS default, so
+   the whole thread starts at the letter and hangs down from it, rather
+   than spanning all the way down from the top of the name block. */
 function positionSiteSpider() {
   const spider = document.querySelector('.site-spider');
   const wrap = document.querySelector('.profile-header-wrap');
@@ -7124,7 +7129,7 @@ function positionSiteSpider() {
   const wrapRect = wrap.getBoundingClientRect();
   spider.style.left = (mRect.left + mRect.width / 2 - wrapRect.left) + 'px';
   spider.style.marginLeft = '-10px';
-  spider.style.height = Math.max(24, mRect.top - wrapRect.top + mRect.height * 0.4) + 'px';
+  spider.style.top = (mRect.top - wrapRect.top) + 'px';
 }
 document.addEventListener('DOMContentLoaded', () => {
   positionSiteSpider();
