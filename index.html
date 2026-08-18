@@ -7124,7 +7124,7 @@ function positionSiteSpider() {
   const wrapRect = wrap.getBoundingClientRect();
   spider.style.left = (mRect.left + mRect.width / 2 - wrapRect.left) + 'px';
   spider.style.marginLeft = '-10px';
-  spider.style.height = Math.max(24, mRect.top - wrapRect.top + mRect.height * 0.2) + 'px';
+  spider.style.height = Math.max(24, mRect.top - wrapRect.top + mRect.height * 0.4) + 'px';
 }
 document.addEventListener('DOMContentLoaded', () => {
   positionSiteSpider();
