@@ -141,6 +141,20 @@
       transform-origin:50% 0%; display:block;
     }
     .site-spider .pupil { transition:transform .1s linear; }
+    /* Tiny quip that pops up beside the spider each time the
+       Spider-Man web-shot easter egg fires — see showSpiderQuip(),
+       called from tryShoot(). Anchored to the (non-swinging) container
+       rather than .spider-body so it doesn't jitter along with the
+       sway — just a plain fade/lift toggled by a class. */
+    .site-spider .spider-quip {
+      position:absolute; bottom:2px; left:100%; margin-left:6px;
+      font-size:9px; font-weight:600; color:#1a1a1a; white-space:nowrap;
+      background:#fff; border:1px solid rgba(0,0,0,.15); border-radius:6px;
+      padding:2px 6px; opacity:0; pointer-events:none;
+      transition:opacity .2s ease, transform .2s ease;
+      transform:translateY(4px);
+    }
+    .site-spider .spider-quip.show { opacity:1; transform:translateY(0); }
     /* Positioning root for the avatar overlap — its box height comes
        from .profile-name-display (two lines), so the avatar (centered
        via .avatar-overlay-slot) lands on the seam between them. */
@@ -1960,6 +1974,7 @@
           <circle class="pupil" cx="12.4" cy="10.7" r="1.45" fill="#1a1a1a"/>
           <circle class="pupil" cx="19.6" cy="10.7" r="1.45" fill="#1a1a1a"/>
         </svg>
+        <div class="spider-quip">Pew pew spiderman!</div>
       </div>
       <div class="profile-name-block">
         <div class="profile-name-display" id="profileNameDisplay" aria-hidden="true"></div>
@@ -7069,6 +7084,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dx=cx-src.x,dy=cy-src.y;
     if(dx*dx+dy*dy<52*52) return;
     shots.push(new WebShot(src.x,src.y,cx,cy));
+    if (typeof showSpiderQuip === 'function') showSpiderQuip();
   }
 
   let _tx=0,_ty=0,_lastTouch=0;
@@ -7301,6 +7317,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   tick();
 })();
+
+/* ── Site spider quip ───────────────────────────────────────
+   Pops the "Pew pew spiderman!" bubble beside the spider whenever the
+   Spider-Man web-shot easter egg fires (see tryShoot(), further down —
+   it's defined after this since script tags execute top-to-bottom and
+   tryShoot() only calls this by name at click time, well after every
+   script on the page has parsed). Re-triggering just resets the
+   hide timer rather than stacking animations. */
+let _spiderQuipTimer = null;
+function showSpiderQuip() {
+  const quip = document.querySelector('.spider-quip');
+  if (!quip) return;
+  quip.classList.add('show');
+  clearTimeout(_spiderQuipTimer);
+  _spiderQuipTimer = setTimeout(() => quip.classList.remove('show'), 900);
+}
 
 /* ── Site spider eye-tracking ──────────────────────────────
    Nudges the two pupil circles a fraction of a viewBox unit toward
