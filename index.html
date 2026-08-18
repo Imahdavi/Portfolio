@@ -2422,6 +2422,16 @@ function revealProfileName() {
     var ageEl  = document.querySelector('.profile-age');
     if (roleEl) { roleEl.style.opacity = '1'; roleEl.style.filter = 'blur(0)'; roleEl.style.transform = 'translateY(0)'; }
     if (ageEl)  { ageEl.style.transition  = 'opacity .3s ease'; ageEl.style.opacity  = '1'; }
+    // The name letters have real layout size (and so a real M to
+    // measure) well before they're actually visible — each starts at
+    // opacity:0 until the .play-triggered blur-in animation reaches it.
+    // A ResizeObserver alone fires the instant renderProfileNameDisplay()
+    // above lays the spans out, which is too early: the spider would
+    // drop in and finish its entrance while the name text underneath it
+    // was still invisible. Triggering it here instead, right where the
+    // reveal actually starts, keeps the two in sync (both take well
+    // under a second, so they read as one moment instead of two).
+    if (typeof positionSiteSpider === 'function') positionSiteSpider(true);
   };
   if (document.fonts && document.fonts.load) {
     document.fonts.load('700 1em ' + nameFont).then(doShow, doShow);
