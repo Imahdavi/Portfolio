@@ -108,15 +108,23 @@
     /* Little spider that periodically drops in on a thread above the
        name, swings a few times, then climbs back up — one long looping
        animation instead of a JS timer, so it just keeps cycling with no
-       script needed. Most of the 28s cycle is the idle/hidden state;
-       the drop+swing+retract only occupies the last ~7s of it. Anchored
+       script needed. Most of the 24s cycle is the idle/hidden state;
+       the drop+swing+retract only occupies the last ~6s of it. Anchored
        to .profile-header-wrap (position:relative, above), independent
-       of the avatar's own positioning system. */
+       of the avatar's own positioning system.
+
+       A negative animation-delay starts the timeline already most of
+       the way through the idle stretch, so the first drop happens ~2s
+       after the page loads instead of making a visitor wait out a full
+       idle period (up to 24s) with nothing to see — every full loop
+       after that first one still gets the complete ~18s idle gap. */
     .site-spider {
       position:absolute; top:0; left:50%; width:20px; height:52px;
       margin-left:-10px; transform-origin:50% 0%;
       pointer-events:none; z-index:3; overflow:hidden;
-      animation:spiderCycle 28s ease-in-out infinite;
+      animation-name:spiderCycle; animation-duration:24s;
+      animation-timing-function:ease-in-out; animation-iteration-count:infinite;
+      animation-delay:-15.5s;
     }
     .site-spider .spider-thread {
       position:absolute; top:0; left:50%; width:1px; height:100%;
