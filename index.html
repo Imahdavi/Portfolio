@@ -400,9 +400,6 @@
     #sg-exp.exp-edit-on .exp-item:hover { transform:none; }
     #sg-exp.exp-edit-on:has(.exp-item:hover) .exp-item:not(:hover) { opacity:1; transform:none; }
     #sg-exp.exp-edit-on [contenteditable="true"] { outline:none; border-bottom:1px dashed rgba(0,0,0,.2); min-width:12px; }
-    .exp-add-btn { display:none; width:100%; margin-top:14px; padding:11px; border:1.5px dashed rgba(0,0,0,.15); border-radius:8px; background:none; font-size:13px; color:#aaa; cursor:pointer; transition:all .2s; }
-    .exp-add-btn:hover { border-color:rgba(0,0,0,.3); color:#555; }
-    .exp-add-btn.show { display:block; }
     .brand-grid-wrap { margin-top:36px; padding-top:28px; text-align:center; --trusted-gap:22px; }
     /* With no experience entries yet, #sg-exp is empty (0 height) and
        its own 48px view-padding + this wrap's 36+28px stacked on top
@@ -1966,7 +1963,6 @@
   <!-- ══════════════════════════════ WORK EXP ══════════════════════════════ -->
   <div class="view" id="view-exp">
     <div class="sg" id="sg-exp"></div>
-    <button id="exp-add-btn" class="exp-add-btn" onclick="addExpItem()">+ Add experience</button>
     <div class="brand-grid-wrap">
       <div class="brand-grid-label-pill">
         <span class="brand-grid-star" aria-hidden="true">✨</span>
@@ -4331,9 +4327,7 @@ function updateExpEditUI() {
   btn.classList.toggle('on', editMode);
   document.getElementById('editLabel').textContent = editMode ? 'Done' : 'Edit';
   const container = document.getElementById('sg-exp');
-  const addBtn    = document.getElementById('exp-add-btn');
   container.classList.toggle('exp-edit-on', editMode);
-  addBtn.classList.toggle('show', editMode);
   container.querySelectorAll('.exp-co, .exp-role, .exp-y1, .exp-y2').forEach(el => {
     el.contentEditable = editMode ? 'true' : 'false';
   });
@@ -4388,24 +4382,6 @@ function saveExpEdits() {
   const toolsLabel = document.querySelector('.tools-label');
   if (toolsLabel) _cachedSettings.toolsLabel = toolsLabel.textContent.trim();
   saveSettings();
-}
-
-function addExpItem() {
-  const container = document.getElementById('sg-exp');
-  const el = document.createElement('div');
-  el.className = 'exp-item';
-  el.innerHTML = `<div class="exp-date"><span class="exp-y1">Year</span><span class="exp-y2">Present</span></div><div class="exp-info"><div class="exp-co">Company</div><div class="exp-role">Role</div></div><button class="exp-edit-del" tabindex="-1">×</button>`;
-  container.appendChild(el);
-  const delBtn = el.querySelector('.exp-edit-del');
-  delBtn._delWired = true;
-  delBtn.addEventListener('click', () => el.remove());
-  el.querySelectorAll('.exp-co,.exp-role,.exp-y1,.exp-y2').forEach(e => { e.contentEditable = 'true'; });
-  const co = el.querySelector('.exp-co');
-  co.focus();
-  const range = document.createRange();
-  range.selectNodeContents(co);
-  window.getSelection().removeAllRanges();
-  window.getSelection().addRange(range);
 }
 
 function updateNoteEditUI() {
