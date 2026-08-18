@@ -7115,7 +7115,13 @@ document.addEventListener('DOMContentLoaded', async () => {
    The thread's own top (not just the spider) sits at the M's top edge
    — .site-spider's `top` is set here instead of the CSS default, so
    the whole thread starts at the letter and hangs down from it, rather
-   than spanning all the way down from the top of the name block. */
+   than spanning all the way down from the top of the name block. Its
+   length now reaches down to just above .contact-row (the social
+   pills), per the user's annotated screenshot showing the thread
+   running past the role text down to that row — measured live off
+   .contact-row's own position rather than a guessed fixed length, so
+   it still lands in the right spot if the role text wraps to a
+   different number of lines. */
 function positionSiteSpider() {
   const spider = document.querySelector('.site-spider');
   const wrap = document.querySelector('.profile-header-wrap');
@@ -7129,6 +7135,11 @@ function positionSiteSpider() {
   const wrapRect = wrap.getBoundingClientRect();
   spider.style.left = (mRect.left + mRect.width / 2 - wrapRect.left) + 'px';
   spider.style.marginLeft = '-10px';
+  const contactRow = document.querySelector('.contact-row');
+  if (contactRow) {
+    const contactRect = contactRow.getBoundingClientRect();
+    spider.style.height = Math.max(30, contactRect.top - mRect.top - 6) + 'px';
+  }
   spider.style.top = (mRect.top - wrapRect.top) + 'px';
 }
 document.addEventListener('DOMContentLoaded', () => {
