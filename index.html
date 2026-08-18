@@ -1943,7 +1943,7 @@
         <svg class="spider-rope" overflow="visible">
           <path class="rope-path" d="M10,0 L10,30"/>
         </svg>
-        <svg class="spider-body" viewBox="0 0 32 26" width="23" height="19">
+        <svg class="spider-body" viewBox="0 0 32 26" width="27" height="22">
           <g stroke="#1a1a1a" stroke-width="1.4" stroke-linecap="round" fill="none">
             <path d="M11 10 C6 8, 3 6, 1 4"/>
             <path d="M11 12 C5 11, 2 11, 0 11"/>
@@ -1954,11 +1954,11 @@
             <path d="M21 14 C27 15, 30 17, 32 19"/>
             <path d="M21 16 C26 18, 28 21, 30 24"/>
           </g>
-          <ellipse cx="16" cy="13" rx="7.3" ry="6.8" fill="#1a1a1a"/>
-          <ellipse cx="12.7" cy="11.1" rx="2.6" ry="3.2" fill="#fff"/>
-          <ellipse cx="19.3" cy="11.1" rx="2.6" ry="3.2" fill="#fff"/>
-          <circle class="pupil" cx="12.7" cy="11.1" r="1.25" fill="#1a1a1a"/>
-          <circle class="pupil" cx="19.3" cy="11.1" r="1.25" fill="#1a1a1a"/>
+          <ellipse cx="16" cy="13" rx="8.3" ry="7.8" fill="#1a1a1a"/>
+          <ellipse cx="12.4" cy="10.7" rx="3.0" ry="3.7" fill="#fff"/>
+          <ellipse cx="19.6" cy="10.7" rx="3.0" ry="3.7" fill="#fff"/>
+          <circle class="pupil" cx="12.4" cy="10.7" r="1.45" fill="#1a1a1a"/>
+          <circle class="pupil" cx="19.6" cy="10.7" r="1.45" fill="#1a1a1a"/>
         </svg>
       </div>
       <div class="profile-name-block">
@@ -7184,7 +7184,17 @@ document.addEventListener('DOMContentLoaded', () => {
    curve from the fixed top anchor to that offset point — the bow
    actually bends like slack rope instead of staying a straight
    rotating line. .spider-body rides at the curve's bottom end with
-   only a slight tilt of its own. */
+   only a slight tilt of its own.
+
+   The curve's endpoint is the top of the spider's *body*, not the
+   bottom of its whole SVG box — .spider-body's viewBox extends well
+   past the body ellipse to fit the legs, so ending the rope at the
+   container's full height made it look like the thread ran down past
+   the body instead of attaching to it. BODY_TOP_GAP is that portion
+   of the SVG box (legs + the lower half of the body) that sits below
+   the body's own top edge, in px at the SVG's current rendered size —
+   subtracting it from the thread length lands the curve right at the
+   top of the body instead. */
 (function () {
   const wrap = document.querySelector('.site-spider');
   const rope = wrap && wrap.querySelector('.rope-path');
@@ -7193,6 +7203,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let angle = 0, vel = 0;
   const damping = 0.92, stiffness = 0.02;
   let t = 0;
+  const BODY_TOP_GAP = 17.6; // (26 - 5.2) / 26 * 22px SVG height
 
   function tick() {
     t += 0.016;
@@ -7201,7 +7212,7 @@ document.addEventListener('DOMContentLoaded', () => {
     vel *= damping;
     angle += vel;
 
-    const h = _spiderThreadLen;
+    const h = Math.max(10, _spiderThreadLen - BODY_TOP_GAP);
     const offsetX = Math.sin(angle * Math.PI / 180) * h * 0.85;
     const midX = (10 + offsetX * 0.55).toFixed(2);
     const midY = (h * 0.5).toFixed(2);
@@ -7225,8 +7236,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* ── Site spider eye-tracking ──────────────────────────────
    Nudges the two pupil circles a fraction of a viewBox unit toward
-   wherever the cursor is. maxOffset (1.3 viewBox units) is deliberately
-   just shy of the white eye's own radius (rx:2.6) so the pupil always
+   wherever the cursor is. maxOffset (1.5 viewBox units) is deliberately
+   just shy of the white eye's own radius (rx:3.0) so the pupil always
    stays inside it. rAF-throttled so a rapid mousemove burst still only
    costs one getBoundingClientRect() + one style write per frame.
    Selects .spider-body specifically (not spider .rope which is also
@@ -7239,7 +7250,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const svg = spider.querySelector('.spider-body');
   if (!pupils.length || !svg) return;
 
-  const maxOffset = 1.3;
+  const maxOffset = 1.5;
   let mx = 0, my = 0, rafPending = false;
 
   function update() {
