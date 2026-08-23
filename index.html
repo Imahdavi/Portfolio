@@ -776,8 +776,19 @@
     }
     .edit-hint.show { display:block; animation:fadeUp .2s ease both; }
 
-    /* Block list */
-    .block-list { display:grid; grid-template-columns:repeat(6,1fr); column-gap:10px; row-gap:0; grid-auto-rows:1px; margin-bottom:20px; align-items:start; }
+    /* Block list — fixed-width columns (auto-fill), not 6 stretchy fr
+       columns. Blocks are positioned with grid-column:start/span
+       against a 6-columns-of-74.33px reference frame (74.33px =
+       (496px baseline content width − 5×10px gaps) / 6, the exact
+       width a column already comes out to at the default 540px site
+       width). A wider --site-width just adds more same-size columns
+       past the original 6 for placing additional blocks into — it
+       doesn't stretch the existing 6 wider. Every place that used to
+       derive column width from the container's own rendered width
+       (grid-column resize/drag math) needs to use this same fixed
+       74.33px instead — see BLOCK_COL_PX/BLOCK_GAP_PX near
+       migrateBlockLayout(). */
+    .block-list { display:grid; grid-template-columns:repeat(auto-fill, 74.33px); column-gap:10px; row-gap:0; grid-auto-rows:1px; margin-bottom:20px; align-items:start; }
 
     .block {
       position:relative;
@@ -2718,6 +2729,17 @@ function makePosIcon(vis) {
   return `<svg viewBox="0 0 29 11" width="36" height="14" xmlns="http://www.w3.org/2000/svg">${cells}</svg>`;
 }
 
+// One block-grid column, fixed — matches the 74.33px used in
+// .block-list's grid-template-columns. Everything below that used to
+// derive "column width" from the container's own live rendered width
+// (list.offsetWidth/6, lr.width/6) used it BECAUSE the grid used to be
+// 6 stretchy 1fr columns, so that was the column width. Now that the
+// grid is fixed-width auto-fill columns, the column width is this
+// constant regardless of how wide the container/site is.
+const BLOCK_COL_PX = 74.33;
+const BLOCK_GAP_PX = 10;
+const BLOCK_COL_PITCH = BLOCK_COL_PX + BLOCK_GAP_PX;
+
 function migrateBlockLayout(block) {
   if (block._half) { block._cols = 1; delete block._half; }
   if (block._colStart === undefined) {
@@ -2824,7 +2846,7 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
 
       // ── Horizontal: update column span immediately ─────────────
       if (list) {
-        const colW    = list.offsetWidth / 6;
+        const colW    = BLOCK_COL_PITCH; // fixed — list.offsetWidth/6 used to double as column width back when columns were 6 stretchy 1fr tracks; now they're a fixed size regardless of the container's width
         const startW  = colW * startSpan;
         const rawSpan = Math.max(0.6, (startW + (e.clientX - startX)) / colW);
         let best = COL_SNAPS[0];
@@ -5343,7 +5365,6 @@ function startFreeDrag(e, wrap) {
   if (!list) return;
 
   const cols  = block._cols || 6;
-  const maxCS = Math.max(1, 7 - cols);
 
   wrap.classList.add('col-dragging');
 
@@ -5352,18 +5373,30 @@ function startFreeDrag(e, wrap) {
   let hasMoved  = false;
   const startX  = e.clientX, startY = e.clientY;
 
+  // Measured once at drag-start, not on every mousemove — the list's
+  // rect (and so the column count derived from it) can't change
+  // mid-gesture, so re-reading it every move was a forced layout on
+  // every single frame for no reason (same choppiness cause already
+  // fixed for the avatar drag). colW is now the fixed column pitch
+  // instead of list.offsetWidth/6, and maxCS grows with however many
+  // fixed-width columns actually fit at the current site width instead
+  // of always capping at the original 6 — this is what actually lets a
+  // block get dragged into the newly-available columns on a wider site.
+  const lr        = list.getBoundingClientRect();
+  const colW      = BLOCK_COL_PITCH;
+  const totalCols = Math.max(6, Math.floor((lr.width + BLOCK_GAP_PX) / BLOCK_COL_PITCH));
+  const maxCS     = Math.max(1, totalCols + 1 - cols);
+  const centerX   = lr.width / 2;
+
   function onMove(ev) {
     // Don't start until cursor has actually moved (prevents click-jump)
     if (!hasMoved) {
       if (Math.abs(ev.clientX - startX) < 5 && Math.abs(ev.clientY - startY) < 5) return;
       hasMoved = true;
     }
-    const lr   = list.getBoundingClientRect();
-    const colW = lr.width / 6;
     const relX = ev.clientX - lr.left;
 
     // ── X → column position (with center snap zone) ──────────────────────────────
-    const centerX = lr.width / 2;
     if (Math.abs(relX - centerX) < colW * 0.75) {
       // Center snap zone — snap to perfect center alignment
       if (lastAlign !== 'center') {
