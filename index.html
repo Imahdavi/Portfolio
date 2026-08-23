@@ -316,9 +316,18 @@
        shell, more once --site-width grows) instead of the existing 3
        cards stretching wider. 154.67px = the exact width 3 columns
        already come out to today: (496px view content − 8px grid
-       padding − 24px for 2 gaps) / 3. justify-content centers the row
-       when the width doesn't divide evenly into whole columns. */
+       padding − 24px for 2 gaps) / 3. The row is left-aligned, not
+       centered: when the width doesn't divide evenly into whole
+       columns the leftover space is left on the right, so the first
+       card's edge stays put instead of drifting inward and falling
+       out of line with the section title above it.
+       The negative inline margin cancels the 4px side padding (which
+       is only there so the hover lift isn't visually clipped) so the
+       card content edge — not the grid's padding edge — lands on
+       #view-home's content edge, which is what .sec-label sits on.
+       It bleeds 4px into that 22px padding, so nothing overflows. */
     .card-grid {
+      margin-inline:-4px;
       display:grid;
       /* Always 3 stretchy columns by default — the original mobile
          behavior, unchanged. The fixed-width auto-fill (below, 540px+)
@@ -332,7 +341,7 @@
       padding:6px 4px;
     }
     @media (min-width:540px) {
-      .card-grid { grid-template-columns:repeat(auto-fill, 154.67px); justify-content:center; }
+      .card-grid { grid-template-columns:repeat(auto-fill, 154.67px); justify-content:start; }
     }
 
     .proj-card { position:relative; cursor:pointer; transition:opacity .25s, filter .25s, transform .55s cubic-bezier(.34,1.56,.64,1); }
