@@ -5636,11 +5636,7 @@ function startFreeDrag(e, wrap) {
   // rect (and so the column count derived from it) can't change
   // mid-gesture, so re-reading it every move was a forced layout on
   // every single frame for no reason (same choppiness cause already
-  // fixed for the avatar drag). colW is now the fixed column pitch
-  // instead of list.offsetWidth/6, and maxCS grows with however many
-  // fixed-width columns actually fit at the current site width instead
-  // of always capping at the original 6 — this is what actually lets a
-  // block get dragged into the newly-available columns on a wider site.
+  // fixed for the avatar drag).
   const lr = list.getBoundingClientRect();
   // Metrics are read once for the whole gesture. They'd otherwise shift under
   // the cursor as the board's extent changes with the block being dragged.
