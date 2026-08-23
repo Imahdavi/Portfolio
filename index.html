@@ -1351,6 +1351,14 @@
     .media-wrap .media-inner {
       position:relative; border-radius:20px; overflow:hidden;
       background:#111; width:100%; height:auto;
+      /* A rounded + clipped element that also gets a 3D transform (the
+         hover tilt below) loses its corner anti-aliasing on Chromium —
+         the curve snaps to a jagged pixel edge the instant the tilt
+         starts. Forcing the clip through a mask instead of plain
+         overflow keeps it smooth under a transform; backface-visibility
+         avoids a related flicker on the same GPU layer. */
+      -webkit-mask-image:-webkit-radial-gradient(circle, #fff, #000);
+      -webkit-backface-visibility:hidden; backface-visibility:hidden;
     }
     .media-wrap img, .media-wrap video {
       width:100%; height:100%; object-fit:cover; display:block; pointer-events:none;
@@ -8519,8 +8527,8 @@ document.addEventListener('DOMContentLoaded', () => {
     targetRX = (0.5 - py) * MAX_TILT;
     kick();
     const g = ensureGlare(inner);
-    g.style.background = `radial-gradient(circle at ${(px * 100).toFixed(1)}% ${(py * 100).toFixed(1)}%, rgba(255,255,255,.9), transparent 50%)`;
-    g.style.opacity = '1';
+    g.style.background = `radial-gradient(circle at ${(px * 100).toFixed(1)}% ${(py * 100).toFixed(1)}%, rgba(255,255,255,.35), transparent 50%)`;
+    g.style.opacity = '0.6';
   });
 
   list.addEventListener('mouseleave', () => {
