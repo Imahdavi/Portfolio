@@ -306,6 +306,51 @@
     .pill:hover  { border-color:rgba(0,0,0,.15); background:#d8d4cc; transform:translateY(-2px); }
     .pill:active { transform:scale(.94); }
 
+    /* ─────────────────── GAME (table tennis) ─────────────────── */
+    /* The board itself is a canvas — the table, net, rackets and ball are
+       all painted in drawGame(). Everything here is the frame around it. */
+    .game-head  { margin-bottom:18px; }
+    .game-title { font-family:var(--font-heading); font-size:27px; font-weight:600; }
+    .game-sub   { font-size:13px; color:#8a8580; margin-top:4px; }
+
+    .game-stage {
+      position:relative;
+      border-radius:20px;
+      background:#0e1113;
+      padding:14px;
+      overflow:hidden;
+      /* No page scroll / text selection while dragging the racket. */
+      touch-action:none;
+      user-select:none; -webkit-user-select:none;
+    }
+    /* Size is set by resize() in JS so the table keeps its portrait ratio. */
+    .game-stage canvas { display:block; margin:0 auto; border-radius:10px; }
+
+    .game-score {
+      position:absolute; top:16px; left:0; right:0;
+      display:flex; justify-content:center; gap:8px;
+      font-variant-numeric:tabular-nums; font-size:15px; font-weight:600;
+      color:rgba(255,255,255,.5); pointer-events:none; z-index:2;
+    }
+    .game-score-cpu { color:#ef5350; }
+    .game-score-you { color:#7ec8ef; }
+
+    .game-overlay {
+      position:absolute; inset:14px; border-radius:10px;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+      background:rgba(8,10,11,.72); backdrop-filter:blur(3px);
+      z-index:3; transition:opacity .2s ease;
+    }
+    .game-overlay.hide { opacity:0; pointer-events:none; }
+    .game-overlay-title { font-family:var(--font-heading); font-size:22px; color:#fff; text-align:center; padding:0 20px; }
+    .game-btn {
+      border:0; border-radius:999px; padding:10px 26px; cursor:pointer;
+      background:#fff; color:#14181a; font-size:14px; font-weight:600;
+      font-family:inherit; transition:transform .15s ease;
+    }
+    .game-btn:hover  { transform:translateY(-2px); }
+    .game-btn:active { transform:scale(.94); }
+
     /* ─────────────────── SECTION TITLE ─────────────────── */
     .sec-label { font-family:var(--font-heading); font-size:27px; font-weight:600; margin-bottom:18px; }
 
@@ -2112,6 +2157,28 @@
   </div><!-- /view-soon -->
 
 
+  <!-- ══════════════════════════════ GAME ══════════════════════════════ -->
+  <div class="view" id="view-game">
+    <div class="game-head">
+      <div class="game-title">Table tennis</div>
+      <div class="game-sub">First to 7 wins. Drag anywhere to move your racket.</div>
+    </div>
+
+    <div class="game-stage" id="gameStage">
+      <div class="game-score" id="gameScore">
+        <span class="game-score-cpu" id="gameScoreCpu">0</span>
+        <span class="game-score-sep">:</span>
+        <span class="game-score-you" id="gameScoreYou">0</span>
+      </div>
+      <canvas id="gameCanvas"></canvas>
+      <div class="game-overlay" id="gameOverlay">
+        <div class="game-overlay-title" id="gameOverlayTitle">Ready?</div>
+        <button class="game-btn" id="gameBtn">Play</button>
+      </div>
+    </div>
+  </div><!-- /view-game -->
+
+
   <!-- ══════════════════════════════ ANALYTICS ══════════════════════════════ -->
   <div class="view" id="view-analytics">
     <div class="an-title">Analytics</div>
@@ -2255,6 +2322,13 @@
       <path d="M12.2604 11.4385H8.90442" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       <path fill-rule="evenodd" clip-rule="evenodd" d="M20.1598 8.29988L14.4898 2.89988C13.7598 2.79988 12.9398 2.74988 12.0398 2.74988C5.74978 2.74988 3.64978 5.06988 3.64978 11.9999C3.64978 18.9399 5.74978 21.2499 12.0398 21.2499C18.3398 21.2499 20.4398 18.9399 20.4398 11.9999C20.4398 10.5799 20.3498 9.34988 20.1598 8.29988Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M13.9342 2.83252V5.49352C13.9342 7.35152 15.4402 8.85652 17.2982 8.85652H20.2492" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+  <button class="nav-btn" id="nb-game" onclick="goView('view-game',this)">
+    <span class="nav-tip">Game</span>
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M14.19 3.02a6.62 6.62 0 0 1 0 9.36c-2.2 2.2-5.55 2.45-7.85.74l-2.4 2.4a1.6 1.6 0 1 1-2.26-2.27l2.4-2.4c-1.7-2.3-1.46-5.65.75-7.85a6.62 6.62 0 0 1 9.36 0Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="18.1" cy="18.1" r="3.05" stroke="currentColor" stroke-width="2"/>
     </svg>
   </button>
   <button class="nav-btn an-nav-btn" id="nb-analytics" onclick="goView('view-analytics',this)">
@@ -4334,8 +4408,8 @@ const PROJECTS = {
 function uid() { return Math.random().toString(36).slice(2,9); }
 
 /* ─── View navigation ──────────────────────────────────── */
-const MAIN_VIEWS = ['view-home','view-exp','view-soon','view-analytics'];
-const NAV_MAP    = { 'view-home':'nb-home', 'view-exp':'nb-exp', 'view-soon':'nb-soon', 'view-analytics':'nb-analytics' };
+const MAIN_VIEWS = ['view-home','view-exp','view-soon','view-game','view-analytics'];
+const NAV_MAP    = { 'view-home':'nb-home', 'view-exp':'nb-exp', 'view-soon':'nb-soon', 'view-game':'nb-game', 'view-analytics':'nb-analytics' };
 let current     = 'view-home';
 let prevMain    = 'view-home';
 let editMode    = false;
@@ -4363,6 +4437,15 @@ function showView(toId, anim) {
     void sg.offsetWidth;
     sg.classList.add('run');
   });
+
+  // The game's rAF loop only runs while its view is on screen.
+  if (typeof window.stopGame === 'function' && toId !== 'view-game') window.stopGame();
+  if (typeof window.startGame === 'function' && toId === 'view-game') {
+    // Wait for the enter animation to settle so the canvas measures its
+    // final width rather than the mid-slide one.
+    requestAnimationFrame(() => requestAnimationFrame(() => window.startGame()));
+  }
+
   current = toId;
 
   // persist state in URL path (skip when we're already restoring from popstate)
@@ -4375,6 +4458,8 @@ function showView(toId, anim) {
       history.pushState({ view: 'exp' }, '', '/exp');
     } else if (toId === 'view-soon') {
       history.pushState({ view: 'soon' }, '', '/soon');
+    } else if (toId === 'view-game') {
+      history.pushState({ view: 'game' }, '', '/game');
     }
     if (toId === 'view-analytics') loadAnalytics(_analyticsRange);
   }
@@ -4392,6 +4477,8 @@ window.addEventListener('popstate', () => {
     goView('view-exp', document.getElementById('nb-exp'));
   } else if (path === '/soon') {
     goView('view-soon', document.getElementById('nb-soon'));
+  } else if (path === '/game') {
+    goView('view-game', document.getElementById('nb-game'));
   } else {
     setNavActive(document.getElementById('nb-home'));
     showView('view-home', 'enter-l');
@@ -4409,6 +4496,7 @@ function goView(viewId, btn) {
   showView(viewId, anim);
   if (viewId === 'view-exp')       { trackView('work-experience'); playToolsLabelAnim(); }
   else if (viewId === 'view-soon') trackView('note');
+  else if (viewId === 'view-game') trackView('game');
 }
 
 function setNavActive(btn) {
@@ -7062,6 +7150,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     goView('view-exp', document.getElementById('nb-exp'));
   } else if (path === '/soon') {
     goView('view-soon', document.getElementById('nb-soon'));
+  } else if (path === '/game') {
+    goView('view-game', document.getElementById('nb-game'));
   } else {
     document.querySelectorAll('#view-home .sg').forEach(sg => sg.classList.add('run'));
   }
@@ -7918,6 +8008,320 @@ document.addEventListener('DOMContentLoaded', () => {
     const ms = Math.max(0.3, CONFIG.autoBurstInterval) * 1000;
     setInterval(burst, ms);
   }
+})();
+
+/* ═══════════════════ TABLE TENNIS (view-game) ═══════════════════
+   Top-down table tennis. You control the near (blue) racket by dragging
+   anywhere over the board; the far (red) racket is the CPU. First to 7.
+
+   Everything is drawn on a canvas sized in CSS pixels and scaled by DPR,
+   so all the geometry below is in CSS px and needs no unit juggling. The
+   loop only runs while #view-game is the active view AND the tab is
+   visible — see startGame/stopGame, which showView() calls. */
+(function () {
+  const WIN_SCORE = 7;
+  const ASPECT    = 1.46;          // board is portrait, h / w
+  const BALL_R    = 7;
+  const PAD_RX    = 33, PAD_RY = 21; // racket blade radii
+  const EDGE      = 26;            // gap between canvas edge and table
+  const MAX_BOUNCE_ANGLE = 1.05;   // ~60° off the racket face
+
+  let canvas, ctx, stage, overlay, overlayTitle, overlayBtn, scoreYouEl, scoreCpuEl;
+  let W = 0, H = 0;                // canvas size in CSS px
+  let raf = 0, lastTs = 0, running = false, started = false;
+  let scoreYou = 0, scoreCpu = 0;
+  let serveTimer = 0;
+
+  const ball   = { x: 0, y: 0, vx: 0, vy: 0, speed: 0, trail: [] };
+  const you    = { x: 0, y: 0, tx: 0, vx: 0 };
+  const cpu    = { x: 0, y: 0, vx: 0 };
+
+  /* ── Audio: tiny synthesised blips, no assets. Honours the same mute
+     flag as the web-shot sound so one toggle covers the whole site. ── */
+  let actx = null;
+  function blip(freq, dur, type, gain) {
+    if (window._webShotMuted) return;
+    try {
+      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = type || 'triangle';
+      o.frequency.setValueAtTime(freq, actx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(freq * 0.62, actx.currentTime + dur);
+      g.gain.setValueAtTime(gain == null ? 0.06 : gain, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + dur);
+      o.connect(g); g.connect(actx.destination);
+      o.start(); o.stop(actx.currentTime + dur);
+    } catch (e) { /* audio is a nicety — never let it break the game */ }
+  }
+  const sndRacket = () => blip(520, 0.07, 'triangle', 0.07);
+  const sndTable  = () => blip(300, 0.05, 'sine', 0.045);
+  const sndPoint  = () => blip(180, 0.22, 'sawtooth', 0.05);
+
+  const table = () => ({ l: EDGE, r: W - EDGE, t: EDGE, b: H - EDGE });
+
+  function resize() {
+    if (!canvas || !stage) return;
+    const availW = stage.clientWidth - 28; // stage padding is 14px a side
+    if (availW <= 0) return;
+    // Fit inside the space the view actually has, but never distort the
+    // table — shrink the width to hold the portrait ratio instead.
+    const availH = Math.max(260, window.innerHeight - 300);
+    let w = availW, h = w * ASPECT;
+    if (h > availH) { h = availH; w = h / ASPECT; }
+    W = Math.round(w); H = Math.round(h);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    canvas.width  = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Re-seat the rackets for the new size.
+    you.y = H - EDGE - 34;
+    cpu.y = EDGE + 34;
+    you.x = you.tx = clamp(you.x || W / 2, table().l + PAD_RX * 0.4, table().r - PAD_RX * 0.4);
+    cpu.x = clamp(cpu.x || W / 2, table().l + PAD_RX * 0.4, table().r - PAD_RX * 0.4);
+    if (!started) resetBall(1);
+    draw();
+  }
+
+  const clamp = (v, a, b) => v < a ? a : (v > b ? b : v);
+
+  function resetBall(dir) {
+    ball.x = W / 2;
+    ball.y = H / 2;
+    ball.speed = 4.4;
+    ball.trail.length = 0;
+    // Serve at a shallow-ish angle so the first touch is always reachable.
+    const ang = (Math.random() * 0.5 - 0.25);
+    ball.vx = Math.sin(ang) * ball.speed;
+    ball.vy = Math.cos(ang) * ball.speed * dirSign(dir);
+    serveTimer = 0;
+  }
+  const dirSign = d => d >= 0 ? 1 : -1;
+
+  function point(who) {
+    if (who === 'you') scoreYou++; else scoreCpu++;
+    scoreYouEl.textContent = scoreYou;
+    scoreCpuEl.textContent = scoreCpu;
+    sndPoint();
+    if (scoreYou >= WIN_SCORE || scoreCpu >= WIN_SCORE) {
+      started = false;
+      showOverlay(scoreYou > scoreCpu ? 'You win 🏓' : 'CPU wins', 'Play again');
+      return;
+    }
+    // Serve towards whoever just conceded.
+    resetBall(who === 'you' ? -1 : 1);
+    serveTimer = 750;
+  }
+
+  function step(ts) {
+    raf = 0;
+    if (!running) return;
+    const dt = lastTs ? Math.min(34, ts - lastTs) : 16.7;
+    lastTs = ts;
+    if (started) update(dt);
+    draw();
+    raf = requestAnimationFrame(step);
+  }
+
+  function update(dt) {
+    const f = dt / 16.7;               // normalise to 60fps steps
+    const t = table();
+
+    if (serveTimer > 0) { serveTimer -= dt; return; }
+
+    // ── Your racket: ease towards the pointer, keep a velocity for spin ──
+    const prevX = you.x;
+    you.x += (you.tx - you.x) * Math.min(1, 0.28 * f);
+    you.x = clamp(you.x, t.l + PAD_RX * 0.4, t.r - PAD_RX * 0.4);
+    you.vx = (you.x - prevX) / Math.max(f, 0.001);
+
+    // ── CPU: chases the ball, but only reacts once it's on its side, and
+    //    with a capped speed + aim error so it stays beatable. ──
+    const lead = ball.vy < 0 ? ball.x : W / 2;
+    const diff = lead - cpu.x;
+    const skill = 0.55 + Math.min(scoreCpu, 5) * 0.045;
+    const cpuMax = (2.9 + Math.min(scoreYou, 6) * 0.32) * f;
+    cpu.vx = clamp(diff * skill * 0.1 * f, -cpuMax, cpuMax);
+    cpu.x = clamp(cpu.x + cpu.vx, t.l + PAD_RX * 0.4, t.r - PAD_RX * 0.4);
+
+    // ── Ball ──
+    ball.trail.push({ x: ball.x, y: ball.y });
+    if (ball.trail.length > 9) ball.trail.shift();
+    ball.x += ball.vx * f;
+    ball.y += ball.vy * f;
+
+    // Side rails
+    if (ball.x - BALL_R < t.l) { ball.x = t.l + BALL_R; ball.vx = Math.abs(ball.vx); sndTable(); }
+    if (ball.x + BALL_R > t.r) { ball.x = t.r - BALL_R; ball.vx = -Math.abs(ball.vx); sndTable(); }
+
+    hitRacket(you, 1);
+    hitRacket(cpu, -1);
+
+    // Past an end line — point to the other side.
+    if (ball.y + BALL_R < 0)  point('you');
+    else if (ball.y - BALL_R > H) point('cpu');
+  }
+
+  /* side: +1 for the near racket (ball must be travelling down, vy>0),
+     -1 for the far one. Bounce angle comes from where on the blade it
+     lands, plus a nudge from how fast the racket is moving sideways. */
+  function hitRacket(p, side) {
+    const movingIn = side > 0 ? ball.vy > 0 : ball.vy < 0;
+    if (!movingIn) return;
+    const dx = ball.x - p.x, dy = ball.y - p.y;
+    const rx = PAD_RX + BALL_R, ry = PAD_RY + BALL_R;
+    if ((dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) > 1) return;
+
+    const norm = clamp(dx / rx, -1, 1);
+    let ang = norm * MAX_BOUNCE_ANGLE;
+    if (side > 0) ang += clamp(p.vx * 0.035, -0.28, 0.28); // your swing adds spin
+    ang = clamp(ang, -MAX_BOUNCE_ANGLE, MAX_BOUNCE_ANGLE);
+
+    ball.speed = Math.min(ball.speed + 0.28, 11.5);
+    ball.vx = Math.sin(ang) * ball.speed;
+    ball.vy = -side * Math.abs(Math.cos(ang) * ball.speed);
+    // Push clear of the blade so it can't register twice on one pass.
+    ball.y = p.y + (side > 0 ? -(ry + 0.5) : (ry + 0.5));
+    sndRacket();
+  }
+
+  /* ── Painting ── */
+  function roundRect(c, x, y, w, h, r) {
+    c.beginPath();
+    if (c.roundRect) { c.roundRect(x, y, w, h, r); return; }
+    c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r); c.closePath();
+  }
+
+  function racket(c, x, y, blade, rim, rot) {
+    c.save();
+    c.translate(x, y);
+    c.rotate(rot);
+    // handle
+    c.fillStyle = '#b07b4d';
+    roundRect(c, -6, PAD_RY - 3, 12, 30, 6); c.fill();
+    // blade
+    c.beginPath(); c.ellipse(0, 0, PAD_RX, PAD_RY, 0, 0, Math.PI * 2);
+    c.fillStyle = blade; c.fill();
+    c.lineWidth = 2; c.strokeStyle = rim; c.stroke();
+    c.restore();
+  }
+
+  function draw() {
+    if (!ctx) return;
+    const t = table();
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#0e1113';
+    ctx.fillRect(0, 0, W, H);
+
+    // Table
+    const g = ctx.createLinearGradient(0, t.t, 0, t.b);
+    g.addColorStop(0, '#57a97f'); g.addColorStop(1, '#4b9a72');
+    roundRect(ctx, t.l, t.t, t.r - t.l, t.b - t.t, 6);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.92)'; ctx.stroke();
+
+    // Centre line down the length of the table
+    ctx.beginPath();
+    ctx.moveTo(W / 2, t.t); ctx.lineTo(W / 2, t.b);
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.stroke();
+
+    // Net — sits across the middle and overhangs both edges
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2;
+    ctx.beginPath();
+    ctx.moveTo(t.l - 16, H / 2); ctx.lineTo(t.r + 16, H / 2);
+    ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.strokeStyle = '#fff'; ctx.stroke();
+    ctx.restore();
+
+    // Ball trail
+    for (let i = 0; i < ball.trail.length; i++) {
+      const p = ball.trail[i], k = (i + 1) / ball.trail.length;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, BALL_R * k * 0.8, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.05 + k * 0.13).toFixed(3) + ')';
+      ctx.fill();
+    }
+
+    racket(ctx, cpu.x, cpu.y, '#e0473f', '#f38b85', Math.PI);
+    racket(ctx, you.x, you.y, '#3f87b5', '#8ecdf0', 0);
+
+    // Ball
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 7; ctx.shadowOffsetY = 3;
+    ctx.beginPath(); ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.restore();
+  }
+
+  /* ── Overlay + lifecycle ── */
+  function showOverlay(title, btn) {
+    overlayTitle.textContent = title;
+    overlayBtn.textContent = btn;
+    overlay.classList.remove('hide');
+  }
+  function hideOverlay() { overlay.classList.add('hide'); }
+
+  function playPressed() {
+    scoreYou = 0; scoreCpu = 0;
+    scoreYouEl.textContent = '0'; scoreCpuEl.textContent = '0';
+    resetBall(Math.random() < 0.5 ? 1 : -1);
+    serveTimer = 600;
+    started = true;
+    hideOverlay();
+    blip(660, 0.09, 'triangle', 0.05); // also unlocks the AudioContext
+  }
+
+  function pointerMove(e) {
+    const r = canvas.getBoundingClientRect();
+    const t = table();
+    you.tx = clamp(e.clientX - r.left, t.l + PAD_RX * 0.4, t.r - PAD_RX * 0.4);
+  }
+
+  window.startGame = function () {
+    if (!canvas) return;
+    resize();
+    running = true;
+    lastTs = 0;
+    if (!raf) raf = requestAnimationFrame(step);
+  };
+  window.stopGame = function () {
+    running = false;
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    canvas       = document.getElementById('gameCanvas');
+    stage        = document.getElementById('gameStage');
+    overlay      = document.getElementById('gameOverlay');
+    overlayTitle = document.getElementById('gameOverlayTitle');
+    overlayBtn   = document.getElementById('gameBtn');
+    scoreYouEl   = document.getElementById('gameScoreYou');
+    scoreCpuEl   = document.getElementById('gameScoreCpu');
+    if (!canvas || !stage) return;
+
+    overlayBtn.addEventListener('click', playPressed);
+    stage.addEventListener('pointermove', pointerMove);
+    stage.addEventListener('pointerdown', (e) => { pointerMove(e); you.x = you.tx; });
+    // Keyboard for anyone not using a pointer.
+    document.addEventListener('keydown', (e) => {
+      if (!running || !started) return;
+      const t = table(), stepPx = 26;
+      if (e.key === 'ArrowLeft')  { you.tx = clamp(you.tx - stepPx, t.l + PAD_RX * 0.4, t.r - PAD_RX * 0.4); e.preventDefault(); }
+      if (e.key === 'ArrowRight') { you.tx = clamp(you.tx + stepPx, t.l + PAD_RX * 0.4, t.r - PAD_RX * 0.4); e.preventDefault(); }
+    });
+
+    window.addEventListener('resize', () => { if (running) resize(); });
+    // Don't keep animating a tab nobody's looking at.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) window.stopGame();
+      else if (document.getElementById('view-game').classList.contains('active')) window.startGame();
+    });
+  });
 })();
 </script>
 </body>
