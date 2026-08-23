@@ -785,19 +785,17 @@
     }
     .edit-hint.show { display:block; animation:fadeUp .2s ease both; }
 
-    /* Block list — fixed-width columns (auto-fill), not 6 stretchy fr
-       columns. Blocks are positioned with grid-column:start/span
-       against a 6-columns-of-74.33px reference frame (74.33px =
-       (496px baseline content width − 5×10px gaps) / 6, the exact
-       width a column already comes out to at the default 540px site
-       width). A wider --site-width just adds more same-size columns
-       past the original 6 for placing additional blocks into — it
-       doesn't stretch the existing 6 wider. Every place that used to
-       derive column width from the container's own rendered width
-       (grid-column resize/drag math) needs to use this same fixed
-       74.33px instead — see BLOCK_COL_PX/BLOCK_GAP_PX near
-       migrateBlockLayout(). */
-    .block-list { display:grid; grid-template-columns:repeat(auto-fill, 74.33px); column-gap:10px; row-gap:0; grid-auto-rows:1px; margin-bottom:20px; align-items:start; }
+    /* Block list — the real track list is written by layoutBlockGrid()
+       (see BLOCK_COL_PX near migrateBlockLayout), which switches between
+       fixed 74.33px columns and these six stretchy ones depending on
+       whether six fixed columns actually fit. The 1fr version here is the
+       pre-JS default because it is the one that is safe at every width:
+       74.33px columns on a narrow phone would fit only four, and a
+       `span 6` block would pick up 0px-wide implicit columns.
+       74.33px = (496px baseline content width − 5×10px gaps) / 6, the
+       exact width a column already comes out to at the default 540px
+       site width, so nothing moves at the default. */
+    .block-list { display:grid; grid-template-columns:repeat(6, 1fr); column-gap:10px; row-gap:0; grid-auto-rows:1px; margin-bottom:20px; align-items:start; }
 
     .block {
       position:relative;
@@ -2749,6 +2747,99 @@ const BLOCK_COL_PX = 74.33;
 const BLOCK_GAP_PX = 10;
 const BLOCK_COL_PITCH = BLOCK_COL_PX + BLOCK_GAP_PX;
 
+/* Every block's _colStart/_cols is expressed against a 6-column frame —
+   that's what the data has always meant and what "Full" still is. */
+const BLOCK_FRAME_COLS = 6;
+const BLOCK_FRAME_PX =
+  BLOCK_FRAME_COLS * BLOCK_COL_PX + (BLOCK_FRAME_COLS - 1) * BLOCK_GAP_PX; // 495.98
+
+/* Size the block grid and work out where the 6-column frame sits inside it.
+   Widening the site adds columns in PAIRS — one on each side — and the frame
+   is offset by half of them, so existing blocks stay centred and the new room
+   opens up symmetrically instead of all of it appearing off to the right.
+
+   Below the frame width (phones) fixed 74.33px columns can't fit six of them,
+   and a `span 6` block would silently get 0px-wide implicit columns tacked on
+   — two blocks with identical _cols rendering at different widths. There we
+   fall back to the original six stretchy columns, which always fit exactly. */
+function layoutBlockGrid(list) {
+  if (!list) return { totalCols: BLOCK_FRAME_COLS, offset: 0 };
+  const parent = list.parentElement;
+  let avail = list.clientWidth;
+  if (parent) {
+    const pcs = getComputedStyle(parent);
+    avail = parent.getBoundingClientRect().width
+          - parseFloat(pcs.paddingLeft) - parseFloat(pcs.paddingRight);
+  }
+
+  let totalCols, offset;
+  if (avail < BLOCK_FRAME_PX - 0.5) {
+    totalCols = BLOCK_FRAME_COLS;
+    offset    = 0;
+    list.style.gridTemplateColumns = `repeat(${BLOCK_FRAME_COLS}, 1fr)`;
+    list.style.width        = '';
+    list.style.marginInline = '';
+  } else {
+    const fits = Math.floor((avail + BLOCK_GAP_PX) / BLOCK_COL_PITCH);
+    const pairs = Math.max(0, Math.floor((fits - BLOCK_FRAME_COLS) / 2));
+    totalCols = BLOCK_FRAME_COLS + pairs * 2;
+    offset    = pairs;
+    list.style.gridTemplateColumns = `repeat(${totalCols}, ${BLOCK_COL_PX}px)`;
+    // Exact width + auto margins, so the list's own left edge IS column 1 —
+    // the drag/resize math can keep measuring from getBoundingClientRect().
+    list.style.width        =
+      (totalCols * BLOCK_COL_PX + (totalCols - 1) * BLOCK_GAP_PX) + 'px';
+    list.style.marginInline = 'auto';
+  }
+
+  list.dataset.totalCols = totalCols;
+  list.dataset.colOffset = offset;
+  return { totalCols, offset };
+}
+
+/* Re-run the grid sizing whenever the space around the list changes — the
+   site-width slider, a window resize, anything. Observes the PARENT, because
+   the list's own width is now explicitly set and so can't report the change. */
+function relayoutBlockGrid() {
+  const list = document.getElementById('block-list');
+  if (!list) return;
+  const prevCols   = list.dataset.totalCols;
+  const prevOffset = list.dataset.colOffset;
+  layoutBlockGrid(list);
+  if (list.dataset.totalCols === prevCols && list.dataset.colOffset === prevOffset) return;
+  const proj = PROJECTS[activeKey];
+  if (!proj) return;
+  list.querySelectorAll('.block').forEach(el => {
+    const b = proj.blocks.find(x => x.id === el.dataset.id);
+    if (b) applyBlockGrid(el, b);
+  });
+  requestAnimationFrame(() => list.querySelectorAll('.block').forEach(setBlockRowSpan));
+}
+
+let _blockGridObs = null;
+function observeBlockGridWidth(list) {
+  if (_blockGridObs) { _blockGridObs.disconnect(); _blockGridObs = null; }
+  const parent = list && list.parentElement;
+  if (!parent || typeof ResizeObserver === 'undefined') return;
+  let last = -1;
+  _blockGridObs = new ResizeObserver(() => {
+    const w = parent.getBoundingClientRect().width;
+    if (Math.abs(w - last) < 0.5) return;
+    last = w;
+    relayoutBlockGrid();
+  });
+  _blockGridObs.observe(parent);
+}
+
+/* Read back what layoutBlockGrid decided, without re-measuring. */
+function blockGridMetrics(list) {
+  const totalCols = list ? +list.dataset.totalCols : 0;
+  const offset    = list ? +list.dataset.colOffset : 0;
+  return Number.isFinite(totalCols) && totalCols >= BLOCK_FRAME_COLS
+    ? { totalCols, offset: Number.isFinite(offset) ? offset : 0 }
+    : layoutBlockGrid(list);
+}
+
 function migrateBlockLayout(block) {
   if (block._half) { block._cols = 1; delete block._half; }
   if (block._colStart === undefined) {
@@ -2772,13 +2863,21 @@ function applyBlockGrid(el, block) {
   const cs    = block._colStart || 1;
   const align = block._align || 'left';
 
-  if (align === 'center') {
-    el.style.gridColumn = '1 / span 6';
-  } else if (align === 'right') {
-    el.style.gridColumn = `${Math.max(1, 7 - cols)} / span ${cols}`;
-  } else {
-    el.style.gridColumn = `${cs} / span ${cols}`;
-  }
+  // Frame-relative start → actual grid line. offset is 0 until the site is
+  // wide enough to have unlocked extra column pairs.
+  const { totalCols, offset } = blockGridMetrics(el.parentElement);
+  // Centred blocks span the whole frame and get their real width from
+  // .media-wrap below; the others span their own columns.
+  const span = align === 'center' ? BLOCK_FRAME_COLS : cols;
+  const frameStart =
+    align === 'center' ? 1 :
+    align === 'right'  ? Math.max(1, 7 - cols) :
+    cs;
+  // Clamp in grid-line space: a _colStart parked in a column that only exists
+  // at a wider site must not survive into a CSS grid-column, where 0 and
+  // negatives silently mean "count back from the last line".
+  const start = Math.max(1, Math.min(frameStart + offset, totalCols + 1 - span));
+  el.style.gridColumn = `${start} / span ${span}`;
 
   const mw = el.querySelector('.media-wrap');
   if (mw) {
@@ -2869,7 +2968,11 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
         } else if (align === 'right') {
           newSpan = Math.min(best.span, 6);
         } else {
-          newSpan = Math.min(best.span, 7 - startCS); // left: clamp so block doesn't overflow
+          // Clamp against the real last column, not the frame's — startCS is
+          // frame-relative and can sit outside 1..6 once the site is wide
+          // enough to have unlocked extra columns.
+          const { totalCols, offset } = blockGridMetrics(list);
+          newSpan = Math.min(best.span, totalCols + 1 - (startCS + offset));
         }
         if (newSpan !== (block._cols || 6)) {
           block._cols = newSpan;
@@ -4907,7 +5010,11 @@ function renderBlocks(animate) {
   if (proj0) proj0.blocks.forEach(b => { if (b._lottieInst) { try { b._lottieInst.destroy(); } catch(e){} b._lottieInst = null; } });
   list.innerHTML = '';
   const proj = PROJECTS[activeKey];
+  // Size the grid before the blocks go in, so makeBlockEl's applyBlockGrid
+  // reads the right column offset instead of laying out against a stale one.
+  layoutBlockGrid(list);
   proj.blocks.forEach(b => list.appendChild(makeBlockEl(b, proj)));
+  observeBlockGridWidth(list);
 
   requestAnimationFrame(() => {
     list.querySelectorAll('.block').forEach(setBlockRowSpan);
@@ -5392,9 +5499,16 @@ function startFreeDrag(e, wrap) {
   // of always capping at the original 6 — this is what actually lets a
   // block get dragged into the newly-available columns on a wider site.
   const lr        = list.getBoundingClientRect();
-  const colW      = BLOCK_COL_PITCH;
-  const totalCols = Math.max(6, Math.floor((lr.width + BLOCK_GAP_PX) / BLOCK_COL_PITCH));
-  const maxCS     = Math.max(1, totalCols + 1 - cols);
+  const { totalCols, offset } = blockGridMetrics(list);
+  // On a phone the grid falls back to six stretchy columns, so a column is
+  // whatever the list divides into rather than the fixed pitch.
+  const colW      = totalCols === BLOCK_FRAME_COLS && lr.width < BLOCK_FRAME_PX - 0.5
+                      ? (lr.width + BLOCK_GAP_PX) / BLOCK_FRAME_COLS
+                      : BLOCK_COL_PITCH;
+  // Drag limits live in grid-line space, then convert back to the
+  // frame-relative _colStart the block data actually stores.
+  const minCS     = 1 - offset;
+  const maxCS     = totalCols + 1 - cols - offset;
   const centerX   = lr.width / 2;
 
   function onMove(ev) {
@@ -5419,8 +5533,10 @@ function startFreeDrag(e, wrap) {
         lastAlign = 'left';
         block._align = 'left';
       }
-      const rawCS = Math.round((relX - (cols * colW) / 2) / colW) + 1;
-      const newCS = Math.max(1, Math.min(maxCS, rawCS));
+      // relX is measured from column 1's left edge; subtract the frame
+      // offset so what gets stored stays frame-relative.
+      const rawCS = Math.round((relX - (cols * colW) / 2) / colW) + 1 - offset;
+      const newCS = Math.max(minCS, Math.min(maxCS, rawCS));
       if (newCS !== lastCS) {
         lastCS = newCS;
         block._colStart = newCS;
@@ -5565,7 +5681,13 @@ function onDragEnd(e) {
   const proj = PROJECTS[activeKey];
 
   function setGrid(el, data, cols, cs) {
-    if (data) { data._cols = cols; data._colStart = cs; data._align = 'left'; }
+    if (data) {
+      data._cols = cols; data._colStart = cs; data._align = 'left';
+      // Go through applyBlockGrid rather than writing gridColumn here — cs is
+      // frame-relative and still needs the centring offset applied.
+      applyBlockGrid(el, data);
+      return;
+    }
     el.style.gridColumn = `${cs} / span ${cols}`;
     const mw = el.querySelector('.media-wrap');
     if (mw) { mw.style.width = ''; mw.style.marginLeft = ''; mw.style.marginRight = ''; }
@@ -7518,6 +7640,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const apply = (px) => {
     document.documentElement.style.setProperty('--site-width', px + 'px');
     val.textContent = px + 'px';
+    // Re-column the project grid straight away. The ResizeObserver in
+    // observeBlockGridWidth() covers window resizes, but driving it from here
+    // too keeps the slider exact rather than depending on observer timing.
+    relayoutBlockGrid();
   };
   slider.addEventListener('pointerdown', (e) => e.stopPropagation());
   slider.addEventListener('input', () => apply(+slider.value));
