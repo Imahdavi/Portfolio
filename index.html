@@ -2822,23 +2822,46 @@ const BLOCK_COL_PX = 74.33;
 const BLOCK_GAP_PX = 10;
 const BLOCK_COL_PITCH = BLOCK_COL_PX + BLOCK_GAP_PX;
 
-/* Every block's _colStart/_cols is expressed against a 6-column frame —
-   that's what the data has always meant and what "Full" still is. */
+/* "Full" is still 6 columns — that's what the width presets mean — but a
+   block is no longer limited to it, and _colStart is free to sit outside
+   1..6 once a board has been spread wider. */
 const BLOCK_FRAME_COLS = 6;
-const BLOCK_FRAME_PX =
-  BLOCK_FRAME_COLS * BLOCK_COL_PX + (BLOCK_FRAME_COLS - 1) * BLOCK_GAP_PX; // 495.98
+const BLOCK_MAX_SPAN   = 12;
 
-/* Size the block grid and work out where the 6-column frame sits inside it.
-   Widening the site adds columns in PAIRS — one on each side — and the frame
-   is offset by half of them, so existing blocks stay centred and the new room
-   opens up symmetrically instead of all of it appearing off to the right.
+const colsToPx = n => n * BLOCK_COL_PX + (n - 1) * BLOCK_GAP_PX;
 
-   Below the frame width (phones) fixed 74.33px columns can't fit six of them,
-   and a `span 6` block would silently get 0px-wide implicit columns tacked on
-   — two blocks with identical _cols rendering at different widths. There we
-   fall back to the original six stretchy columns, which always fit exactly. */
+/* How many columns this board actually uses, and where it starts. _colStart
+   is an absolute position on an open-ended axis (it can be 0 or negative),
+   so the only meaningful frame is the span the blocks themselves cover. */
+function blockExtent(proj) {
+  let minStart = Infinity, maxEnd = -Infinity;
+  ((proj && proj.blocks) || []).forEach(b => {
+    const cols  = b._cols || 6;
+    // Centre/right blocks are placed relative to the extent, not part of it,
+    // so they'd be circular to include — count them from column 1.
+    const start = (b._align || 'left') === 'left' ? (b._colStart || 1) : 1;
+    if (start < minStart) minStart = start;
+    if (start + cols - 1 > maxEnd) maxEnd = start + cols - 1;
+  });
+  if (!isFinite(minStart)) { minStart = 1; maxEnd = BLOCK_FRAME_COLS; }
+  return { minStart, occCols: Math.max(1, maxEnd - minStart + 1) };
+}
+
+/* Size the grid and place the board inside it.
+
+   The board is centred on the columns it ACTUALLY occupies, in pixels — not
+   on a fixed 6-column frame. Centring on a fixed frame only lines up when the
+   content happens to be that wide, which is why a board spread over 9 columns
+   still sat half a column off. Spare columns for dragging into are added in
+   equal numbers on both sides, and the leftover fraction is taken up by the
+   grid's own left margin, so the centring is exact at any column count.
+
+   If the board is wider than the space available (a phone, mostly), fixed
+   columns can't fit and pinning every block to a column it no longer has
+   would pile them on top of each other. There the grid switches to stretchy
+   columns instead, keeping the arrangement but scaling it down to fit. */
 function layoutBlockGrid(list) {
-  if (!list) return { totalCols: BLOCK_FRAME_COLS, offset: 0 };
+  if (!list) return { totalCols: BLOCK_FRAME_COLS, lead: 0, minStart: 1, occCols: BLOCK_FRAME_COLS, fluid: false };
   const parent = list.parentElement;
   let avail = list.clientWidth;
   if (parent) {
@@ -2847,29 +2870,41 @@ function layoutBlockGrid(list) {
           - parseFloat(pcs.paddingLeft) - parseFloat(pcs.paddingRight);
   }
 
-  let totalCols, offset;
-  if (avail < BLOCK_FRAME_PX - 0.5) {
-    totalCols = BLOCK_FRAME_COLS;
-    offset    = 0;
-    list.style.gridTemplateColumns = `repeat(${BLOCK_FRAME_COLS}, 1fr)`;
-    list.style.width        = '';
-    list.style.marginInline = '';
+  const { minStart, occCols } = blockExtent(PROJECTS[activeKey]);
+  const occPx = colsToPx(occCols);
+
+  let totalCols = occCols, lead = 0, fluid = false;
+
+  if (occPx > avail + 0.5) {
+    fluid = true;
+    list.style.gridTemplateColumns = `repeat(${occCols}, 1fr)`;
+    list.style.width      = '';
+    list.style.marginLeft = '';
+    list.style.marginRight = '';
   } else {
     const fits = Math.floor((avail + BLOCK_GAP_PX) / BLOCK_COL_PITCH);
-    const pairs = Math.max(0, Math.floor((fits - BLOCK_FRAME_COLS) / 2));
-    totalCols = BLOCK_FRAME_COLS + pairs * 2;
-    offset    = pairs;
+    lead = Math.max(0, Math.floor((fits - occCols) / 2));
+    let gridW, ml;
+    for (;;) {
+      totalCols = occCols + lead * 2;
+      gridW = colsToPx(totalCols);
+      ml    = (avail - occPx) / 2 - lead * BLOCK_COL_PITCH;
+      // Drop a pair of spare columns if they'd hang outside the view.
+      if (lead === 0 || (ml >= -0.5 && ml + gridW <= avail + 0.5)) break;
+      lead--;
+    }
     list.style.gridTemplateColumns = `repeat(${totalCols}, ${BLOCK_COL_PX}px)`;
-    // Exact width + auto margins, so the list's own left edge IS column 1 —
-    // the drag/resize math can keep measuring from getBoundingClientRect().
-    list.style.width        =
-      (totalCols * BLOCK_COL_PX + (totalCols - 1) * BLOCK_GAP_PX) + 'px';
-    list.style.marginInline = 'auto';
+    list.style.width       = gridW + 'px';
+    list.style.marginLeft  = Math.max(0, ml) + 'px';
+    list.style.marginRight = '0px';
   }
 
   list.dataset.totalCols = totalCols;
-  list.dataset.colOffset = offset;
-  return { totalCols, offset };
+  list.dataset.lead      = lead;
+  list.dataset.minStart  = minStart;
+  list.dataset.occCols   = occCols;
+  list.dataset.fluid     = fluid ? '1' : '';
+  return { totalCols, lead, minStart, occCols, fluid };
 }
 
 /* Re-run the grid sizing whenever the space around the list changes — the
@@ -2878,10 +2913,7 @@ function layoutBlockGrid(list) {
 function relayoutBlockGrid() {
   const list = document.getElementById('block-list');
   if (!list) return;
-  const prevCols   = list.dataset.totalCols;
-  const prevOffset = list.dataset.colOffset;
   layoutBlockGrid(list);
-  if (list.dataset.totalCols === prevCols && list.dataset.colOffset === prevOffset) return;
   const proj = PROJECTS[activeKey];
   if (!proj) return;
   list.querySelectorAll('.block').forEach(el => {
@@ -2909,10 +2941,14 @@ function observeBlockGridWidth(list) {
 /* Read back what layoutBlockGrid decided, without re-measuring. */
 function blockGridMetrics(list) {
   const totalCols = list ? +list.dataset.totalCols : 0;
-  const offset    = list ? +list.dataset.colOffset : 0;
-  return Number.isFinite(totalCols) && totalCols >= BLOCK_FRAME_COLS
-    ? { totalCols, offset: Number.isFinite(offset) ? offset : 0 }
-    : layoutBlockGrid(list);
+  if (!Number.isFinite(totalCols) || totalCols < 1) return layoutBlockGrid(list);
+  return {
+    totalCols,
+    lead:     +list.dataset.lead     || 0,
+    minStart: +list.dataset.minStart || 1,
+    occCols:  +list.dataset.occCols  || totalCols,
+    fluid:    list.dataset.fluid === '1'
+  };
 }
 
 function migrateBlockLayout(block) {
@@ -2938,26 +2974,36 @@ function applyBlockGrid(el, block) {
   const cs    = block._colStart || 1;
   const align = block._align || 'left';
 
-  // Frame-relative start → actual grid line. offset is 0 until the site is
-  // wide enough to have unlocked extra column pairs.
-  const { totalCols, offset } = blockGridMetrics(el.parentElement);
-  // Centred blocks span the whole frame and get their real width from
-  // .media-wrap below; the others span their own columns.
-  const span = align === 'center' ? BLOCK_FRAME_COLS : cols;
-  const frameStart =
-    align === 'center' ? 1 :
-    align === 'right'  ? Math.max(1, 7 - cols) :
-    cs;
-  // Clamp in grid-line space: a _colStart parked in a column that only exists
-  // at a wider site must not survive into a CSS grid-column, where 0 and
-  // negatives silently mean "count back from the last line".
-  const start = Math.max(1, Math.min(frameStart + offset, totalCols + 1 - span));
+  // _colStart lives on an open-ended axis; the grid starts at the board's own
+  // first column (minStart) plus however many spare columns sit on the left.
+  const m = blockGridMetrics(el.parentElement);
+  let span, start;
+  if (align === 'center') {
+    // Spans the whole board so the media can centre across it; the real width
+    // comes from .media-wrap below.
+    span  = m.occCols;
+    start = 1 + m.lead;
+  } else if (align === 'right') {
+    span  = Math.min(cols, m.occCols);
+    start = m.lead + m.occCols - span + 1;
+  } else {
+    span  = cols;
+    start = cs - m.minStart + 1 + m.lead;
+  }
+  span  = Math.max(1, Math.min(span, m.totalCols));
+  // A grid-column of 0 or less quietly counts back from the last line rather
+  // than erroring, so keep it in range whatever the data says.
+  start = Math.max(1, Math.min(start, m.totalCols + 1 - span));
   el.style.gridColumn = `${start} / span ${span}`;
 
   const mw = el.querySelector('.media-wrap');
   if (mw) {
     if (align === 'center') {
-      mw.style.width       = (cols / 6 * 100).toFixed(2) + '%';
+      // Exact px while the columns are a fixed size, a share of the board when
+      // they're stretchy — either way it's the width of `cols` columns.
+      mw.style.width       = m.fluid
+        ? (Math.min(cols, m.occCols) / m.occCols * 100).toFixed(2) + '%'
+        : colsToPx(Math.min(cols, m.occCols)) + 'px';
       mw.style.marginLeft  = 'auto';
       mw.style.marginRight = 'auto';
     } else {
@@ -3017,11 +3063,16 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
     const startCS   = block._colStart || 1;
     const list      = wrap ? wrap.parentElement : null;
 
+    // Past "Full" the block spills into the columns either side of the
+    // original six — the board just grows and re-centres around it.
     const COL_SNAPS = [
-      { span:2, label:'1/3' },
-      { span:3, label:'1/2' },
-      { span:4, label:'2/3' },
-      { span:6, label:'Full'},
+      { span:2,  label:'1/3'  },
+      { span:3,  label:'1/2'  },
+      { span:4,  label:'2/3'  },
+      { span:6,  label:'Full' },
+      { span:8,  label:'Wide' },
+      { span:10, label:'Wider'},
+      { span:12, label:'Max'  },
     ];
 
     function onMove(e) {
@@ -3029,29 +3080,30 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
 
       // ── Horizontal: update column span immediately ─────────────
       if (list) {
-        const colW    = BLOCK_COL_PITCH; // fixed — list.offsetWidth/6 used to double as column width back when columns were 6 stretchy 1fr tracks; now they're a fixed size regardless of the container's width
+        const m0      = blockGridMetrics(list);
+        // A column is the fixed pitch, unless the board had to fall back to
+        // stretchy columns to fit, in which case it's whatever they came out to.
+        const colW    = m0.fluid
+          ? (list.getBoundingClientRect().width + BLOCK_GAP_PX) / Math.max(1, m0.totalCols)
+          : BLOCK_COL_PITCH;
         const startW  = colW * startSpan;
         const rawSpan = Math.max(0.6, (startW + (e.clientX - startX)) / colW);
         let best = COL_SNAPS[0];
         for (const s of COL_SNAPS) {
           if (Math.abs(rawSpan - s.span) < Math.abs(rawSpan - best.span)) best = s;
         }
+        // Growing past the board's current width just widens the board — the
+        // relayout below re-centres everything around it — so the only cap is
+        // BLOCK_MAX_SPAN. Right-aligned blocks stay within the board.
         const align = block._align || 'left';
-        let newSpan;
-        if (align === 'center') {
-          newSpan = best.span; // centered: any width OK, applyBlockGrid updates mw.style.width
-        } else if (align === 'right') {
-          newSpan = Math.min(best.span, 6);
-        } else {
-          // Clamp against the real last column, not the frame's — startCS is
-          // frame-relative and can sit outside 1..6 once the site is wide
-          // enough to have unlocked extra columns.
-          const { totalCols, offset } = blockGridMetrics(list);
-          newSpan = Math.min(best.span, totalCols + 1 - (startCS + offset));
-        }
+        const newSpan = align === 'right'
+          ? Math.min(best.span, m0.occCols)
+          : Math.min(best.span, BLOCK_MAX_SPAN);
         if (newSpan !== (block._cols || 6)) {
           block._cols = newSpan;
-          applyBlockGrid(wrap, block);
+          // Re-lay the whole board out: this block may have just changed how
+          // many columns the board spans, which moves every other block.
+          relayoutBlockGrid();
         }
       }
 
@@ -3106,6 +3158,7 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       snapLbl.classList.remove('show');
+      relayoutBlockGrid();
       if (activeKey) saveProject(activeKey);
     }
 
@@ -5453,7 +5506,8 @@ function makeBlockEl(block, proj) {
         e.stopPropagation();
         block._cols = p.cols;
         if ((block._align || 'left') !== 'center') block._colStart = 1;
-        applyBlockGrid(wrap, block);
+        // Changing a width can change how wide the whole board is.
+        relayoutBlockGrid();
         posGrid.querySelectorAll('.pos-opt').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         requestAnimationFrame(() => setBlockRowSpan(wrap));
@@ -5587,18 +5641,19 @@ function startFreeDrag(e, wrap) {
   // fixed-width columns actually fit at the current site width instead
   // of always capping at the original 6 — this is what actually lets a
   // block get dragged into the newly-available columns on a wider site.
-  const lr        = list.getBoundingClientRect();
-  const { totalCols, offset } = blockGridMetrics(list);
-  // On a phone the grid falls back to six stretchy columns, so a column is
-  // whatever the list divides into rather than the fixed pitch.
-  const colW      = totalCols === BLOCK_FRAME_COLS && lr.width < BLOCK_FRAME_PX - 0.5
-                      ? (lr.width + BLOCK_GAP_PX) / BLOCK_FRAME_COLS
-                      : BLOCK_COL_PITCH;
-  // Drag limits live in grid-line space, then convert back to the
-  // frame-relative _colStart the block data actually stores.
-  const minCS     = 1 - offset;
-  const maxCS     = totalCols + 1 - cols - offset;
-  const centerX   = lr.width / 2;
+  const lr = list.getBoundingClientRect();
+  // Metrics are read once for the whole gesture. They'd otherwise shift under
+  // the cursor as the board's extent changes with the block being dragged.
+  const m  = blockGridMetrics(list);
+  // A column is the fixed pitch unless the board fell back to stretchy columns.
+  const colW    = m.fluid
+    ? (lr.width + BLOCK_GAP_PX) / Math.max(1, m.totalCols)
+    : BLOCK_COL_PITCH;
+  // Limits are in grid-line space; _colStart is then read back off the same
+  // open-ended axis the board's extent is measured on.
+  const maxRS   = Math.max(1, m.totalCols + 1 - cols);
+  const toCS    = rs => rs - m.lead - 1 + m.minStart;
+  const centerX = lr.width / 2;
 
   function onMove(ev) {
     // Don't start until cursor has actually moved (prevents click-jump)
@@ -5622,10 +5677,10 @@ function startFreeDrag(e, wrap) {
         lastAlign = 'left';
         block._align = 'left';
       }
-      // relX is measured from column 1's left edge; subtract the frame
-      // offset so what gets stored stays frame-relative.
-      const rawCS = Math.round((relX - (cols * colW) / 2) / colW) + 1 - offset;
-      const newCS = Math.max(minCS, Math.min(maxCS, rawCS));
+      // relX is measured from the grid's first column; convert the grid line
+      // the cursor lands on back to a _colStart.
+      const rawRS = Math.round((relX - (cols * colW) / 2) / colW) + 1;
+      const newCS = toCS(Math.max(1, Math.min(maxRS, rawRS)));
       if (newCS !== lastCS) {
         lastCS = newCS;
         block._colStart = newCS;
@@ -5659,6 +5714,8 @@ function startFreeDrag(e, wrap) {
     const newOrder = [...list.querySelectorAll('.block')].map(el => el.dataset.id);
     proj.blocks = newOrder.map(id => proj.blocks.find(b => b.id === id)).filter(Boolean);
 
+    // The board's extent may have moved with this block — re-centre on it.
+    relayoutBlockGrid();
     requestAnimationFrame(() => list.querySelectorAll('.block').forEach(setBlockRowSpan));
     if (activeKey) saveProject(activeKey);
   }
@@ -5813,6 +5870,7 @@ function onDragEnd(e) {
   const newOrder = [...list.querySelectorAll('.block')].map(el => el.dataset.id);
   proj.blocks = newOrder.map(id => proj.blocks.find(b => b.id === id)).filter(Boolean);
 
+  relayoutBlockGrid();
   requestAnimationFrame(() => list.querySelectorAll('.block').forEach(setBlockRowSpan));
 
   dropTarget = null; dropSide = null; dragEl = null;
