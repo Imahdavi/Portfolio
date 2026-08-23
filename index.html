@@ -316,7 +316,8 @@
     .game-stage {
       position:relative;
       border-radius:20px;
-      background:#0e1113;
+      background:#f2efe9;
+      border:0.5px solid rgba(0,0,0,.07);
       padding:14px;
       overflow:hidden;
       /* No page scroll / text selection while dragging the racket. */
@@ -330,22 +331,22 @@
       position:absolute; top:16px; left:0; right:0;
       display:flex; justify-content:center; gap:8px;
       font-variant-numeric:tabular-nums; font-size:15px; font-weight:600;
-      color:rgba(255,255,255,.5); pointer-events:none; z-index:2;
+      color:rgba(0,0,0,.32); pointer-events:none; z-index:2;
     }
-    .game-score-cpu { color:#ef5350; }
-    .game-score-you { color:#7ec8ef; }
+    .game-score-cpu { color:#d0413a; }
+    .game-score-you { color:#2f77a6; }
 
     .game-overlay {
       position:absolute; inset:14px; border-radius:10px;
       display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
-      background:rgba(8,10,11,.72); backdrop-filter:blur(3px);
+      background:rgba(242,239,233,.82); backdrop-filter:blur(3px);
       z-index:3; transition:opacity .2s ease;
     }
     .game-overlay.hide { opacity:0; pointer-events:none; }
-    .game-overlay-title { font-family:var(--font-heading); font-size:22px; color:#fff; text-align:center; padding:0 20px; }
+    .game-overlay-title { font-family:var(--font-heading); font-size:22px; color:#2c2725; text-align:center; padding:0 20px; }
     .game-btn {
       border:0; border-radius:999px; padding:10px 26px; cursor:pointer;
-      background:#fff; color:#14181a; font-size:14px; font-weight:600;
+      background:#2c2725; color:#f7f5f1; font-size:14px; font-weight:600;
       font-family:inherit; transition:transform .15s ease;
     }
     .game-btn:hover  { transform:translateY(-2px); }
@@ -8031,6 +8032,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let raf = 0, lastTs = 0, running = false, started = false;
   let scoreYou = 0, scoreCpu = 0;
   let serveTimer = 0;
+  let cpuErr = 0, cpuLastVy = 0;
 
   const ball   = { x: 0, y: 0, vx: 0, vy: 0, speed: 0, trail: [] };
   const you    = { x: 0, y: 0, tx: 0, vx: 0 };
@@ -8091,7 +8093,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function resetBall(dir) {
     ball.x = W / 2;
     ball.y = H / 2;
-    ball.speed = 4.4;
+    ball.speed = 7.2;
     ball.trail.length = 0;
     // Serve at a shallow-ish angle so the first touch is always reachable.
     const ang = (Math.random() * 0.5 - 0.25);
@@ -8113,7 +8115,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // Serve towards whoever just conceded.
     resetBall(who === 'you' ? -1 : 1);
-    serveTimer = 750;
+    serveTimer = 520;
   }
 
   function step(ts) {
@@ -8134,17 +8136,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Your racket: ease towards the pointer, keep a velocity for spin ──
     const prevX = you.x;
-    you.x += (you.tx - you.x) * Math.min(1, 0.28 * f);
+    you.x += (you.tx - you.x) * Math.min(1, 0.45 * f);
     you.x = clamp(you.x, t.l + PAD_RX * 0.4, t.r - PAD_RX * 0.4);
     you.vx = (you.x - prevX) / Math.max(f, 0.001);
 
-    // ── CPU: chases the ball, but only reacts once it's on its side, and
-    //    with a capped speed + aim error so it stays beatable. ──
-    const lead = ball.vy < 0 ? ball.x : W / 2;
+    // ── CPU: chases the ball, but only reacts once it's coming at it, and
+    //    aims at a spot that's deliberately off by a bit. Its top speed is
+    //    tied to the current rally speed, otherwise a fast rally would
+    //    simply outrun it and every long point would be a free one. ──
+    if (ball.vy < 0 && cpuLastVy >= 0) cpuErr = (Math.random() * 2 - 1) * PAD_RX * 0.5;
+    cpuLastVy = ball.vy;
+    const lead = ball.vy < 0 ? ball.x + cpuErr : W / 2;
     const diff = lead - cpu.x;
-    const skill = 0.55 + Math.min(scoreCpu, 5) * 0.045;
-    const cpuMax = (2.9 + Math.min(scoreYou, 6) * 0.32) * f;
-    cpu.vx = clamp(diff * skill * 0.1 * f, -cpuMax, cpuMax);
+    const skill = 0.62 + Math.min(scoreCpu, 5) * 0.05;
+    const cpuMax = (ball.speed * 0.58 + 1.2 + Math.min(scoreYou, 6) * 0.3) * f;
+    cpu.vx = clamp(diff * skill * 0.17 * f, -cpuMax, cpuMax);
     cpu.x = clamp(cpu.x + cpu.vx, t.l + PAD_RX * 0.4, t.r - PAD_RX * 0.4);
 
     // ── Ball ──
@@ -8180,7 +8186,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (side > 0) ang += clamp(p.vx * 0.035, -0.28, 0.28); // your swing adds spin
     ang = clamp(ang, -MAX_BOUNCE_ANGLE, MAX_BOUNCE_ANGLE);
 
-    ball.speed = Math.min(ball.speed + 0.28, 11.5);
+    ball.speed = Math.min(ball.speed + 0.42, 16.5);
     ball.vx = Math.sin(ang) * ball.speed;
     ball.vy = -side * Math.abs(Math.cos(ang) * ball.speed);
     // Push clear of the blade so it can't register twice on one pass.
@@ -8197,25 +8203,68 @@ document.addEventListener('DOMContentLoaded', () => {
     c.arcTo(x, y, x + w, y, r); c.closePath();
   }
 
-  function racket(c, x, y, blade, rim, rot) {
+  /* Built up in layers so the racket reads as a solid object rather than a
+     flat ellipse: cast shadow, wooden handle, the rubber's edge seen from
+     slightly above, the top face shaded from the upper-left, then a rim and
+     a specular highlight. */
+  function racket(c, x, y, col, rot) {
     c.save();
     c.translate(x, y);
     c.rotate(rot);
-    // handle
-    c.fillStyle = '#b07b4d';
-    roundRect(c, -6, PAD_RY - 3, 12, 30, 6); c.fill();
-    // blade
+
+    // 1. cast shadow on the table
+    c.save();
+    c.shadowColor = 'rgba(0,0,0,.38)';
+    c.shadowBlur = 10; c.shadowOffsetX = 2; c.shadowOffsetY = 5;
     c.beginPath(); c.ellipse(0, 0, PAD_RX, PAD_RY, 0, 0, Math.PI * 2);
-    c.fillStyle = blade; c.fill();
-    c.lineWidth = 2; c.strokeStyle = rim; c.stroke();
+    c.fillStyle = 'rgba(0,0,0,.9)'; c.fill();
+    c.restore();
+
+    // 2. handle, behind the blade
+    const hg = c.createLinearGradient(-7, 0, 7, 0);
+    hg.addColorStop(0,   '#8a5a33');
+    hg.addColorStop(0.35,'#cf9a63');
+    hg.addColorStop(0.7, '#b07b4d');
+    hg.addColorStop(1,   '#7d4f2c');
+    c.fillStyle = hg;
+    roundRect(c, -7, PAD_RY - 6, 14, 32, 6); c.fill();
+    c.strokeStyle = 'rgba(60,34,15,.5)'; c.lineWidth = 1; c.stroke();
+
+    // 3. the blade's edge — a darker copy nudged down gives it thickness
+    c.beginPath(); c.ellipse(0, 3.5, PAD_RX, PAD_RY, 0, 0, Math.PI * 2);
+    c.fillStyle = col.dark; c.fill();
+
+    // 4. top face, lit from the upper left
+    const bg = c.createRadialGradient(-PAD_RX * 0.38, -PAD_RY * 0.5, 2,
+                                       0, 0, PAD_RX * 1.15);
+    bg.addColorStop(0,    col.light);
+    bg.addColorStop(0.55, col.base);
+    bg.addColorStop(1,    col.deep);
+    c.beginPath(); c.ellipse(0, 0, PAD_RX, PAD_RY, 0, 0, Math.PI * 2);
+    c.fillStyle = bg; c.fill();
+
+    // 5. rim
+    c.lineWidth = 1.6; c.strokeStyle = col.rim; c.stroke();
+
+    // 6. specular highlight
+    c.save();
+    c.globalAlpha = 0.4;
+    c.beginPath();
+    c.ellipse(-PAD_RX * 0.34, -PAD_RY * 0.42, PAD_RX * 0.34, PAD_RY * 0.26,
+              -0.5, 0, Math.PI * 2);
+    c.fillStyle = '#fff'; c.fill();
+    c.restore();
+
     c.restore();
   }
+  const RED_RACKET  = { light:'#ff8a7e', base:'#d8392f', deep:'#a72a22', dark:'#7c1c16', rim:'#f0a49c' };
+  const BLUE_RACKET = { light:'#8fd4f5', base:'#2f7fae', deep:'#215f85', dark:'#154a68', rim:'#a5dcf7' };
 
   function draw() {
     if (!ctx) return;
     const t = table();
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#0e1113';
+    ctx.fillStyle = '#f2efe9';
     ctx.fillRect(0, 0, W, H);
 
     // Table
@@ -8247,15 +8296,24 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.fill();
     }
 
-    racket(ctx, cpu.x, cpu.y, '#e0473f', '#f38b85', Math.PI);
-    racket(ctx, you.x, you.y, '#3f87b5', '#8ecdf0', 0);
+    racket(ctx, cpu.x, cpu.y, RED_RACKET,  Math.PI);
+    racket(ctx, you.x, you.y, BLUE_RACKET, 0);
 
-    // Ball
+    // Ball — shaded the same way as the rackets so it sits on the table
+    // rather than floating, and rimmed so it still reads off the green.
     ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 7; ctx.shadowOffsetY = 3;
+    ctx.shadowColor = 'rgba(0,0,0,.42)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 4;
     ctx.beginPath(); ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff'; ctx.fill();
+    const ballG = ctx.createRadialGradient(
+      ball.x - BALL_R * 0.35, ball.y - BALL_R * 0.4, 1,
+      ball.x, ball.y, BALL_R * 1.1);
+    ballG.addColorStop(0, '#ffffff');
+    ballG.addColorStop(0.6, '#f6f3ea');
+    ballG.addColorStop(1, '#d9d3c4');
+    ctx.fillStyle = ballG; ctx.fill();
     ctx.restore();
+    ctx.beginPath(); ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2);
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(90,80,60,.35)'; ctx.stroke();
   }
 
   /* ── Overlay + lifecycle ── */
@@ -8270,7 +8328,7 @@ document.addEventListener('DOMContentLoaded', () => {
     scoreYou = 0; scoreCpu = 0;
     scoreYouEl.textContent = '0'; scoreCpuEl.textContent = '0';
     resetBall(Math.random() < 0.5 ? 1 : -1);
-    serveTimer = 600;
+    serveTimer = 450;
     started = true;
     hideOverlay();
     blip(660, 0.09, 'triangle', 0.05); // also unlocks the AudioContext
