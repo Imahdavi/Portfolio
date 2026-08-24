@@ -2075,8 +2075,10 @@
               <button class="avatar-edit-btn" title="Change photo" onclick="avatarOpenPicker(event)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
               </button>
-              <!-- swap src="" with your photo path -->
-              <img src="" id="pfAv" alt="Alireza Mahdavi"><script>(function(){var u=localStorage.getItem('pf_avatar');if(u)document.getElementById('pfAv').src=u;})()</script>
+              <!-- Falls back to the bundled avatar.jpg whenever the stored
+                   photo can't load (backend down, or a stale cached URL in
+                   localStorage), so the profile never renders as a blank box. -->
+              <img src="/avatar.jpg" id="pfAv" alt="Alireza Mahdavi" onerror="this.onerror=null;this.src='/avatar.jpg'"><script>(function(){var u=localStorage.getItem('pf_avatar');if(u)document.getElementById('pfAv').src=u;})()</script>
             </div>
           </div>
         </div>
@@ -4453,7 +4455,13 @@ function renderHomeSections(sections) {
       el.className = 'proj-card';
       el.onclick = () => openProject(card.key);
       const thumbBg = card.thumb ? '' : ' style="background:linear-gradient(135deg,#e8e0d8,#c8bdb4)"';
-      const thumbImg = card.thumb ? `<img src="${card.thumb}" alt="${card.name}"/>` : '';
+      // Same gradient the no-thumb case uses, reapplied if the image itself
+      // fails to load (backend down, or the thumb was deleted) so the card
+      // degrades to a clean placeholder instead of a broken-image icon.
+      // Paint the parent before remove() — removing first nulls parentNode.
+      // The if(p) guard covers the image erroring after a re-render already
+      // detached it, which would otherwise throw on p.style.
+      const thumbImg = card.thumb ? `<img src="${card.thumb}" alt="${card.name}" onerror="var p=this.parentNode;if(p)p.style.background='linear-gradient(135deg,#e8e0d8,#c8bdb4)';this.remove()"/>` : '';
       el.dataset.key = card.key;
       if (card.hidden) el.dataset.hidden = 'true';
       el.innerHTML = `<div class="proj-thumb"${thumbBg}>${thumbImg}</div><div class="proj-title">${card.name}</div><div class="proj-sub">${card.sub||''}</div>`;
@@ -4500,6 +4508,10 @@ function markBackendDown() {
 }
 
 /* ─── Default sections (shown when Supabase has no sections saved) ── */
+/* Mirrors the sections currently saved in settings, so an outage falls back
+   to the real card list instead of an older, shorter one. Thumbs stay empty
+   on purpose — the thumb images live in the backend that's unavailable in
+   exactly the case this list is used for, and .proj-thumb's gradient covers it. */
 const DEFAULT_SECTIONS = [
   { title: 'Works', cards: [
     { key: 'lina',   name: 'Lina',        sub: 'Food & snacks brand', thumb: '' },
@@ -4511,7 +4523,9 @@ const DEFAULT_SECTIONS = [
     { key: 'social', name: 'Social Media',sub: 'Instagram, X Content',        thumb: '' },
     { key: 'ui',     name: 'Ui Motion',   sub: 'Interaction, Web, App',       thumb: '' },
     { key: 'edit',   name: 'Documentary', sub: 'Thesis & personal documentaries', thumb: '' },
-    { key: 'web',    name: 'Banners & Cubox', sub: 'Banners & interactive Cubox displays', thumb: '' },
+    { key: 'web',    name: 'Cubox & LED display', sub: 'LED & interactive Cubox displays', thumb: '' },
+    { key: 'card-drkjhl2', name: 'Youtube', sub: 'Vlogs & music video edits', thumb: '' },
+    { key: 'card-fgnupcb', name: 'Banner',  sub: 'Ads banner web',            thumb: '' },
   ]},
 ];
 
