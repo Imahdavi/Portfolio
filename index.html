@@ -1351,9 +1351,27 @@
     .media-wrap .media-inner {
       position:relative; border-radius:20px; overflow:hidden;
       background:#111; width:100%; height:auto;
+      /* A rounded + clipped element that also gets a 3D transform (the
+         hover tilt below) loses its corner anti-aliasing on Chromium —
+         the curve snaps to a jagged pixel edge the instant the tilt
+         starts. Forcing the clip through a mask instead of plain
+         overflow keeps it smooth under a transform; backface-visibility
+         avoids a related flicker on the same GPU layer. */
+      -webkit-mask-image:-webkit-radial-gradient(circle, #fff, #000);
+      -webkit-backface-visibility:hidden; backface-visibility:hidden;
     }
     .media-wrap img, .media-wrap video {
       width:100%; height:100%; object-fit:cover; display:block; pointer-events:none;
+    }
+
+    /* Media tilt glare — ported from a shadcn/motion "TiltCard" component's
+       radial-gradient sheen (see mediaTilt IIFE near the end of the script
+       for the cursor-tracked rotate + this layer's position, which are the
+       source's own math). overlay blend reads as a glass reflection on top
+       of real photos/video instead of a flat white wash. */
+    .media-tilt-glare {
+      position:absolute; inset:0; z-index:5; pointer-events:none;
+      opacity:0; transition:opacity .25s ease; mix-blend-mode:overlay;
     }
 
     /* Custom freehand resize corner — lives inside media-inner */
@@ -8480,6 +8498,90 @@ document.addEventListener('DOMContentLoaded', () => {
       else if (document.getElementById('view-game').classList.contains('active')) window.startGame();
     });
   });
+})();
+</script>
+
+<script>
+/* ── Media tilt + glare ──────────────────────────────────────
+   Ported from a shadcn/motion "TiltCard" component. The cursor-driven
+   3D tilt (rotateX/rotateY toward the pointer, eased rather than
+   snapping) and the radial-gradient glare that tracks the same
+   pointer position are the source's own math, unchanged — re-done as
+   a plain rAF lerp loop since this page has no framer-motion/`motion`
+   library, and wired to every media block's .media-inner through one
+   delegated listener on #block-list instead of a per-card React
+   component. Gated exactly like the source's own hooks: skipped on
+   touch/coarse pointers and prefers-reduced-motion (useHoverCapable +
+   useReducedMotion), and also skipped in edit mode here, since that's
+   when resize-corner dragging needs uncontested mouse control over
+   the same element. */
+(function () {
+  if (!window.matchMedia) return;
+  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const MAX_TILT = 12; // degrees — the component's own default
+  const list = document.getElementById('block-list');
+  if (!list) return;
+
+  let activeEl = null;
+  let targetRX = 0, targetRY = 0, curRX = 0, curRY = 0, rafId = 0;
+
+  function ensureGlare(el) {
+    let g = el.querySelector(':scope > .media-tilt-glare');
+    if (!g) { g = document.createElement('div'); g.className = 'media-tilt-glare'; el.appendChild(g); }
+    return g;
+  }
+
+  function clear(el) {
+    if (!el) return;
+    el.style.transform = '';
+    const g = el.querySelector(':scope > .media-tilt-glare');
+    if (g) g.style.opacity = '0';
+  }
+
+  function tick() {
+    curRX += (targetRX - curRX) * 0.18;
+    curRY += (targetRY - curRY) * 0.18;
+    if (activeEl) {
+      activeEl.style.transform = `perspective(1000px) rotateX(${curRX.toFixed(3)}deg) rotateY(${curRY.toFixed(3)}deg)`;
+    }
+    if (Math.abs(targetRX - curRX) > 0.02 || Math.abs(targetRY - curRY) > 0.02) {
+      rafId = requestAnimationFrame(tick);
+    } else {
+      rafId = 0;
+    }
+  }
+  function kick() { if (!rafId) rafId = requestAnimationFrame(tick); }
+
+  list.addEventListener('mousemove', (e) => {
+    if (typeof editMode !== 'undefined' && editMode) {
+      if (activeEl) { clear(activeEl); activeEl = null; curRX = curRY = targetRX = targetRY = 0; }
+      return;
+    }
+    const inner = e.target.closest('.media-inner');
+    if (!inner) return;
+    if (inner !== activeEl) {
+      clear(activeEl);
+      activeEl = inner;
+      curRX = 0; curRY = 0;
+    }
+    const rect = inner.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width;
+    const py = (e.clientY - rect.top) / rect.height;
+    targetRY = (px - 0.5) * MAX_TILT;
+    targetRX = (0.5 - py) * MAX_TILT;
+    kick();
+    const g = ensureGlare(inner);
+    g.style.background = `radial-gradient(circle at ${(px * 100).toFixed(1)}% ${(py * 100).toFixed(1)}%, rgba(255,255,255,.35), transparent 50%)`;
+    g.style.opacity = '0.6';
+  });
+
+  list.addEventListener('mouseleave', () => {
+    targetRX = 0; targetRY = 0;
+    kick();
+    if (activeEl) { const g = activeEl.querySelector(':scope > .media-tilt-glare'); if (g) g.style.opacity = '0'; }
+  }, true);
 })();
 </script>
 </body>
