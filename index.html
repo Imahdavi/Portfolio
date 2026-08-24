@@ -1795,6 +1795,27 @@
       pointer-events:none;
     }
     .nav-limelight.ready { transition:left .4s cubic-bezier(.4,0,.2,1); }
+
+    /* "We're down" banner — sits below #bottom-nav's floating pill
+       (bottom:50px) rather than behind/over it, so both stay usable. Hidden
+       until markBackendDown() adds .show; pure opacity/translate, no layout
+       shift for the (overwhelmingly common) case where it never appears. */
+    .backend-down-banner {
+      position:fixed; left:50%; bottom:14px; transform:translateX(-50%) translateY(8px);
+      z-index:190;
+      display:flex; align-items:center; gap:8px;
+      padding:9px 16px; border-radius:999px;
+      background:rgba(40,32,26,.92); color:#f7f0e8;
+      font-size:12.5px; font-weight:500; white-space:nowrap;
+      box-shadow:0 6px 20px rgba(0,0,0,.18);
+      opacity:0; pointer-events:none;
+      transition:opacity .25s ease, transform .25s ease;
+    }
+    .backend-down-banner.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    .backend-down-icon { font-size:13px; line-height:1; }
+    @media (max-width:539px) {
+      .backend-down-banner { bottom:10px; font-size:11.5px; padding:8px 14px; white-space:normal; text-align:center; max-width:88vw; }
+    }
     .nav-limelight-beam {
       position:absolute; left:-30%; bottom:4px; width:160%; height:34px;
       clip-path:polygon(5% 0%, 25% 100%, 75% 100%, 95% 0%);
@@ -2373,6 +2394,14 @@
   <div id="emojiburst-mount" aria-hidden="false"></div>
  </div>
 </nav>
+
+<!-- "We're down" banner — shown by markBackendDown() when Supabase is
+     unreachable, so the site says something instead of just rendering
+     with no project cards. Hidden by default; pure CSS/JS, no data. -->
+<div class="backend-down-banner" id="backendDownBanner">
+  <span class="backend-down-icon" aria-hidden="true">⚠️</span>
+  <span>Oops, we're down for a bit — back soon.</span>
+</div>
 
 <!-- hidden file input -->
 <input type="file" id="fileInput" accept="image/*,video/*" multiple style="display:none"/>
@@ -3625,6 +3654,12 @@ async function loadSettings() {
       cache: 'no-store',
       headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
     });
+    // A restricted/paused backend (e.g. quota exceeded) still returns a JSON
+    // body, just not the row shape we expect — !res.ok is what actually
+    // signals "this didn't work", not just a network-level throw. Render the
+    // same placeholder cards already used when settings has no sections yet,
+    // rather than leaving the page looking broken on top of the banner.
+    if (!res.ok) { renderHomeSections(DEFAULT_SECTIONS); markBackendDown(); return; }
     const rows = await res.json();
     if (!rows || !rows[0]) return;
     const s = rows[0].data;
@@ -4424,11 +4459,22 @@ async function loadProjects() {
       cache: 'no-store',
       headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
     });
+    if (!res.ok) { markBackendDown(); return; }
     const rows = await res.json();
     if (Array.isArray(rows)) rows.forEach(row => {
       if (PROJECTS[row.key]) PROJECTS[row.key].blocks = row.data.blocks;
     });
-  } catch(e) { console.warn('Supabase load failed, using defaults'); }
+  } catch(e) { console.warn('Supabase load failed, using defaults'); markBackendDown(); }
+}
+
+/* ─── "We're down" banner ──────────────────────────────────
+   Shown once, the first time either loadSettings() or loadProjects() gets a
+   non-ok response from Supabase — a soft, honest "coming back soon" instead
+   of the site just quietly rendering with no project cards. Nothing here
+   assumes WHY the backend is down; it only reacts to the response. */
+function markBackendDown() {
+  const el = document.getElementById('backendDownBanner');
+  if (el) el.classList.add('show');
 }
 
 /* ─── Default sections (shown when Supabase has no sections saved) ── */
