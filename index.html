@@ -3221,10 +3221,20 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
 }
 
 /* ─── Supabase config ──────────────────────────────────── */
+// Storage (SB_URL/SB_KEY) is still referenced by tusUpload()'s bucket/path
+// scheme (see below), but the actual bytes now go to Vercel Blob — SB_URL
+// itself is only used there as a namespacing string, never fetched.
 const SB_URL    = 'https://jbdirevxdgcffpaeizcd.supabase.co';
 const SB_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiZGlyZXZ4ZGdjZmZwYWVpemNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NzAwNjgsImV4cCI6MjA5NjU0NjA2OH0._09c4ViKGJvDQXDUGOFEmVWyCg9scPMb6VBGV7DJvoI';
 const SB_BUCKET       = 'Portfolio';
 const SB_MEDIA_BUCKET = 'Media';
+
+/* ─── Settings/project data — Cloudflare Worker + D1 ──────
+   Supabase's REST API (portfolio_settings/portfolio_projects) is on the
+   same egress-restricted project as Storage, so it 402s too. This Worker
+   serves the same two tables — schema and JSON shapes kept identical to
+   the Supabase rows — out of D1, which the current outage doesn't touch. */
+const API_URL = 'https://portfolio-api.alireza-mahdavi.workers.dev';
 
 /* ─── Analytics ────────────────────────────────────────── */
 function _mkId() {
@@ -3484,13 +3494,10 @@ async function loadAnalytics(days, btn) {
 async function saveProject(key) {
   const proj = PROJECTS[key];
   const clean = proj.blocks.map(({ _muted, _lottieInst, ...b }) => b);
-  await fetch(`${SB_URL}/rest/v1/portfolio_projects`, {
+  await fetch(`${API_URL}/api/projects`, {
     method: 'POST',
-    headers: {
-      'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`,
-      'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'
-    },
-    body: JSON.stringify({ key, data: { name: proj.name, sub: proj.sub, blocks: clean }, updated_at: new Date().toISOString() })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, data: { name: proj.name, sub: proj.sub, blocks: clean } })
   });
 }
 
@@ -3505,12 +3512,9 @@ async function saveSettings() {
   if (_saveInFlight) { _saveDirty = true; return; }
   _saveInFlight = true;
   try {
-    await fetch(`${SB_URL}/rest/v1/portfolio_settings?id=eq.1`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`,
-        'Content-Type': 'application/json'
-      },
+    await fetch(`${API_URL}/api/settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ data: _cachedSettings })
     });
   } catch (e) {
@@ -3674,10 +3678,7 @@ function closeFontPanel() {
 
 async function loadSettings() {
   try {
-    const res = await fetch(`${SB_URL}/rest/v1/portfolio_settings?id=eq.1&select=data`, {
-      cache: 'no-store',
-      headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
-    });
+    const res = await fetch(`${API_URL}/api/settings`, { cache: 'no-store' });
     // A restricted/paused backend (e.g. quota exceeded) still returns a JSON
     // body, just not the row shape we expect — !res.ok is what actually
     // signals "this didn't work", not just a network-level throw. Render the
@@ -4485,16 +4486,13 @@ function renderHomeSections(sections) {
 
 async function loadProjects() {
   try {
-    const res = await fetch(`${SB_URL}/rest/v1/portfolio_projects?select=key,data`, {
-      cache: 'no-store',
-      headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
-    });
+    const res = await fetch(`${API_URL}/api/projects`, { cache: 'no-store' });
     if (!res.ok) { markBackendDown(); return; }
     const rows = await res.json();
     if (Array.isArray(rows)) rows.forEach(row => {
       if (PROJECTS[row.key]) PROJECTS[row.key].blocks = row.data.blocks;
     });
-  } catch(e) { console.warn('Supabase load failed, using defaults'); markBackendDown(); }
+  } catch(e) { console.warn('Backend load failed, using defaults'); markBackendDown(); }
 }
 
 /* ─── "We're down" banner ──────────────────────────────────
@@ -4673,14 +4671,10 @@ async function openProject(key) {
   document.getElementById('scroll-top-btn').classList.remove('show');
   trackView(key);
   try {
-    const res  = await fetch(`${SB_URL}/rest/v1/portfolio_projects?key=eq.${encodeURIComponent(key)}&select=data`, {
-      cache: 'no-store',
-      headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
-    });
+    const res  = await fetch(`${API_URL}/api/projects`, { cache: 'no-store' });
     const rows = await res.json();
-    if (Array.isArray(rows) && rows[0]?.data?.blocks) {
-      PROJECTS[key].blocks = rows[0].data.blocks;
-    }
+    const row  = Array.isArray(rows) ? rows.find(r => r.key === key) : null;
+    if (row?.data?.blocks) PROJECTS[key].blocks = row.data.blocks;
   } catch(e) {}
   const p = PROJECTS[key];
   document.getElementById('d-title').textContent = p.name || '';
