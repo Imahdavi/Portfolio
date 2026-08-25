@@ -4694,10 +4694,12 @@ function closeProject() {
 
 let _revealObs = null;
 let _videoObs = null;
+let _audioObs = null;
 
 function teardownScrollReveal() {
   if (_revealObs) { _revealObs.disconnect(); _revealObs = null; }
   if (_videoObs) { _videoObs.disconnect(); _videoObs = null; }
+  if (_audioObs) { _audioObs.disconnect(); _audioObs = null; }
 }
 
 // Lazy-load videos: only set src (= start downloading) when a block nears the
@@ -4720,6 +4722,26 @@ function setupLazyVideos() {
     });
   }, { root: viewEl, rootMargin: '700px 0px 700px 0px', threshold: 0.01 });
   vids.forEach(v => _videoObs.observe(v));
+}
+
+// Separate from setupLazyVideos on purpose: that observer's 700px rootMargin
+// is a preload buffer, so a video is still "intersecting" (and playing) long
+// before/after it's actually on screen — fine for silent muted playback, but
+// it means an unmuted video keeps making sound well past where it scrolled
+// out of view. This one uses the real viewport (no margin) and only ever
+// mutes, never unmutes — leaving is a one-way trip back to silent, same as
+// a fresh block. Re-entering doesn't restore sound; that's the user's call.
+function setupAudioAutoMute() {
+  if (_audioObs) { _audioObs.disconnect(); _audioObs = null; }
+  const viewEl = document.getElementById('view-project');
+  const vids = document.querySelectorAll('#block-list video[data-lazy-src]');
+  if (!vids.length) return;
+  _audioObs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting && !entry.target.muted) entry.target._forceMute?.();
+    });
+  }, { root: viewEl, rootMargin: '0px', threshold: 0 });
+  vids.forEach(v => _audioObs.observe(v));
 }
 
 function setupScrollReveal() {
@@ -5237,6 +5259,7 @@ function renderBlocks(animate) {
   requestAnimationFrame(() => {
     list.querySelectorAll('.block').forEach(setBlockRowSpan);
     setupLazyVideos();
+    setupAudioAutoMute();
     if (!animate) return;
     requestAnimationFrame(() => {
       const viewEl = document.getElementById('view-project');
@@ -5455,13 +5478,19 @@ function makeBlockEl(block, proj) {
       muteBtn.className = 'media-mute-btn';
       muteBtn.innerHTML = SVG_MUTED;
       muteBtn.title = 'Unmute';
-      muteBtn.onclick = (e) => {
-        e.stopPropagation();
-        block._muted = !block._muted;
-        vid.muted = block._muted;
-        muteBtn.innerHTML = block._muted ? SVG_MUTED : SVG_UNMUTED;
-        muteBtn.title     = block._muted ? 'Unmute' : 'Mute';
+      const setMuted = (m) => {
+        block._muted = m;
+        vid.muted = m;
+        muteBtn.innerHTML = m ? SVG_MUTED : SVG_UNMUTED;
+        muteBtn.title     = m ? 'Unmute' : 'Mute';
       };
+      muteBtn.onclick = (e) => { e.stopPropagation(); setMuted(!block._muted); };
+      // Exposed for setupAudioAutoMute() — the lazy-load observer's 700px
+      // rootMargin keeps a video playing well before/after it's actually on
+      // screen (that's the point, it's a preload buffer), so an unmuted
+      // video could still be heard long after scrolling past it. This is
+      // the hook a separate, true-viewport observer uses to cut it.
+      vid._forceMute = () => setMuted(true);
       inner.appendChild(muteBtn);
 
       // Hide mute button for videos with no audio track.
