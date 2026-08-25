@@ -426,7 +426,7 @@
        intrinsic aspect ratio and packs left-to-right, no JS layout math. */
     .projects-list { display:flex; flex-direction:column; margin-bottom:20px; }
     .proj-list-item {
-      display:flex; gap:18px; cursor:pointer;
+      display:flex; gap:18px;
       padding-bottom:26px; margin-bottom:26px;
       border-bottom:1px solid rgba(0,0,0,.07);
     }
@@ -459,18 +459,33 @@
       height:100%; width:auto; aspect-ratio:4 / 3; flex-shrink:0; display:block;
       border-radius:10px; object-fit:cover; background:#e8e0d8;
     }
-    /* Edit-mode-only fields (year/category/description) — no wiring for
-       drag-reorder or thumbnails here, same reason Grid stays forced
-       during edit mode: see updateHomeEditUI(). These are edited on the
-       Grid card itself instead (see .pli-edit-row in the card markup). */
-    .pli-edit-row { display:none; flex-direction:column; gap:3px; margin-top:6px; }
-    #view-home.home-edit .pli-edit-row { display:flex; }
-    .pli-edit-row [contenteditable] {
-      font-size:11px; padding:3px 6px; border-radius:5px;
-      background:rgba(0,0,0,.04); outline:none;
+    /* grab/grabbing on the strip itself, so it reads as draggable. The
+       tiles get it too — without this the cursor reverts over each tile,
+       which is most of the strip's surface. */
+    .pli-media-strip { cursor:grab; }
+    .pli-media-strip.dragging { cursor:grabbing; scroll-behavior:auto; }
+    .pli-media-strip.dragging img,
+    .pli-media-strip.dragging video { pointer-events:none; }
+
+    /* This view edits in place rather than through the grid's cards, so
+       its three fields get the dashed affordance directly (see
+       wireProjectsListEditing). Empty ones only take up space while
+       editing — outside edit mode a blank field collapses away. */
+    .pli-year:empty, .pli-category:empty, .pli-desc:empty { display:none; }
+    #view-home.home-edit .pli-year,
+    #view-home.home-edit .pli-category,
+    #view-home.home-edit .pli-desc {
+      display:block; min-height:1em; min-width:30px;
+      outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px;
+      padding:2px 6px; cursor:text;
     }
-    .pli-edit-row [contenteditable]:empty:before { content:attr(data-ph); color:#aaa; }
-    .pli-edit-row [contenteditable]:focus { background:rgba(0,0,0,.07); }
+    #view-home.home-edit .pli-year:empty:before,
+    #view-home.home-edit .pli-category:empty:before,
+    #view-home.home-edit .pli-desc:empty:before { content:attr(data-ph); color:#bbb; }
+    /* Nothing in this view is clickable-through-to-a-board while editing,
+       and the title is the only link when not. */
+    #view-home.home-edit .pli-title-row { cursor:default; }
+    .pli-title-row { cursor:pointer; align-self:flex-start; }
 
     .proj-card { position:relative; cursor:pointer; transition:opacity .25s, filter .25s, transform .55s cubic-bezier(.34,1.56,.64,1); }
 
@@ -4533,13 +4548,17 @@ function _makeSecDelBtn(label, grid) {
 
 /* ─── Render home sections dynamically ────────────────── */
 /* ── Home view toggle: Grid ↔ Projects ─────────────────────
-   Projects replaces each section's card grid with a vertical write-up
-   list (year, title, category, description, image strip) built below.
-   Editing (drag-reorder, rename, delete, thumbnails) is only wired for
-   the plain .proj-card grid, so entering edit mode always forces Grid —
-   see updateHomeEditUI(). The list's own new fields (year/category/
-   description) are edited on the Grid card instead, via .pli-edit-row —
-   see buildProjectListItem() and saveHomeEdits(). */
+   Projects replaces the card grids with one vertical write-up list over
+   PROJECTS_LIST_KEYS — year, title, category, description, and a strip of
+   that board's own media.
+
+   The two views edit differently, and deliberately don't share a save
+   path. Grid keeps the card wiring it always had (drag-reorder, rename,
+   delete, thumbnails) and saves via saveHomeEdits(), which rebuilds every
+   section from the DOM. Projects edits its three fields in place and
+   saves via saveProjectsListEdits(), which only patches those fields on
+   the cards it shows — running the grid's whole-structure rebuild from a
+   three-card view would drop everything not on screen. */
 let homeView = 'grid';
 let _lastHomeSections = null;
 
@@ -4579,47 +4598,92 @@ function listMediaFor(key, fallbackThumb) {
   return fallbackThumb ? [{ type: 'image', src: fallbackThumb }] : [];
 }
 
+// Click-and-drag horizontal scrolling for a media strip, so the rest of a
+// board's work can be pulled into view without the strip being a scroll
+// trap. Pointer events (not mouse) so a touch drag keeps working via the
+// browser's own touch scrolling — the handler bails on touch and lets it
+// through. Nothing here navigates; the title is the only way into a board.
+function _wireStripDragScroll(strip) {
+  let down = false, startX = 0, startScroll = 0, moved = 0;
+
+  strip.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'touch') return; // native touch scroll handles it
+    down = true; moved = 0;
+    startX = e.clientX;
+    startScroll = strip.scrollLeft;
+    strip.classList.add('dragging');
+  });
+
+  strip.addEventListener('pointermove', (e) => {
+    if (!down) return;
+    const dx = e.clientX - startX;
+    if (Math.abs(dx) > 3) {
+      // Claim the gesture only once it's clearly a drag, so a plain click
+      // on a tile isn't swallowed.
+      if (moved === 0) { try { strip.setPointerCapture(e.pointerId); } catch (err) {} }
+      moved = Math.abs(dx);
+      e.preventDefault();
+    }
+    strip.scrollLeft = startScroll - dx;
+  });
+
+  const end = (e) => {
+    if (!down) return;
+    down = false;
+    strip.classList.remove('dragging');
+    try { strip.releasePointerCapture(e.pointerId); } catch (err) {}
+  };
+  strip.addEventListener('pointerup', end);
+  strip.addEventListener('pointercancel', end);
+
+  // Videos and images are draggable by default; that ghost-image drag
+  // fights the scroll gesture, so turn it off.
+  strip.addEventListener('dragstart', e => e.preventDefault());
+}
+
 function buildProjectListItem(card) {
   const media = listMediaFor(card.key, card.thumb);
 
   const item = document.createElement('div');
   item.className = 'proj-list-item';
   item.dataset.key = card.key;
-  item.onclick = () => openProject(card.key);
 
   const year = document.createElement('div');
   year.className = 'pli-year';
+  year.dataset.ph = 'Year';
   year.textContent = card.year || '';
 
   const body = document.createElement('div');
   body.className = 'pli-body';
 
+  // Only the title opens the board. The row as a whole deliberately does
+  // not: the strip below is drag-to-scroll, and a drag that ends on the
+  // row would otherwise navigate away mid-gesture.
   const titleRow = document.createElement('div');
   titleRow.className = 'pli-title-row';
   titleRow.innerHTML = `<span class="pli-title">${card.name}</span><span class="pli-arrow">↗</span>`;
+  titleRow.addEventListener('click', () => {
+    if (typeof editMode !== 'undefined' && editMode) return;
+    openProject(card.key);
+  });
   body.appendChild(titleRow);
 
-  if (card.category) {
-    const cat = document.createElement('div');
-    cat.className = 'pli-category';
-    cat.textContent = card.category;
-    body.appendChild(cat);
-  }
+  const cat = document.createElement('div');
+  cat.className = 'pli-category';
+  cat.dataset.ph = 'Category, e.g. Motion Design / Web Banner';
+  cat.textContent = card.category || '';
+  body.appendChild(cat);
 
-  if (card.desc) {
-    const desc = document.createElement('div');
-    desc.className = 'pli-desc';
-    desc.textContent = card.desc;
-    body.appendChild(desc);
-  }
+  const desc = document.createElement('div');
+  desc.className = 'pli-desc';
+  desc.dataset.ph = 'Short description';
+  desc.textContent = card.desc || '';
+  body.appendChild(desc);
 
   if (media.length) {
     const strip = document.createElement('div');
     strip.className = 'pli-media-strip';
-    // Stop a strip drag/scroll from also triggering the item's own
-    // click-to-open — mousedown rather than click, so a real drag-to-
-    // scroll gesture doesn't still count as a "click" on release.
-    strip.addEventListener('mousedown', e => e.stopPropagation());
+    _wireStripDragScroll(strip);
     media.forEach(m => {
       const el = document.createElement(m.type === 'video' ? 'video' : 'img');
       // Width comes from the file's OWN dimensions, not the block's box on
@@ -4656,6 +4720,61 @@ function buildProjectListItem(card) {
   return item;
 }
 
+/* ── Projects list editing ─────────────────────────────────
+   Separate from the grid's editing on purpose. saveHomeEdits() rebuilds
+   the whole sections array from the DOM, which is only safe when every
+   card is on screen — this view shows three of them, so running that here
+   would drop the other seven and both section titles. Instead this writes
+   just the three fields it owns, straight into the cached settings. */
+function wireProjectsListEditing() {
+  document.querySelectorAll('.proj-list-item').forEach(item => {
+    ['.pli-year', '.pli-category', '.pli-desc'].forEach(sel => {
+      const el = item.querySelector(sel);
+      if (!el) return;
+      el.contentEditable = 'true';
+      if (el._pliWired) return;
+      el._pliWired = true;
+      el.addEventListener('blur', saveProjectsListEdits);
+      el.addEventListener('keydown', ev => {
+        // Description is the one field worth having line breaks in.
+        if (ev.key === 'Enter' && !el.classList.contains('pli-desc')) {
+          ev.preventDefault();
+          el.blur();
+        }
+      });
+    });
+  });
+}
+
+function unwireProjectsListEditing() {
+  document.querySelectorAll('.pli-year, .pli-category, .pli-desc')
+    .forEach(el => { el.contentEditable = 'false'; });
+}
+
+function saveProjectsListEdits() {
+  if (!_cachedSettings || !_cachedSettings.sections) return;
+  let changed = false;
+  document.querySelectorAll('.proj-list-item').forEach(item => {
+    const key = item.dataset.key;
+    let card = null;
+    _cachedSettings.sections.forEach(sec =>
+      (sec.cards || []).forEach(c => { if (c.key === key) card = c; }));
+    if (!card) return;
+
+    const next = {
+      year:     item.querySelector('.pli-year')?.textContent.trim()     || '',
+      category: item.querySelector('.pli-category')?.textContent.trim() || '',
+      desc:     item.querySelector('.pli-desc')?.innerText.trim()       || '',
+    };
+    Object.entries(next).forEach(([k, v]) => {
+      if ((card[k] || '') === v) return;
+      changed = true;
+      if (v) card[k] = v; else delete card[k];
+    });
+  });
+  if (changed) saveSettings();
+}
+
 // Same idea as setupLazyVideos() on project pages: don't fetch a strip
 // video until its row is near the viewport, and pause it once it leaves.
 let _stripObs = null;
@@ -4685,7 +4804,10 @@ function renderHomeSections(sections) {
   // — never rendered for a public visitor even if homeView somehow ends
   // up 'list' for that session.
   const isAdmin = document.body.classList.contains('is-admin');
-  const useList = isAdmin && homeView === 'list' && !(typeof editMode !== 'undefined' && editMode);
+  // Unlike the old folder view, this one stays up in edit mode — it has its
+  // own editing (year/category/description inline, saved by
+  // saveProjectsListEdits) rather than borrowing the grid's.
+  const useList = isAdmin && homeView === 'list';
   container.innerHTML = '';
 
   // PROJECTS metadata has to stay in sync regardless of which view renders,
@@ -4718,6 +4840,7 @@ function renderHomeSections(sections) {
       container.style.opacity = '1';
       setHomeView(homeView);
       setupStripVideos();
+      if (typeof editMode !== 'undefined' && editMode) wireProjectsListEditing();
     });
     return;
   }
@@ -4744,16 +4867,7 @@ function renderHomeSections(sections) {
       const thumbImg = card.thumb ? `<img src="${card.thumb}" alt="${card.name}" onerror="var p=this.parentNode;if(p)p.style.background='linear-gradient(135deg,#e8e0d8,#c8bdb4)';this.remove()"/>` : '';
       el.dataset.key = card.key;
       if (card.hidden) el.dataset.hidden = 'true';
-      // .pli-edit-row: year/category/description for the Projects (list)
-      // view — edited here on the Grid card (hidden outside edit mode via
-      // CSS) rather than on the list view itself, since editing wiring
-      // (drag-reorder, delete, thumbnails) only exists for Grid cards.
-      el.innerHTML = `<div class="proj-thumb"${thumbBg}>${thumbImg}</div><div class="proj-title">${card.name}</div><div class="proj-sub">${card.sub||''}</div>`
-        + `<div class="pli-edit-row">`
-        + `<span class="pli-edit-year" data-ph="Year">${card.year||''}</span>`
-        + `<span class="pli-edit-category" data-ph="Category, e.g. Motion Design / Web Banner">${card.category||''}</span>`
-        + `<span class="pli-edit-desc" data-ph="Short description for the Projects list view">${card.desc||''}</span>`
-        + `</div>`;
+      el.innerHTML = `<div class="proj-thumb"${thumbBg}>${thumbImg}</div><div class="proj-title">${card.name}</div><div class="proj-sub">${card.sub||''}</div>`;
       grid.appendChild(el);
     });
     container.appendChild(_makeSecDelBtn(label, grid));
@@ -5282,19 +5396,20 @@ function updateEditUI() {
 
 /* ─── Home edit mode ────────────────────────────────────── */
 function updateHomeEditUI() {
-  // Projects (list) view has none of the drag/rename/delete wiring below
-  // — force Grid so editing always has real cards to work with. Its own
-  // new fields (year/category/desc) are edited on the Grid card itself,
-  // via .pli-edit-row.
-  if (editMode && homeView !== 'grid' && _lastHomeSections) {
-    homeView = 'grid';
-    renderHomeSections(_lastHomeSections);
-  }
   const btn = document.getElementById('editBtn');
   btn.classList.toggle('on', editMode);
   document.getElementById('editLabel').textContent = editMode ? 'Done' : 'Edit';
   const homeEl = document.getElementById('view-home');
   homeEl.classList.toggle('home-edit', editMode);
+
+  // The Projects list has its own editing — three inline fields, saved by
+  // saveProjectsListEdits — and none of the card drag/rename/delete wiring
+  // below applies to it, so it takes this branch and stops here.
+  if (homeView === 'list') {
+    if (editMode) wireProjectsListEditing();
+    else { saveProjectsListEdits(); unwireProjectsListEditing(); }
+    return;
+  }
 
   const editables = [
     document.querySelector('.profile-name'),
@@ -5302,7 +5417,7 @@ function updateHomeEditUI() {
     document.querySelector('.profile-age'),
     document.getElementById('contactLblBefore'),
   ];
-  homeEl.querySelectorAll('.sec-label, .proj-title, .proj-sub, .pli-edit-year, .pli-edit-category, .pli-edit-desc').forEach(el => editables.push(el));
+  homeEl.querySelectorAll('.sec-label, .proj-title, .proj-sub').forEach(el => editables.push(el));
 
   editables.forEach(el => {
     if (!el) return;
@@ -5389,12 +5504,7 @@ function _addHomeCard(grid, addBtn) {
   el.className = 'proj-card';
   el.dataset.key = newKey;
   el.onclick = () => openProject(newKey);
-  el.innerHTML = `<div class="proj-thumb" style="background:linear-gradient(135deg,#e8e0d8,#c8bdb4)"></div><div class="proj-title">New Project</div><div class="proj-sub"></div>`
-    + `<div class="pli-edit-row">`
-    + `<span class="pli-edit-year" data-ph="Year"></span>`
-    + `<span class="pli-edit-category" data-ph="Category, e.g. Motion Design / Web Banner"></span>`
-    + `<span class="pli-edit-desc" data-ph="Short description for the Projects list view"></span>`
-    + `</div>`;
+  el.innerHTML = `<div class="proj-thumb" style="background:linear-gradient(135deg,#e8e0d8,#c8bdb4)"></div><div class="proj-title">New Project</div><div class="proj-sub"></div>`;
   const del = document.createElement('button');
   del.className = 'home-card-del';
   del.textContent = '×';
@@ -5411,7 +5521,7 @@ function _addHomeCard(grid, addBtn) {
   });
   el.appendChild(hide);
   grid.insertBefore(el, addBtn);
-  ['proj-title','proj-sub','pli-edit-year','pli-edit-category','pli-edit-desc'].forEach(cls => {
+  ['proj-title','proj-sub'].forEach(cls => {
     const f = el.querySelector('.'+cls);
     f.contentEditable = 'true';
     f._homeKeyWired = true;
@@ -5484,6 +5594,12 @@ function _initHomeCardDrag() {
 }
 
 function saveHomeEdits() {
+  // This rebuilds sections wholesale from the cards currently in the DOM,
+  // which is only correct when the grid is up. The Projects list renders
+  // three cards under one synthetic heading, so running this there would
+  // save that as the entire site structure and lose the rest. That view
+  // saves through saveProjectsListEdits() instead.
+  if (homeView === 'list') return;
   if (!_cachedSettings) _cachedSettings = {};
   if (!_cachedSettings.profile) _cachedSettings.profile = {};
 
@@ -5507,8 +5623,15 @@ function saveHomeEdits() {
 
   // build a lookup of previously-saved thumbs so a render glitch can never wipe them
   const _prevThumbs = {};
+  // Same idea for the Projects-list fields: they have no input in the grid
+  // DOM at all (they're edited in the list view), so they'd read as empty
+  // here and get dropped on every grid save if they weren't carried over.
+  const _prevMeta = {};
   (_cachedSettings.sections || []).forEach(sec =>
-    (sec.cards || []).forEach(c => { if (c.thumb) _prevThumbs[c.key] = c.thumb; }));
+    (sec.cards || []).forEach(c => {
+      if (c.thumb) _prevThumbs[c.key] = c.thumb;
+      _prevMeta[c.key] = { year: c.year, category: c.category, desc: c.desc };
+    }));
 
   const sections = [];
   document.querySelectorAll('#home-sections .sec-label').forEach(labelEl => {
@@ -5519,21 +5642,18 @@ function saveHomeEdits() {
       const key  = cardEl.dataset.key;
       const name = cardEl.querySelector('.proj-title')?.textContent?.trim() || '';
       const sub  = cardEl.querySelector('.proj-sub')?.textContent?.trim()  || '';
-      // year/category/desc: only used by the Projects (list) view, edited
-      // here on the Grid card — see the .pli-edit-row comment in
-      // renderHomeSections().
-      const year     = cardEl.querySelector('.pli-edit-year')?.textContent?.trim()     || '';
-      const category = cardEl.querySelector('.pli-edit-category')?.textContent?.trim() || '';
-      const desc     = cardEl.querySelector('.pli-edit-desc')?.textContent?.trim()     || '';
       // read thumb from img OR video src; if DOM lost it, fall back to the
       // previously-saved value so saving never destroys an existing thumbnail
       const mediaEl = cardEl.querySelector('.proj-thumb img, .proj-thumb video');
       const thumb = mediaEl?.getAttribute('src') || _prevThumbs[key] || '';
       const hidden = cardEl.dataset.hidden === 'true';
+      const meta = _prevMeta[key] || {};
       cards.push({
         key, name, sub,
         ...(thumb ? { thumb } : {}), ...(hidden ? { hidden: true } : {}),
-        ...(year ? { year } : {}), ...(category ? { category } : {}), ...(desc ? { desc } : {}),
+        ...(meta.year ? { year: meta.year } : {}),
+        ...(meta.category ? { category: meta.category } : {}),
+        ...(meta.desc ? { desc: meta.desc } : {}),
       });
       if (PROJECTS[key]) { PROJECTS[key].name = name; PROJECTS[key].sub = sub; }
     });
