@@ -424,16 +424,23 @@
        filmstrip of that project's own images. The strip's sizing is just
        height:100%/width:auto on each <img> — every tile keeps its own
        intrinsic aspect ratio and packs left-to-right, no JS layout math. */
-    .projects-list { display:flex; flex-direction:column; gap:36px; margin-bottom:20px; }
-    .proj-list-item { display:flex; gap:18px; cursor:pointer; }
+    .projects-list { display:flex; flex-direction:column; margin-bottom:20px; }
+    .proj-list-item {
+      display:flex; gap:18px; cursor:pointer;
+      padding-bottom:26px; margin-bottom:26px;
+      border-bottom:1px solid rgba(0,0,0,.07);
+    }
+    .projects-list .proj-list-item:last-child { border-bottom:none; margin-bottom:0; }
     .pli-year {
       flex:0 0 auto; width:40px; padding-top:2px;
       font-size:12.5px; font-weight:600; color:#b4a99a;
     }
     .pli-body { flex:1 1 auto; min-width:0; }
-    .pli-title-row { display:flex; align-items:baseline; gap:6px; }
+    .pli-title-row { display:flex; align-items:baseline; gap:5px; }
     .pli-title { font-family:var(--font-heading); font-size:17px; font-weight:600; }
+    .pli-arrow { font-size:12px; color:#b4a99a; }
     .proj-list-item:hover .pli-title { text-decoration:underline; text-underline-offset:3px; }
+    .proj-list-item:hover .pli-arrow { color:#6a6055; }
     .pli-category { font-size:12.5px; color:#a89e91; margin-top:2px; }
     .pli-desc { font-size:13.5px; line-height:1.55; color:#5a5148; margin:8px 0 14px; max-width:52ch; }
     .pli-media-strip {
@@ -441,7 +448,12 @@
       margin-inline:-4px; padding-inline:4px;
     }
     .pli-media-strip::-webkit-scrollbar { display:none; }
-    .pli-media-strip img {
+    /* height:100% + width:auto is the whole layout rule — each tile keeps
+       its own intrinsic aspect ratio and they pack left to right, so a
+       16:9 still and a 9:16 reel sit side by side at matching heights
+       without any per-tile sizing. */
+    .pli-media-strip img,
+    .pli-media-strip video {
       height:100%; width:auto; flex-shrink:0; display:block;
       border-radius:10px; object-fit:cover; background:#e8e0d8;
     }
@@ -4545,18 +4557,32 @@ function setHomeView(view) {
   if (_lastHomeSections) renderHomeSections(_lastHomeSections);
 }
 
-// Images only — video/lottie/text blocks don't contribute a strip photo.
-// Falls back to the card's own thumbnail so a project with no image
-// blocks still gets one tile instead of an empty strip.
-function galleryPhotosFor(key, fallbackThumb) {
+// Which projects the Projects list shows, in order. Deliberately a fixed
+// list rather than every card: this view is a pilot on these three boards.
+const PROJECTS_LIST_KEYS = ['tosan', 'vam30', 'lina'];
+
+// The strip shows the board's actual media, so it takes video blocks too —
+// these boards are mostly video (tosan is 13 videos and no images), and an
+// images-only strip left them blank. Order is board order. Falls back to
+// the card's own thumbnail so a board with no media still shows one tile.
+function listMediaFor(key, fallbackThumb) {
   const proj = PROJECTS[key];
-  const imgs = proj ? (proj.blocks || []).filter(b => b.type === 'image' && b.content).map(b => b.content) : [];
-  const photos = imgs.slice(0, 8);
-  return photos.length ? photos : (fallbackThumb ? [fallbackThumb] : []);
+  const media = proj
+    ? (proj.blocks || [])
+        .filter(b => (b.type === 'image' || b.type === 'video') && b.content)
+        // _freeAspect is what the board already stores for this block's
+        // shape. Carrying it over lets a tile reserve the right width
+        // before the file loads — without it a not-yet-loaded <video> has
+        // no intrinsic size and the strip visibly reflows once it does.
+        .map(b => ({ type: b.type, src: b.content, aspect: b._freeAspect }))
+    : [];
+  const picked = media.slice(0, 10);
+  if (picked.length) return picked;
+  return fallbackThumb ? [{ type: 'image', src: fallbackThumb }] : [];
 }
 
 function buildProjectListItem(card) {
-  const photos = galleryPhotosFor(card.key, card.thumb);
+  const media = listMediaFor(card.key, card.thumb);
 
   const item = document.createElement('div');
   item.className = 'proj-list-item';
@@ -4572,7 +4598,7 @@ function buildProjectListItem(card) {
 
   const titleRow = document.createElement('div');
   titleRow.className = 'pli-title-row';
-  titleRow.innerHTML = `<span class="pli-title">${card.name}</span>`;
+  titleRow.innerHTML = `<span class="pli-title">${card.name}</span><span class="pli-arrow">↗</span>`;
   body.appendChild(titleRow);
 
   if (card.category) {
@@ -4589,18 +4615,29 @@ function buildProjectListItem(card) {
     body.appendChild(desc);
   }
 
-  if (photos.length) {
+  if (media.length) {
     const strip = document.createElement('div');
     strip.className = 'pli-media-strip';
     // Stop a strip drag/scroll from also triggering the item's own
     // click-to-open — mousedown rather than click, so a real drag-to-
     // scroll gesture doesn't still count as a "click" on release.
     strip.addEventListener('mousedown', e => e.stopPropagation());
-    photos.forEach(src => {
-      const img = document.createElement('img');
-      img.src = src; img.alt = '';
-      img.loading = 'lazy';
-      strip.appendChild(img);
+    media.forEach(m => {
+      const el = document.createElement(m.type === 'video' ? 'video' : 'img');
+      if (m.aspect) el.style.aspectRatio = String(m.aspect);
+      if (m.type === 'video') {
+        // Muted+playsInline so it can autoplay; these are short loops and
+        // the strip is small, so they read as moving thumbnails. Lazy via
+        // preload="none" + the strip observer below rather than loading
+        // ten videos up front.
+        el.dataset.lazySrc = m.src;
+        el.preload = 'none';
+        el.muted = true; el.loop = true; el.playsInline = true;
+      } else {
+        el.src = m.src; el.alt = '';
+        el.loading = 'lazy';
+      }
+      strip.appendChild(el);
     });
     body.appendChild(strip);
   }
@@ -4608,6 +4645,27 @@ function buildProjectListItem(card) {
   item.appendChild(year);
   item.appendChild(body);
   return item;
+}
+
+// Same idea as setupLazyVideos() on project pages: don't fetch a strip
+// video until its row is near the viewport, and pause it once it leaves.
+let _stripObs = null;
+function setupStripVideos() {
+  if (_stripObs) { _stripObs.disconnect(); _stripObs = null; }
+  const vids = document.querySelectorAll('.pli-media-strip video[data-lazy-src]');
+  if (!vids.length) return;
+  _stripObs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const v = entry.target;
+      if (entry.isIntersecting) {
+        if (!v.getAttribute('src') && v.dataset.lazySrc) v.src = v.dataset.lazySrc;
+        const p = v.play(); if (p && p.catch) p.catch(() => {});
+      } else {
+        v.pause();
+      }
+    });
+  }, { rootMargin: '300px 0px 300px 0px', threshold: 0.01 });
+  vids.forEach(v => _stripObs.observe(v));
 }
 
 function renderHomeSections(sections) {
@@ -4620,56 +4678,77 @@ function renderHomeSections(sections) {
   const isAdmin = document.body.classList.contains('is-admin');
   const useList = isAdmin && homeView === 'list' && !(typeof editMode !== 'undefined' && editMode);
   container.innerHTML = '';
+
+  // PROJECTS metadata has to stay in sync regardless of which view renders,
+  // so this runs over every card even when the list view only shows three.
+  sections.forEach(sec => (sec.cards || []).forEach(card => {
+    if (!PROJECTS[card.key]) PROJECTS[card.key] = { name: card.name, sub: card.sub||'', blocks: [{ id: uid(), type:'text', content:'' }] };
+    else { PROJECTS[card.key].name = card.name; PROJECTS[card.key].sub = card.sub||''; }
+  }));
+
+  if (useList) {
+    // One flat "Projects" heading over the pilot boards, rather than
+    // mirroring the Works/Projects section split the grid uses — this view
+    // is a single run-down, and PROJECTS_LIST_KEYS sets both which boards
+    // appear and their order.
+    const allCards = sections.flatMap(sec => sec.cards || []);
+    const label = document.createElement('div');
+    label.className = 'sec-label';
+    label.textContent = 'Projects';
+    container.appendChild(label);
+
+    const row = document.createElement('div');
+    row.className = 'projects-list';
+    PROJECTS_LIST_KEYS.forEach(key => {
+      const card = allCards.find(c => c.key === key);
+      if (card) row.appendChild(buildProjectListItem(card));
+    });
+    container.appendChild(row);
+
+    requestAnimationFrame(() => {
+      container.style.opacity = '1';
+      setHomeView(homeView);
+      setupStripVideos();
+    });
+    return;
+  }
+
   sections.forEach(sec => {
     const label = document.createElement('div');
     label.className = 'sec-label';
     label.textContent = sec.title;
     container.appendChild(label);
 
+    const grid = document.createElement('div');
+    grid.className = 'card-grid sg';
     (sec.cards || []).forEach(card => {
-      // sync PROJECTS metadata regardless of which view renders it
-      if (!PROJECTS[card.key]) PROJECTS[card.key] = { name: card.name, sub: card.sub||'', blocks: [{ id: uid(), type:'text', content:'' }] };
-      else { PROJECTS[card.key].name = card.name; PROJECTS[card.key].sub = card.sub||''; }
+      const el = document.createElement('div');
+      el.className = 'proj-card';
+      el.onclick = () => openProject(card.key);
+      const thumbBg = card.thumb ? '' : ' style="background:linear-gradient(135deg,#e8e0d8,#c8bdb4)"';
+      // Same gradient the no-thumb case uses, reapplied if the image itself
+      // fails to load (backend down, or the thumb was deleted) so the card
+      // degrades to a clean placeholder instead of a broken-image icon.
+      // Paint the parent before remove() — removing first nulls parentNode.
+      // The if(p) guard covers the image erroring after a re-render already
+      // detached it, which would otherwise throw on p.style.
+      const thumbImg = card.thumb ? `<img src="${card.thumb}" alt="${card.name}" onerror="var p=this.parentNode;if(p)p.style.background='linear-gradient(135deg,#e8e0d8,#c8bdb4)';this.remove()"/>` : '';
+      el.dataset.key = card.key;
+      if (card.hidden) el.dataset.hidden = 'true';
+      // .pli-edit-row: year/category/description for the Projects (list)
+      // view — edited here on the Grid card (hidden outside edit mode via
+      // CSS) rather than on the list view itself, since editing wiring
+      // (drag-reorder, delete, thumbnails) only exists for Grid cards.
+      el.innerHTML = `<div class="proj-thumb"${thumbBg}>${thumbImg}</div><div class="proj-title">${card.name}</div><div class="proj-sub">${card.sub||''}</div>`
+        + `<div class="pli-edit-row">`
+        + `<span class="pli-edit-year" data-ph="Year">${card.year||''}</span>`
+        + `<span class="pli-edit-category" data-ph="Category, e.g. Motion Design / Web Banner">${card.category||''}</span>`
+        + `<span class="pli-edit-desc" data-ph="Short description for the Projects list view">${card.desc||''}</span>`
+        + `</div>`;
+      grid.appendChild(el);
     });
-
-    if (useList) {
-      const row = document.createElement('div');
-      row.className = 'projects-list';
-      (sec.cards || []).forEach(card => row.appendChild(buildProjectListItem(card)));
-      container.appendChild(_makeSecDelBtn(label, row));
-      container.appendChild(row);
-    } else {
-      const grid = document.createElement('div');
-      grid.className = 'card-grid sg';
-      (sec.cards || []).forEach(card => {
-        const el = document.createElement('div');
-        el.className = 'proj-card';
-        el.onclick = () => openProject(card.key);
-        const thumbBg = card.thumb ? '' : ' style="background:linear-gradient(135deg,#e8e0d8,#c8bdb4)"';
-        // Same gradient the no-thumb case uses, reapplied if the image itself
-        // fails to load (backend down, or the thumb was deleted) so the card
-        // degrades to a clean placeholder instead of a broken-image icon.
-        // Paint the parent before remove() — removing first nulls parentNode.
-        // The if(p) guard covers the image erroring after a re-render already
-        // detached it, which would otherwise throw on p.style.
-        const thumbImg = card.thumb ? `<img src="${card.thumb}" alt="${card.name}" onerror="var p=this.parentNode;if(p)p.style.background='linear-gradient(135deg,#e8e0d8,#c8bdb4)';this.remove()"/>` : '';
-        el.dataset.key = card.key;
-        if (card.hidden) el.dataset.hidden = 'true';
-        // .pli-edit-row: year/category/description for the Projects (list)
-        // view — edited here on the Grid card (hidden outside edit mode via
-        // CSS) rather than on the list view itself, since editing wiring
-        // (drag-reorder, delete, thumbnails) only exists for Grid cards.
-        el.innerHTML = `<div class="proj-thumb"${thumbBg}>${thumbImg}</div><div class="proj-title">${card.name}</div><div class="proj-sub">${card.sub||''}</div>`
-          + `<div class="pli-edit-row">`
-          + `<span class="pli-edit-year" data-ph="Year">${card.year||''}</span>`
-          + `<span class="pli-edit-category" data-ph="Category, e.g. Motion Design / Web Banner">${card.category||''}</span>`
-          + `<span class="pli-edit-desc" data-ph="Short description for the Projects list view">${card.desc||''}</span>`
-          + `</div>`;
-        grid.appendChild(el);
-      });
-      container.appendChild(_makeSecDelBtn(label, grid));
-      container.appendChild(grid);
-    }
+    container.appendChild(_makeSecDelBtn(label, grid));
+    container.appendChild(grid);
   });
   requestAnimationFrame(() => {
     container.querySelectorAll('.sg').forEach(sg => {
@@ -4679,6 +4758,7 @@ function renderHomeSections(sections) {
     });
     container.style.opacity = '1';
     setHomeView(homeView); // sync the pill's highlight position now it's laid out
+    setupStripVideos();    // no strip videos in grid — disconnects the observer
   });
 }
 
