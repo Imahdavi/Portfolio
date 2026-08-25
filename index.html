@@ -4645,15 +4645,21 @@ function _wireStripDragScroll(strip) {
 
   function paintParallax() {
     const rect = strip.getBoundingClientRect();
+    // Before the strip is in the document it measures 0, and the offset
+    // below would divide by zero. Writing the resulting NaN into
+    // --pli-shift invalidates the whole transform, including the
+    // translateX(-50%) that centres the media, so bail instead.
+    if (!rect.width) return;
     const mid = rect.left + rect.width / 2;
     strip.querySelectorAll('.pli-tile').forEach(tile => {
       const t = tile.getBoundingClientRect();
       // -1 at the strip's left edge, +1 at its right.
       const offset = ((t.left + t.width / 2) - mid) / (rect.width / 2);
       const shift = -offset * slackFor(tile) * STRIP_PARALLAX;
-      tile.style.setProperty('--pli-shift', shift.toFixed(2) + 'px');
+      tile.style.setProperty('--pli-shift', (Number.isFinite(shift) ? shift : 0).toFixed(2) + 'px');
     });
   }
+  strip._paintParallax = paintParallax;
 
   function frame() {
     const diff = target - current;
@@ -4945,6 +4951,9 @@ function renderHomeSections(sections) {
       container.style.opacity = '1';
       setHomeView(homeView);
       setupStripVideos();
+      // The strips were wired while still detached, so this is their first
+      // paint with real geometry to measure.
+      container.querySelectorAll('.pli-media-strip').forEach(s => s._paintParallax?.());
       if (typeof editMode !== 'undefined' && editMode) wireProjectsListEditing();
     });
     return;
