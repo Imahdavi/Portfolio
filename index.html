@@ -391,12 +391,14 @@
     }
 
     /* ── Home view toggle — segmented pill, switches Works/Projects
-       between the plain card grid and a row of "folders" per project.
-       Admin-only while the folder view is still being checked over —
-       public visitors never see the toggle or the folder rendering
-       (belt-and-braces: renderHomeSections() also refuses to render
-       folders unless body.is-admin, in case homeView ever ends up
-       'folders' for a non-admin session). ── */
+       between the plain card grid and a vertical list of project write-ups
+       (year, title, category, a short description, and a strip of that
+       project's own images sized by their own aspect ratio). Admin-only
+       while the list view is still being checked over — public visitors
+       never see the toggle or the list rendering (belt-and-braces:
+       renderHomeSections() also refuses to render it unless
+       body.is-admin, in case homeView ever ends up 'list' for a
+       non-admin session). ── */
     .home-view-toggle { display:none; }
     body.is-admin .home-view-toggle {
       position:relative; display:inline-flex; margin:4px auto 28px;
@@ -417,82 +419,44 @@
     }
     .hvt-opt.active { color:#1a1a1a; }
 
-    /* ── Project folders (ported from an "Interactive Folder Gallery"
-       React/framer-motion component) — the closed-lid hover tilt, the
-       click-to-open fan of photos, and drag-a-photo-down-to-close are
-       the source's own interaction and spring feel; re-built with
-       plain CSS transitions (a bouncy cubic-bezier standing in for its
-       spring configs) and manual pointer tracking for the drag, since
-       this page has no framer-motion. Sized down from the source's
-       desktop-only 400x500 demo to sit in a horizontally-scrolling row
-       of several, one per project, alongside the plain grid view. */
-    .folder-row {
-      display:flex; gap:22px; overflow-x:auto; overflow-y:visible;
-      padding:34px 4px 30px; margin-bottom:20px; margin-inline:-4px;
-      scrollbar-width:none;
+    /* ── Projects list — an alternate write-up-style view of the same
+       cards: year, title, category line, a short description, and a
+       filmstrip of that project's own images. The strip's sizing is just
+       height:100%/width:auto on each <img> — every tile keeps its own
+       intrinsic aspect ratio and packs left-to-right, no JS layout math. */
+    .projects-list { display:flex; flex-direction:column; gap:36px; margin-bottom:20px; }
+    .proj-list-item { display:flex; gap:18px; cursor:pointer; }
+    .pli-year {
+      flex:0 0 auto; width:40px; padding-top:2px;
+      font-size:12.5px; font-weight:600; color:#b4a99a;
     }
-    .folder-row::-webkit-scrollbar { display:none; }
-    .project-folder {
-      position:relative; flex:0 0 auto; width:118px; height:150px;
-      cursor:pointer;
+    .pli-body { flex:1 1 auto; min-width:0; }
+    .pli-title-row { display:flex; align-items:baseline; gap:6px; }
+    .pli-title { font-family:var(--font-heading); font-size:17px; font-weight:600; }
+    .proj-list-item:hover .pli-title { text-decoration:underline; text-underline-offset:3px; }
+    .pli-category { font-size:12.5px; color:#a89e91; margin-top:2px; }
+    .pli-desc { font-size:13.5px; line-height:1.55; color:#5a5148; margin:8px 0 14px; max-width:52ch; }
+    .pli-media-strip {
+      display:flex; gap:8px; height:88px; overflow-x:auto; scrollbar-width:none;
+      margin-inline:-4px; padding-inline:4px;
     }
-    .project-folder .pf-stage {
-      position:absolute; inset:0; display:flex; justify-content:center;
+    .pli-media-strip::-webkit-scrollbar { display:none; }
+    .pli-media-strip img {
+      height:100%; width:auto; flex-shrink:0; display:block;
+      border-radius:10px; object-fit:cover; background:#e8e0d8;
     }
-    .pf-lid-back {
-      position:absolute; bottom:6px; width:96px; height:64px;
-      transition:opacity .3s ease, transform .3s ease;
+    /* Edit-mode-only fields (year/category/description) — no wiring for
+       drag-reorder or thumbnails here, same reason Grid stays forced
+       during edit mode: see updateHomeEditUI(). These are edited on the
+       Grid card itself instead (see .pli-edit-row in the card markup). */
+    .pli-edit-row { display:none; flex-direction:column; gap:3px; margin-top:6px; }
+    #view-home.home-edit .pli-edit-row { display:flex; }
+    .pli-edit-row [contenteditable] {
+      font-size:11px; padding:3px 6px; border-radius:5px;
+      background:rgba(0,0,0,.04); outline:none;
     }
-    .pf-lid-back .pf-tab { position:absolute; top:0; left:0; width:38px; height:11px; background:linear-gradient(to top,#1e1e1e,#2a2a2a); border-radius:8px 8px 0 0; border:1px solid rgba(255,255,255,.1); border-bottom:none; }
-    .pf-lid-back .pf-body { position:absolute; top:9px; left:0; right:0; bottom:0; background:linear-gradient(to bottom,#1e1e1e,#0a0a0a); border-radius:0 8px 8px 8px; border:1px solid rgba(255,255,255,.1); box-shadow:inset 0 0 16px rgba(0,0,0,.8); }
-    .pf-lid-back .pf-well { position:absolute; top:11px; left:2px; right:2px; bottom:2px; background:#000; border-radius:6px; }
-    .project-folder.open .pf-lid-back { opacity:0; transform:scale(.9); }
-
-    .pf-photos { position:absolute; bottom:14px; left:0; right:0; display:flex; justify-content:center; z-index:2; }
-    .pf-photo {
-      position:absolute; bottom:0; width:64px; height:82px;
-      border-radius:9px; overflow:hidden; border:1px solid rgba(255,255,255,.25);
-      box-shadow:0 8px 16px rgba(0,0,0,.4);
-      background:#111; transform-origin:bottom center;
-      transition:transform .38s cubic-bezier(.34,1.56,.64,1);
-      touch-action:none;
-    }
-    .pf-photo img { width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; -webkit-user-drag:none; }
-    .project-folder.open .pf-photo { cursor:grab; }
-    .project-folder.open .pf-photo.dragging { cursor:grabbing; transition:none; }
-
-    .pf-lid-front {
-      position:absolute; bottom:0; width:112px; height:50px;
-      z-index:3; transition:opacity .3s ease, transform .3s ease;
-      transform-origin:bottom center;
-    }
-    .pf-lid-front .pf-front-body {
-      width:100%; height:100%; background:linear-gradient(to bottom,#2a2a2a,#111);
-      border-radius:14px; border:1px solid rgba(255,255,255,.2);
-      box-shadow:inset 0 2px 8px rgba(255,255,255,.1), 0 -8px 16px rgba(0,0,0,.5);
-      display:flex; align-items:flex-end; justify-content:center; padding-bottom:7px;
-      position:relative; overflow:hidden;
-    }
-    .pf-lid-front .pf-front-body::before {
-      content:''; position:absolute; top:0; left:8%; right:8%; height:1px;
-      background:linear-gradient(to right,transparent,rgba(255,255,255,.4),transparent);
-    }
-    .pf-lid-front .pf-name {
-      font-size:8px; font-weight:500; color:rgba(255,255,255,.9);
-      background:#000; padding:2.5px 6px; border-radius:5px; max-width:88%;
-      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-    }
-    .project-folder:hover .pf-lid-front { transform:rotateX(-22deg) translateY(3px); }
-    .project-folder.open .pf-lid-front { opacity:0; pointer-events:none; }
-
-    .pf-hint {
-      position:absolute; bottom:-24px; left:50%; transform:translateX(-50%) translateY(6px);
-      font-size:8px; font-weight:600; text-transform:uppercase; letter-spacing:.06em;
-      color:#999; background:rgba(0,0,0,.04); border:1px solid rgba(0,0,0,.08);
-      padding:4px 9px; border-radius:999px; white-space:nowrap;
-      opacity:0; transition:opacity .25s ease, transform .25s ease; pointer-events:none;
-    }
-    .project-folder.open .pf-hint { opacity:1; transform:translateX(-50%) translateY(0); }
+    .pli-edit-row [contenteditable]:empty:before { content:attr(data-ph); color:#aaa; }
+    .pli-edit-row [contenteditable]:focus { background:rgba(0,0,0,.07); }
 
     .proj-card { position:relative; cursor:pointer; transition:opacity .25s, filter .25s, transform .55s cubic-bezier(.34,1.56,.64,1); }
 
@@ -869,9 +833,10 @@
       outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px;
       padding:2px 8px; cursor:text; min-width:16px;
     }
-    /* Folder view has no edit wiring of its own — editing always forces
-       Grid (see updateHomeEditUI), so hide the toggle rather than leave
-       a "Folders" option that silently does nothing while editing. */
+    /* The Projects (list) view has no edit wiring of its own — editing
+       always forces Grid (see updateHomeEditUI), so hide the toggle
+       rather than leave a "Projects" option that silently does nothing
+       while editing. */
     #view-home.home-edit .home-view-toggle { display:none; }
     #view-home.home-edit .sec-label {
       display:inline-block;
@@ -2222,7 +2187,7 @@ one keyframe at a time</div>
     <div class="home-view-toggle" id="homeViewToggle">
       <div class="hvt-highlight"></div>
       <button class="hvt-opt active" data-view="grid" onclick="setHomeView('grid')">Grid</button>
-      <button class="hvt-opt" data-view="folders" onclick="setHomeView('folders')">Folders</button>
+      <button class="hvt-opt" data-view="list" onclick="setHomeView('list')">Projects</button>
     </div>
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
     <div id="home-sections" style="opacity:0;transition:opacity .3s ease"></div>
@@ -4553,12 +4518,14 @@ function _makeSecDelBtn(label, grid) {
 
 
 /* ─── Render home sections dynamically ────────────────── */
-/* ── Home view toggle: Grid ↔ Folders ─────────────────────
-   Folders replace each project card with a small "Interactive Folder
-   Gallery" (ported below) showing that project's own images. Editing
-   (drag-reorder, rename, delete, thumbnails) is only wired for the
-   plain .proj-card grid, so entering edit mode always forces Grid —
-   see updateHomeEditUI(). */
+/* ── Home view toggle: Grid ↔ Projects ─────────────────────
+   Projects replaces each section's card grid with a vertical write-up
+   list (year, title, category, description, image strip) built below.
+   Editing (drag-reorder, rename, delete, thumbnails) is only wired for
+   the plain .proj-card grid, so entering edit mode always forces Grid —
+   see updateHomeEditUI(). The list's own new fields (year/category/
+   description) are edited on the Grid card instead, via .pli-edit-row —
+   see buildProjectListItem() and saveHomeEdits(). */
 let homeView = 'grid';
 let _lastHomeSections = null;
 
@@ -4578,126 +4545,80 @@ function setHomeView(view) {
   if (_lastHomeSections) renderHomeSections(_lastHomeSections);
 }
 
-// Images only — the gallery renders <img>, so video/lottie/text blocks
-// don't contribute a photo. Falls back to the card's own thumbnail so a
-// project with no image blocks still gets a one-photo folder.
+// Images only — video/lottie/text blocks don't contribute a strip photo.
+// Falls back to the card's own thumbnail so a project with no image
+// blocks still gets one tile instead of an empty strip.
 function galleryPhotosFor(key, fallbackThumb) {
   const proj = PROJECTS[key];
   const imgs = proj ? (proj.blocks || []).filter(b => b.type === 'image' && b.content).map(b => b.content) : [];
-  const photos = imgs.slice(0, 5);
+  const photos = imgs.slice(0, 8);
   return photos.length ? photos : (fallbackThumb ? [fallbackThumb] : []);
 }
 
-function buildProjectFolder(card) {
+function buildProjectListItem(card) {
   const photos = galleryPhotosFor(card.key, card.thumb);
 
-  const folder = document.createElement('div');
-  folder.className = 'project-folder';
-  folder.dataset.key = card.key;
+  const item = document.createElement('div');
+  item.className = 'proj-list-item';
+  item.dataset.key = card.key;
+  item.onclick = () => openProject(card.key);
 
-  const stage = document.createElement('div');
-  stage.className = 'pf-stage';
-  folder.appendChild(stage);
+  const year = document.createElement('div');
+  year.className = 'pli-year';
+  year.textContent = card.year || '';
 
-  const lidBack = document.createElement('div');
-  lidBack.className = 'pf-lid-back';
-  lidBack.innerHTML = '<div class="pf-tab"></div><div class="pf-body"><div class="pf-well"></div></div>';
-  stage.appendChild(lidBack);
+  const body = document.createElement('div');
+  body.className = 'pli-body';
 
-  const photosWrap = document.createElement('div');
-  photosWrap.className = 'pf-photos';
-  stage.appendChild(photosWrap);
+  const titleRow = document.createElement('div');
+  titleRow.className = 'pli-title-row';
+  titleRow.innerHTML = `<span class="pli-title">${card.name}</span>`;
+  body.appendChild(titleRow);
 
-  const n = photos.length;
-  const mid = (n - 1) / 2;
-  const photoEls = photos.map((src, i) => {
-    const p = document.createElement('div');
-    p.className = 'pf-photo';
-    p.style.zIndex = 10 + i;
-    const img = document.createElement('img');
-    img.src = src; img.alt = '';
-    p.appendChild(img);
-    photosWrap.appendChild(p);
-    return { el: p, offset: i - mid };
-  });
-
-  const lidFront = document.createElement('div');
-  lidFront.className = 'pf-lid-front';
-  lidFront.innerHTML = `<div class="pf-front-body"><span class="pf-name">${card.name}</span></div>`;
-  stage.appendChild(lidFront);
-
-  const hint = document.createElement('div');
-  hint.className = 'pf-hint';
-  hint.textContent = 'Drag a photo down to close';
-  folder.appendChild(hint);
-
-  let isOpen = false;
-
-  function layout() {
-    photoEls.forEach(({ el, offset }) => {
-      const t = isOpen
-        ? `translate(${offset * 30}px, -46px) scale(1.05)`
-        : `translate(${offset * 3}px, ${offset * -3}px) rotate(${offset * 3}deg) scale(${1 - Math.abs(offset) * 0.04})`;
-      el.style.transform = t;
-    });
-  }
-  layout();
-
-  function open() {
-    if (isOpen || !photoEls.length) return;
-    isOpen = true;
-    folder.classList.add('open');
-    layout();
-  }
-  function close() {
-    if (!isOpen) return;
-    isOpen = false;
-    folder.classList.remove('open');
-    layout();
+  if (card.category) {
+    const cat = document.createElement('div');
+    cat.className = 'pli-category';
+    cat.textContent = card.category;
+    body.appendChild(cat);
   }
 
-  folder.addEventListener('click', () => {
-    if (typeof editMode !== 'undefined' && editMode) return;
-    if (!isOpen) open();
-  });
+  if (card.desc) {
+    const desc = document.createElement('div');
+    desc.className = 'pli-desc';
+    desc.textContent = card.desc;
+    body.appendChild(desc);
+  }
 
-  photoEls.forEach(({ el, offset }) => {
-    let dragging = false, startY = 0;
-    el.addEventListener('pointerdown', (e) => {
-      if (!isOpen) return;
-      dragging = true;
-      startY = e.clientY;
-      el.classList.add('dragging');
-      try { el.setPointerCapture(e.pointerId); } catch (err) {}
+  if (photos.length) {
+    const strip = document.createElement('div');
+    strip.className = 'pli-media-strip';
+    // Stop a strip drag/scroll from also triggering the item's own
+    // click-to-open — mousedown rather than click, so a real drag-to-
+    // scroll gesture doesn't still count as a "click" on release.
+    strip.addEventListener('mousedown', e => e.stopPropagation());
+    photos.forEach(src => {
+      const img = document.createElement('img');
+      img.src = src; img.alt = '';
+      img.loading = 'lazy';
+      strip.appendChild(img);
     });
-    el.addEventListener('pointermove', (e) => {
-      if (!dragging) return;
-      const dy = Math.max(0, e.clientY - startY);
-      el.style.transform = `translate(${offset * 30}px, ${-46 + dy}px) rotate(${(dy * 0.05).toFixed(1)}deg) scale(1.05)`;
-    });
-    const endDrag = (e) => {
-      if (!dragging) return;
-      dragging = false;
-      el.classList.remove('dragging');
-      const dy = Math.max(0, e.clientY - startY);
-      if (dy > 70) close(); else layout();
-    };
-    el.addEventListener('pointerup', endDrag);
-    el.addEventListener('pointercancel', endDrag);
-  });
+    body.appendChild(strip);
+  }
 
-  return folder;
+  item.appendChild(year);
+  item.appendChild(body);
+  return item;
 }
 
 function renderHomeSections(sections) {
   _lastHomeSections = sections;
   const container = document.getElementById('home-sections');
   if (!container) return;
-  // Folder view is admin-only for now (still being checked over) —
-  // never rendered for a public visitor even if homeView somehow ends
-  // up 'folders' for that session.
+  // Projects (list) view is admin-only for now (still being checked over)
+  // — never rendered for a public visitor even if homeView somehow ends
+  // up 'list' for that session.
   const isAdmin = document.body.classList.contains('is-admin');
-  const useFolders = isAdmin && homeView === 'folders' && !(typeof editMode !== 'undefined' && editMode);
+  const useList = isAdmin && homeView === 'list' && !(typeof editMode !== 'undefined' && editMode);
   container.innerHTML = '';
   sections.forEach(sec => {
     const label = document.createElement('div');
@@ -4711,10 +4632,10 @@ function renderHomeSections(sections) {
       else { PROJECTS[card.key].name = card.name; PROJECTS[card.key].sub = card.sub||''; }
     });
 
-    if (useFolders) {
+    if (useList) {
       const row = document.createElement('div');
-      row.className = 'folder-row';
-      (sec.cards || []).forEach(card => row.appendChild(buildProjectFolder(card)));
+      row.className = 'projects-list';
+      (sec.cards || []).forEach(card => row.appendChild(buildProjectListItem(card)));
       container.appendChild(_makeSecDelBtn(label, row));
       container.appendChild(row);
     } else {
@@ -4734,7 +4655,16 @@ function renderHomeSections(sections) {
         const thumbImg = card.thumb ? `<img src="${card.thumb}" alt="${card.name}" onerror="var p=this.parentNode;if(p)p.style.background='linear-gradient(135deg,#e8e0d8,#c8bdb4)';this.remove()"/>` : '';
         el.dataset.key = card.key;
         if (card.hidden) el.dataset.hidden = 'true';
-        el.innerHTML = `<div class="proj-thumb"${thumbBg}>${thumbImg}</div><div class="proj-title">${card.name}</div><div class="proj-sub">${card.sub||''}</div>`;
+        // .pli-edit-row: year/category/description for the Projects (list)
+        // view — edited here on the Grid card (hidden outside edit mode via
+        // CSS) rather than on the list view itself, since editing wiring
+        // (drag-reorder, delete, thumbnails) only exists for Grid cards.
+        el.innerHTML = `<div class="proj-thumb"${thumbBg}>${thumbImg}</div><div class="proj-title">${card.name}</div><div class="proj-sub">${card.sub||''}</div>`
+          + `<div class="pli-edit-row">`
+          + `<span class="pli-edit-year" data-ph="Year">${card.year||''}</span>`
+          + `<span class="pli-edit-category" data-ph="Category, e.g. Motion Design / Web Banner">${card.category||''}</span>`
+          + `<span class="pli-edit-desc" data-ph="Short description for the Projects list view">${card.desc||''}</span>`
+          + `</div>`;
         grid.appendChild(el);
       });
       container.appendChild(_makeSecDelBtn(label, grid));
@@ -5263,8 +5193,10 @@ function updateEditUI() {
 
 /* ─── Home edit mode ────────────────────────────────────── */
 function updateHomeEditUI() {
-  // Folder view has none of the drag/rename/delete wiring below — force
-  // Grid so editing always has real cards to work with.
+  // Projects (list) view has none of the drag/rename/delete wiring below
+  // — force Grid so editing always has real cards to work with. Its own
+  // new fields (year/category/desc) are edited on the Grid card itself,
+  // via .pli-edit-row.
   if (editMode && homeView !== 'grid' && _lastHomeSections) {
     homeView = 'grid';
     renderHomeSections(_lastHomeSections);
@@ -5281,7 +5213,7 @@ function updateHomeEditUI() {
     document.querySelector('.profile-age'),
     document.getElementById('contactLblBefore'),
   ];
-  homeEl.querySelectorAll('.sec-label, .proj-title, .proj-sub').forEach(el => editables.push(el));
+  homeEl.querySelectorAll('.sec-label, .proj-title, .proj-sub, .pli-edit-year, .pli-edit-category, .pli-edit-desc').forEach(el => editables.push(el));
 
   editables.forEach(el => {
     if (!el) return;
@@ -5368,7 +5300,12 @@ function _addHomeCard(grid, addBtn) {
   el.className = 'proj-card';
   el.dataset.key = newKey;
   el.onclick = () => openProject(newKey);
-  el.innerHTML = `<div class="proj-thumb" style="background:linear-gradient(135deg,#e8e0d8,#c8bdb4)"></div><div class="proj-title">New Project</div><div class="proj-sub"></div>`;
+  el.innerHTML = `<div class="proj-thumb" style="background:linear-gradient(135deg,#e8e0d8,#c8bdb4)"></div><div class="proj-title">New Project</div><div class="proj-sub"></div>`
+    + `<div class="pli-edit-row">`
+    + `<span class="pli-edit-year" data-ph="Year"></span>`
+    + `<span class="pli-edit-category" data-ph="Category, e.g. Motion Design / Web Banner"></span>`
+    + `<span class="pli-edit-desc" data-ph="Short description for the Projects list view"></span>`
+    + `</div>`;
   const del = document.createElement('button');
   del.className = 'home-card-del';
   del.textContent = '×';
@@ -5385,7 +5322,7 @@ function _addHomeCard(grid, addBtn) {
   });
   el.appendChild(hide);
   grid.insertBefore(el, addBtn);
-  ['proj-title','proj-sub'].forEach(cls => {
+  ['proj-title','proj-sub','pli-edit-year','pli-edit-category','pli-edit-desc'].forEach(cls => {
     const f = el.querySelector('.'+cls);
     f.contentEditable = 'true';
     f._homeKeyWired = true;
@@ -5493,12 +5430,22 @@ function saveHomeEdits() {
       const key  = cardEl.dataset.key;
       const name = cardEl.querySelector('.proj-title')?.textContent?.trim() || '';
       const sub  = cardEl.querySelector('.proj-sub')?.textContent?.trim()  || '';
+      // year/category/desc: only used by the Projects (list) view, edited
+      // here on the Grid card — see the .pli-edit-row comment in
+      // renderHomeSections().
+      const year     = cardEl.querySelector('.pli-edit-year')?.textContent?.trim()     || '';
+      const category = cardEl.querySelector('.pli-edit-category')?.textContent?.trim() || '';
+      const desc     = cardEl.querySelector('.pli-edit-desc')?.textContent?.trim()     || '';
       // read thumb from img OR video src; if DOM lost it, fall back to the
       // previously-saved value so saving never destroys an existing thumbnail
       const mediaEl = cardEl.querySelector('.proj-thumb img, .proj-thumb video');
       const thumb = mediaEl?.getAttribute('src') || _prevThumbs[key] || '';
       const hidden = cardEl.dataset.hidden === 'true';
-      cards.push({ key, name, sub, ...(thumb ? { thumb } : {}), ...(hidden ? { hidden: true } : {}) });
+      cards.push({
+        key, name, sub,
+        ...(thumb ? { thumb } : {}), ...(hidden ? { hidden: true } : {}),
+        ...(year ? { year } : {}), ...(category ? { category } : {}), ...(desc ? { desc } : {}),
+      });
       if (PROJECTS[key]) { PROJECTS[key].name = name; PROJECTS[key].sub = sub; }
     });
     sections.push({ title: labelEl.textContent.trim(), cards });
