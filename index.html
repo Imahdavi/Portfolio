@@ -442,9 +442,6 @@
     .pli-body { flex:1 1 auto; min-width:0; }
     .pli-title-row { display:flex; align-items:baseline; gap:5px; }
     .pli-title { font-family:var(--font-title); font-size:17px; font-weight:600; }
-    .pli-arrow { font-size:12px; color:#b4a99a; }
-    .proj-list-item:hover .pli-title { text-decoration:underline; text-underline-offset:3px; }
-    .proj-list-item:hover .pli-arrow { color:#6a6055; }
     .pli-category { font-family:var(--font-body); font-size:12.5px; color:#a89e91; margin-top:2px; }
     .pli-desc { font-family:var(--font-body); font-size:13.5px; line-height:1.55; color:#5a5148; margin:8px 0 14px; max-width:52ch; }
     .pli-media-strip {
@@ -506,6 +503,77 @@
     }
     #view-home.home-edit .pli-tile.pli-drop-before { box-shadow:-3px 0 0 0 #3b82f6; }
     #view-home.home-edit .pli-tile.pli-drop-after  { box-shadow:3px 0 0 0 #3b82f6; }
+    /* Highlights the strip a dragged tile would land in — the drag can
+       cross into another project's strip, so it matters which one. */
+    #view-home.home-edit .pli-media-strip.pli-drop-zone {
+      background:rgba(59,130,246,.09); outline:1.5px dashed rgba(59,130,246,.55);
+    }
+
+    .pli-tile-del {
+      position:absolute; top:5px; right:5px; z-index:3; display:none;
+      width:19px; height:19px; border:none; border-radius:50%;
+      background:rgba(0,0,0,.62); color:#fff; font-size:13px; line-height:1;
+      cursor:pointer; align-items:center; justify-content:center; padding:0;
+    }
+    #view-home.home-edit .pli-tile:hover .pli-tile-del { display:flex; }
+    .pli-tile-del:hover { background:#dc2626; }
+
+    .pli-add-tile {
+      flex-shrink:0; height:104px; aspect-ratio:4 / 3; display:none;
+      align-items:center; justify-content:center; gap:4px; flex-direction:column;
+      border:1.5px dashed rgba(0,0,0,.22); border-radius:12px;
+      background:none; cursor:pointer; color:#8a8178; font-size:11.5px;
+      font-family:var(--font-body);
+    }
+    #view-home.home-edit .pli-add-tile { display:flex; }
+    .pli-add-tile:hover { border-color:rgba(0,0,0,.4); color:#5a5148; background:rgba(0,0,0,.02); }
+    .pli-add-tile span:first-child { font-size:19px; line-height:1; }
+
+    /* Media picker — same bottom sheet as the animation picker. */
+    #media-picker-overlay {
+      display:none; position:fixed; inset:0; z-index:5000;
+      background:rgba(0,0,0,.38); backdrop-filter:blur(4px);
+      align-items:flex-end; justify-content:center;
+    }
+    #media-picker-overlay.show { display:flex; }
+    #media-picker-sheet {
+      background:#fff; border-radius:20px 20px 0 0;
+      padding:20px 16px 24px; width:100%; max-width:620px;
+      max-height:82vh; display:flex; flex-direction:column;
+      animation:slideInSheet .25s cubic-bezier(.25,.46,.45,.94) both;
+    }
+    #media-picker-sheet h3 {
+      font-family:var(--font-heading); font-size:22px; font-weight:600;
+      text-align:center; margin-bottom:4px; color:#1a1a1a;
+    }
+    .mp-sub { text-align:center; font-size:12px; color:#999; margin-bottom:14px; font-family:var(--font-body); }
+    .mp-grid {
+      display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr));
+      gap:8px; overflow-y:auto; padding:2px; flex:1 1 auto; min-height:0;
+    }
+    .mp-item {
+      position:relative; aspect-ratio:1; border-radius:10px; overflow:hidden;
+      border:2px solid transparent; background:#e8e0d8; cursor:pointer; padding:0;
+    }
+    .mp-item img, .mp-item video { width:100%; height:100%; object-fit:cover; display:block; }
+    .mp-item:hover { border-color:rgba(0,0,0,.3); }
+    .mp-item.in-project { border-color:#3b82f6; }
+    .mp-item.in-project::after {
+      content:'✓'; position:absolute; top:3px; right:4px;
+      width:16px; height:16px; border-radius:50%; background:#3b82f6; color:#fff;
+      font-size:10px; display:flex; align-items:center; justify-content:center;
+    }
+    .mp-empty { grid-column:1/-1; text-align:center; color:#aaa; font-size:12.5px; padding:24px 0; font-family:var(--font-body); }
+    .mp-actions { display:flex; gap:8px; margin-top:12px; }
+    .mp-actions button {
+      flex:1; padding:11px; border:none; border-radius:12px;
+      font-size:13.5px; font-weight:600; cursor:pointer; font-family:var(--font-body);
+      transition:background .15s;
+    }
+    #mp-upload { background:#1a1a1a; color:#fff; }
+    #mp-upload:hover { background:#333; }
+    #mp-close { background:rgba(0,0,0,.06); color:#555; font-weight:500; }
+    #mp-close:hover { background:rgba(0,0,0,.1); }
 
     /* This view edits in place rather than through the grid's cards, so
        its three fields get the dashed affordance directly (see
@@ -527,10 +595,7 @@
     #view-home.home-edit .pli-year:empty:before,
     #view-home.home-edit .pli-category:empty:before,
     #view-home.home-edit .pli-desc:empty:before { content:attr(data-ph); color:#bbb; }
-    /* Nothing in this view is clickable-through-to-a-board while editing,
-       and the title is the only link when not. */
-    #view-home.home-edit .pli-title-row { cursor:default; }
-    .pli-title-row { cursor:pointer; align-self:flex-start; }
+    .pli-title-row { align-self:flex-start; }
 
     .proj-card { position:relative; cursor:pointer; transition:opacity .25s, filter .25s, transform .55s cubic-bezier(.34,1.56,.64,1); }
 
@@ -2585,6 +2650,21 @@ one keyframe at a time</div>
 <input type="file" id="avatarInput" accept="image/*" style="display:none"/>
 
 <!-- lottie picker sheet -->
+<!-- Media picker for the Projects list: everything already uploaded to the
+     site (gathered from every board's blocks), plus a direct upload. -->
+<div id="media-picker-overlay" onclick="if(event.target===this)closeMediaPicker()">
+  <div id="media-picker-sheet">
+    <h3 id="mp-title">Media</h3>
+    <div class="mp-sub" id="mp-sub"></div>
+    <div class="mp-grid" id="mp-grid"></div>
+    <div class="mp-actions">
+      <button id="mp-upload" onclick="mediaPickerUpload()">Upload new</button>
+      <button id="mp-close" onclick="closeMediaPicker()">Done</button>
+    </div>
+  </div>
+</div>
+<input type="file" id="mediaPickerInput" accept="image/*,video/*" multiple style="display:none"/>
+
 <div id="lottie-picker-overlay" onclick="if(event.target===this)closeLottiePicker()">
   <div id="lottie-picker-sheet">
     <h3>Choose Animation</h3>
@@ -4811,16 +4891,11 @@ function buildProjectListItem(card) {
   const body = document.createElement('div');
   body.className = 'pli-body';
 
-  // Only the title opens the board. The row as a whole deliberately does
-  // not: the strip below is drag-to-scroll, and a drag that ends on the
-  // row would otherwise navigate away mid-gesture.
+  // Nothing in this view navigates — it's a self-contained run-down of the
+  // work, so the row shows the media rather than linking off to it.
   const titleRow = document.createElement('div');
   titleRow.className = 'pli-title-row';
-  titleRow.innerHTML = `<span class="pli-title">${card.name}</span><span class="pli-arrow">↗</span>`;
-  titleRow.addEventListener('click', () => {
-    if (typeof editMode !== 'undefined' && editMode) return;
-    openProject(card.key);
-  });
+  titleRow.innerHTML = `<span class="pli-title">${card.name}</span>`;
   body.appendChild(titleRow);
 
   const cat = document.createElement('div');
@@ -4835,7 +4910,10 @@ function buildProjectListItem(card) {
   desc.textContent = card.desc || '';
   body.appendChild(desc);
 
-  if (media.length) {
+  // The strip is built even when empty: it still carries the "Add media"
+  // button and is a drop target for tiles dragged in from another project,
+  // both of which a project with nothing in it yet needs most.
+  {
     const strip = document.createElement('div');
     strip.className = 'pli-media-strip';
     media.forEach(m => {
@@ -4875,8 +4953,31 @@ function buildProjectListItem(card) {
         el.loading = 'lazy';
       }
       tile.appendChild(el);
+
+      // Edit-mode only (CSS keeps it hidden otherwise). Removes the block
+      // from the board, same as deleting it on the project page would.
+      const del = document.createElement('button');
+      del.className = 'pli-tile-del';
+      del.type = 'button';
+      del.textContent = '×';
+      del.title = 'Remove from this project';
+      del.addEventListener('pointerdown', e => e.stopPropagation()); // don't start a reorder drag
+      del.addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeMediaFromProject(card.key, tile.dataset.blockId);
+      });
+      tile.appendChild(del);
+
       strip.appendChild(tile);
     });
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'pli-add-tile';
+    addBtn.type = 'button';
+    addBtn.innerHTML = '<span>+</span><span>Add media</span>';
+    addBtn.addEventListener('pointerdown', e => e.stopPropagation());
+    addBtn.addEventListener('click', () => openMediaPicker(card.key));
+    strip.appendChild(addBtn);
     // After the tiles exist, so the first parallax paint has something to
     // measure rather than running against an empty strip.
     _wireStripDragScroll(strip);
@@ -4926,10 +5027,16 @@ function wireStripReorder(strip, key) {
   if (strip._reorderWired) return;
   strip._reorderWired = true;
 
-  let dragEl = null, targetEl = null, after = false;
+  let dragEl = null, targetEl = null, targetStrip = null, after = false;
 
-  const clearMarks = () => strip.querySelectorAll('.pli-tile').forEach(t =>
-    t.classList.remove('pli-drop-before', 'pli-drop-after'));
+  // Marks live on any strip the pointer has passed over, not just this
+  // one, since a drag can cross into another project's row.
+  const clearMarks = () => {
+    document.querySelectorAll('.pli-drop-before, .pli-drop-after')
+      .forEach(t => t.classList.remove('pli-drop-before', 'pli-drop-after'));
+    document.querySelectorAll('.pli-drop-zone')
+      .forEach(s => s.classList.remove('pli-drop-zone'));
+  };
 
   strip.addEventListener('pointerdown', (e) => {
     if (!(typeof editMode !== 'undefined' && editMode)) return;
@@ -4945,10 +5052,20 @@ function wireStripReorder(strip, key) {
     if (!dragEl) return;
     e.preventDefault();
     // elementFromPoint rather than e.target: the pointer is captured to
-    // the strip, so e.target stays the strip for the whole gesture.
-    const over = document.elementFromPoint(e.clientX, e.clientY)?.closest('.pli-tile');
+    // this strip, so e.target stays this strip for the whole gesture —
+    // which is also the only way to see a drop into a different one.
+    const under = document.elementFromPoint(e.clientX, e.clientY);
     clearMarks();
-    if (!over || over === dragEl || over.parentElement !== strip) { targetEl = null; return; }
+    targetEl = null; targetStrip = null;
+    if (!under) return;
+
+    const overStrip = under.closest('.pli-media-strip');
+    if (!overStrip) return;
+    targetStrip = overStrip;
+    overStrip.classList.add('pli-drop-zone');
+
+    const over = under.closest('.pli-tile');
+    if (!over || over === dragEl) return;   // empty area of a strip: append
     const r = over.getBoundingClientRect();
     after = e.clientX > r.left + r.width / 2;
     targetEl = over;
@@ -4958,19 +5075,187 @@ function wireStripReorder(strip, key) {
   const finish = (e) => {
     if (!dragEl) return;
     const moved = dragEl;
-    const dest = targetEl, destAfter = after;
-    dragEl = null; targetEl = null;
+    const dest = targetEl, destAfter = after, destStrip = targetStrip;
+    dragEl = null; targetEl = null; targetStrip = null;
     moved.classList.remove('pli-dragging');
     clearMarks();
     try { strip.releasePointerCapture(e.pointerId); } catch (err) {}
-    if (!dest) return;
+    if (!destStrip) return;
 
-    strip.insertBefore(moved, destAfter ? dest.nextSibling : dest);
-    commitStripOrder(strip, key);
+    const destKey = destStrip.closest('.proj-list-item')?.dataset.key;
+    if (!destKey) return;
+
+    if (destKey === key) {
+      // Same project: a reorder. Dropping on empty space parks it last.
+      if (dest) strip.insertBefore(moved, destAfter ? dest.nextSibling : dest);
+      else strip.insertBefore(moved, strip.querySelector('.pli-add-tile'));
+      commitStripOrder(strip, key);
+      return;
+    }
+
+    // Different project: move the block across. Position is worked out
+    // from the destination's own media blocks, so it lands where it was
+    // dropped rather than always at the end.
+    const src = PROJECTS[key];
+    const blockId = moved.dataset.blockId;
+    const i = src?.blocks?.findIndex(b => b.id === blockId);
+    if (i == null || i < 0) return;
+    const block = src.blocks[i];
+
+    let atIndex;
+    if (dest) {
+      const destProj = PROJECTS[destKey];
+      const destPos = (destProj.blocks || []).findIndex(b => b.id === dest.dataset.blockId);
+      if (destPos >= 0) atIndex = destAfter ? destPos + 1 : destPos;
+    }
+
+    src.blocks.splice(i, 1);
+    addMediaToProject(destKey, { type: block.type, src: block.content, aspect: block._freeAspect }, atIndex);
+    saveProject(key);
+    refreshProjectsList();
   };
   strip.addEventListener('pointerup', finish);
   strip.addEventListener('pointercancel', finish);
 }
+
+/* ── Projects list media management ────────────────────────
+   Everything here edits PROJECTS[key].blocks directly and saves the
+   project, because the strip is only a window onto that array. Media is
+   appended/removed among the media blocks; text, dividers and lottie
+   blocks are never touched. */
+
+// Re-render just the rows, keeping the current scroll position — a full
+// renderHomeSections() would jump the page back to the top mid-edit.
+function refreshProjectsList() {
+  if (!_lastHomeSections) return;
+  const y = window.scrollY;
+  renderHomeSections(_lastHomeSections);
+  requestAnimationFrame(() => window.scrollTo(0, y));
+}
+
+function removeMediaFromProject(key, blockId) {
+  const proj = PROJECTS[key];
+  if (!proj || !proj.blocks || !blockId) return;
+  const i = proj.blocks.findIndex(b => b.id === blockId);
+  if (i < 0) return;
+  proj.blocks.splice(i, 1);
+  saveProject(key);
+  refreshProjectsList();
+}
+
+function addMediaToProject(key, media, atIndex) {
+  const proj = PROJECTS[key];
+  if (!proj) return null;
+  if (!proj.blocks) proj.blocks = [];
+  // A fresh id per placement: the same file can sit in several projects,
+  // and reordering matches tiles to blocks by id.
+  const block = { id: uid(), type: media.type, content: media.src };
+  if (media.aspect) block._freeAspect = media.aspect;
+  if (typeof atIndex === 'number' && atIndex >= 0 && atIndex <= proj.blocks.length) {
+    proj.blocks.splice(atIndex, 0, block);
+  } else {
+    proj.blocks.push(block);
+  }
+  saveProject(key);
+  return block;
+}
+
+// Every distinct media file already on the site, gathered from the boards
+// themselves — there's no separate asset index, and the boards are what
+// "uploaded to the site" actually means here.
+function collectSiteMedia() {
+  const seen = new Map();
+  Object.keys(PROJECTS).forEach(k => {
+    (PROJECTS[k].blocks || []).forEach(b => {
+      if ((b.type !== 'image' && b.type !== 'video') || !b.content) return;
+      if (!seen.has(b.content)) seen.set(b.content, { type: b.type, src: b.content });
+    });
+  });
+  return [...seen.values()];
+}
+
+let _mpKey = null;
+function openMediaPicker(key) {
+  _mpKey = key;
+  const overlay = document.getElementById('media-picker-overlay');
+  document.getElementById('mp-title').textContent = (PROJECTS[key]?.name || key);
+  renderMediaPicker();
+  overlay.classList.add('show');
+}
+
+function closeMediaPicker() {
+  document.getElementById('media-picker-overlay').classList.remove('show');
+  _mpKey = null;
+}
+
+function renderMediaPicker() {
+  const key = _mpKey;
+  const grid = document.getElementById('mp-grid');
+  const sub  = document.getElementById('mp-sub');
+  if (!key || !grid) return;
+
+  const inProject = new Set((PROJECTS[key]?.blocks || [])
+    .filter(b => (b.type === 'image' || b.type === 'video') && b.content)
+    .map(b => b.content));
+  const all = collectSiteMedia();
+
+  sub.textContent = all.length
+    ? 'Tap to add or remove from this project'
+    : '';
+  grid.innerHTML = '';
+  if (!all.length) {
+    grid.innerHTML = '<div class="mp-empty">Nothing uploaded yet — use “Upload new”.</div>';
+    return;
+  }
+
+  all.forEach(m => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'mp-item' + (inProject.has(m.src) ? ' in-project' : '');
+    const el = document.createElement(m.type === 'video' ? 'video' : 'img');
+    if (m.type === 'video') { el.src = m.src; el.muted = true; el.playsInline = true; el.preload = 'metadata'; }
+    else { el.src = m.src; el.alt = ''; el.loading = 'lazy'; }
+    btn.appendChild(el);
+    btn.addEventListener('click', () => {
+      const proj = PROJECTS[key];
+      const existing = (proj.blocks || []).find(b => b.content === m.src && (b.type === 'image' || b.type === 'video'));
+      if (existing) removeMediaFromProject(key, existing.id);
+      else { addMediaToProject(key, m); refreshProjectsList(); }
+      renderMediaPicker();
+    });
+    grid.appendChild(btn);
+  });
+}
+
+function mediaPickerUpload() {
+  document.getElementById('mediaPickerInput').click();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('mediaPickerInput');
+  if (!input) return;
+  input.addEventListener('change', async function () {
+    const files = [...this.files];
+    this.value = '';
+    const key = _mpKey;
+    if (!files.length || !key) return;
+    for (const file of files) {
+      showUploadToast('Uploading ' + file.name + '…');
+      try {
+        const ext  = (file.name.split('.').pop() || 'bin').toLowerCase();
+        const path = `uploads/${Date.now()}_${uid()}.${ext}`;
+        // Same upload path as the project page's own uploads.
+        const url  = await tusUpload(file, SB_MEDIA_BUCKET, path, () => {});
+        addMediaToProject(key, { type: file.type.startsWith('video') ? 'video' : 'image', src: url });
+        showUploadToast('Uploaded ✓');
+      } catch (e) {
+        showUploadToast('Upload failed: ' + e.message, true);
+      }
+    }
+    refreshProjectsList();
+    renderMediaPicker();
+  });
+});
 
 function commitStripOrder(strip, key) {
   const proj = PROJECTS[key];
