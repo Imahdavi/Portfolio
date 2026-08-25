@@ -448,13 +448,15 @@
       margin-inline:-4px; padding-inline:4px;
     }
     .pli-media-strip::-webkit-scrollbar { display:none; }
-    /* height:100% + width:auto is the whole layout rule — each tile keeps
-       its own intrinsic aspect ratio and they pack left to right, so a
+    /* height:100% + the file's own aspect ratio is the whole layout rule —
+       each tile keeps its real shape and they pack left to right, so a
        16:9 still and a 9:16 reel sit side by side at matching heights
-       without any per-tile sizing. */
+       without any per-tile sizing. The 4/3 here is only a placeholder for
+       the gap before a file loads and reports its dimensions; buildProject-
+       ListItem() replaces it with the real ratio on load/loadedmetadata. */
     .pli-media-strip img,
     .pli-media-strip video {
-      height:100%; width:auto; flex-shrink:0; display:block;
+      height:100%; width:auto; aspect-ratio:4 / 3; flex-shrink:0; display:block;
       border-radius:10px; object-fit:cover; background:#e8e0d8;
     }
     /* Edit-mode-only fields (year/category/description) — no wiring for
@@ -4570,11 +4572,7 @@ function listMediaFor(key, fallbackThumb) {
   const media = proj
     ? (proj.blocks || [])
         .filter(b => (b.type === 'image' || b.type === 'video') && b.content)
-        // _freeAspect is what the board already stores for this block's
-        // shape. Carrying it over lets a tile reserve the right width
-        // before the file loads — without it a not-yet-loaded <video> has
-        // no intrinsic size and the strip visibly reflows once it does.
-        .map(b => ({ type: b.type, src: b.content, aspect: b._freeAspect }))
+        .map(b => ({ type: b.type, src: b.content }))
     : [];
   const picked = media.slice(0, 10);
   if (picked.length) return picked;
@@ -4624,7 +4622,18 @@ function buildProjectListItem(card) {
     strip.addEventListener('mousedown', e => e.stopPropagation());
     media.forEach(m => {
       const el = document.createElement(m.type === 'video' ? 'video' : 'img');
-      if (m.aspect) el.style.aspectRatio = String(m.aspect);
+      // Width comes from the file's OWN dimensions, not the block's box on
+      // the board — a block the user resized to a wide slot can still hold
+      // a square video, so the board's stored _freeAspect is the wrong
+      // shape here. Until the file loads there are no intrinsic dimensions
+      // (an empty <video> reports the browser's 300x150 default), so CSS
+      // holds a neutral placeholder ratio and this swaps in the real one.
+      const applyAspect = () => {
+        const w = el.videoWidth || el.naturalWidth;
+        const h = el.videoHeight || el.naturalHeight;
+        if (w && h) el.style.aspectRatio = w + ' / ' + h;
+      };
+      el.addEventListener(m.type === 'video' ? 'loadedmetadata' : 'load', applyAspect);
       if (m.type === 'video') {
         // Muted+playsInline so it can autoplay; these are short loops and
         // the strip is small, so they read as moving thumbnails. Lazy via
