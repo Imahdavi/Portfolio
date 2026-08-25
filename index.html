@@ -591,10 +591,10 @@
       z-index:150; pointer-events:none;
       opacity:0; transition:opacity .3s ease;
     }
-    /* Toggled from JS rather than `body:has(#view-home.active)`: that
-       selector matches correctly when tested with .matches(), but the
-       engine doesn't re-evaluate it when the class changes on a
-       descendant, so the blur stayed up on every view. */
+    /* Toggled from JS rather than `body:has(#view-home.active)`. Both
+       work; this one doesn't rest on :has() re-invalidating when a
+       descendant's class changes, and it keeps the show/hide decision
+       next to the observer that drives it. */
     .gradual-blur.show { opacity:1; }
     .gradual-blur-inner { position:absolute; inset:0; }
     .gradual-blur-inner > div { position:absolute; inset:0; }
