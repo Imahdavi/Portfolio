@@ -2796,7 +2796,10 @@ function spiderSense(x, y) {
   document.addEventListener('mousedown', e => {
     cur.classList.add('pressing');
     spiderSense(e.clientX, e.clientY);
-    if (!e.target.closest('#sound-toggle-btn') && window._playWebShot) window._playWebShot();
+    // Grabbing the Projects media strip doesn't fire a web (see NO_SHOOT),
+    // so it shouldn't play the shot sound either — otherwise every drag
+    // thwips with nothing to show for it.
+    if (!e.target.closest('#sound-toggle-btn, .pli-media-strip') && window._playWebShot) window._playWebShot();
   });
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
 
@@ -8002,12 +8005,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     shots.push(new WebShot(src.x,src.y,cx,cy));
   }
 
+  // Controls, and the Projects media strip — dragging that strip ends in a
+  // click, so without it every pull to see more work also fired a web.
+  const NO_SHOOT = 'button,a,input,.nav-btn,.pill,.pli-media-strip';
+
   let _tx=0,_ty=0,_lastTouch=0;
   document.addEventListener('touchstart',e=>{
     const t=e.touches[0]; _tx=t.clientX; _ty=t.clientY;
   },{passive:true});
   document.addEventListener('touchend',e=>{
-    if(e.target.closest('button,a,input,.nav-btn,.pill')) return;
+    if(e.target.closest(NO_SHOOT)) return;
     const t=e.changedTouches[0];
     const dx=t.clientX-_tx, dy=t.clientY-_ty;
     if(dx*dx+dy*dy>12*12) return; // was a scroll, not a tap
@@ -8016,7 +8023,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   },{passive:true});
   document.addEventListener('click',e=>{
     if(Date.now()-_lastTouch<600) return; // suppress ghost click after touch
-    if(e.target.closest('button,a,input,.nav-btn,.pill')) return;
+    if(e.target.closest(NO_SHOOT)) return;
     tryShoot(e.clientX,e.clientY);
   });
 })();
