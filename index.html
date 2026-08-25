@@ -591,7 +591,11 @@
       z-index:150; pointer-events:none;
       opacity:0; transition:opacity .3s ease;
     }
-    body:has(#view-home.active) .gradual-blur { opacity:1; }
+    /* Toggled from JS rather than `body:has(#view-home.active)`: that
+       selector matches correctly when tested with .matches(), but the
+       engine doesn't re-evaluate it when the class changes on a
+       descendant, so the blur stayed up on every view. */
+    .gradual-blur.show { opacity:1; }
     .gradual-blur-inner { position:absolute; inset:0; }
     .gradual-blur-inner > div { position:absolute; inset:0; }
     @media (prefers-reduced-motion: reduce) { .gradual-blur { transition:none; } }
@@ -8571,6 +8575,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     wrap.setAttribute('aria-hidden', 'true');
     wrap.appendChild(buildGradualBlur(CONFIG));
     document.body.appendChild(wrap);
+
+    // Watch the home view's own class rather than hooking showView, so the
+    // trial stays self-contained and can be lifted out in one block.
+    const home = document.getElementById('view-home');
+    if (!home) return;
+    const sync = () => wrap.classList.toggle('show', home.classList.contains('active'));
+    sync();
+    new MutationObserver(sync).observe(home, { attributes: true, attributeFilter: ['class'] });
   });
 })();
 
