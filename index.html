@@ -444,28 +444,31 @@
     .pli-category { font-size:12.5px; color:#a89e91; margin-top:2px; }
     .pli-desc { font-size:13.5px; line-height:1.55; color:#5a5148; margin:8px 0 14px; max-width:52ch; }
     .pli-media-strip {
-      display:flex; gap:8px; height:88px; overflow-x:auto; scrollbar-width:none;
+      display:flex; gap:10px; height:170px; overflow-x:auto; scrollbar-width:none;
       margin-inline:-4px; padding-inline:4px;
+      cursor:grab; scroll-behavior:auto;
     }
     .pli-media-strip::-webkit-scrollbar { display:none; }
-    /* height:100% + the file's own aspect ratio is the whole layout rule —
-       each tile keeps its real shape and they pack left to right, so a
-       16:9 still and a 9:16 reel sit side by side at matching heights
-       without any per-tile sizing. The 4/3 here is only a placeholder for
-       the gap before a file loads and reports its dimensions; buildProject-
-       ListItem() replaces it with the real ratio on load/loadedmetadata. */
-    .pli-media-strip img,
-    .pli-media-strip video {
-      height:100%; width:auto; aspect-ratio:4 / 3; flex-shrink:0; display:block;
-      border-radius:10px; object-fit:cover; background:#e8e0d8;
+    .pli-media-strip.dragging { cursor:grabbing; }
+    /* Each tile is a fixed frame; the media inside is deliberately wider
+       than it (see --pli-uv) so it has room to counter-shift as the tile
+       travels across the strip — that pan is the parallax. Frame width
+       comes from the file's own aspect ratio, so a 16:9 still and a 9:16
+       reel sit side by side at matching heights with no per-tile sizing.
+       The 4/3 is only a placeholder for the window before a file reports
+       its dimensions; buildProjectListItem() sets the real ratio then. */
+    .pli-tile {
+      position:relative; height:100%; aspect-ratio:4 / 3; flex-shrink:0;
+      border-radius:12px; overflow:hidden; background:#e8e0d8;
     }
-    /* grab/grabbing on the strip itself, so it reads as draggable. The
-       tiles get it too — without this the cursor reverts over each tile,
-       which is most of the strip's surface. */
-    .pli-media-strip { cursor:grab; }
-    .pli-media-strip.dragging { cursor:grabbing; scroll-behavior:auto; }
-    .pli-media-strip.dragging img,
-    .pli-media-strip.dragging video { pointer-events:none; }
+    .pli-tile img,
+    .pli-tile video {
+      position:absolute; top:0; left:50%;
+      height:100%; width:calc(100% / var(--pli-uv, .85));
+      transform:translateX(-50%) translateX(var(--pli-shift, 0px));
+      object-fit:cover; display:block; will-change:transform;
+    }
+    .pli-media-strip.dragging .pli-tile { pointer-events:none; }
 
     /* This view edits in place rather than through the grid's cards, so
        its three fields get the dashed affordance directly (see
@@ -4598,33 +4601,101 @@ function listMediaFor(key, fallbackThumb) {
   return fallbackThumb ? [{ type: 'image', src: fallbackThumb }] : [];
 }
 
-// Click-and-drag horizontal scrolling for a media strip, so the rest of a
-// board's work can be pulled into view without the strip being a scroll
-// trap. Pointer events (not mouse) so a touch drag keeps working via the
-// browser's own touch scrolling — the handler bails on touch and lets it
-// through. Nothing here navigates; the title is the only way into a board.
+/* ── Parallax carousel drag ────────────────────────────────
+   The interaction from React Bits Pro's "Parallax Carousel". That
+   component is React + Tailwind installed through shadcn, and this page
+   is one vanilla HTML file with no React, no Tailwind and no build step
+   (same call as the TiltCard and folder-gallery ports before it), so
+   this re-implements its behaviour rather than installing it:
+
+     - drag with a 1.4 sensitivity multiplier, and wheel at 1.0
+     - position eased toward the target by a 0.08 lerp each frame, which
+       is what gives the release its inertia instead of stopping dead
+     - the parallax itself: as a tile drifts from the strip's centre, the
+       media inside it counter-shifts. Its source does this in UV space
+       with a 0.85 inset; here the media is sized 1/0.85 wider than its
+       frame and panned within that slack, which is the same idea in DOM
+       terms. parallaxIntensity 0.4 matches the default.
+
+   Its snap, autoplay and progress-bar options aren't ported — this strip
+   is a free-scrolling row of work, not a slideshow. */
+const STRIP_DRAG_SENSITIVITY = 1.4;
+const STRIP_WHEEL_SENSITIVITY = 1.0;
+const STRIP_LERP = 0.08;
+const STRIP_PARALLAX = 0.4;
+const STRIP_UV_SCALE = 0.85;
+
+let _stripDrivers = [];
+
+function _teardownStripDrivers() {
+  _stripDrivers.forEach(stop => stop());
+  _stripDrivers = [];
+}
+
 function _wireStripDragScroll(strip) {
-  let down = false, startX = 0, startScroll = 0, moved = 0;
+  let target = 0, current = 0, raf = null, down = false;
+  let startX = 0, startTarget = 0, dragged = false;
+
+  const maxScroll = () => Math.max(0, strip.scrollWidth - strip.clientWidth);
+  const clamp = v => Math.min(Math.max(v, 0), maxScroll());
+
+  // Slack each side of a tile's media, in px — how far it can pan before
+  // its edge would show inside the frame.
+  const slackFor = tile => (tile.clientWidth / STRIP_UV_SCALE - tile.clientWidth) / 2;
+
+  function paintParallax() {
+    const rect = strip.getBoundingClientRect();
+    const mid = rect.left + rect.width / 2;
+    strip.querySelectorAll('.pli-tile').forEach(tile => {
+      const t = tile.getBoundingClientRect();
+      // -1 at the strip's left edge, +1 at its right.
+      const offset = ((t.left + t.width / 2) - mid) / (rect.width / 2);
+      const shift = -offset * slackFor(tile) * STRIP_PARALLAX;
+      tile.style.setProperty('--pli-shift', shift.toFixed(2) + 'px');
+    });
+  }
+
+  function frame() {
+    const diff = target - current;
+    // Below a subpixel the lerp would crawl toward the target forever.
+    if (Math.abs(diff) < 0.05) {
+      current = target;
+      strip.scrollLeft = current;
+      paintParallax();
+      raf = null;
+      return;
+    }
+    current += diff * STRIP_LERP;
+    strip.scrollLeft = current;
+    paintParallax();
+    raf = requestAnimationFrame(frame);
+  }
+
+  function kick() { if (raf === null) raf = requestAnimationFrame(frame); }
 
   strip.addEventListener('pointerdown', (e) => {
-    if (e.pointerType === 'touch') return; // native touch scroll handles it
-    down = true; moved = 0;
+    if (e.pointerType === 'touch') return;  // native touch scrolling handles it
+    down = true; dragged = false;
     startX = e.clientX;
-    startScroll = strip.scrollLeft;
+    // Resync from the DOM: a touch scroll or the observer may have moved it.
+    current = target = strip.scrollLeft;
+    startTarget = target;
     strip.classList.add('dragging');
   });
 
   strip.addEventListener('pointermove', (e) => {
     if (!down) return;
     const dx = e.clientX - startX;
-    if (Math.abs(dx) > 3) {
+    if (!dragged && Math.abs(dx) > 3) {
       // Claim the gesture only once it's clearly a drag, so a plain click
       // on a tile isn't swallowed.
-      if (moved === 0) { try { strip.setPointerCapture(e.pointerId); } catch (err) {} }
-      moved = Math.abs(dx);
-      e.preventDefault();
+      dragged = true;
+      try { strip.setPointerCapture(e.pointerId); } catch (err) {}
     }
-    strip.scrollLeft = startScroll - dx;
+    if (!dragged) return;
+    e.preventDefault();
+    target = clamp(startTarget - dx * STRIP_DRAG_SENSITIVITY);
+    kick();
   });
 
   const end = (e) => {
@@ -4636,9 +4707,31 @@ function _wireStripDragScroll(strip) {
   strip.addEventListener('pointerup', end);
   strip.addEventListener('pointercancel', end);
 
-  // Videos and images are draggable by default; that ghost-image drag
-  // fights the scroll gesture, so turn it off.
+  strip.addEventListener('wheel', (e) => {
+    // Only take over for horizontal intent; a vertical wheel should still
+    // scroll the page rather than being trapped by the strip.
+    const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : 0;
+    if (!dx) return;
+    e.preventDefault();
+    if (raf === null) current = target = strip.scrollLeft;
+    target = clamp(target + dx * STRIP_WHEEL_SENSITIVITY);
+    kick();
+  }, { passive: false });
+
+  // Media is draggable by default; that ghost-image drag fights the
+  // gesture, so turn it off.
   strip.addEventListener('dragstart', e => e.preventDefault());
+
+  // Tiles start at their natural width and get their real aspect ratio on
+  // load, so paint once now and again after a tile resizes.
+  paintParallax();
+  const ro = new ResizeObserver(paintParallax);
+  ro.observe(strip);
+
+  _stripDrivers.push(() => {
+    if (raf !== null) cancelAnimationFrame(raf);
+    ro.disconnect();
+  });
 }
 
 function buildProjectListItem(card) {
@@ -4683,26 +4776,31 @@ function buildProjectListItem(card) {
   if (media.length) {
     const strip = document.createElement('div');
     strip.className = 'pli-media-strip';
-    _wireStripDragScroll(strip);
     media.forEach(m => {
+      // The frame carries the shape; the media inside it is oversized and
+      // pans within the frame — that pan is the parallax.
+      const tile = document.createElement('div');
+      tile.className = 'pli-tile';
+      tile.style.setProperty('--pli-uv', STRIP_UV_SCALE);
+
       const el = document.createElement(m.type === 'video' ? 'video' : 'img');
-      // Width comes from the file's OWN dimensions, not the block's box on
-      // the board — a block the user resized to a wide slot can still hold
-      // a square video, so the board's stored _freeAspect is the wrong
-      // shape here. Until the file loads there are no intrinsic dimensions
-      // (an empty <video> reports the browser's 300x150 default), so CSS
-      // holds a neutral placeholder ratio and this swaps in the real one.
+      // The frame's width comes from the file's OWN dimensions, not the
+      // block's box on the board — a block the user resized to a wide slot
+      // can still hold a square video, so the board's stored _freeAspect is
+      // the wrong shape here. Until the file loads there are no intrinsic
+      // dimensions (an empty <video> reports the browser's 300x150
+      // default), so CSS holds a placeholder ratio and this swaps in the
+      // real one.
       const applyAspect = () => {
         const w = el.videoWidth || el.naturalWidth;
         const h = el.videoHeight || el.naturalHeight;
-        if (w && h) el.style.aspectRatio = w + ' / ' + h;
+        if (w && h) tile.style.aspectRatio = w + ' / ' + h;
       };
       el.addEventListener(m.type === 'video' ? 'loadedmetadata' : 'load', applyAspect);
       if (m.type === 'video') {
-        // Muted+playsInline so it can autoplay; these are short loops and
-        // the strip is small, so they read as moving thumbnails. Lazy via
-        // preload="none" + the strip observer below rather than loading
-        // ten videos up front.
+        // Muted+playsInline so it can autoplay; these are short loops, so
+        // they read as moving thumbnails. Lazy via preload="none" plus the
+        // strip observer rather than loading ten videos up front.
         el.dataset.lazySrc = m.src;
         el.preload = 'none';
         el.muted = true; el.loop = true; el.playsInline = true;
@@ -4710,8 +4808,12 @@ function buildProjectListItem(card) {
         el.src = m.src; el.alt = '';
         el.loading = 'lazy';
       }
-      strip.appendChild(el);
+      tile.appendChild(el);
+      strip.appendChild(tile);
     });
+    // After the tiles exist, so the first parallax paint has something to
+    // measure rather than running against an empty strip.
+    _wireStripDragScroll(strip);
     body.appendChild(strip);
   }
 
@@ -4808,6 +4910,9 @@ function renderHomeSections(sections) {
   // own editing (year/category/description inline, saved by
   // saveProjectsListEdits) rather than borrowing the grid's.
   const useList = isAdmin && homeView === 'list';
+  // Strips are about to be discarded — stop their rAF loops and observers
+  // before the DOM goes, or switching views leaves them running forever.
+  _teardownStripDrivers();
   container.innerHTML = '';
 
   // PROJECTS metadata has to stay in sync regardless of which view renders,
