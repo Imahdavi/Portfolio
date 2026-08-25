@@ -390,6 +390,110 @@
       .card-grid { grid-template-columns:repeat(auto-fill, 154.67px); justify-content:start; }
     }
 
+    /* ── Home view toggle — segmented pill, switches Works/Projects
+       between the plain card grid and a row of "folders" per project.
+       Admin-only while the folder view is still being checked over —
+       public visitors never see the toggle or the folder rendering
+       (belt-and-braces: renderHomeSections() also refuses to render
+       folders unless body.is-admin, in case homeView ever ends up
+       'folders' for a non-admin session). ── */
+    .home-view-toggle { display:none; }
+    body.is-admin .home-view-toggle {
+      position:relative; display:inline-flex; margin:4px auto 28px;
+      padding:3px; border-radius:999px; background:rgba(0,0,0,.05);
+      gap:2px;
+    }
+    .hvt-highlight {
+      position:absolute; top:3px; left:3px; height:calc(100% - 6px);
+      width:var(--hvt-w, 50%); transform:translateX(var(--hvt-x, 0px));
+      background:#fff; border-radius:999px;
+      box-shadow:0 1px 4px rgba(0,0,0,.15);
+      transition:transform .32s cubic-bezier(.34,1.56,.64,1), width .32s cubic-bezier(.34,1.56,.64,1);
+    }
+    .hvt-opt {
+      position:relative; z-index:1; border:none; background:none; cursor:pointer;
+      padding:7px 16px; font-size:12.5px; font-weight:600; color:#999;
+      border-radius:999px; transition:color .2s; white-space:nowrap;
+    }
+    .hvt-opt.active { color:#1a1a1a; }
+
+    /* ── Project folders (ported from an "Interactive Folder Gallery"
+       React/framer-motion component) — the closed-lid hover tilt, the
+       click-to-open fan of photos, and drag-a-photo-down-to-close are
+       the source's own interaction and spring feel; re-built with
+       plain CSS transitions (a bouncy cubic-bezier standing in for its
+       spring configs) and manual pointer tracking for the drag, since
+       this page has no framer-motion. Sized down from the source's
+       desktop-only 400x500 demo to sit in a horizontally-scrolling row
+       of several, one per project, alongside the plain grid view. */
+    .folder-row {
+      display:flex; gap:22px; overflow-x:auto; overflow-y:visible;
+      padding:34px 4px 30px; margin-bottom:20px; margin-inline:-4px;
+      scrollbar-width:none;
+    }
+    .folder-row::-webkit-scrollbar { display:none; }
+    .project-folder {
+      position:relative; flex:0 0 auto; width:118px; height:150px;
+      cursor:pointer;
+    }
+    .project-folder .pf-stage {
+      position:absolute; inset:0; display:flex; justify-content:center;
+    }
+    .pf-lid-back {
+      position:absolute; bottom:6px; width:96px; height:64px;
+      transition:opacity .3s ease, transform .3s ease;
+    }
+    .pf-lid-back .pf-tab { position:absolute; top:0; left:0; width:38px; height:11px; background:linear-gradient(to top,#1e1e1e,#2a2a2a); border-radius:8px 8px 0 0; border:1px solid rgba(255,255,255,.1); border-bottom:none; }
+    .pf-lid-back .pf-body { position:absolute; top:9px; left:0; right:0; bottom:0; background:linear-gradient(to bottom,#1e1e1e,#0a0a0a); border-radius:0 8px 8px 8px; border:1px solid rgba(255,255,255,.1); box-shadow:inset 0 0 16px rgba(0,0,0,.8); }
+    .pf-lid-back .pf-well { position:absolute; top:11px; left:2px; right:2px; bottom:2px; background:#000; border-radius:6px; }
+    .project-folder.open .pf-lid-back { opacity:0; transform:scale(.9); }
+
+    .pf-photos { position:absolute; bottom:14px; left:0; right:0; display:flex; justify-content:center; z-index:2; }
+    .pf-photo {
+      position:absolute; bottom:0; width:64px; height:82px;
+      border-radius:9px; overflow:hidden; border:1px solid rgba(255,255,255,.25);
+      box-shadow:0 8px 16px rgba(0,0,0,.4);
+      background:#111; transform-origin:bottom center;
+      transition:transform .38s cubic-bezier(.34,1.56,.64,1);
+      touch-action:none;
+    }
+    .pf-photo img { width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; -webkit-user-drag:none; }
+    .project-folder.open .pf-photo { cursor:grab; }
+    .project-folder.open .pf-photo.dragging { cursor:grabbing; transition:none; }
+
+    .pf-lid-front {
+      position:absolute; bottom:0; width:112px; height:50px;
+      z-index:3; transition:opacity .3s ease, transform .3s ease;
+      transform-origin:bottom center;
+    }
+    .pf-lid-front .pf-front-body {
+      width:100%; height:100%; background:linear-gradient(to bottom,#2a2a2a,#111);
+      border-radius:14px; border:1px solid rgba(255,255,255,.2);
+      box-shadow:inset 0 2px 8px rgba(255,255,255,.1), 0 -8px 16px rgba(0,0,0,.5);
+      display:flex; align-items:flex-end; justify-content:center; padding-bottom:7px;
+      position:relative; overflow:hidden;
+    }
+    .pf-lid-front .pf-front-body::before {
+      content:''; position:absolute; top:0; left:8%; right:8%; height:1px;
+      background:linear-gradient(to right,transparent,rgba(255,255,255,.4),transparent);
+    }
+    .pf-lid-front .pf-name {
+      font-size:8px; font-weight:500; color:rgba(255,255,255,.9);
+      background:#000; padding:2.5px 6px; border-radius:5px; max-width:88%;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .project-folder:hover .pf-lid-front { transform:rotateX(-22deg) translateY(3px); }
+    .project-folder.open .pf-lid-front { opacity:0; pointer-events:none; }
+
+    .pf-hint {
+      position:absolute; bottom:-24px; left:50%; transform:translateX(-50%) translateY(6px);
+      font-size:8px; font-weight:600; text-transform:uppercase; letter-spacing:.06em;
+      color:#999; background:rgba(0,0,0,.04); border:1px solid rgba(0,0,0,.08);
+      padding:4px 9px; border-radius:999px; white-space:nowrap;
+      opacity:0; transition:opacity .25s ease, transform .25s ease; pointer-events:none;
+    }
+    .project-folder.open .pf-hint { opacity:1; transform:translateX(-50%) translateY(0); }
+
     .proj-card { position:relative; cursor:pointer; transition:opacity .25s, filter .25s, transform .55s cubic-bezier(.34,1.56,.64,1); }
 
     /* white-lift overlay on non-hovered cards */
@@ -765,6 +869,10 @@
       outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px;
       padding:2px 8px; cursor:text; min-width:16px;
     }
+    /* Folder view has no edit wiring of its own — editing always forces
+       Grid (see updateHomeEditUI), so hide the toggle rather than leave
+       a "Folders" option that silently does nothing while editing. */
+    #view-home.home-edit .home-view-toggle { display:none; }
     #view-home.home-edit .sec-label {
       display:inline-block;
       outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px;
@@ -2111,6 +2219,11 @@ one keyframe at a time</div>
           </a>
     </div>
 
+    <div class="home-view-toggle" id="homeViewToggle">
+      <div class="hvt-highlight"></div>
+      <button class="hvt-opt active" data-view="grid" onclick="setHomeView('grid')">Grid</button>
+      <button class="hvt-opt" data-view="folders" onclick="setHomeView('folders')">Folders</button>
+    </div>
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
     <div id="home-sections" style="opacity:0;transition:opacity .3s ease"></div>
     <button id="home-add-sec-btn" onclick="addHomeSection()">+ Add section</button>
@@ -4440,39 +4553,193 @@ function _makeSecDelBtn(label, grid) {
 
 
 /* ─── Render home sections dynamically ────────────────── */
+/* ── Home view toggle: Grid ↔ Folders ─────────────────────
+   Folders replace each project card with a small "Interactive Folder
+   Gallery" (ported below) showing that project's own images. Editing
+   (drag-reorder, rename, delete, thumbnails) is only wired for the
+   plain .proj-card grid, so entering edit mode always forces Grid —
+   see updateHomeEditUI(). */
+let homeView = 'grid';
+let _lastHomeSections = null;
+
+function setHomeView(view) {
+  const toggle = document.getElementById('homeViewToggle');
+  if (toggle) {
+    const opts = Array.from(toggle.querySelectorAll('.hvt-opt'));
+    opts.forEach(b => b.classList.toggle('active', b.dataset.view === view));
+    const activeBtn = opts.find(b => b.dataset.view === view);
+    if (activeBtn) {
+      toggle.style.setProperty('--hvt-w', activeBtn.offsetWidth + 'px');
+      toggle.style.setProperty('--hvt-x', (activeBtn.offsetLeft - 3) + 'px');
+    }
+  }
+  if (homeView === view) return;
+  homeView = view;
+  if (_lastHomeSections) renderHomeSections(_lastHomeSections);
+}
+
+// Images only — the gallery renders <img>, so video/lottie/text blocks
+// don't contribute a photo. Falls back to the card's own thumbnail so a
+// project with no image blocks still gets a one-photo folder.
+function galleryPhotosFor(key, fallbackThumb) {
+  const proj = PROJECTS[key];
+  const imgs = proj ? (proj.blocks || []).filter(b => b.type === 'image' && b.content).map(b => b.content) : [];
+  const photos = imgs.slice(0, 5);
+  return photos.length ? photos : (fallbackThumb ? [fallbackThumb] : []);
+}
+
+function buildProjectFolder(card) {
+  const photos = galleryPhotosFor(card.key, card.thumb);
+
+  const folder = document.createElement('div');
+  folder.className = 'project-folder';
+  folder.dataset.key = card.key;
+
+  const stage = document.createElement('div');
+  stage.className = 'pf-stage';
+  folder.appendChild(stage);
+
+  const lidBack = document.createElement('div');
+  lidBack.className = 'pf-lid-back';
+  lidBack.innerHTML = '<div class="pf-tab"></div><div class="pf-body"><div class="pf-well"></div></div>';
+  stage.appendChild(lidBack);
+
+  const photosWrap = document.createElement('div');
+  photosWrap.className = 'pf-photos';
+  stage.appendChild(photosWrap);
+
+  const n = photos.length;
+  const mid = (n - 1) / 2;
+  const photoEls = photos.map((src, i) => {
+    const p = document.createElement('div');
+    p.className = 'pf-photo';
+    p.style.zIndex = 10 + i;
+    const img = document.createElement('img');
+    img.src = src; img.alt = '';
+    p.appendChild(img);
+    photosWrap.appendChild(p);
+    return { el: p, offset: i - mid };
+  });
+
+  const lidFront = document.createElement('div');
+  lidFront.className = 'pf-lid-front';
+  lidFront.innerHTML = `<div class="pf-front-body"><span class="pf-name">${card.name}</span></div>`;
+  stage.appendChild(lidFront);
+
+  const hint = document.createElement('div');
+  hint.className = 'pf-hint';
+  hint.textContent = 'Drag a photo down to close';
+  folder.appendChild(hint);
+
+  let isOpen = false;
+
+  function layout() {
+    photoEls.forEach(({ el, offset }) => {
+      const t = isOpen
+        ? `translate(${offset * 30}px, -46px) scale(1.05)`
+        : `translate(${offset * 3}px, ${offset * -3}px) rotate(${offset * 3}deg) scale(${1 - Math.abs(offset) * 0.04})`;
+      el.style.transform = t;
+    });
+  }
+  layout();
+
+  function open() {
+    if (isOpen || !photoEls.length) return;
+    isOpen = true;
+    folder.classList.add('open');
+    layout();
+  }
+  function close() {
+    if (!isOpen) return;
+    isOpen = false;
+    folder.classList.remove('open');
+    layout();
+  }
+
+  folder.addEventListener('click', () => {
+    if (typeof editMode !== 'undefined' && editMode) return;
+    if (!isOpen) open();
+  });
+
+  photoEls.forEach(({ el, offset }) => {
+    let dragging = false, startY = 0;
+    el.addEventListener('pointerdown', (e) => {
+      if (!isOpen) return;
+      dragging = true;
+      startY = e.clientY;
+      el.classList.add('dragging');
+      try { el.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const dy = Math.max(0, e.clientY - startY);
+      el.style.transform = `translate(${offset * 30}px, ${-46 + dy}px) rotate(${(dy * 0.05).toFixed(1)}deg) scale(1.05)`;
+    });
+    const endDrag = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      el.classList.remove('dragging');
+      const dy = Math.max(0, e.clientY - startY);
+      if (dy > 70) close(); else layout();
+    };
+    el.addEventListener('pointerup', endDrag);
+    el.addEventListener('pointercancel', endDrag);
+  });
+
+  return folder;
+}
+
 function renderHomeSections(sections) {
+  _lastHomeSections = sections;
   const container = document.getElementById('home-sections');
   if (!container) return;
+  // Folder view is admin-only for now (still being checked over) —
+  // never rendered for a public visitor even if homeView somehow ends
+  // up 'folders' for that session.
+  const isAdmin = document.body.classList.contains('is-admin');
+  const useFolders = isAdmin && homeView === 'folders' && !(typeof editMode !== 'undefined' && editMode);
   container.innerHTML = '';
   sections.forEach(sec => {
     const label = document.createElement('div');
     label.className = 'sec-label';
     label.textContent = sec.title;
     container.appendChild(label);
-    const grid = document.createElement('div');
-    grid.className = 'card-grid sg';
+
     (sec.cards || []).forEach(card => {
-      const el = document.createElement('div');
-      el.className = 'proj-card';
-      el.onclick = () => openProject(card.key);
-      const thumbBg = card.thumb ? '' : ' style="background:linear-gradient(135deg,#e8e0d8,#c8bdb4)"';
-      // Same gradient the no-thumb case uses, reapplied if the image itself
-      // fails to load (backend down, or the thumb was deleted) so the card
-      // degrades to a clean placeholder instead of a broken-image icon.
-      // Paint the parent before remove() — removing first nulls parentNode.
-      // The if(p) guard covers the image erroring after a re-render already
-      // detached it, which would otherwise throw on p.style.
-      const thumbImg = card.thumb ? `<img src="${card.thumb}" alt="${card.name}" onerror="var p=this.parentNode;if(p)p.style.background='linear-gradient(135deg,#e8e0d8,#c8bdb4)';this.remove()"/>` : '';
-      el.dataset.key = card.key;
-      if (card.hidden) el.dataset.hidden = 'true';
-      el.innerHTML = `<div class="proj-thumb"${thumbBg}>${thumbImg}</div><div class="proj-title">${card.name}</div><div class="proj-sub">${card.sub||''}</div>`;
-      // sync PROJECTS metadata
+      // sync PROJECTS metadata regardless of which view renders it
       if (!PROJECTS[card.key]) PROJECTS[card.key] = { name: card.name, sub: card.sub||'', blocks: [{ id: uid(), type:'text', content:'' }] };
       else { PROJECTS[card.key].name = card.name; PROJECTS[card.key].sub = card.sub||''; }
-      grid.appendChild(el);
     });
-    container.appendChild(_makeSecDelBtn(label, grid));
-    container.appendChild(grid);
+
+    if (useFolders) {
+      const row = document.createElement('div');
+      row.className = 'folder-row';
+      (sec.cards || []).forEach(card => row.appendChild(buildProjectFolder(card)));
+      container.appendChild(_makeSecDelBtn(label, row));
+      container.appendChild(row);
+    } else {
+      const grid = document.createElement('div');
+      grid.className = 'card-grid sg';
+      (sec.cards || []).forEach(card => {
+        const el = document.createElement('div');
+        el.className = 'proj-card';
+        el.onclick = () => openProject(card.key);
+        const thumbBg = card.thumb ? '' : ' style="background:linear-gradient(135deg,#e8e0d8,#c8bdb4)"';
+        // Same gradient the no-thumb case uses, reapplied if the image itself
+        // fails to load (backend down, or the thumb was deleted) so the card
+        // degrades to a clean placeholder instead of a broken-image icon.
+        // Paint the parent before remove() — removing first nulls parentNode.
+        // The if(p) guard covers the image erroring after a re-render already
+        // detached it, which would otherwise throw on p.style.
+        const thumbImg = card.thumb ? `<img src="${card.thumb}" alt="${card.name}" onerror="var p=this.parentNode;if(p)p.style.background='linear-gradient(135deg,#e8e0d8,#c8bdb4)';this.remove()"/>` : '';
+        el.dataset.key = card.key;
+        if (card.hidden) el.dataset.hidden = 'true';
+        el.innerHTML = `<div class="proj-thumb"${thumbBg}>${thumbImg}</div><div class="proj-title">${card.name}</div><div class="proj-sub">${card.sub||''}</div>`;
+        grid.appendChild(el);
+      });
+      container.appendChild(_makeSecDelBtn(label, grid));
+      container.appendChild(grid);
+    }
   });
   requestAnimationFrame(() => {
     container.querySelectorAll('.sg').forEach(sg => {
@@ -4481,6 +4748,7 @@ function renderHomeSections(sections) {
       sg.classList.add('run');
     });
     container.style.opacity = '1';
+    setHomeView(homeView); // sync the pill's highlight position now it's laid out
   });
 }
 
@@ -4995,6 +5263,12 @@ function updateEditUI() {
 
 /* ─── Home edit mode ────────────────────────────────────── */
 function updateHomeEditUI() {
+  // Folder view has none of the drag/rename/delete wiring below — force
+  // Grid so editing always has real cards to work with.
+  if (editMode && homeView !== 'grid' && _lastHomeSections) {
+    homeView = 'grid';
+    renderHomeSections(_lastHomeSections);
+  }
   const btn = document.getElementById('editBtn');
   btn.classList.toggle('on', editMode);
   document.getElementById('editLabel').textContent = editMode ? 'Done' : 'Edit';
