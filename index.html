@@ -575,31 +575,6 @@
     #mp-close { background:rgba(0,0,0,.06); color:#555; font-weight:500; }
     #mp-close:hover { background:rgba(0,0,0,.1); }
 
-    /* ── Gradual blur (React Bits "GradualBlur", JS-CSS variant) ──
-       Ported rather than installed: that component is React + shadcn and
-       this page is one vanilla HTML file with no React and no build step
-       — same call as the TiltCard and parallax-carousel ports. The effect
-       itself is pure CSS anyway (a stack of backdrop-filter layers, each
-       masked to its own band), so nothing is lost; buildGradualBlur()
-       generates the layers with the component's own maths.
-
-       z-index sits under #bottom-nav (200) and the down-banner (190) so
-       it blurs the page content without touching the controls — the
-       component's own default of 1000 would have covered both. */
-    .gradual-blur {
-      position:fixed; left:0; right:0; bottom:0; height:6rem;
-      z-index:150; pointer-events:none;
-      opacity:0; transition:opacity .3s ease;
-    }
-    /* Toggled from JS rather than `body:has(#view-home.active)`. Both
-       work; this one doesn't rest on :has() re-invalidating when a
-       descendant's class changes, and it keeps the show/hide decision
-       next to the observer that drives it. */
-    .gradual-blur.show { opacity:1; }
-    .gradual-blur-inner { position:absolute; inset:0; }
-    .gradual-blur-inner > div { position:absolute; inset:0; }
-    @media (prefers-reduced-motion: reduce) { .gradual-blur { transition:none; } }
-
     /* This view edits in place rather than through the grid's cards, so
        its three fields get the dashed affordance directly (see
        wireProjectsListEditing). An empty category/description collapses
@@ -8499,91 +8474,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }, { passive: true });
 
   tick();
-})();
-
-/* ── Gradual blur layers ───────────────────────────────────
-   The maths is React Bits' GradualBlur verbatim: per layer, progress is
-   pushed through a curve function, turned into a blur radius, and the
-   layer is masked to a band so the blur ramps up toward the edge rather
-   than appearing as one flat sheet. Config below matches the requested
-   one (strength 2, 5 divs, bezier, exponential). */
-(function () {
-  const CURVE_FUNCTIONS = {
-    linear: p => p,
-    bezier: p => p * p * (3 - 2 * p),
-    'ease-in': p => p * p,
-    'ease-out': p => 1 - Math.pow(1 - p, 2),
-    'ease-in-out': p => (p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2)
-  };
-
-  const CONFIG = {
-    position: 'bottom',
-    strength: 2,
-    divCount: 5,
-    curve: 'bezier',
-    exponential: true,
-    opacity: 1
-  };
-
-  // A bottom-positioned blur ramps upward, so the mask runs "to top".
-  const DIRECTION = { bottom: 'to top', top: 'to bottom', left: 'to right', right: 'to left' };
-
-  function buildGradualBlur(cfg) {
-    const curve = CURVE_FUNCTIONS[cfg.curve] || CURVE_FUNCTIONS.linear;
-    const increment = 100 / cfg.divCount;
-    const direction = DIRECTION[cfg.position] || DIRECTION.bottom;
-
-    const inner = document.createElement('div');
-    inner.className = 'gradual-blur-inner';
-
-    for (let i = 1; i <= cfg.divCount; i++) {
-      const progress = curve(i / cfg.divCount);
-      const blurValue = cfg.exponential
-        ? Math.pow(2, progress * 4) * 0.0625 * cfg.strength
-        : 0.0625 * (progress * cfg.divCount + 1) * cfg.strength;
-
-      const p1 = Math.round((increment * i - increment) * 10) / 10;
-      const p2 = Math.round(increment * i * 10) / 10;
-      const p3 = Math.round((increment * i + increment) * 10) / 10;
-      const p4 = Math.round((increment * i + increment * 2) * 10) / 10;
-
-      let gradient = `transparent ${p1}%, black ${p2}%`;
-      if (p3 <= 100) gradient += `, black ${p3}%`;
-      if (p4 <= 100) gradient += `, transparent ${p4}%`;
-      const mask = `linear-gradient(${direction}, ${gradient})`;
-
-      const layer = document.createElement('div');
-      layer.style.maskImage = mask;
-      layer.style.webkitMaskImage = mask;
-      layer.style.backdropFilter = `blur(${blurValue.toFixed(3)}rem)`;
-      layer.style.webkitBackdropFilter = `blur(${blurValue.toFixed(3)}rem)`;
-      layer.style.opacity = cfg.opacity;
-      inner.appendChild(layer);
-    }
-    return inner;
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    // backdrop-filter is the whole effect — without it these layers would
-    // be five invisible empty divs, so don't add them at all.
-    const ok = CSS.supports('backdrop-filter', 'blur(1px)') ||
-               CSS.supports('-webkit-backdrop-filter', 'blur(1px)');
-    if (!ok) return;
-
-    const wrap = document.createElement('div');
-    wrap.className = 'gradual-blur';
-    wrap.setAttribute('aria-hidden', 'true');
-    wrap.appendChild(buildGradualBlur(CONFIG));
-    document.body.appendChild(wrap);
-
-    // Watch the home view's own class rather than hooking showView, so the
-    // trial stays self-contained and can be lifted out in one block.
-    const home = document.getElementById('view-home');
-    if (!home) return;
-    const sync = () => wrap.classList.toggle('show', home.classList.contains('active'));
-    sync();
-    new MutationObserver(sync).observe(home, { attributes: true, attributeFilter: ['class'] });
-  });
 })();
 
 /* ── Site spider anchor — thread starts at the "M" of "Mahdavi" ──
