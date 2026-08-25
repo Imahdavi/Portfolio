@@ -461,12 +461,24 @@
       position:relative; height:100%; aspect-ratio:4 / 3; flex-shrink:0;
       border-radius:12px; overflow:hidden; background:#e8e0d8;
     }
+    /* No will-change here on purpose. Promoting the media to its own
+       compositing layer means it's rasterised once and then resampled by
+       the GPU for every fractional offset, which reads as a soft blur
+       while the strip moves. Painting it in place each frame keeps it
+       sharp, and the shift is rounded to whole pixels (see paintParallax)
+       so it never lands on a half-pixel either. The centring offset is
+       done with a whole-pixel margin rather than translateX(-50%), which
+       would be fractional whenever the media's width is odd. */
     .pli-tile img,
     .pli-tile video {
-      position:absolute; top:0; left:50%;
+      position:absolute; top:0; left:0;
       height:100%; width:calc(100% / var(--pli-uv, .85));
-      transform:translateX(-50%) translateX(var(--pli-shift, 0px));
-      object-fit:cover; display:block; will-change:transform;
+      /* The calc is the same centring, and holds until paintParallax
+         replaces it with a whole-pixel value — without it the media would
+         sit left-aligned for the frame before the first paint. */
+      margin-left:var(--pli-center, calc((100% - 100% / var(--pli-uv, .85)) / 2));
+      transform:translateX(var(--pli-shift, 0px));
+      object-fit:cover; display:block;
     }
     .pli-media-strip.dragging .pli-tile { pointer-events:none; }
 
@@ -4648,15 +4660,20 @@ function _wireStripDragScroll(strip) {
     // Before the strip is in the document it measures 0, and the offset
     // below would divide by zero. Writing the resulting NaN into
     // --pli-shift invalidates the whole transform, including the
-    // translateX(-50%) that centres the media, so bail instead.
+    // centring, so bail instead.
     if (!rect.width) return;
     const mid = rect.left + rect.width / 2;
     strip.querySelectorAll('.pli-tile').forEach(tile => {
       const t = tile.getBoundingClientRect();
       // -1 at the strip's left edge, +1 at its right.
       const offset = ((t.left + t.width / 2) - mid) / (rect.width / 2);
-      const shift = -offset * slackFor(tile) * STRIP_PARALLAX;
-      tile.style.setProperty('--pli-shift', (Number.isFinite(shift) ? shift : 0).toFixed(2) + 'px');
+      const slack = slackFor(tile);
+      const shift = -offset * slack * STRIP_PARALLAX;
+      // Whole pixels only: a fractional offset makes the browser resample
+      // the media, which shows up as a blur while the strip is moving.
+      // The parallax range is tens of pixels, so rounding costs nothing.
+      tile.style.setProperty('--pli-shift', Math.round(Number.isFinite(shift) ? shift : 0) + 'px');
+      tile.style.setProperty('--pli-center', -Math.round(slack) + 'px');
     });
   }
   strip._paintParallax = paintParallax;
