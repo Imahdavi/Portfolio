@@ -431,18 +431,22 @@
       border-bottom:1px solid rgba(0,0,0,.07);
     }
     .projects-list .proj-list-item:last-child { border-bottom:none; margin-bottom:0; }
+    /* Same type as a project page: --font-title for the heading (what
+       .d-title and .proj-title use) and --font-body for everything under
+       it (what .block-text inherits), so a row reads like the board it
+       links to rather than like the handwritten section labels. */
     .pli-year {
       flex:0 0 auto; width:40px; padding-top:2px;
-      font-size:12.5px; font-weight:600; color:#b4a99a;
+      font-family:var(--font-body); font-size:12.5px; font-weight:600; color:#b4a99a;
     }
     .pli-body { flex:1 1 auto; min-width:0; }
     .pli-title-row { display:flex; align-items:baseline; gap:5px; }
-    .pli-title { font-family:var(--font-heading); font-size:17px; font-weight:600; }
+    .pli-title { font-family:var(--font-title); font-size:17px; font-weight:600; }
     .pli-arrow { font-size:12px; color:#b4a99a; }
     .proj-list-item:hover .pli-title { text-decoration:underline; text-underline-offset:3px; }
     .proj-list-item:hover .pli-arrow { color:#6a6055; }
-    .pli-category { font-size:12.5px; color:#a89e91; margin-top:2px; }
-    .pli-desc { font-size:13.5px; line-height:1.55; color:#5a5148; margin:8px 0 14px; max-width:52ch; }
+    .pli-category { font-family:var(--font-body); font-size:12.5px; color:#a89e91; margin-top:2px; }
+    .pli-desc { font-family:var(--font-body); font-size:13.5px; line-height:1.55; color:#5a5148; margin:8px 0 14px; max-width:52ch; }
     .pli-media-strip {
       display:flex; gap:10px; height:170px; overflow-x:auto; scrollbar-width:none;
       margin-inline:-4px; padding-inline:4px;
@@ -482,11 +486,37 @@
     }
     .pli-media-strip.dragging .pli-tile { pointer-events:none; }
 
+    /* In edit mode the strip stops being a strip: it wraps so every tile
+       is visible at once instead of behind a horizontal scroll, and drag
+       reorders rather than scrolls (see wireStripReorder). Tiles get a
+       fixed height here rather than height:100% — the wrapped container
+       has no single row height to be 100% of. */
+    #view-home.home-edit .pli-media-strip {
+      flex-wrap:wrap; height:auto; overflow:visible; cursor:default;
+      padding:8px 4px; border-radius:10px; background:rgba(0,0,0,.025);
+    }
+    #view-home.home-edit .pli-tile { height:104px; cursor:grab; }
+    #view-home.home-edit .pli-tile:active { cursor:grabbing; }
+    /* The parallax pan is a scroll-position effect, so it has nothing to
+       say in a wrapped grid — park the media centred while editing. */
+    #view-home.home-edit .pli-tile img,
+    #view-home.home-edit .pli-tile video { transform:none; }
+    #view-home.home-edit .pli-tile.pli-dragging {
+      opacity:.45; outline:2px dashed rgba(0,0,0,.35); outline-offset:-2px;
+    }
+    #view-home.home-edit .pli-tile.pli-drop-before { box-shadow:-3px 0 0 0 #3b82f6; }
+    #view-home.home-edit .pli-tile.pli-drop-after  { box-shadow:3px 0 0 0 #3b82f6; }
+
     /* This view edits in place rather than through the grid's cards, so
        its three fields get the dashed affordance directly (see
-       wireProjectsListEditing). Empty ones only take up space while
-       editing — outside edit mode a blank field collapses away. */
-    .pli-year:empty, .pli-category:empty, .pli-desc:empty { display:none; }
+       wireProjectsListEditing). An empty category/description collapses
+       away outside edit mode so it doesn't leave a gap.
+
+       The year is NOT collapsed: it's the fixed left column every row's
+       body is offset by, so display:none on a blank one pulled that whole
+       row left and broke alignment against the rows that do have a year.
+       It keeps its width and just renders empty. */
+    .pli-category:empty, .pli-desc:empty { display:none; }
     #view-home.home-edit .pli-year,
     #view-home.home-edit .pli-category,
     #view-home.home-edit .pli-desc {
@@ -4609,10 +4639,13 @@ function listMediaFor(key, fallbackThumb) {
   const media = proj
     ? (proj.blocks || [])
         .filter(b => (b.type === 'image' || b.type === 'video') && b.content)
-        .map(b => ({ type: b.type, src: b.content }))
+        .map(b => ({ id: b.id, type: b.type, src: b.content }))
     : [];
-  const picked = media.slice(0, 10);
-  if (picked.length) return picked;
+  // Every media block, not a capped preview: edit mode wraps the strip so
+  // the whole board is visible and reorderable at once, and commitStrip-
+  // Order can only write back an order it can see all of. Cost is low —
+  // videos are preload:none behind an observer, images are loading:lazy.
+  if (media.length) return media;
   return fallbackThumb ? [{ type: 'image', src: fallbackThumb }] : [];
 }
 
@@ -4701,6 +4734,9 @@ function _wireStripDragScroll(strip) {
 
   strip.addEventListener('pointerdown', (e) => {
     if (e.pointerType === 'touch') return;  // native touch scrolling handles it
+    // In edit mode the strip is a wrapped grid and a drag reorders tiles
+    // instead of scrolling — see wireStripReorder.
+    if (typeof editMode !== 'undefined' && editMode) return;
     down = true; dragged = false;
     startX = e.clientX;
     // Resync from the DOM: a touch scroll or the observer may have moved it.
@@ -4807,6 +4843,10 @@ function buildProjectListItem(card) {
       // pans within the frame — that pan is the parallax.
       const tile = document.createElement('div');
       tile.className = 'pli-tile';
+      // The block this tile stands for, so a reorder can be written back
+      // by identity — two blocks can legitimately share the same src, and
+      // matching on that would confuse them for each other.
+      if (m.id) tile.dataset.blockId = m.id;
       tile.style.setProperty('--pli-uv', STRIP_UV_SCALE);
 
       const el = document.createElement(m.type === 'video' ? 'video' : 'img');
@@ -4871,7 +4911,91 @@ function wireProjectsListEditing() {
         }
       });
     });
+    const strip = item.querySelector('.pli-media-strip');
+    if (strip) wireStripReorder(strip, item.dataset.key);
   });
+}
+
+/* Drag a tile onto another to reorder the board's media. The strip is
+   only a window onto PROJECTS[key].blocks, so this commits by permuting
+   the media blocks in that array and saving the project — which is also
+   why non-media blocks (text, dividers, lottie) keep their positions:
+   the reordered media is written back into the same slots it came from,
+   rather than the whole array being rebuilt around it. */
+function wireStripReorder(strip, key) {
+  if (strip._reorderWired) return;
+  strip._reorderWired = true;
+
+  let dragEl = null, targetEl = null, after = false;
+
+  const clearMarks = () => strip.querySelectorAll('.pli-tile').forEach(t =>
+    t.classList.remove('pli-drop-before', 'pli-drop-after'));
+
+  strip.addEventListener('pointerdown', (e) => {
+    if (!(typeof editMode !== 'undefined' && editMode)) return;
+    const tile = e.target.closest('.pli-tile');
+    if (!tile) return;
+    dragEl = tile;
+    tile.classList.add('pli-dragging');
+    try { strip.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+  });
+
+  strip.addEventListener('pointermove', (e) => {
+    if (!dragEl) return;
+    e.preventDefault();
+    // elementFromPoint rather than e.target: the pointer is captured to
+    // the strip, so e.target stays the strip for the whole gesture.
+    const over = document.elementFromPoint(e.clientX, e.clientY)?.closest('.pli-tile');
+    clearMarks();
+    if (!over || over === dragEl || over.parentElement !== strip) { targetEl = null; return; }
+    const r = over.getBoundingClientRect();
+    after = e.clientX > r.left + r.width / 2;
+    targetEl = over;
+    over.classList.add(after ? 'pli-drop-after' : 'pli-drop-before');
+  });
+
+  const finish = (e) => {
+    if (!dragEl) return;
+    const moved = dragEl;
+    const dest = targetEl, destAfter = after;
+    dragEl = null; targetEl = null;
+    moved.classList.remove('pli-dragging');
+    clearMarks();
+    try { strip.releasePointerCapture(e.pointerId); } catch (err) {}
+    if (!dest) return;
+
+    strip.insertBefore(moved, destAfter ? dest.nextSibling : dest);
+    commitStripOrder(strip, key);
+  };
+  strip.addEventListener('pointerup', finish);
+  strip.addEventListener('pointercancel', finish);
+}
+
+function commitStripOrder(strip, key) {
+  const proj = PROJECTS[key];
+  if (!proj || !proj.blocks) return;
+
+  // Where the media blocks sit in the full block list, and the blocks
+  // themselves keyed by the src the tiles carry.
+  const slots = [];
+  proj.blocks.forEach((b, i) => {
+    if ((b.type === 'image' || b.type === 'video') && b.content) slots.push(i);
+  });
+
+  const byId = new Map();
+  slots.forEach(i => byId.set(proj.blocks[i].id, proj.blocks[i]));
+
+  const ordered = [...strip.querySelectorAll('.pli-tile')]
+    .map(t => byId.get(t.dataset.blockId))
+    .filter(Boolean);
+
+  // Only the tiles actually backed by a block get rewritten; if the strip
+  // was capped (listMediaFor takes the first N) or a tile fell back to the
+  // card thumbnail, the rest of the slots are left exactly as they were.
+  if (ordered.length !== slots.length) return;
+  slots.forEach((slot, n) => { proj.blocks[slot] = ordered[n]; });
+  saveProject(key);
 }
 
 function unwireProjectsListEditing() {
