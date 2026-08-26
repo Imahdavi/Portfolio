@@ -490,6 +490,34 @@
     }
     .pli-media-strip.dragging .pli-tile { pointer-events:none; }
 
+    /* Rows and tiles fade in the way project-page blocks do (blockReveal),
+       rather than the whole list appearing at once. The stagger is set per
+       element from JS as --pli-delay, since the counts vary per row. Only
+       the rows/tiles actually reached get revealed — that's what keeps the
+       videos behind them from all being fetched together. */
+    @keyframes pliReveal {
+      from { opacity:0; transform:translateY(20px); filter:blur(6px); }
+      to   { opacity:1; transform:none; filter:blur(0); }
+    }
+    .proj-list-item[data-revealed] > *,
+    .pli-tile[data-revealed] {
+      animation:pliReveal .5s cubic-bezier(.25,.46,.45,.94) both;
+      animation-delay:var(--pli-delay, 0ms);
+    }
+    /* Hidden until reached, so nothing flashes in at full opacity first. */
+    .projects-list .proj-list-item:not([data-revealed]) > * { opacity:0; }
+    .pli-tile:not([data-revealed]) { opacity:0; }
+    /* Editing shouldn't be behind an animation, and prefers-reduced-motion
+       gets the content with no movement at all. */
+    #view-home.home-edit .proj-list-item > *,
+    #view-home.home-edit .pli-tile { opacity:1; animation:none; }
+    @media (prefers-reduced-motion: reduce) {
+      .proj-list-item[data-revealed] > *,
+      .pli-tile[data-revealed] { animation:none; }
+      .projects-list .proj-list-item:not([data-revealed]) > *,
+      .pli-tile:not([data-revealed]) { opacity:1; }
+    }
+
     /* In edit mode the strip stops being a strip: it wraps so every tile
        is visible at once instead of behind a horizontal scroll, and drag
        reorders rather than scrolls (see wireStripReorder). Tiles get a
@@ -3248,6 +3276,21 @@ function layoutBlockGrid(list) {
       list.style.marginLeft  = '';
       list.style.marginRight = '';
       list.style.overflowX   = 'auto';
+      // A board wider than its container can't be centred by margins — they
+      // resolve to zero once content overflows, which left it pinned to the
+      // left edge and lost the centring the frame-fitting path gives. Park
+      // the scroll in the middle instead so it still reads as centred, and
+      // only while it's untouched, so a relayout can't yank the view back
+      // from wherever the reader scrolled to.
+      if (!list.dataset.scrollCentred) {
+        requestAnimationFrame(() => {
+          const over = list.scrollWidth - list.clientWidth;
+          if (over > 0) {
+            list.scrollLeft = over / 2;
+            list.dataset.scrollCentred = '1';
+          }
+        });
+      }
     } else {
       fluid = true;
       list.style.gridTemplateColumns = `repeat(${occCols}, 1fr)`;
@@ -5406,10 +5449,14 @@ function addMediaToProject(key, media, atIndex) {
   return block;
 }
 
-// Every distinct media file already on the site, gathered from the boards
-// themselves — there's no separate asset index, and the boards are what
-// "uploaded to the site" actually means here.
-function collectSiteMedia() {
+// The picker's library. Read from the Blob store via /api/blob-list, not
+// from the boards: a board-derived library loses a file the moment its
+// last project drops it, which made removing media from one project look
+// like deleting it from the site. Board contents are only the fallback,
+// for when that endpoint isn't reachable.
+let _siteMediaCache = null;
+
+function collectSiteMediaFromBoards() {
   const seen = new Map();
   Object.keys(PROJECTS).forEach(k => {
     (PROJECTS[k].blocks || []).forEach(b => {
@@ -5420,13 +5467,33 @@ function collectSiteMedia() {
   return [...seen.values()];
 }
 
+async function loadSiteMedia({ force } = {}) {
+  if (_siteMediaCache && !force) return _siteMediaCache;
+  try {
+    const res = await fetch('/api/blob-list', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const rows = await res.json();
+    if (!Array.isArray(rows)) throw new Error('bad payload');
+    // Anything a board references but the store doesn't (media still on the
+    // old host, say) still belongs in the library.
+    const bySrc = new Map(rows.map(r => [r.src, { type: r.type, src: r.src }]));
+    collectSiteMediaFromBoards().forEach(m => { if (!bySrc.has(m.src)) bySrc.set(m.src, m); });
+    _siteMediaCache = [...bySrc.values()];
+  } catch (e) {
+    console.warn('Blob listing unavailable, falling back to board media:', e.message);
+    _siteMediaCache = collectSiteMediaFromBoards();
+  }
+  return _siteMediaCache;
+}
+
 let _mpKey = null;
 function openMediaPicker(key) {
   _mpKey = key;
   const overlay = document.getElementById('media-picker-overlay');
   document.getElementById('mp-title').textContent = (PROJECTS[key]?.name || key);
-  renderMediaPicker();
+  document.getElementById('mp-grid').innerHTML = '<div class="mp-empty">Loading…</div>';
   overlay.classList.add('show');
+  renderMediaPicker();
 }
 
 function closeMediaPicker() {
@@ -5437,7 +5504,7 @@ function closeMediaPicker() {
   _mpKey = null;
 }
 
-function renderMediaPicker() {
+async function renderMediaPicker() {
   const key = _mpKey;
   const grid = document.getElementById('mp-grid');
   const sub  = document.getElementById('mp-sub');
@@ -5446,7 +5513,8 @@ function renderMediaPicker() {
   const inProject = new Set((PROJECTS[key]?.blocks || [])
     .filter(b => (b.type === 'image' || b.type === 'video') && b.content)
     .map(b => b.content));
-  const all = collectSiteMedia();
+  const all = await loadSiteMedia();
+  if (_mpKey !== key) return;   // picker moved on while the listing loaded
 
   sub.textContent = all.length
     ? 'Tap to add or remove from this project'
@@ -5502,6 +5570,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     refreshProjectsList();
+    await loadSiteMedia({ force: true });   // the new files belong in the library
     renderMediaPicker();
   });
 });
@@ -5560,6 +5629,39 @@ function saveProjectsListEdits() {
     });
   });
   if (changed) saveSettings();
+}
+
+/* Staggered reveal, mirroring the project page's scroll-in. Rows and the
+   tiles inside them are only revealed as they're reached, so the strip
+   videos behind them are fetched a row at a time instead of every board's
+   media at once — which is what was driving egress up. */
+let _pliRevealObs = null;
+function setupProjectsListReveal() {
+  if (_pliRevealObs) { _pliRevealObs.disconnect(); _pliRevealObs = null; }
+  if (typeof editMode !== 'undefined' && editMode) return;   // no animation while editing
+
+  const targets = document.querySelectorAll('.projects-list .proj-list-item, .projects-list .pli-tile');
+  if (!targets.length) return;
+
+  _pliRevealObs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const el = entry.target;
+      if (el.dataset.revealed) { _pliRevealObs.unobserve(el); return; }
+
+      if (el.classList.contains('pli-tile')) {
+        // Position within its own strip, so each row counts from zero.
+        const i = [...el.parentElement.children].filter(c => c.classList.contains('pli-tile')).indexOf(el);
+        el.style.setProperty('--pli-delay', Math.min(i, 8) * 45 + 'ms');
+      } else {
+        [...el.children].forEach((c, i) => c.style.setProperty('--pli-delay', i * 70 + 'ms'));
+      }
+      el.dataset.revealed = '1';
+      _pliRevealObs.unobserve(el);
+    });
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.01 });
+
+  targets.forEach(t => _pliRevealObs.observe(t));
 }
 
 // Same idea as setupLazyVideos() on project pages: don't fetch a strip
@@ -5642,6 +5744,7 @@ function renderHomeSections(sections) {
       // The strips were wired while still detached, so this is their first
       // paint with real geometry to measure.
       container.querySelectorAll('.pli-media-strip').forEach(s => s._paintParallax?.());
+      setupProjectsListReveal();
       if (typeof editMode !== 'undefined' && editMode) wireProjectsListEditing();
     });
     return;
@@ -6482,6 +6585,8 @@ function renderBlocks(animate) {
   const proj0 = PROJECTS[activeKey];
   if (proj0) proj0.blocks.forEach(b => { if (b._lottieInst) { try { b._lottieInst.destroy(); } catch(e){} b._lottieInst = null; } });
   list.innerHTML = '';
+  // New board, so any centred scroll position belongs to the old one.
+  delete list.dataset.scrollCentred;
   const proj = PROJECTS[activeKey];
   // Size the grid before the blocks go in, so makeBlockEl's applyBlockGrid
   // reads the right column offset instead of laying out against a stale one.
