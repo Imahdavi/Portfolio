@@ -599,6 +599,21 @@
     .mp-grid {
       display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr));
       gap:8px; overflow-y:auto; padding:2px; flex:1 1 auto; min-height:0;
+      align-items:start;
+      /* grid-auto-rows:auto (the default) measured barely 16px per row —
+         .mp-grid gets a DEFINITE height from the flex column above it
+         (flex:1 1 auto resolves against #media-picker-sheet's max-height),
+         and an auto row track sized against a definite container height
+         collapses toward the items' content-box minimum instead of the
+         84px aspect-ratio:4/3 actually gives them. Every row after the
+         first then rendered on top of the row before it, 84px of image
+         crammed into a 16px slot with only a sliver visible above whatever
+         painted after it — which is what made the sheet look mostly empty
+         and impossible to tell tiles apart. max-content sizes each row
+         from the items' own intrinsic (aspect-ratio) size regardless of
+         the container's resolved height, which is what auto was supposed
+         to do here in the first place. */
+      grid-auto-rows:max-content;
     }
     .mp-item {
       position:relative; aspect-ratio:4 / 3; border-radius:10px; overflow:hidden;
