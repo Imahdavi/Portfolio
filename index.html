@@ -5037,11 +5037,14 @@ function buildProjectListItem(card) {
    card is on screen — this view shows three of them, so running that here
    would drop the other seven and both section titles. Instead this writes
    just the three fields it owns, straight into the cached settings. */
-// The dash only earns its place when there's an end value beside it.
+// The dash needs a value on BOTH sides to be separating anything — with
+// only an end filled in it would render as a stray leading "– Present".
 function syncYearSep(yearEl) {
   if (!yearEl) return;
-  const to = yearEl.querySelector('.pli-year-to');
-  yearEl.classList.toggle('no-end', !(to && to.textContent.trim()));
+  const from = yearEl.querySelector('.pli-year-from');
+  const to   = yearEl.querySelector('.pli-year-to');
+  const both = !!(from && from.textContent.trim()) && !!(to && to.textContent.trim());
+  yearEl.classList.toggle('no-end', !both);
 }
 
 function wireProjectsListEditing() {
