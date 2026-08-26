@@ -620,13 +620,13 @@
       -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
     }
     #ml-close:hover { background:rgba(255,255,255,.26); }
-    /* The cue only belongs on media that actually opens — edit mode has its
-       own click meaning on these same elements (select, drag, resize). */
-    #block-list .media-inner img,
-    #block-list .media-inner video,
-    .pli-tile img, .pli-tile video { cursor:zoom-in; }
-    #view-home.home-edit .pli-tile img,
-    #view-home.home-edit .pli-tile video { cursor:grab; }
+    /* On the container, not the img/video: board media carries
+       pointer-events:none (the tilt and the overlay controls are driven from
+       the wrapper), so a cursor set on it would never be seen. Edit mode has
+       its own click meaning on these same elements — select, drag, resize. */
+    #block-list .media-inner, .pli-tile { cursor:zoom-in; }
+    #block-list.edit-on .media-inner { cursor:default; }
+    #view-home.home-edit .pli-tile { cursor:grab; }
     @media (prefers-reduced-motion: reduce) {
       #ml-stage { animation:none; }
     }
@@ -10347,8 +10347,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const closeBtn = document.getElementById('ml-close');
   if (!box || !stage || !closeBtn) return;
 
-  const SEL = '#block-list .media-inner img, #block-list .media-inner video,' +
-              '.pli-tile img, .pli-tile video';
+  // Matched on the wrapper rather than the img/video itself: board media is
+  // pointer-events:none (the tilt and the overlay buttons are driven from the
+  // wrapper), so the click never actually lands on the media node and a
+  // selector aimed at it matched nothing at all.
+  const HOST = '#block-list .media-inner, .pli-tile';
+  // Everything layered over the media that has its own job — mute, resize,
+  // link, duplicate, delete, the drag handle. A click on any of those is not
+  // a request to enlarge.
+  const CONTROL = 'button, a, input, label, .resize-corner';
   let downAt = null;
 
   function isOpen() { return box.classList.contains('show'); }
@@ -10397,7 +10404,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('click', (e) => {
     if (isOpen()) return;
     if (typeof editMode !== 'undefined' && editMode) return; // editing owns these clicks
-    const media = e.target.closest && e.target.closest(SEL);
+    if (!e.target.closest) return;
+    if (e.target.closest(CONTROL)) return;
+    const host = e.target.closest(HOST);
+    if (!host) return;
+    const media = host.querySelector('img, video');
     if (!media) return;
     if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 6) return;
     e.preventDefault();
