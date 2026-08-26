@@ -5459,15 +5459,21 @@ function openProjectRowPicker() {
 }
 
 /* A brand-new board, created from the Projects list rather than the grid.
-   It has to exist in settings.sections too, otherwise the list would have
-   a key with no card behind it and simply skip the row. */
+
+   The card still has to exist in settings.sections — the row is built from
+   one, and a list key with no card behind it is simply skipped — but it is
+   created hidden, so adding a project to this list doesn't also plant an
+   empty placeholder card in the home grid, which is not what "add a project
+   row" asked for. .proj-card[data-hidden] is display:none on the grid and
+   only shows (dimmed) in home edit mode, so it stays available to unhide
+   there if it should appear in the grid later. */
 function createEmptyProjectRow() {
   if (!_cachedSettings) _cachedSettings = {};
   if (!Array.isArray(_cachedSettings.sections) || !_cachedSettings.sections.length) {
     _cachedSettings.sections = [{ title: 'Projects', cards: [] }];
   }
   const key = 'card-' + uid();
-  const card = { key, name: 'New Project', sub: '' };
+  const card = { key, name: 'New Project', sub: '', hidden: true };
 
   // Into the last section, which is where the grid's own "+" adds cards.
   _cachedSettings.sections[_cachedSettings.sections.length - 1].cards.push(card);
