@@ -5247,11 +5247,13 @@ function buildProjectListItem(card) {
       del.className = 'pli-tile-del';
       del.type = 'button';
       del.textContent = '×';
-      del.title = 'Hide from this list (stays on the project page)';
+      del.title = isListOwnedMedia(card.key, m.src)
+        ? 'Remove — added here, so this takes it out for good'
+        : 'Hide from this list (stays on the project page)';
       del.addEventListener('pointerdown', e => e.stopPropagation()); // don't start a reorder drag
       del.addEventListener('click', (e) => {
         e.stopPropagation();
-        hideMediaFromList(card.key, tile.dataset.src);
+        removeFromProjectsList(card.key, tile.dataset.src);
       });
       tile.appendChild(del);
 
@@ -5555,11 +5557,43 @@ function refreshProjectsList() {
   requestAnimationFrame(() => window.scrollTo(0, y));
 }
 
-// (removeMediaFromProject lived here — it spliced a block out of the board
-// on behalf of the Projects list, which is what silently deleted project
-// media from a curation surface. Both callers hide instead now, and the
-// board editor has its own delete, so nothing needs it. Left out rather
-// than kept around unused, so it can't get wired back in by accident.)
+/* Taking a tile out of a Projects-list row.
+
+   What that should mean depends on where the block came from, which is
+   why addMediaToProject stamps _fromList on the ones it creates:
+
+   - Media that belongs to the board (added on the project page) is only
+     hidden. It's someone else's work on another surface; a curation
+     click here must not reach into the board and delete it.
+   - Media added through this list only exists because of this list, so
+     taking it out here removes it outright — leaving an invisible block
+     behind on the board would be its own surprise.
+
+   Matching on the block object rather than filtering by src, because
+   two blocks may legitimately hold the same file and only the one this
+   tile stands for should go. */
+function removeFromProjectsList(key, src) {
+  const proj = PROJECTS[key];
+  const block = ((proj && proj.blocks) || [])
+    .find(b => b.content === src && (b.type === 'image' || b.type === 'video'));
+  if (!block || !block._fromList) { hideMediaFromList(key, src); return; }
+  proj.blocks = proj.blocks.filter(b => b !== block);
+  saveProject(key);
+  // Drop any hide left over from before it was re-added, so the entry
+  // can't linger and suppress the file if it's picked back in later.
+  const hidden = getListHidden(key);
+  if (hidden.includes(src)) setListHidden(key, hidden.filter(s => s !== src));
+  refreshProjectsList();
+}
+
+// True when taking this file out of the row would delete it rather than
+// just hide it — used to label the × honestly per tile.
+function isListOwnedMedia(key, src) {
+  const proj = PROJECTS[key];
+  const block = ((proj && proj.blocks) || [])
+    .find(b => b.content === src && (b.type === 'image' || b.type === 'video'));
+  return !!(block && block._fromList);
+}
 
 function addMediaToProject(key, media, atIndex) {
   const proj = PROJECTS[key];
@@ -5567,7 +5601,9 @@ function addMediaToProject(key, media, atIndex) {
   if (!proj.blocks) proj.blocks = [];
   // A fresh id per placement: the same file can sit in several projects,
   // and reordering matches tiles to blocks by id.
-  const block = { id: uid(), type: media.type, content: media.src };
+  // _fromList marks it as this list's own, so removing it here removes it
+  // for real instead of hiding a block the board never asked for.
+  const block = { id: uid(), type: media.type, content: media.src, _fromList: true };
   if (media.aspect) block._freeAspect = media.aspect;
   if (typeof atIndex === 'number' && atIndex >= 0 && atIndex <= proj.blocks.length) {
     proj.blocks.splice(atIndex, 0, block);
@@ -5685,9 +5721,10 @@ async function renderMediaPicker() {
       const proj = PROJECTS[key];
       const existing = (proj.blocks || []).find(b => b.content === m.src && (b.type === 'image' || b.type === 'video'));
       const isHidden = getListHidden(key).includes(m.src);
-      // Unticking only ever hides — the board's block is never touched from
-      // here, so a mistap costs a re-tick rather than a deleted clip.
-      if (existing && !isHidden) hideMediaFromList(key, m.src);
+      // Unticking hides a board's own media and removes what this list added
+      // itself — see removeFromProjectsList. Either way a board block that
+      // predates this list is never deleted from here.
+      if (existing && !isHidden) removeFromProjectsList(key, m.src);
       else if (existing) unhideMediaInList(key, m.src);
       else { addMediaToProject(key, m); refreshProjectsList(); }
       renderMediaPicker();
