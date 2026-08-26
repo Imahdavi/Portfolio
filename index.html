@@ -3229,12 +3229,35 @@ function layoutBlockGrid(list) {
   let totalCols = occCols, lead = 0, fluid = false;
 
   if (occPx > avail + 0.5) {
-    fluid = true;
-    list.style.gridTemplateColumns = `repeat(${occCols}, 1fr)`;
-    list.style.width      = '';
-    list.style.marginLeft = '';
-    list.style.marginRight = '';
+    // The board is wider than the space it has. Which way that gives is
+    // deliberate and depends on WHY there isn't room:
+    //
+    // - The viewport itself is narrower than the standard frame (a phone).
+    //   Nothing would fit at full size, so the columns go stretchy and the
+    //   whole arrangement scales down intact — the long-standing behaviour.
+    // - There IS room for the frame, and the board is only over because
+    //   blocks were dragged outside it. Scaling there silently shrank the
+    //   media (lina rendered at 40.6px columns against a 74.33px pitch, and
+    //   grew again with every extra pixel of site width). The columns stay
+    //   at their real size and the board scrolls sideways instead, so media
+    //   is the size it was set to at any shell width.
+    const frameFits = avail + 0.5 >= colsToPx(BLOCK_FRAME_COLS);
+    if (frameFits) {
+      list.style.gridTemplateColumns = `repeat(${occCols}, ${BLOCK_COL_PX}px)`;
+      list.style.width       = '';
+      list.style.marginLeft  = '';
+      list.style.marginRight = '';
+      list.style.overflowX   = 'auto';
+    } else {
+      fluid = true;
+      list.style.gridTemplateColumns = `repeat(${occCols}, 1fr)`;
+      list.style.width      = '';
+      list.style.marginLeft = '';
+      list.style.marginRight = '';
+      list.style.overflowX  = '';
+    }
   } else {
+    list.style.overflowX = '';
     const fits = Math.floor((avail + BLOCK_GAP_PX) / BLOCK_COL_PITCH);
     lead = Math.max(0, Math.floor((fits - occCols) / 2));
     let gridW, ml;
