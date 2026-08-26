@@ -644,6 +644,10 @@
       margin:10px 0 2px;
     }
     .mp-group-label:first-child { margin-top:0; }
+    .mp-group-label-sub {
+      font-size:10.5px; font-weight:500; color:#aaa; text-transform:none;
+      letter-spacing:0; margin:6px 0 2px;
+    }
     .mp-actions { display:flex; gap:8px; margin-top:12px; }
     .mp-actions button {
       flex:1; padding:11px; border:none; border-radius:12px;
@@ -5659,11 +5663,44 @@ async function renderMediaPicker() {
     mine.forEach(m => grid.appendChild(makeTile(m)));
   }
   if (rest.length) {
-    const label = document.createElement('div');
-    label.className = 'mp-group-label';
-    label.textContent = mine.length ? 'All media' : 'All media — tap to add';
-    grid.appendChild(label);
-    rest.forEach(m => grid.appendChild(makeTile(m)));
+    // "All media" on its own was still one undifferentiated wall of every
+    // file any project has ever used — fine once a project already has a
+    // few of its own tiles up top, useless for a brand-new empty board,
+    // which is exactly when picking the right file out of a hundred
+    // unrelated ones matters most. Group by whichever other project
+    // already uses each file (first one found wins — a file reused across
+    // several only needs one home for browsing purposes), backups
+    // excluded since they're history, not a real place to browse from.
+    const ownerOf = new Map();
+    for (const k in PROJECTS) {
+      if (k === key || /^zz_backup/.test(k)) continue;
+      (PROJECTS[k].blocks || []).forEach(b => {
+        if ((b.type === 'image' || b.type === 'video') && b.content && !ownerOf.has(b.content)) {
+          ownerOf.set(b.content, PROJECTS[k].name || k);
+        }
+      });
+    }
+    const groups = new Map(); // owner name -> media[], insertion order
+    rest.forEach(m => {
+      const owner = ownerOf.get(m.src) || 'Unused uploads';
+      if (!groups.has(owner)) groups.set(owner, []);
+      groups.get(owner).push(m);
+    });
+    const ownerNames = [...groups.keys()].filter(n => n !== 'Unused uploads').sort();
+    if (groups.has('Unused uploads')) ownerNames.push('Unused uploads');
+
+    const allLabel = document.createElement('div');
+    allLabel.className = 'mp-group-label';
+    allLabel.textContent = mine.length ? 'All media' : 'All media — tap to add';
+    grid.appendChild(allLabel);
+
+    ownerNames.forEach(owner => {
+      const sub = document.createElement('div');
+      sub.className = 'mp-group-label mp-group-label-sub';
+      sub.textContent = `${owner} (${groups.get(owner).length})`;
+      grid.appendChild(sub);
+      groups.get(owner).forEach(m => grid.appendChild(makeTile(m)));
+    });
   }
 
   mountMediaPickerPreviews(grid);
