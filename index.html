@@ -9083,6 +9083,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const disp = document.getElementById('profileNameDisplay');
   if (disp && window.ResizeObserver) new ResizeObserver(() => positionSiteSpider(true)).observe(disp);
   window.addEventListener('resize', () => positionSiteSpider(false));
+  // revealProfileName() already waits on document.fonts.load() for the
+  // one specific weight/family it names before calling positionSiteSpider,
+  // but that promise can resolve before the browser has actually swapped
+  // the rendered glyphs in — measuring the "M" span in that gap gets its
+  // fallback-font position instead of the real one, which is stable
+  // (a ResizeObserver on the display box won't catch it — a font swap at
+  // the same font-size doesn't change the box's overall size, only where
+  // the letters land inside it) rather than a one-frame flicker. Re-firing
+  // once document.fonts.ready — the browser's own signal that every font
+  // it's using has actually finished — settles corrects that regardless
+  // of whether the earlier call already had the right metrics.
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => positionSiteSpider(false));
+  }
 });
 
 /* ── Site spider pendulum physics ──────────────────────────
