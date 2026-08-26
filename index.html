@@ -435,15 +435,22 @@
        .d-title and .proj-title use) and --font-body for everything under
        it (what .block-text inherits), so a row reads like the board it
        links to rather than like the handwritten section labels. */
+    /* Two stacked values rather than one line: a range needs more room
+       than the old 40px column had, and stacking keeps the left rail
+       narrow instead of pushing every row's body across. The dash is a
+       separator element so it can be hidden when there's no end value. */
     .pli-year {
-      flex:0 0 auto; width:40px; padding-top:2px;
-      font-family:var(--font-body); font-size:12.5px; font-weight:600; color:#b4a99a;
+      flex:0 0 auto; width:66px; padding-top:3px;
+      display:flex; flex-direction:column; align-items:flex-start; gap:1px;
+      font-family:var(--font-body); font-size:12.5px; font-weight:600;
+      color:#b4a99a; line-height:1.35;
     }
+    .pli-year-sep { font-weight:400; opacity:.65; }
     .pli-body { flex:1 1 auto; min-width:0; }
     .pli-title-row { display:flex; align-items:baseline; gap:5px; }
-    .pli-title { font-family:var(--font-title); font-size:17px; font-weight:600; }
-    .pli-category { font-family:var(--font-body); font-size:12.5px; color:#a89e91; margin-top:2px; }
-    .pli-desc { font-family:var(--font-body); font-size:13.5px; line-height:1.55; color:#5a5148; margin:8px 0 14px; max-width:52ch; }
+    .pli-title { font-family:var(--font-title); font-size:17px; font-weight:600; line-height:1.3; }
+    .pli-category { font-family:var(--font-body); font-size:12.5px; color:#a89e91; margin-top:7px; }
+    .pli-desc { font-family:var(--font-body); font-size:13.5px; line-height:1.55; color:#5a5148; margin:18px 0 16px; max-width:52ch; }
     .pli-media-strip {
       display:flex; gap:10px; height:170px; overflow-x:auto; scrollbar-width:none;
       margin-inline:-4px; padding-inline:4px;
@@ -585,14 +592,30 @@
        row left and broke alignment against the rows that do have a year.
        It keeps its width and just renders empty. */
     .pli-category:empty, .pli-desc:empty { display:none; }
-    #view-home.home-edit .pli-year,
+    /* Outside edit mode an unset end date leaves nothing to separate, so
+       the dash goes with it. Both stay visible while editing, otherwise
+       there'd be no way to add an end to a row that hasn't got one. */
+    .pli-year-from:empty, .pli-year-to:empty { display:none; }
+    /* .no-end is set by syncYearSep() rather than derived with :has() —
+       :has() proved not to re-evaluate on dynamic changes here (see the
+       reverted gradual-blur scoping), and this has to update as it's typed. */
+    .pli-year.no-end .pli-year-sep { display:none; }
+    #view-home.home-edit .pli-year-from,
+    #view-home.home-edit .pli-year-to,
+    #view-home.home-edit .pli-year-sep { display:inline-block; }
+
+    #view-home.home-edit .pli-year-from,
+    #view-home.home-edit .pli-year-to,
     #view-home.home-edit .pli-category,
     #view-home.home-edit .pli-desc {
-      display:block; min-height:1em; min-width:30px;
+      min-height:1em; min-width:30px;
       outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px;
       padding:2px 6px; cursor:text;
     }
-    #view-home.home-edit .pli-year:empty:before,
+    #view-home.home-edit .pli-category,
+    #view-home.home-edit .pli-desc { display:block; }
+    #view-home.home-edit .pli-year-from:empty:before,
+    #view-home.home-edit .pli-year-to:empty:before,
     #view-home.home-edit .pli-category:empty:before,
     #view-home.home-edit .pli-desc:empty:before { content:attr(data-ph); color:#bbb; }
     .pli-title-row { align-self:flex-start; }
@@ -4883,10 +4906,29 @@ function buildProjectListItem(card) {
   item.className = 'proj-list-item';
   item.dataset.key = card.key;
 
+  // A period, not a single year: `year` is the start (kept under that name
+  // so existing saved values still read), `yearEnd` the end — free text so
+  // it can hold "Present", "Ongoing", a month, whatever suits the entry.
+  // The separator only shows when there's actually an end to separate.
   const year = document.createElement('div');
   year.className = 'pli-year';
-  year.dataset.ph = 'Year';
-  year.textContent = card.year || '';
+
+  const yFrom = document.createElement('span');
+  yFrom.className = 'pli-year-from';
+  yFrom.dataset.ph = 'From';
+  yFrom.textContent = card.year || '';
+
+  const ySep = document.createElement('span');
+  ySep.className = 'pli-year-sep';
+  ySep.textContent = '–';
+
+  const yTo = document.createElement('span');
+  yTo.className = 'pli-year-to';
+  yTo.dataset.ph = 'To / Present';
+  yTo.textContent = card.yearEnd || '';
+
+  year.append(yFrom, ySep, yTo);
+  syncYearSep(year);
 
   const body = document.createElement('div');
   body.className = 'pli-body';
@@ -4995,15 +5037,25 @@ function buildProjectListItem(card) {
    card is on screen — this view shows three of them, so running that here
    would drop the other seven and both section titles. Instead this writes
    just the three fields it owns, straight into the cached settings. */
+// The dash only earns its place when there's an end value beside it.
+function syncYearSep(yearEl) {
+  if (!yearEl) return;
+  const to = yearEl.querySelector('.pli-year-to');
+  yearEl.classList.toggle('no-end', !(to && to.textContent.trim()));
+}
+
 function wireProjectsListEditing() {
   document.querySelectorAll('.proj-list-item').forEach(item => {
-    ['.pli-year', '.pli-category', '.pli-desc'].forEach(sel => {
+    ['.pli-year-from', '.pli-year-to', '.pli-category', '.pli-desc'].forEach(sel => {
       const el = item.querySelector(sel);
       if (!el) return;
       el.contentEditable = 'true';
       if (el._pliWired) return;
       el._pliWired = true;
-      el.addEventListener('blur', saveProjectsListEdits);
+      el.addEventListener('blur', () => {
+        syncYearSep(item.querySelector('.pli-year'));
+        saveProjectsListEdits();
+      });
       el.addEventListener('keydown', ev => {
         // Description is the one field worth having line breaks in.
         if (ev.key === 'Enter' && !el.classList.contains('pli-desc')) {
@@ -5284,7 +5336,7 @@ function commitStripOrder(strip, key) {
 }
 
 function unwireProjectsListEditing() {
-  document.querySelectorAll('.pli-year, .pli-category, .pli-desc')
+  document.querySelectorAll('.pli-year-from, .pli-year-to, .pli-category, .pli-desc')
     .forEach(el => { el.contentEditable = 'false'; });
 }
 
@@ -5299,9 +5351,10 @@ function saveProjectsListEdits() {
     if (!card) return;
 
     const next = {
-      year:     item.querySelector('.pli-year')?.textContent.trim()     || '',
-      category: item.querySelector('.pli-category')?.textContent.trim() || '',
-      desc:     item.querySelector('.pli-desc')?.innerText.trim()       || '',
+      year:     item.querySelector('.pli-year-from')?.textContent.trim() || '',
+      yearEnd:  item.querySelector('.pli-year-to')?.textContent.trim()   || '',
+      category: item.querySelector('.pli-category')?.textContent.trim()  || '',
+      desc:     item.querySelector('.pli-desc')?.innerText.trim()        || '',
     };
     Object.entries(next).forEach(([k, v]) => {
       if ((card[k] || '') === v) return;
@@ -6173,7 +6226,7 @@ function saveHomeEdits() {
   (_cachedSettings.sections || []).forEach(sec =>
     (sec.cards || []).forEach(c => {
       if (c.thumb) _prevThumbs[c.key] = c.thumb;
-      _prevMeta[c.key] = { year: c.year, category: c.category, desc: c.desc };
+      _prevMeta[c.key] = { year: c.year, yearEnd: c.yearEnd, category: c.category, desc: c.desc };
     }));
 
   const sections = [];
@@ -6195,6 +6248,7 @@ function saveHomeEdits() {
         key, name, sub,
         ...(thumb ? { thumb } : {}), ...(hidden ? { hidden: true } : {}),
         ...(meta.year ? { year: meta.year } : {}),
+        ...(meta.yearEnd ? { yearEnd: meta.yearEnd } : {}),
         ...(meta.category ? { category: meta.category } : {}),
         ...(meta.desc ? { desc: meta.desc } : {}),
       });
