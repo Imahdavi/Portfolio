@@ -439,9 +439,11 @@
        than the old 40px column had, and stacking keeps the left rail
        narrow instead of pushing every row's body across. The dash is a
        separator element so it can be hidden when there's no end value. */
+    /* One line, not stacked: a column of three put the rail's height above
+       the text beside it and pushed the row taller for no gain. */
     .pli-year {
-      flex:0 0 auto; width:66px; padding-top:3px;
-      display:flex; flex-direction:column; align-items:flex-start; gap:1px;
+      flex:0 0 auto; width:104px; padding-top:3px;
+      display:flex; flex-direction:row; flex-wrap:wrap; align-items:baseline; gap:4px;
       font-family:var(--font-body); font-size:12.5px; font-weight:600;
       color:#b4a99a; line-height:1.35;
     }
@@ -588,10 +590,17 @@
       gap:8px; overflow-y:auto; padding:2px; flex:1 1 auto; min-height:0;
     }
     .mp-item {
-      position:relative; aspect-ratio:1; border-radius:10px; overflow:hidden;
+      position:relative; aspect-ratio:4 / 3; border-radius:10px; overflow:hidden;
       border:2px solid transparent; background:#e8e0d8; cursor:pointer; padding:0;
     }
     .mp-item img, .mp-item video { width:100%; height:100%; object-fit:cover; display:block; }
+    .mp-item-name {
+      position:absolute; left:0; right:0; bottom:0; padding:3px 5px;
+      background:linear-gradient(to top, rgba(0,0,0,.78), transparent);
+      color:#fff; font-family:var(--font-body); font-size:9px; line-height:1.25;
+      text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      direction:rtl;   /* keeps the distinguishing tail of the name visible */
+    }
     .mp-item:hover { border-color:rgba(0,0,0,.3); }
     .mp-item.in-project { border-color:#3b82f6; }
     .mp-item.in-project::after {
@@ -624,6 +633,13 @@
       inset:0; background:none; color:#555; display:flex;
       align-items:center; justify-content:center; text-align:center; white-space:normal;
     }
+    .mp-new-project {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:4px; border:2px dashed rgba(0,0,0,.22); background:none; color:#8a8178;
+    }
+    .mp-new-project:hover { border-color:rgba(0,0,0,.42); color:#5a5148; }
+    .mp-new-project span:first-child { font-size:22px; line-height:1; }
+    .mp-new-label { font-family:var(--font-body); font-size:10.5px; font-weight:600; }
 
     /* Row controls — grip and remove, edit mode only. They sit in the
        year rail, which is otherwise mostly empty space. */
@@ -675,6 +691,7 @@
     #view-home.home-edit .pli-year-to,
     #view-home.home-edit .pli-year-sep { display:inline-block; }
 
+    #view-home.home-edit .pli-title,
     #view-home.home-edit .pli-year-from,
     #view-home.home-edit .pli-year-to,
     #view-home.home-edit .pli-category,
@@ -5246,13 +5263,25 @@ function openProjectRowPicker() {
   const overlay = document.getElementById('media-picker-overlay');
   const grid = document.getElementById('mp-grid');
   document.getElementById('mp-title').textContent = 'Add project';
-  document.getElementById('mp-sub').textContent = available.length
-    ? 'Boards not in this list yet' : '';
+  document.getElementById('mp-sub').textContent = 'Pick an existing board, or start an empty one';
   document.getElementById('mp-upload').style.display = 'none';
 
   grid.innerHTML = '';
+
+  // A blank board to fill in from scratch, rather than only ever adopting
+  // one that already exists.
+  const blank = document.createElement('button');
+  blank.type = 'button';
+  blank.className = 'mp-item mp-project mp-new-project';
+  blank.innerHTML = '<span>+</span><span class="mp-new-label">New empty project</span>';
+  blank.addEventListener('click', createEmptyProjectRow);
+  grid.appendChild(blank);
+
   if (!available.length) {
-    grid.innerHTML = '<div class="mp-empty">Every board is already in the list.</div>';
+    const note = document.createElement('div');
+    note.className = 'mp-empty';
+    note.textContent = 'Every existing board is already in the list.';
+    grid.appendChild(note);
   }
   available.forEach(card => {
     const btn = document.createElement('button');
@@ -5271,6 +5300,28 @@ function openProjectRowPicker() {
   overlay.classList.add('show');
 }
 
+/* A brand-new board, created from the Projects list rather than the grid.
+   It has to exist in settings.sections too, otherwise the list would have
+   a key with no card behind it and simply skip the row. */
+function createEmptyProjectRow() {
+  if (!_cachedSettings) _cachedSettings = {};
+  if (!Array.isArray(_cachedSettings.sections) || !_cachedSettings.sections.length) {
+    _cachedSettings.sections = [{ title: 'Projects', cards: [] }];
+  }
+  const key = 'card-' + uid();
+  const card = { key, name: 'New Project', sub: '' };
+
+  // Into the last section, which is where the grid's own "+" adds cards.
+  _cachedSettings.sections[_cachedSettings.sections.length - 1].cards.push(card);
+  PROJECTS[key] = { name: card.name, sub: '', blocks: [] };
+
+  saveSettings();
+  saveProject(key);
+  setProjectsListKeys([...getProjectsListKeys(), key]);
+  closeMediaPicker();
+  refreshProjectsList();
+}
+
 // The dash needs a value on BOTH sides to be separating anything — with
 // only an end filled in it would render as a stray leading "– Present".
 function syncYearSep(yearEl) {
@@ -5283,7 +5334,7 @@ function syncYearSep(yearEl) {
 
 function wireProjectsListEditing() {
   document.querySelectorAll('.proj-list-item').forEach(item => {
-    ['.pli-year-from', '.pli-year-to', '.pli-category', '.pli-desc'].forEach(sel => {
+    ['.pli-title', '.pli-year-from', '.pli-year-to', '.pli-category', '.pli-desc'].forEach(sel => {
       const el = item.querySelector(sel);
       if (!el) return;
       el.contentEditable = 'true';
@@ -5531,9 +5582,24 @@ async function renderMediaPicker() {
     btn.type = 'button';
     btn.className = 'mp-item' + (inProject.has(m.src) ? ' in-project' : '');
     const el = document.createElement(m.type === 'video' ? 'video' : 'img');
-    if (m.type === 'video') { el.src = m.src; el.muted = true; el.playsInline = true; el.preload = 'metadata'; }
-    else { el.src = m.src; el.alt = ''; el.loading = 'lazy'; }
+    if (m.type === 'video') {
+      // #t=0.1 makes the browser seek to and paint a frame instead of
+      // leaving a black box — a still is what makes these identifiable.
+      el.dataset.src = m.src + '#t=0.1';
+      el.muted = true; el.playsInline = true; el.preload = 'metadata';
+    } else {
+      el.dataset.src = m.src;
+      el.alt = '';
+    }
     btn.appendChild(el);
+
+    // Filename under the still: several clips share a look, and the name
+    // is often the only thing that separates them.
+    const label = document.createElement('span');
+    label.className = 'mp-item-name';
+    label.textContent = decodeURIComponent((m.pathname || m.src).split('/').pop());
+    btn.appendChild(label);
+
     btn.addEventListener('click', () => {
       const proj = PROJECTS[key];
       const existing = (proj.blocks || []).find(b => b.content === m.src && (b.type === 'image' || b.type === 'video'));
@@ -5543,6 +5609,34 @@ async function renderMediaPicker() {
     });
     grid.appendChild(btn);
   });
+
+  mountMediaPickerPreviews(grid);
+}
+
+/* The library runs to well over a hundred files; giving every one a src up
+   front meant the sheet fetched metadata for all of them at once, which is
+   what made it slow to open. Only what's scrolled near gets a source. */
+let _mpPreviewObs = null;
+function mountMediaPickerPreviews(grid) {
+  if (_mpPreviewObs) { _mpPreviewObs.disconnect(); _mpPreviewObs = null; }
+  const pending = grid.querySelectorAll('[data-src]');
+  if (!pending.length) return;
+
+  const load = (el) => {
+    if (!el.dataset.src) return;
+    el.src = el.dataset.src;
+    delete el.dataset.src;
+  };
+
+  if (!('IntersectionObserver' in window)) { pending.forEach(load); return; }
+  _mpPreviewObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      load(e.target);
+      _mpPreviewObs.unobserve(e.target);
+    });
+  }, { root: grid, rootMargin: '250px 0px', threshold: 0.01 });
+  pending.forEach(el => _mpPreviewObs.observe(el));
 }
 
 function mediaPickerUpload() {
@@ -5603,7 +5697,7 @@ function commitStripOrder(strip, key) {
 }
 
 function unwireProjectsListEditing() {
-  document.querySelectorAll('.pli-year-from, .pli-year-to, .pli-category, .pli-desc')
+  document.querySelectorAll('.pli-title, .pli-year-from, .pli-year-to, .pli-category, .pli-desc')
     .forEach(el => { el.contentEditable = 'false'; });
 }
 
@@ -5628,6 +5722,16 @@ function saveProjectsListEdits() {
       changed = true;
       if (v) card[k] = v; else delete card[k];
     });
+
+    // The name is the board's, not just this row's, so it goes to the card
+    // and the board together — the grid reads the same value.
+    const name = item.querySelector('.pli-title')?.textContent.trim();
+    if (name && name !== card.name) {
+      card.name = name;
+      if (PROJECTS[key]) { PROJECTS[key].name = name; saveProject(key); }
+      syncProjectTitleToHome(key, name, card.sub);
+      changed = true;
+    }
   });
   if (changed) saveSettings();
 }
