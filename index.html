@@ -440,14 +440,25 @@
        narrow instead of pushing every row's body across. The dash is a
        separator element so it can be hidden when there's no end value. */
     /* One line, not stacked: a column of three put the rail's height above
-       the text beside it and pushed the row taller for no gain. */
+       the text beside it and pushed the row taller for no gain.
+       align-self:flex-start matters here — .proj-list-item is a flex row
+       with the default align-items:stretch, which was pulling .pli-year
+       up to .pli-body's full height (description + media strip). Once
+       stretched, flex-wrap's second line (yTo wrapping under yFrom) landed
+       wherever align-content spread it across that height — hundreds of
+       px below the first line — instead of sitting right underneath it. */
     .pli-year {
-      flex:0 0 auto; width:104px; padding-top:3px;
+      flex:0 0 auto; width:130px; padding-top:3px; align-self:flex-start;
       display:flex; flex-direction:row; flex-wrap:wrap; align-items:baseline; gap:4px;
+      align-content:flex-start;
       font-family:var(--font-body); font-size:12.5px; font-weight:600;
       color:#b4a99a; line-height:1.35;
     }
     .pli-year-sep { font-weight:400; opacity:.65; }
+    /* Row tools (drag handle, delete) are admin chrome, not part of the
+       date — keep them off the date's own line so "2025 – Present" isn't
+       competing with "⠿ ×" for the same 130px. */
+    .pli-year .pli-row-tools { flex-basis:100%; }
     .pli-body { flex:1 1 auto; min-width:0; }
     .pli-title-row { display:flex; align-items:baseline; gap:5px; }
     .pli-title { font-family:var(--font-title); font-size:17px; font-weight:600; line-height:1.3; }
