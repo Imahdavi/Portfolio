@@ -4911,15 +4911,54 @@ function setProjectsListKeys(keys) {
   saveSettings();
 }
 
+/* Media the Projects list hides for a board, per board, by src.
+
+   The strip renders the board's real blocks, so "take this out of the
+   strip" used to be spliced straight out of proj.blocks — which quietly
+   deleted it from the project page too. Curating which clips a summary
+   row shows off is not the same intent as removing work from the
+   portfolio, and there was no confirm or undo between the two, so a
+   mistap on a browsing surface permanently destroyed board content.
+   Hiding is recorded here instead; the block stays exactly where it is
+   and the project page is untouched. Deleting for real still lives on
+   the board editor, where that is unambiguously what you came to do. */
+function getListHidden(key) {
+  const all = _cachedSettings && _cachedSettings.projectsListHidden;
+  const saved = all && all[key];
+  return Array.isArray(saved) ? saved.slice() : [];
+}
+
+function setListHidden(key, srcs) {
+  if (!_cachedSettings) _cachedSettings = {};
+  if (!_cachedSettings.projectsListHidden) _cachedSettings.projectsListHidden = {};
+  if (srcs.length) _cachedSettings.projectsListHidden[key] = srcs.slice();
+  else delete _cachedSettings.projectsListHidden[key];
+  saveSettings();
+}
+
+function hideMediaFromList(key, src) {
+  if (!src) return;
+  const hidden = getListHidden(key);
+  if (!hidden.includes(src)) hidden.push(src);
+  setListHidden(key, hidden);
+  refreshProjectsList();
+}
+
+function unhideMediaInList(key, src) {
+  setListHidden(key, getListHidden(key).filter(s => s !== src));
+  refreshProjectsList();
+}
+
 // The strip shows the board's actual media, so it takes video blocks too —
 // these boards are mostly video (tosan is 13 videos and no images), and an
 // images-only strip left them blank. Order is board order. Falls back to
 // the card's own thumbnail so a board with no media still shows one tile.
 function listMediaFor(key, fallbackThumb) {
   const proj = PROJECTS[key];
+  const hidden = new Set(getListHidden(key));
   const media = proj
     ? (proj.blocks || [])
-        .filter(b => (b.type === 'image' || b.type === 'video') && b.content)
+        .filter(b => (b.type === 'image' || b.type === 'video') && b.content && !hidden.has(b.content))
         .map(b => ({ id: b.id, type: b.type, src: b.content }))
     : [];
   // Every media block, not a capped preview: edit mode wraps the strip so
@@ -5170,6 +5209,9 @@ function buildProjectListItem(card) {
       // by identity — two blocks can legitimately share the same src, and
       // matching on that would confuse them for each other.
       if (m.id) tile.dataset.blockId = m.id;
+      // Hiding is keyed by src, not block id — the hidden set has to survive
+      // the board being re-saved (which can hand the same file a new block).
+      tile.dataset.src = m.src;
       tile.style.setProperty('--pli-uv', STRIP_UV_SCALE);
 
       const el = document.createElement(m.type === 'video' ? 'video' : 'img');
@@ -5199,17 +5241,17 @@ function buildProjectListItem(card) {
       }
       tile.appendChild(el);
 
-      // Edit-mode only (CSS keeps it hidden otherwise). Removes the block
-      // from the board, same as deleting it on the project page would.
+      // Edit-mode only (CSS keeps it hidden otherwise). Takes the tile out
+      // of THIS list and nothing else — the board keeps the block.
       const del = document.createElement('button');
       del.className = 'pli-tile-del';
       del.type = 'button';
       del.textContent = '×';
-      del.title = 'Remove from this project';
+      del.title = 'Hide from this list (stays on the project page)';
       del.addEventListener('pointerdown', e => e.stopPropagation()); // don't start a reorder drag
       del.addEventListener('click', (e) => {
         e.stopPropagation();
-        removeMediaFromProject(card.key, tile.dataset.blockId);
+        hideMediaFromList(card.key, tile.dataset.src);
       });
       tile.appendChild(del);
 
@@ -5513,15 +5555,11 @@ function refreshProjectsList() {
   requestAnimationFrame(() => window.scrollTo(0, y));
 }
 
-function removeMediaFromProject(key, blockId) {
-  const proj = PROJECTS[key];
-  if (!proj || !proj.blocks || !blockId) return;
-  const i = proj.blocks.findIndex(b => b.id === blockId);
-  if (i < 0) return;
-  proj.blocks.splice(i, 1);
-  saveProject(key);
-  refreshProjectsList();
-}
+// (removeMediaFromProject lived here — it spliced a block out of the board
+// on behalf of the Projects list, which is what silently deleted project
+// media from a curation surface. Both callers hide instead now, and the
+// board editor has its own delete, so nothing needs it. Left out rather
+// than kept around unused, so it can't get wired back in by accident.)
 
 function addMediaToProject(key, media, atIndex) {
   const proj = PROJECTS[key];
@@ -5601,8 +5639,12 @@ async function renderMediaPicker() {
   const sub  = document.getElementById('mp-sub');
   if (!key || !grid) return;
 
+  // Ticked means "showing in this list", not merely "exists on the board" —
+  // a hidden block is still on the project page, so ticking it back on has
+  // to be offered rather than looking like it was never there.
+  const listHidden = new Set(getListHidden(key));
   const inProject = new Set((PROJECTS[key]?.blocks || [])
-    .filter(b => (b.type === 'image' || b.type === 'video') && b.content)
+    .filter(b => (b.type === 'image' || b.type === 'video') && b.content && !listHidden.has(b.content))
     .map(b => b.content));
   const all = await loadSiteMedia();
   if (_mpKey !== key) return;   // picker moved on while the listing loaded
@@ -5642,7 +5684,11 @@ async function renderMediaPicker() {
     btn.addEventListener('click', () => {
       const proj = PROJECTS[key];
       const existing = (proj.blocks || []).find(b => b.content === m.src && (b.type === 'image' || b.type === 'video'));
-      if (existing) removeMediaFromProject(key, existing.id);
+      const isHidden = getListHidden(key).includes(m.src);
+      // Unticking only ever hides — the board's block is never touched from
+      // here, so a mistap costs a re-tick rather than a deleted clip.
+      if (existing && !isHidden) hideMediaFromList(key, m.src);
+      else if (existing) unhideMediaInList(key, m.src);
       else { addMediaToProject(key, m); refreshProjectsList(); }
       renderMediaPicker();
     });
