@@ -504,9 +504,10 @@
       animation:pliReveal .5s cubic-bezier(.25,.46,.45,.94) both;
       animation-delay:var(--pli-delay, 0ms);
     }
-    /* Hidden until reached, so nothing flashes in at full opacity first. */
-    .projects-list .proj-list-item:not([data-revealed]) > * { opacity:0; }
-    .pli-tile:not([data-revealed]) { opacity:0; }
+    /* Nothing is hidden by CSS. Whatever starts below the fold is hidden by
+       setupProjectsListReveal() instead, so if the observer never fires the
+       page is still readable rather than blank — the same arrangement
+       renderBlocks() uses for project pages. */
     /* Editing shouldn't be behind an animation, and prefers-reduced-motion
        gets the content with no movement at all. */
     #view-home.home-edit .proj-list-item > *,
@@ -5640,28 +5641,50 @@ function setupProjectsListReveal() {
   if (_pliRevealObs) { _pliRevealObs.disconnect(); _pliRevealObs = null; }
   if (typeof editMode !== 'undefined' && editMode) return;   // no animation while editing
 
-  const targets = document.querySelectorAll('.projects-list .proj-list-item, .projects-list .pli-tile');
+  const targets = [...document.querySelectorAll('.projects-list .proj-list-item, .projects-list .pli-tile')];
   if (!targets.length) return;
+
+  const reveal = (el) => {
+    if (el.dataset.revealed) return;
+    if (el.classList.contains('pli-tile')) {
+      // Position within its own strip, so each row counts from zero.
+      const i = [...el.parentElement.children].filter(c => c.classList.contains('pli-tile')).indexOf(el);
+      el.style.setProperty('--pli-delay', Math.min(i, 8) * 45 + 'ms');
+    } else {
+      [...el.children].forEach((c, i) => c.style.setProperty('--pli-delay', i * 70 + 'ms'));
+    }
+    el.style.opacity = '';
+    [...el.children].forEach(c => { c.style.opacity = ''; });
+    el.dataset.revealed = '1';
+  };
+
+  const hide = (el) => {
+    if (el.classList.contains('pli-tile')) el.style.opacity = '0';
+    else [...el.children].forEach(c => { c.style.opacity = '0'; });
+  };
+
+  // Anything already on screen is shown straight away; only what's below the
+  // fold is hidden and waits. That keeps the list readable even if the
+  // observer never fires.
+  const below = [];
+  targets.forEach(el => {
+    if (el.getBoundingClientRect().top < window.innerHeight) reveal(el);
+    else { hide(el); below.push(el); }
+  });
+  if (!below.length || !('IntersectionObserver' in window)) {
+    below.forEach(reveal);
+    return;
+  }
 
   _pliRevealObs = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (!entry.isIntersecting) return;
-      const el = entry.target;
-      if (el.dataset.revealed) { _pliRevealObs.unobserve(el); return; }
-
-      if (el.classList.contains('pli-tile')) {
-        // Position within its own strip, so each row counts from zero.
-        const i = [...el.parentElement.children].filter(c => c.classList.contains('pli-tile')).indexOf(el);
-        el.style.setProperty('--pli-delay', Math.min(i, 8) * 45 + 'ms');
-      } else {
-        [...el.children].forEach((c, i) => c.style.setProperty('--pli-delay', i * 70 + 'ms'));
-      }
-      el.dataset.revealed = '1';
-      _pliRevealObs.unobserve(el);
+      reveal(entry.target);
+      _pliRevealObs.unobserve(entry.target);
     });
   }, { rootMargin: '0px 0px -8% 0px', threshold: 0.01 });
 
-  targets.forEach(t => _pliRevealObs.observe(t));
+  below.forEach(t => _pliRevealObs.observe(t));
 }
 
 // Same idea as setupLazyVideos() on project pages: don't fetch a strip
