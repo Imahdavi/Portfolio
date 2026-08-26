@@ -335,8 +335,30 @@
 </div>
 
 <script>
-const SB_URL = 'https://jbdirevxdgcffpaeizcd.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiZGlyZXZ4ZGdjZmZwYWVpemNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NzAwNjgsImV4cCI6MjA5NjU0NjA2OH0._09c4ViKGJvDQXDUGOFEmVWyCg9scPMb6VBGV7DJvoI';
+/* Same backend as the main site: settings and boards come from the
+   Cloudflare Worker over D1, media goes to Vercel Blob. This page was
+   still pointed at Supabase, which is why it stopped working — that
+   project's egress quota ran out and every call returns 402. */
+const API_URL = 'https://portfolio-api.alireza-mahdavi.workers.dev';
+const SB_MEDIA_BUCKET = 'Media';
+
+// Lazily loaded from a CDN, as in index.html — no bundler here either.
+let _blobUploadPromise = null;
+function _getBlobUpload() {
+  if (!_blobUploadPromise) {
+    _blobUploadPromise = import('https://esm.sh/@vercel/blob@2.8.0/client').then(m => m.upload);
+  }
+  return _blobUploadPromise;
+}
+async function uploadMedia(file, bucket, path) {
+  const upload = await _getBlobUpload();
+  const blob = await upload(`${bucket}/${path}`, file, {
+    access: 'public',
+    handleUploadUrl: '/api/blob-upload',
+    contentType: file.type || 'application/octet-stream',
+  });
+  return blob.url;
+}
 function slugify(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || ('sec-'+Date.now()); }
 
 const BODY_FONTS = [
@@ -358,11 +380,9 @@ async function unlock() {
   if (!pass) { err.textContent = 'Enter a password.'; return; }
 
   try {
-    const res  = await fetch(`${SB_URL}/rest/v1/portfolio_settings?id=eq.1&select=data`, {
-      headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
-    });
+    const res  = await fetch(`${API_URL}/api/settings`, { cache: 'no-store' });
     const rows = await res.json();
-    if (!rows[0]) { err.textContent = 'Connection error.'; return; }
+    if (!res.ok || !rows[0]) { err.textContent = 'Connection error.'; return; }
     const stored = rows[0].data.admin_password || 'admin1234';
     if (pass !== stored) { err.textContent = 'Wrong password.'; return; }
 
@@ -636,13 +656,10 @@ async function save() {
   allStatus.forEach(s => { s.textContent = 'Saving…'; s.className = 'save-status'; });
 
   try {
-    const res = await fetch(`${SB_URL}/rest/v1/portfolio_settings?id=eq.1`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`,
-        'Content-Type': 'application/json', 'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({ data: settings, updated_at: new Date().toISOString() })
+    const res = await fetch(`${API_URL}/api/settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: settings })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     allStatus.forEach(s => { s.textContent = 'Saved ✓'; s.className = 'save-status ok'; });
@@ -680,9 +697,7 @@ function populateBoardSelect() {
 
 async function loadBoardsData() {
   try {
-    const res  = await fetch(`${SB_URL}/rest/v1/portfolio_projects?select=key,data`, {
-      headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
-    });
+    const res  = await fetch(`${API_URL}/api/projects`, { cache: 'no-store' });
     const rows = await res.json();
     boardsData = {};
     rows.forEach(r => { boardsData[r.key] = r.data || { name: '', sub: '', blocks: [] }; });
@@ -699,11 +714,13 @@ async function selectBoard(key) {
   if (key) {
     // Always fetch fresh data so we never overwrite layout changes made in the main site
     try {
-      const res  = await fetch(`${SB_URL}/rest/v1/portfolio_projects?key=eq.${encodeURIComponent(key)}&select=key,data`, {
-        headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
-      });
+      // The Worker serves the whole set rather than one row; picking the
+      // one here keeps the API surface small and the payload is ~100KB
+      // for every board, which is cheaper than adding an endpoint for it.
+      const res  = await fetch(`${API_URL}/api/projects`, { cache: 'no-store' });
       const rows = await res.json();
-      if (rows[0]) boardsData[key] = rows[0].data || { blocks: [] };
+      const row  = Array.isArray(rows) ? rows.find(r => r.key === key) : null;
+      if (row) boardsData[key] = row.data || { blocks: [] };
     } catch(e) { console.warn('Board fetch failed:', e); }
   }
   renderBoardBlocks();
@@ -787,13 +804,7 @@ async function uploadBoardFiles(input) {
     const type = file.type.startsWith('video/') ? 'video' : 'image';
 
     try {
-      const up = await fetch(`${SB_URL}/storage/v1/object/Portfolio/${path}`, {
-        method:  'POST',
-        headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': file.type, 'x-upsert': 'true' },
-        body:    file
-      });
-      if (!up.ok) throw new Error('Upload failed: ' + up.status);
-      const url = `${SB_URL}/storage/v1/object/public/Portfolio/${path}`;
+      const url = await uploadMedia(file, SB_MEDIA_BUCKET, path);
       proj.blocks.push({ id: uid(), type, content: url });
     } catch(e) {
       progress.textContent = `Error uploading ${file.name}: ${e.message}`;
@@ -813,13 +824,10 @@ async function saveBoardBlocks(key) {
   if (!proj)   return;
   const progress = document.getElementById('upload-progress');
   try {
-    const res = await fetch(`${SB_URL}/rest/v1/portfolio_projects`, {
+    const res = await fetch(`${API_URL}/api/projects`, {
       method:  'POST',
-      headers: {
-        'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`,
-        'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify({ key, data: proj, updated_at: new Date().toISOString() })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, data: proj })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     if (progress && !progress.textContent) progress.textContent = '';
