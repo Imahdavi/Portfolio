@@ -635,6 +635,15 @@
       font-size:10px; display:flex; align-items:center; justify-content:center;
     }
     .mp-empty { grid-column:1/-1; text-align:center; color:#aaa; font-size:12.5px; padding:24px 0; font-family:var(--font-body); }
+    /* Section headings splitting "already in this project" from the rest
+       of the site's media — plain grid children so they can just span
+       every column instead of needing a separate layout. */
+    .mp-group-label {
+      grid-column:1/-1; font-family:var(--font-body); font-size:11.5px;
+      font-weight:600; color:#8a8178; text-transform:uppercase; letter-spacing:.02em;
+      margin:10px 0 2px;
+    }
+    .mp-group-label:first-child { margin-top:0; }
     .mp-actions { display:flex; gap:8px; margin-top:12px; }
     .mp-actions button {
       flex:1; padding:11px; border:none; border-radius:12px;
@@ -5603,7 +5612,7 @@ async function renderMediaPicker() {
     return;
   }
 
-  all.forEach(m => {
+  function makeTile(m) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'mp-item' + (inProject.has(m.src) ? ' in-project' : '');
@@ -5633,8 +5642,29 @@ async function renderMediaPicker() {
       else { addMediaToProject(key, m); refreshProjectsList(); }
       renderMediaPicker();
     });
-    grid.appendChild(btn);
-  });
+    return btn;
+  }
+
+  // Split so this project's own media isn't lost in the hundred-plus
+  // files every other project has ever uploaded — the flat list made it
+  // hard to tell "belongs here" from "everything that's ever existed".
+  const mine = all.filter(m => inProject.has(m.src));
+  const rest = all.filter(m => !inProject.has(m.src));
+
+  if (mine.length) {
+    const label = document.createElement('div');
+    label.className = 'mp-group-label';
+    label.textContent = `In this project (${mine.length})`;
+    grid.appendChild(label);
+    mine.forEach(m => grid.appendChild(makeTile(m)));
+  }
+  if (rest.length) {
+    const label = document.createElement('div');
+    label.className = 'mp-group-label';
+    label.textContent = mine.length ? 'All media' : 'All media — tap to add';
+    grid.appendChild(label);
+    rest.forEach(m => grid.appendChild(makeTile(m)));
+  }
 
   mountMediaPickerPreviews(grid);
 }
