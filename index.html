@@ -3516,7 +3516,18 @@ function applyBlockGrid(el, block) {
 
   // _colStart lives on an open-ended axis; the grid starts at the board's own
   // first column (minStart) plus however many spare columns sit on the left.
-  const m = blockGridMetrics(el.parentElement);
+  //
+  // Falls back to the list itself when the block has no parent yet:
+  // renderBlocks builds every element through makeBlockEl (which lands here)
+  // BEFORE appending it, so el.parentElement is null on first paint and
+  // blockGridMetrics answers with its no-list default of a plain 6-column
+  // frame. Any board wider than that — four across, say, which needs eight —
+  // then had its right-hand blocks clamped back inside column 6, stacking
+  // them on top of each other and pushing everything out of alignment. It
+  // only looked intermittent because relayoutBlockGrid re-applies correct
+  // metrics whenever the parent happens to resize, so the board would
+  // sometimes snap right a moment later and sometimes stay broken.
+  const m = blockGridMetrics(el.parentElement || document.getElementById('block-list'));
   let span, start;
   if (align === 'center') {
     // Spans the whole board so the media can centre across it; the real width
