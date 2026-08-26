@@ -581,6 +581,48 @@
     #mp-upload:hover { background:#333; }
     #mp-close { background:rgba(0,0,0,.06); color:#555; font-weight:500; }
     #mp-close:hover { background:rgba(0,0,0,.1); }
+    /* Project cards in the borrowed sheet: a thumb with its name over it,
+       or just the name when the board has no thumbnail. */
+    .mp-project { aspect-ratio:4 / 3; }
+    .mp-project-name {
+      position:absolute; left:0; right:0; bottom:0; padding:4px 6px;
+      background:linear-gradient(to top, rgba(0,0,0,.72), transparent);
+      color:#fff; font-size:11px; font-weight:600; text-align:left;
+      font-family:var(--font-body);
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .mp-project-name-only {
+      inset:0; background:none; color:#555; display:flex;
+      align-items:center; justify-content:center; text-align:center; white-space:normal;
+    }
+
+    /* Row controls — grip and remove, edit mode only. They sit in the
+       year rail, which is otherwise mostly empty space. */
+    .pli-row-tools { display:none; align-items:center; gap:6px; margin-top:8px; }
+    #view-home.home-edit .pli-row-tools { display:flex; }
+    .pli-row-handle {
+      cursor:grab; color:#c3b9ab; font-size:14px; line-height:1;
+      user-select:none; touch-action:none; padding:2px 1px;
+    }
+    .pli-row-handle:active { cursor:grabbing; }
+    .pli-row-del {
+      width:17px; height:17px; padding:0; border:none; border-radius:50%;
+      background:rgba(0,0,0,.1); color:#666; font-size:12px; line-height:1;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+    }
+    .pli-row-del:hover { background:#dc2626; color:#fff; }
+    .proj-list-item.pli-row-dragging { opacity:.45; }
+    .proj-list-item.pli-row-drop-before { box-shadow:0 -3px 0 0 #3b82f6; }
+    .proj-list-item.pli-row-drop-after  { box-shadow:0 3px 0 0 #3b82f6; }
+
+    .pli-add-row {
+      display:none; width:100%; margin-top:6px; padding:11px;
+      border:1.5px dashed rgba(0,0,0,.2); border-radius:12px;
+      background:none; cursor:pointer; color:#8a8178;
+      font-family:var(--font-body); font-size:13px; font-weight:600;
+    }
+    #view-home.home-edit .pli-add-row { display:block; }
+    .pli-add-row:hover { border-color:rgba(0,0,0,.38); color:#5a5148; background:rgba(0,0,0,.02); }
 
     /* This view edits in place rather than through the grid's cards, so
        its three fields get the dashed affordance directly (see
@@ -4700,7 +4742,7 @@ function _makeSecDelBtn(label, grid) {
 /* ─── Render home sections dynamically ────────────────── */
 /* ── Home view toggle: Grid ↔ Projects ─────────────────────
    Projects replaces the card grids with one vertical write-up list over
-   PROJECTS_LIST_KEYS — year, title, category, description, and a strip of
+   getProjectsListKeys() — year, title, category, description, and a strip of
    that board's own media.
 
    The two views edit differently, and deliberately don't share a save
@@ -4731,7 +4773,20 @@ function setHomeView(view) {
 
 // Which projects the Projects list shows, in order. Deliberately a fixed
 // list rather than every card: this view is a pilot on these three boards.
-const PROJECTS_LIST_KEYS = ['tosan', 'vam30', 'lina'];
+const PROJECTS_LIST_DEFAULT = ['tosan', 'vam30', 'lina'];
+
+// Which boards this view lists, in order. Stored in settings so it can be
+// added to and reordered; the default only applies until it's first saved.
+function getProjectsListKeys() {
+  const saved = _cachedSettings && _cachedSettings.projectsList;
+  return Array.isArray(saved) && saved.length ? saved.slice() : PROJECTS_LIST_DEFAULT.slice();
+}
+
+function setProjectsListKeys(keys) {
+  if (!_cachedSettings) _cachedSettings = {};
+  _cachedSettings.projectsList = keys.slice();
+  saveSettings();
+}
 
 // The strip shows the board's actual media, so it takes video blocks too —
 // these boards are mostly video (tosan is 13 videos and no images), and an
@@ -4930,6 +4985,31 @@ function buildProjectListItem(card) {
   year.append(yFrom, ySep, yTo);
   syncYearSep(year);
 
+  // Row controls, edit-mode only. The handle is a separate grip rather
+  // than the row itself so dragging a row can't be confused with dragging
+  // a media tile or selecting text in a field.
+  const tools = document.createElement('div');
+  tools.className = 'pli-row-tools';
+
+  const handle = document.createElement('span');
+  handle.className = 'pli-row-handle';
+  handle.title = 'Drag to reorder';
+  handle.textContent = '⠿';
+
+  const rowDel = document.createElement('button');
+  rowDel.className = 'pli-row-del';
+  rowDel.type = 'button';
+  rowDel.title = 'Remove from this list';
+  rowDel.textContent = '×';
+  rowDel.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setProjectsListKeys(getProjectsListKeys().filter(k => k !== card.key));
+    refreshProjectsList();
+  });
+
+  tools.append(handle, rowDel);
+  year.appendChild(tools);
+
   const body = document.createElement('div');
   body.className = 'pli-body';
 
@@ -5037,6 +5117,93 @@ function buildProjectListItem(card) {
    card is on screen — this view shows three of them, so running that here
    would drop the other seven and both section titles. Instead this writes
    just the three fields it owns, straight into the cached settings. */
+/* Drag a row by its grip to reorder the list. Separate from the tile
+   reorder inside a strip: this moves whole boards and commits to
+   settings.projectsList, where that one moves media and commits to the
+   board's own blocks. */
+function wireRowReorder(listEl) {
+  if (!listEl || listEl._rowReorderWired) return;
+  listEl._rowReorderWired = true;
+
+  let dragRow = null, targetRow = null, after = false;
+
+  const clearMarks = () => listEl.querySelectorAll('.proj-list-item').forEach(r =>
+    r.classList.remove('pli-row-drop-before', 'pli-row-drop-after'));
+
+  listEl.addEventListener('pointerdown', (e) => {
+    if (!(typeof editMode !== 'undefined' && editMode)) return;
+    if (!e.target.closest('.pli-row-handle')) return;   // grip only
+    dragRow = e.target.closest('.proj-list-item');
+    if (!dragRow) return;
+    dragRow.classList.add('pli-row-dragging');
+    try { listEl.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+  });
+
+  listEl.addEventListener('pointermove', (e) => {
+    if (!dragRow) return;
+    e.preventDefault();
+    const over = document.elementFromPoint(e.clientX, e.clientY)?.closest('.proj-list-item');
+    clearMarks();
+    if (!over || over === dragRow || over.parentElement !== listEl) { targetRow = null; return; }
+    const r = over.getBoundingClientRect();
+    after = e.clientY > r.top + r.height / 2;   // vertical list, so midpoint is on Y
+    targetRow = over;
+    over.classList.add(after ? 'pli-row-drop-after' : 'pli-row-drop-before');
+  });
+
+  const finish = (e) => {
+    if (!dragRow) return;
+    const moved = dragRow, dest = targetRow, destAfter = after;
+    dragRow = null; targetRow = null;
+    moved.classList.remove('pli-row-dragging');
+    clearMarks();
+    try { listEl.releasePointerCapture(e.pointerId); } catch (err) {}
+    if (!dest) return;
+
+    listEl.insertBefore(moved, destAfter ? dest.nextSibling : dest);
+    setProjectsListKeys([...listEl.querySelectorAll('.proj-list-item')].map(r => r.dataset.key));
+  };
+  listEl.addEventListener('pointerup', finish);
+  listEl.addEventListener('pointercancel', finish);
+}
+
+/* Adds a board to the list. Reuses the media picker's sheet markup with
+   its grid swapped for project cards, rather than a second overlay. */
+function openProjectRowPicker() {
+  const inList = new Set(getProjectsListKeys());
+  const available = (_cachedSettings?.sections || [])
+    .flatMap(s => s.cards || [])
+    .filter(c => !inList.has(c.key));
+
+  const overlay = document.getElementById('media-picker-overlay');
+  const grid = document.getElementById('mp-grid');
+  document.getElementById('mp-title').textContent = 'Add project';
+  document.getElementById('mp-sub').textContent = available.length
+    ? 'Boards not in this list yet' : '';
+  document.getElementById('mp-upload').style.display = 'none';
+
+  grid.innerHTML = '';
+  if (!available.length) {
+    grid.innerHTML = '<div class="mp-empty">Every board is already in the list.</div>';
+  }
+  available.forEach(card => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'mp-item mp-project';
+    btn.innerHTML = card.thumb
+      ? `<img src="${card.thumb}" alt=""><span class="mp-project-name">${card.name}</span>`
+      : `<span class="mp-project-name mp-project-name-only">${card.name}</span>`;
+    btn.addEventListener('click', () => {
+      setProjectsListKeys([...getProjectsListKeys(), card.key]);
+      closeMediaPicker();
+      refreshProjectsList();
+    });
+    grid.appendChild(btn);
+  });
+  overlay.classList.add('show');
+}
+
 // The dash needs a value on BOTH sides to be separating anything — with
 // only an end filled in it would render as a stray leading "– Present".
 function syncYearSep(yearEl) {
@@ -5070,6 +5237,7 @@ function wireProjectsListEditing() {
     const strip = item.querySelector('.pli-media-strip');
     if (strip) wireStripReorder(strip, item.dataset.key);
   });
+  wireRowReorder(document.querySelector('.projects-list'));
 }
 
 /* Drag a tile onto another to reorder the board's media. The strip is
@@ -5240,6 +5408,9 @@ function openMediaPicker(key) {
 
 function closeMediaPicker() {
   document.getElementById('media-picker-overlay').classList.remove('show');
+  // openProjectRowPicker borrows this sheet and hides Upload, which has no
+  // meaning there — put it back so the media picker isn't left without it.
+  document.getElementById('mp-upload').style.display = '';
   _mpKey = null;
 }
 
@@ -5414,10 +5585,10 @@ function renderHomeSections(sections) {
   }));
 
   if (useList) {
-    // One flat "Projects" heading over the pilot boards, rather than
+    // One flat "Projects" heading over the listed boards, rather than
     // mirroring the Works/Projects section split the grid uses — this view
-    // is a single run-down, and PROJECTS_LIST_KEYS sets both which boards
-    // appear and their order.
+    // is a single run-down, and getProjectsListKeys() sets both which
+    // boards appear and their order.
     const allCards = sections.flatMap(sec => sec.cards || []);
     const label = document.createElement('div');
     label.className = 'sec-label';
@@ -5426,11 +5597,20 @@ function renderHomeSections(sections) {
 
     const row = document.createElement('div');
     row.className = 'projects-list';
-    PROJECTS_LIST_KEYS.forEach(key => {
+    getProjectsListKeys().forEach(key => {
       const card = allCards.find(c => c.key === key);
       if (card) row.appendChild(buildProjectListItem(card));
     });
     container.appendChild(row);
+
+    // Edit-mode only (hidden by CSS otherwise) — adds a board that isn't
+    // in the list yet.
+    const addRow = document.createElement('button');
+    addRow.className = 'pli-add-row';
+    addRow.type = 'button';
+    addRow.textContent = '+ Add project';
+    addRow.addEventListener('click', openProjectRowPicker);
+    container.appendChild(addRow);
 
     requestAnimationFrame(() => {
       container.style.opacity = '1';
