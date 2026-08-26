@@ -9061,7 +9061,11 @@ let _spiderThreadLen = 0;
 // resize) just snap straight to the new length.
 let _spiderEntranceDone = false;
 
-function positionSiteSpider(animate) {
+// anchorOnly skips the thread-length assignment below — used by the
+// pendulum tick's periodic re-sync so it can keep the spider glued to
+// the M (cheap, no visible effect either way) without also stomping
+// _spiderThreadLen mid-tween and cutting the entrance animation short.
+function positionSiteSpider(animate, anchorOnly) {
   const spider = document.querySelector('.site-spider');
   const wrap = document.querySelector('.profile-header-wrap');
   const disp = document.getElementById('profileNameDisplay');
@@ -9075,6 +9079,7 @@ function positionSiteSpider(animate) {
   spider.style.left = (mRect.left + mRect.width / 2 - wrapRect.left) + 'px';
   spider.style.marginLeft = '-10px';
   spider.style.top = (mRect.top - wrapRect.top) + 'px';
+  if (anchorOnly) return;
 
   const contactRow = document.querySelector('.contact-row');
   const targetLen = contactRow
@@ -9113,20 +9118,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const disp = document.getElementById('profileNameDisplay');
   if (disp && window.ResizeObserver) new ResizeObserver(() => positionSiteSpider(true)).observe(disp);
   window.addEventListener('resize', () => positionSiteSpider(false));
-  // revealProfileName() already waits on document.fonts.load() for the
-  // one specific weight/family it names before calling positionSiteSpider,
-  // but that promise can resolve before the browser has actually swapped
-  // the rendered glyphs in — measuring the "M" span in that gap gets its
-  // fallback-font position instead of the real one, which is stable
-  // (a ResizeObserver on the display box won't catch it — a font swap at
-  // the same font-size doesn't change the box's overall size, only where
-  // the letters land inside it) rather than a one-frame flicker. Re-firing
-  // once document.fonts.ready — the browser's own signal that every font
-  // it's using has actually finished — settles corrects that regardless
-  // of whether the earlier call already had the right metrics.
-  if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(() => positionSiteSpider(false));
-  }
+  // A font swap that lands after this (fonts.load() resolving before the
+  // browser actually repaints the real glyphs is a known gap, and a swap
+  // at the same font-size doesn't change the display box's overall size,
+  // so the ResizeObserver above won't catch it either) used to leave the
+  // spider glued to the fallback font's letter position with nothing to
+  // correct it. Superseded by the pendulum tick's own periodic re-measure
+  // below, which fixes that plus every other way this measurement can go
+  // stale (a resize mid-animation, a name edit, anything) instead of
+  // chasing each one with its own one-off trigger here.
 });
 
 /* ── Site spider pendulum physics ──────────────────────────
@@ -9177,10 +9177,25 @@ document.addEventListener('DOMContentLoaded', () => {
   let angle = 0, vel = 0;
   const damping = 0.92, stiffness = 0.02;
   let t = 0;
+  let anchorFrame = 0;
   const BODY_TOP_GAP = 17.6; // (26 - 5.2) / 26 * 22px SVG height
 
   function tick() {
     t += 0.016;
+    // Re-measuring the M anchor here rather than trusting whatever
+    // positionSiteSpider() last computed is what makes this actually
+    // self-healing: that function only runs off specific triggers
+    // (DOMContentLoaded, a ResizeObserver, fonts.ready), and every one
+    // of those is a guess at "the name text has definitely finished its
+    // real layout" that can still be wrong — a font finishing its swap
+    // a frame later than fonts.ready fired, a transform/animation still
+    // settling, anything. This tick already runs unconditionally at 60fps
+    // for the pendulum physics, so piggybacking the same cheap
+    // getBoundingClientRect reads on every 6th frame (~10/sec, plenty to
+    // read as instant) means the spider corrects itself within a sixth
+    // of a second of the name box settling wherever it actually is,
+    // instead of needing yet another one-off trigger to be right.
+    if (anchorFrame++ % 6 === 0) positionSiteSpider(false, true);
     const idle = Math.sin(t * 0.4) * 0.006;
     vel += -angle * stiffness + idle;
     vel *= damping;
