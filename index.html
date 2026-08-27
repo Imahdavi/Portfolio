@@ -1349,6 +1349,18 @@
     .block.drop-right  { box-shadow: 3px 0 0 0 rgba(26,23,20,.7); border-radius:14px; }
     .block.drop-center { outline:2px solid rgba(66,133,244,.5); outline-offset:2px; border-radius:14px; }
     .block.col-dragging .media-inner { outline:2px solid rgba(66,133,244,.7) !important; outline-offset:2px; }
+    /* Lifted while dragging so it rides over its neighbours. The block keeps
+       its grid slot underneath — that reserved gap is the drop preview, so
+       there's no separate placeholder element to keep in sync. */
+    .block.col-dragging {
+      z-index:60; will-change:transform; cursor:grabbing;
+      transition:none !important;
+    }
+    .block.col-dragging .media-inner,
+    .block.col-dragging .block-text { box-shadow:0 16px 38px rgba(0,0,0,.22); }
+    /* The others glide to their new slots instead of teleporting, which is
+       what makes it read as things moving out of the way. */
+    #block-list.edit-on .block { transition:transform .16s cubic-bezier(.2,.8,.3,1); }
 
     /* Border follows the actual content (media-inner), not the wrapper */
     .edit-on .media-inner {
@@ -7860,7 +7872,9 @@ function makeBlockEl(block, proj) {
   applyBlockGrid(wrap, block);
 
   // Free 2D drag: left/right = column position, up/down = order
-  wrap.addEventListener('mousedown', (e) => {
+  // pointerdown, not mousedown: the same gesture then works under a finger,
+  // which is the whole point of it feeling like moving an app icon.
+  wrap.addEventListener('pointerdown', (e) => {
     if (!editMode) return;
     if (e.target.closest('button, video, [contenteditable], .resize-corner, .media-mute-btn')) return;
     e.preventDefault();
@@ -7890,6 +7904,10 @@ function startFreeDrag(e, wrap) {
   let lastAlign = block._align || 'left';
   let hasMoved  = false;
   const startX  = e.clientX, startY = e.clientY;
+  // Where in the block it was picked up, so it hangs off the pointer at the
+  // same spot rather than jumping its own corner to the cursor.
+  const grabRect = wrap.getBoundingClientRect();
+  const grabX = e.clientX - grabRect.left, grabY = e.clientY - grabRect.top;
 
   // Measured once at drag-start, not on every mousemove — the list's
   // rect (and so the column count derived from it) can't change
@@ -7919,7 +7937,12 @@ function startFreeDrag(e, wrap) {
     const relX = ev.clientX - lr.left;
 
     // ── X → column position (with center snap zone) ──────────────────────────────
-    if (Math.abs(relX - centerX) < colW * 0.75) {
+    // The zone was three quarters of a column either side of centre, which on
+    // a six-column board is a wide band right where the middle columns are:
+    // aiming a block at the middle of a row snapped it to full-width centred
+    // instead, so two blocks could never be paired up there. Narrow enough now
+    // to be a deliberate gesture rather than something you fall into.
+    if (Math.abs(relX - centerX) < colW * 0.22) {
       // Center snap zone — snap to perfect center alignment
       if (lastAlign !== 'center') {
         lastAlign = 'center';
@@ -7966,17 +7989,43 @@ function startFreeDrag(e, wrap) {
       else list.appendChild(wrap);
     }
 
+    // Ride the pointer. Measured against the slot the block currently occupies
+    // rather than accumulated from the drag's start: the slot moves underneath
+    // it as the column and the DOM order change, and a running delta would
+    // drift away from the cursor every time that happened. Clearing the
+    // transform before measuring is what makes the rect the slot's, not the
+    // transformed box's.
+    wrap.style.transform = '';
+    const slot = wrap.getBoundingClientRect();
+    wrap.style.transform =
+      'translate(' + ((ev.clientX - grabX) - slot.left) + 'px,' +
+                     ((ev.clientY - grabY) - slot.top)  + 'px)';
+
     requestAnimationFrame(() => list.querySelectorAll('.block').forEach(setBlockRowSpan));
   }
 
   function onUp() {
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
     wrap.classList.remove('col-dragging');
+    wrap.style.transform = '';   // hand it back to its slot
 
-    // Sync proj.blocks order to DOM order
-    const newOrder = [...list.querySelectorAll('.block')].map(el => el.dataset.id);
-    proj.blocks = newOrder.map(id => proj.blocks.find(b => b.id === id)).filter(Boolean);
+    // Sync proj.blocks order to DOM order.
+    //
+    // Rebuilt from the DOM, but never *reduced* to it. This used to be a plain
+    // map-and-filter over the rendered elements, which silently dropped any
+    // block that wasn't in the DOM at that moment — and since the very next
+    // line saves, an absent block was deleted from the board for good. A block
+    // can be missing for reasons that have nothing to do with the drag (a
+    // re-render mid-gesture, a media element that never mounted), so anything
+    // not on screen keeps its old position instead of being thrown away.
+    const domIds = [...list.querySelectorAll('.block')].map(el => el.dataset.id);
+    const inDom = new Set(domIds);
+    const reordered = domIds.map(id => proj.blocks.find(b => b.id === id)).filter(Boolean);
+    proj.blocks.forEach((b, i) => {
+      if (!inDom.has(b.id)) reordered.splice(Math.min(i, reordered.length), 0, b);
+    });
+    proj.blocks = reordered;
 
     // The board's extent may have moved with this block — re-centre on it.
     relayoutBlockGrid();
@@ -7984,8 +8033,8 @@ function startFreeDrag(e, wrap) {
     if (activeKey) saveProject(activeKey);
   }
 
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
 }
 
 /* ─── Drag-to-reorder (iOS-style grid snap) ───────────── */
