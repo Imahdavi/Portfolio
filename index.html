@@ -1258,6 +1258,53 @@
        site width, so nothing moves at the default. */
     .block-list { display:grid; grid-template-columns:repeat(6, 1fr); column-gap:10px; row-gap:0; grid-auto-rows:1px; margin-bottom:20px; align-items:start; }
 
+    /* ── Bento board ───────────────────────────────────────────
+       An opt-in per-board layout (proj.layout === 'bento') modelled on the
+       square-cell arrangement the reference site uses: four columns of
+       equal square cells with a wide gap, every block sized in whole
+       cells, and items free to be dragged around each other.
+
+       Absolutely positioned rather than a CSS grid, for the same reason
+       the reference does it: dragging needs to move one block over the
+       others and settle them around it, which means animating positions
+       independently of document flow. The gap is a ratio of the cell
+       (35/80, straight off the reference) so it scales with site width
+       instead of being a fixed pixel value that only looks right at one
+       shell size. ── */
+    .block-list.bento {
+      display:block; position:relative;
+      grid-template-columns:none; grid-auto-rows:auto;
+    }
+    .block-list.bento .block {
+      position:absolute; margin:0; grid-column:auto; grid-row:auto;
+      transition:left .18s cubic-bezier(.2,.8,.3,1), top .18s cubic-bezier(.2,.8,.3,1);
+    }
+    /* The block being dragged tracks the pointer directly, so it must not
+       ease toward its position the way the ones settling around it do. */
+    .block-list.bento .block.bento-drag {
+      z-index:50; transition:none; cursor:grabbing;
+      box-shadow:0 18px 44px rgba(0,0,0,.24);
+    }
+    #view-project.edit-mode .block-list.bento .block { cursor:grab; }
+    /* Blocks are cell-sized here, so the media fills the block instead of the
+       block being sized from the media's own aspect ratio. Filled by absolute
+       inset rather than height:100% — the media sits a couple of wrappers
+       down from .block, and a percentage height only resolves against an
+       ancestor with a definite one, so it was falling back to the media's
+       intrinsic size and overflowing the cell. The !important is for the
+       dimensions applyPreset writes inline per media. */
+    .block-list.bento .block { overflow:hidden; }
+    .block-list.bento .media-wrap,
+    .block-list.bento .media-inner {
+      position:absolute; inset:0;
+      width:auto !important; height:auto !important;
+      max-width:none !important; margin:0 !important;
+      aspect-ratio:auto !important;
+    }
+    .block-list.bento .media-inner img,
+    .block-list.bento .media-inner video { width:100%; height:100%; object-fit:cover; }
+    .block-list.bento .block-text { height:100%; overflow:auto; }
+
     .block {
       position:relative;
       display:flex; align-items:flex-start; gap:8px;
@@ -3453,6 +3500,14 @@ function layoutBlockGrid(list) {
 function relayoutBlockGrid() {
   const list = document.getElementById('block-list');
   if (!list) return;
+  const bentoProj = PROJECTS[activeKey];
+  if (isBentoBoard(bentoProj)) {
+    // Width changed, so the cell changed, so the number of cells a given
+    // paragraph needs changed with it.
+    layoutBento(list, bentoProj);
+    bentoFitText(list, bentoProj);
+    return;
+  }
   layoutBlockGrid(list);
   const proj = PROJECTS[activeKey];
   if (!proj) return;
@@ -3510,6 +3565,9 @@ function migrateBlockLayout(block) {
 }
 
 function applyBlockGrid(el, block) {
+  // Bento boards place blocks themselves; column maths has nothing to say
+  // there and would only write inline grid positions that fight it.
+  if (isBentoBoard(PROJECTS[activeKey])) return;
   const cols  = block._cols || 6;
   const cs    = block._colStart || 1;
   const align = block._align || 'left';
@@ -3992,10 +4050,15 @@ async function loadAnalytics(days, btn) {
 async function saveProject(key) {
   const proj = PROJECTS[key];
   const clean = proj.blocks.map(({ _muted, _lottieInst, ...b }) => b);
+  const data = { name: proj.name, sub: proj.sub, blocks: clean };
+  // Which layout the board uses has to travel with it: openProject re-reads
+  // the row it just saved, so a board left off here comes back as the default
+  // grid and its bento coordinates go unread.
+  if (proj.layout) data.layout = proj.layout;
   await fetch(`${API_URL}/api/projects`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ key, data: { name: proj.name, sub: proj.sub, blocks: clean } })
+    body: JSON.stringify({ key, data })
   });
 }
 
@@ -6364,7 +6427,12 @@ async function openProject(key) {
     const res  = await fetch(`${API_URL}/api/projects`, { cache: 'no-store' });
     const rows = await res.json();
     const row  = Array.isArray(rows) ? rows.find(r => r.key === key) : null;
-    if (row?.data?.blocks) PROJECTS[key].blocks = row.data.blocks;
+    if (row?.data?.blocks) {
+      PROJECTS[key].blocks = row.data.blocks;
+      // Carried over with the blocks, since the coordinates on them are only
+      // meaningful to whichever layout the board was saved in.
+      PROJECTS[key].layout = row.data.layout;
+    }
   } catch(e) {}
   const p = PROJECTS[key];
   document.getElementById('d-title').textContent = p.name || '';
@@ -6955,8 +7023,197 @@ function saveHomeEdits() {
   saveSettings();
 }
 
+/* ─── Bento board layout ──────────────────────────────────
+   A per-board alternative to the six-column masonry grid, modelled on the
+   reference site's arrangement: four equal square cells across, a wide gap
+   between them, and every block occupying a whole number of cells. Blocks
+   carry _bx/_by/_bw/_bh in cell units; nothing here reads _cols/_colStart,
+   so a board can be switched back and forth without losing either.
+
+   Measured off the reference: 4 columns, 80px cells, 35px gaps. The gap is
+   kept as a ratio of the cell rather than those literal pixels so the whole
+   arrangement scales with the site-width slider instead of only looking
+   right at one shell size. ── */
+const BENTO_COLS = 4;
+const BENTO_GAP_RATIO = 35 / 80;
+
+function isBentoBoard(proj) { return !!(proj && proj.layout === 'bento'); }
+
+function bentoMetrics(list) {
+  const W = (list && list.clientWidth) || 496;
+  // W = cols*cell + (cols-1)*gap, with gap = cell*ratio
+  const cell = W / (BENTO_COLS + (BENTO_COLS - 1) * BENTO_GAP_RATIO);
+  const gap  = cell * BENTO_GAP_RATIO;
+  return { cell, gap, pitch: cell + gap };
+}
+
+function bentoSpan(n, m) { return n * m.cell + (n - 1) * m.gap; }
+
+function bentoHits(a, b) {
+  return !(a._bx + a._bw <= b._bx || a._bx >= b._bx + b._bw ||
+           a._by + a._bh <= b._by || a._by >= b._by + b._bh);
+}
+
+/* Settle every block around `pinned` (the one under the pointer, which keeps
+   exactly where the drag put it), then pull the rest upward into any gap that
+   opens up. Same shape as the reference library's compaction: work in reading
+   order so upper rows resolve first, pull each block up while nothing is in
+   the way, then push it down out of whatever it still overlaps. */
+function bentoSettle(blocks, pinned) {
+  const placed = pinned ? [pinned] : [];
+  blocks.filter(b => b !== pinned)
+        .sort((a, b) => a._by - b._by || a._bx - b._bx)
+        .forEach(b => {
+          while (b._by > 0) {
+            b._by--;
+            if (placed.some(p => bentoHits(b, p))) { b._by++; break; }
+          }
+          let guard = 0;
+          while (placed.some(p => bentoHits(b, p)) && guard++ < 500) b._by++;
+          placed.push(b);
+        });
+}
+
+/* First-time coordinates for a board that has never been laid out as bento.
+   Width comes from the block's six-column span, height from the media's own
+   aspect ratio so a portrait clip stays portrait, then each block drops into
+   the first slot it fits scanning left-to-right, top-to-bottom. */
+function bentoAutoPlace(blocks) {
+  const placed = [];
+  blocks.forEach(b => {
+    if (b._bw && b._bh) { placed.push(b); return; }
+    const cols6 = b._cols || 6;
+    let w = Math.max(1, Math.min(BENTO_COLS, Math.round(cols6 / 6 * BENTO_COLS)));
+    let h;
+    if (b.type === 'text' || b.type === 'divider') {
+      h = b.type === 'divider' ? 1 : 2;
+      if (b.type === 'text') w = BENTO_COLS;
+    } else {
+      const aspect = b._freeAspect || 1;             // stored as width / height
+      h = Math.max(1, Math.min(4, Math.round(w / aspect)));
+    }
+    b._bw = w; b._bh = h;
+    // Scan for the first position that clears everything already placed.
+    outer:
+    for (let y = 0; ; y++) {
+      for (let x = 0; x + w <= BENTO_COLS; x++) {
+        b._bx = x; b._by = y;
+        if (!placed.some(p => bentoHits(b, p))) break outer;
+      }
+    }
+    placed.push(b);
+  });
+  bentoSettle(blocks, null);
+}
+
+function layoutBento(list, proj) {
+  if (!list || !proj) return;
+  const m = bentoMetrics(list);
+  let rows = 0;
+  proj.blocks.forEach(b => {
+    const el = list.querySelector('.block[data-id="' + b.id + '"]');
+    if (el) {
+      el.style.left   = (b._bx * m.pitch) + 'px';
+      el.style.top    = (b._by * m.pitch) + 'px';
+      el.style.width  = bentoSpan(b._bw, m) + 'px';
+      el.style.height = bentoSpan(b._bh, m) + 'px';
+    }
+    rows = Math.max(rows, b._by + b._bh);
+  });
+  list.style.height = rows ? (rows * m.pitch - m.gap) + 'px' : '';
+}
+
+/* Text can't be guessed at in whole cells the way a photo can — a caption and
+   three paragraphs want very different boxes — so text blocks are measured
+   once they've actually rendered and grown to whatever they need. Runs after
+   layout, and only re-lays out if something actually changed. */
+function bentoFitText(list, proj) {
+  const m = bentoMetrics(list);
+  let changed = false;
+  proj.blocks.forEach(b => {
+    if (b.type !== 'text') return;
+    const el = list.querySelector('.block[data-id="' + b.id + '"]');
+    if (!el) return;
+    const inner = el.querySelector('.block-text') || el;
+    const need = Math.max(1, Math.ceil((inner.scrollHeight + m.gap) / m.pitch));
+    if (need !== b._bh) { b._bh = need; changed = true; }
+  });
+  if (changed) { bentoSettle(proj.blocks, null); layoutBento(list, proj); }
+}
+
+/* Drag a block the way a phone home screen moves an icon: pick it up, it
+   follows the finger, and everything else slides out of the way and closes
+   the gap behind it. The dragged block is positioned straight from the
+   pointer while held, and only snaps to cells on release. */
+function wireBentoDrag(list) {
+  if (list._bentoWired) return;
+  list._bentoWired = true;
+  let d = null;
+
+  list.addEventListener('pointerdown', (e) => {
+    const proj = PROJECTS[activeKey];
+    if (typeof editMode === 'undefined' || !editMode || !isBentoBoard(proj)) return;
+    if (e.target.closest('button, a, input, [contenteditable], .resize-corner')) return;
+    const el = e.target.closest('.block');
+    if (!el || !list.contains(el)) return;
+    const b = proj.blocks.find(x => x.id === el.dataset.id);
+    if (!b) return;
+    const r = el.getBoundingClientRect();
+    const lr = list.getBoundingClientRect();
+    d = { el, b, proj, moved: false,
+          grabX: e.clientX - r.left, grabY: e.clientY - r.top,
+          lr, m: bentoMetrics(list) };
+    e.preventDefault();
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (!d) return;
+    if (!d.moved) {
+      d.moved = true;
+      d.el.classList.add('bento-drag');
+    }
+    const x = e.clientX - d.lr.left - d.grabX;
+    const y = e.clientY - d.lr.top  - d.grabY;
+    d.el.style.left = x + 'px';
+    d.el.style.top  = y + 'px';
+    // Where it would land if dropped now — the others settle around that,
+    // not around the free-floating pixel position.
+    const nx = Math.max(0, Math.min(BENTO_COLS - d.b._bw, Math.round(x / d.m.pitch)));
+    const ny = Math.max(0, Math.round(y / d.m.pitch));
+    if (nx !== d.b._bx || ny !== d.b._by) {
+      d.b._bx = nx; d.b._by = ny;
+      bentoSettle(d.proj.blocks, d.b);
+      // Lay the others out, leaving the dragged one under the pointer.
+      const held = { left: d.el.style.left, top: d.el.style.top };
+      layoutBento(list, d.proj);
+      d.el.style.left = held.left; d.el.style.top = held.top;
+    }
+  });
+
+  window.addEventListener('pointerup', () => {
+    if (!d) return;
+    const done = d;
+    d = null;
+    done.el.classList.remove('bento-drag');
+    if (!done.moved) return;
+    // Compact with the dropped block taking part, rather than pinning it where
+    // the pointer left it. Pinning looks right for one drop and then bites:
+    // the block sits over a gap it could have filled, and the next time any
+    // other block is dragged the settle pulls it up, so tiles appear to move
+    // on their own long after you placed them. Closing the gap now keeps the
+    // board in one settled state, which is also what makes dropping a tile
+    // beside another one stay put.
+    bentoSettle(done.proj.blocks, null);
+    layoutBento(list, done.proj);
+    saveProject(activeKey);
+  });
+}
+
 /* ─── Row span for masonry layout ─────────────────────── */
 function setBlockRowSpan(el) {
+  // Bento boards position their blocks outright; a masonry row span would
+  // fight that (and the list is not a grid there at all).
+  if (isBentoBoard(PROJECTS[activeKey])) return;
   const h = el.offsetHeight;
   if (!h) return;
   el.style.gridRow = 'span ' + (h + 10);
@@ -6972,13 +7229,33 @@ function renderBlocks(animate) {
   // New board, so any centred scroll position belongs to the old one.
   delete list.dataset.scrollCentred;
   const proj = PROJECTS[activeKey];
-  // Size the grid before the blocks go in, so makeBlockEl's applyBlockGrid
-  // reads the right column offset instead of laying out against a stale one.
-  layoutBlockGrid(list);
+  const bento = isBentoBoard(proj);
+  list.classList.toggle('bento', bento);
+  if (bento) {
+    // Give any block that has never been placed a slot before anything is
+    // measured, so the first paint is already the real arrangement.
+    bentoAutoPlace(proj.blocks);
+  } else {
+    list.style.height = '';
+    // Size the grid before the blocks go in, so makeBlockEl's applyBlockGrid
+    // reads the right column offset instead of laying out against a stale one.
+    layoutBlockGrid(list);
+  }
   proj.blocks.forEach(b => list.appendChild(makeBlockEl(b, proj)));
+  if (bento) { layoutBento(list, proj); wireBentoDrag(list); }
   observeBlockGridWidth(list);
 
   requestAnimationFrame(() => {
+    if (bento) {
+      bentoFitText(list, proj);
+      // Again once webfonts and media have actually settled — the first pass
+      // measures text that may still be laid out in a fallback face, which
+      // reads shorter than the real thing and leaves the block clipping it.
+      setTimeout(() => bentoFitText(list, proj), 350);
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => bentoFitText(list, proj));
+      }
+    }
     list.querySelectorAll('.block').forEach(setBlockRowSpan);
     setupLazyVideos();
     setupAudioAutoMute();
