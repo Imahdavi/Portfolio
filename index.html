@@ -7065,6 +7065,11 @@ function saveHomeEdits() {
    right at one shell size. ── */
 const BENTO_COLS = 4;
 const BENTO_GAP_RATIO = 35 / 80;
+// Floor for a freehand resize, in px rather than cell units: a cell-unit
+// floor is a different real size at every board width, and a small enough
+// fraction resolves to a few pixels — a block dragged down to that is
+// impossible to grab again.
+const BENTO_MIN_PX = 44;
 
 function isBentoBoard(proj) { return !!(proj && proj.layout === 'bento'); }
 
@@ -7097,8 +7102,16 @@ function bentoResolve(blocks, pinned) {
   blocks.filter(b => b !== pinned)
         .sort((a, b) => a._by - b._by || a._bx - b._bx)
         .forEach(b => {
+          // Moved to just clear of whatever it hit rather than nudged down a
+          // cell at a time: sizes are free-form, so the thing in the way is
+          // rarely a whole number of cells tall and stepping would either
+          // stop short or overshoot into a gap.
           let guard = 0;
-          while (placed.some(p => bentoHits(b, p)) && guard++ < 500) b._by++;
+          for (;;) {
+            const hit = placed.find(p => bentoHits(b, p));
+            if (!hit || guard++ > 300) break;
+            b._by = hit._by + hit._bh;
+          }
           placed.push(b);
         });
 }
@@ -7220,9 +7233,13 @@ function wireBentoDrag(list) {
       const el = grip.closest('.block');
       const b = proj.blocks.find(x => x.id === el.dataset.id);
       if (!b) return;
-      const r = el.getBoundingClientRect();
-      rz = { el, b, proj, left: r.left, top: r.top, m: bentoMetrics(list),
-             snap: bentoSnapshot(proj.blocks) };
+      // No cached corner: the block's own rect is a viewport coordinate, and
+      // resizing changes the board's height, which can scroll the view out
+      // from under it. A stale origin then reads the pointer as being far
+      // below the block and a shrink comes out as a huge block instead.
+      // Deriving the corner from the list's live rect plus the block's grid
+      // position each move is immune to both.
+      rz = { el, b, proj, m: bentoMetrics(list), snap: bentoSnapshot(proj.blocks) };
       el.classList.add('bento-sizing');
       e.preventDefault();
       e.stopPropagation();
@@ -7243,12 +7260,21 @@ function wireBentoDrag(list) {
 
   window.addEventListener('pointermove', (e) => {
     if (rz) {
-      // Cells that fit between the block's own top-left and the pointer. The
-      // +gap is because n cells span n*cell + (n-1)*gap, so measuring against
-      // the pitch needs one gap added back before rounding.
-      const w = Math.max(1, Math.min(BENTO_COLS - rz.b._bx,
-                Math.round((e.clientX - rz.left + rz.m.gap) / rz.m.pitch)));
-      const h = Math.max(1, Math.round((e.clientY - rz.top + rz.m.gap) / rz.m.pitch));
+      // Free-form: the size follows the pointer exactly instead of stepping
+      // cell by cell. Sizes are kept in cell units all the same, just
+      // fractional ones, so a block still sits on the same axis as the rest
+      // and scales with the board rather than being pinned to a pixel size
+      // that only holds at one shell width. The +gap converts a pixel span
+      // back to that unit: n cells measure n*cell + (n-1)*gap.
+      const inCells = px => (px + rz.m.gap) / rz.m.pitch;
+      const round3 = n => Math.round(n * 1000) / 1000;
+      const min = inCells(BENTO_MIN_PX);
+      const lr = list.getBoundingClientRect();
+      const originX = lr.left + rz.b._bx * rz.m.pitch;
+      const originY = lr.top  + rz.b._by * rz.m.pitch;
+      const w = round3(Math.max(min, Math.min(BENTO_COLS - rz.b._bx,
+                inCells(e.clientX - originX))));
+      const h = round3(Math.max(min, inCells(e.clientY - originY)));
       if (w !== rz.b._bw || h !== rz.b._bh) {
         rz.b._bw = w; rz.b._bh = h;
         // Hand-sized from here on, so the text auto-fit stops overruling it.
