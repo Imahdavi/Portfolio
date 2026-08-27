@@ -620,27 +620,6 @@
       -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
     }
     #ml-close:hover { background:rgba(255,255,255,.26); }
-    /* Mute + level for an enlarged clip. Deliberately not the browser's
-       controls bar — that brought scrubbing, fullscreen and download along
-       with it, which is a lot of surface for "turn it down a bit". */
-    #ml-audio {
-      position:absolute; left:50%; bottom:22px; transform:translateX(-50%);
-      z-index:30; display:none; align-items:center; gap:11px;
-      padding:9px 15px; border-radius:999px;
-      background:rgba(20,18,16,.5);
-      -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
-    }
-    #media-lightbox.has-audio #ml-audio { display:flex; }
-    #ml-mute {
-      width:26px; height:26px; padding:0; border:none; background:none;
-      color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center;
-    }
-    #ml-mute svg { width:19px; height:19px; }
-    /* The site's mute icons are drawn in near-black for a light chip; on this
-       dark bar they have to follow currentColor instead. */
-    #ml-mute svg [stroke] { stroke:currentColor; }
-    #ml-mute svg [fill]:not([fill="none"]) { fill:currentColor; }
-    #ml-vol { width:112px; accent-color:#fff; cursor:pointer; }
     /* On the container, not the img/video: board media carries
        pointer-events:none (the tilt and the overlay controls are driven from
        the wrapper), so a cursor set on it would never be seen. Edit mode has
@@ -2982,11 +2961,6 @@ one keyframe at a time</div>
 <div id="media-lightbox" aria-hidden="true">
   <div id="ml-stage"></div>
   <button id="ml-close" type="button" aria-label="Close">&times;</button>
-  <!-- Shown only for video. Just mute + level, not a full controls bar. -->
-  <div id="ml-audio">
-    <button id="ml-mute" type="button" aria-label="Mute"></button>
-    <input id="ml-vol" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume"/>
-  </div>
 </div>
 
 <div id="lottie-picker-overlay" onclick="if(event.target===this)closeLottiePicker()">
@@ -3143,6 +3117,16 @@ function revealProfileName() {
 }
 // Fallback: reveal even if settings fail to load
 setTimeout(revealProfileName, 2800);
+
+/* Whether the home view is the one on screen. Several animations only ever
+   drive elements that live inside it, and a hidden view still runs their rAF
+   loops at full rate — style writes and layout reads for a display:none
+   subtree. A class check rather than an offsetParent read, so asking costs
+   nothing and can't itself force a layout. */
+function isHomeVisible() {
+  const v = document.getElementById('view-home');
+  return !!v && v.classList.contains('active');
+}
 
 /* ─── Spider-sense click effect ─────────────────────────── */
 (function(){
@@ -4551,6 +4535,10 @@ function renderWorkExp(items) {
   grid.addEventListener('pointercancel', endDrag);
 
   (function spin() {
+    // Nothing to spin while the home view is off screen. This kept running on
+    // every project page — rotating and writing a transform per cell, every
+    // frame, for a grid inside a display:none view.
+    if (!isHomeVisible()) { requestAnimationFrame(spin); return; }
     if (!dragging) {
       rotY += AUTO_SPEED + velY;
       rotX += velX;
@@ -9713,6 +9701,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   var t = 0;
 
   function tick() {
+    if (!isHomeVisible()) { requestAnimationFrame(tick); return; }  // avatar is home-only
     t += 0.016;
     var idle = Math.sin(t * 0.4) * 0.006;
     vel += -angle * stiffness + idle; // spring always pulls back to center
@@ -9898,6 +9887,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const BODY_TOP_GAP = 17.6; // (26 - 5.2) / 26 * 22px SVG height
 
   function tick() {
+    // The spider hangs off the home header; on any other view it is inside a
+    // display:none subtree, and this was still redrawing its rope and
+    // re-measuring the name text ten times a second to place it.
+    if (!isHomeVisible()) { requestAnimationFrame(tick); return; }
     t += 0.016;
     // Re-measuring the M anchor here rather than trusting whatever
     // positionSiteSpider() last computed is what makes this actually
@@ -10871,41 +10864,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const stage = document.getElementById('ml-stage');
   const closeBtn = document.getElementById('ml-close');
   if (!box || !stage || !closeBtn) return;
-  const audioBar = document.getElementById('ml-audio');
-  const muteBtn  = document.getElementById('ml-mute');
-  const volInput = document.getElementById('ml-vol');
-
-  // The tile the enlarged copy came from, so a change made up here is the
-  // same change on the page underneath rather than being lost on close.
-  let srcMedia = null;
-
-  function paintAudio(v) {
-    if (!v) return;
-    muteBtn.innerHTML = (v.muted || v.volume === 0) ? SVG_MUTED : SVG_UNMUTED;
-    muteBtn.setAttribute('aria-label', v.muted ? 'Unmute' : 'Mute');
-    volInput.value = v.muted ? 0 : v.volume;
-  }
-
-  function bindAudio(v) {
-    box.classList.toggle('has-audio', !!v);
-    if (!v) return;
-    paintAudio(v);
-    muteBtn.onclick = (e) => {
-      e.stopPropagation();
-      // Coming off zero needs a level to come back to, or unmuting is silent.
-      if (v.muted || v.volume === 0) { v.muted = false; if (!v.volume) v.volume = 1; }
-      else v.muted = true;
-      if (srcMedia) { srcMedia.muted = v.muted; srcMedia.volume = v.volume; }
-      paintAudio(v);
-    };
-    volInput.oninput = (e) => {
-      e.stopPropagation();
-      v.volume = +volInput.value;
-      v.muted = v.volume === 0;
-      if (srcMedia) { srcMedia.muted = v.muted; srcMedia.volume = v.volume; }
-      paintAudio(v);
-    };
-  }
+  // Videos paused for the duration of an open lightbox, to be resumed on
+  // close. The enlarged copy is a second <video> playing the same file, so
+  // without this the tile underneath keeps playing too and an unmuted clip is
+  // audibly doubled — and every other clip on the board carries on decoding
+  // behind a blur nobody can see through.
+  let paused = [];
 
   // Matched on the wrapper rather than the img/video itself: board media is
   // pointer-events:none (the tilt and the overlay buttons are driven from the
@@ -10942,8 +10906,10 @@ document.addEventListener('DOMContentLoaded', () => {
       el.alt = src.alt || '';
     }
     stage.appendChild(el);
-    srcMedia = src;
-    bindAudio(src.tagName === 'VIDEO' ? el : null);
+    // Silence and stop the page behind before the copy starts.
+    paused = [...document.querySelectorAll('video')]
+      .filter(v => v !== el && !v.paused);
+    paused.forEach(v => v.pause());
     // The stage node outlives each open, so its grow-in has to be restarted
     // by hand or only the first one ever animates.
     stage.style.animation = 'none';
@@ -10956,9 +10922,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function close() {
     box.classList.remove('show');
     box.setAttribute('aria-hidden', 'true');
-    box.classList.remove('has-audio');
     stage.innerHTML = '';   // also stops the video rather than leaving it playing
-    srcMedia = null;
+    // Hand the board back exactly what it was playing.
+    paused.forEach(v => { const p = v.play(); if (p && p.catch) p.catch(() => {}); });
+    paused = [];
   }
 
   // Pointer travel is measured rather than trusting a drag flag: the strip is
