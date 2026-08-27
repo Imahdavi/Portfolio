@@ -1289,18 +1289,24 @@
        .resize-corner writes pixel sizes and aspect ratios, which mean nothing
        on a cell grid, so it stands down here and this takes over — and unlike
        that one, this exists on text and dividers too. */
+    /* A small grey dot just off the block's bottom-right corner, sitting in
+       the gap between tiles — the reference's grip, rather than a button
+       parked on top of the artwork. The hit area is padded out well past the
+       dot so it stays easy to grab at this size. */
     .bento-resize {
-      position:absolute; right:5px; bottom:5px; z-index:20;
-      width:22px; height:22px; padding:0; border:none; border-radius:7px;
-      background:rgba(253,251,248,.92); color:#1a1a1a; cursor:nwse-resize;
-      display:none; align-items:center; justify-content:center;
-      box-shadow:0 2px 8px rgba(0,0,0,.18); opacity:0; transition:opacity .15s;
+      position:absolute; right:-7px; bottom:-7px; z-index:20;
+      width:14px; height:14px; padding:0; border:none; border-radius:50%;
+      background:#8a8178; cursor:nwse-resize; display:none;
+      box-shadow:0 0 0 2px var(--bg, #fdfbf8);
+      opacity:0; transition:opacity .15s, transform .12s;
+    }
+    .bento-resize::after {
+      content:''; position:absolute; inset:-10px;   /* generous grab area */
     }
     /* Visible at rest, not only on hover: a touch device never hovers, and an
        invisible-but-tappable grip is worse than a faint one. */
-    .block-list.bento.edit-on .bento-resize { display:flex; opacity:.55; }
-    .block-list.bento.edit-on .block:hover .bento-resize { opacity:1; }
-    .bento-resize svg { width:13px; height:13px; pointer-events:none; }
+    .block-list.bento.edit-on .bento-resize { display:block; opacity:.5; }
+    .block-list.bento.edit-on .block:hover .bento-resize { opacity:1; transform:scale(1.15); }
     .block-list.bento .resize-corner,
     .block-list.bento .media-resize-btn { display:none !important; }
     /* Sized in cells while resizing, so easing the width would lag the grip. */
@@ -1312,7 +1318,11 @@
        ancestor with a definite one, so it was falling back to the media's
        intrinsic size and overflowing the cell. The !important is for the
        dimensions applyPreset writes inline per media. */
-    .block-list.bento .block { overflow:hidden; }
+    /* Not overflow:hidden — the resize dot deliberately sits just outside the
+       corner, and clipping the block would swallow it. The media clips itself
+       (.media-inner already rounds and hides its own overflow) and text is
+       scrolled by the rule further down, so nothing needs clipping here. */
+    .block-list.bento .block { overflow:visible; }
     .block-list.bento .media-wrap,
     .block-list.bento .media-inner {
       position:absolute; inset:0;
@@ -7073,24 +7083,35 @@ function bentoHits(a, b) {
            a._by + a._bh <= b._by || a._by >= b._by + b._bh);
 }
 
-/* Settle every block around `pinned` (the one under the pointer, which keeps
-   exactly where the drag put it), then pull the rest upward into any gap that
-   opens up. Same shape as the reference library's compaction: work in reading
-   order so upper rows resolve first, pull each block up while nothing is in
-   the way, then push it down out of whatever it still overlaps. */
-function bentoSettle(blocks, pinned) {
+/* Resolve overlaps around `pinned` (the block under the pointer, which stays
+   exactly where the gesture put it) by pushing whatever it lands on downward.
+
+   Deliberately never pulls a block upward. Gravity looks tidy in the abstract
+   but it fights the author: leave a deliberate gap beside a tile and the next
+   block slides into it, and shrinking a block has the one below jump up to
+   take the space you just made. The reference board keeps its holes, so this
+   does too — a block only ever moves because something was actually dropped
+   on top of it. */
+function bentoResolve(blocks, pinned) {
   const placed = pinned ? [pinned] : [];
   blocks.filter(b => b !== pinned)
         .sort((a, b) => a._by - b._by || a._bx - b._bx)
         .forEach(b => {
-          while (b._by > 0) {
-            b._by--;
-            if (placed.some(p => bentoHits(b, p))) { b._by++; break; }
-          }
           let guard = 0;
           while (placed.some(p => bentoHits(b, p)) && guard++ < 500) b._by++;
           placed.push(b);
         });
+}
+
+/* Positions as they were when the gesture began. Each pointermove restores
+   this before resolving, so a block shoved aside mid-drag returns once the
+   pointer moves off it — without it the pushes accumulate and the board
+   creeps downward over one long drag. */
+function bentoSnapshot(blocks) {
+  return blocks.map(b => ({ b, x: b._bx, y: b._by, w: b._bw, h: b._bh }));
+}
+function bentoRestore(snap, except) {
+  snap.forEach(s => { if (s.b !== except) { s.b._bx = s.x; s.b._by = s.y; } });
 }
 
 /* First-time coordinates for a board that has never been laid out as bento.
@@ -7102,14 +7123,19 @@ function bentoAutoPlace(blocks) {
   blocks.forEach(b => {
     if (b._bw && b._bh) { placed.push(b); return; }
     const cols6 = b._cols || 6;
-    let w = Math.max(1, Math.min(BENTO_COLS, Math.round(cols6 / 6 * BENTO_COLS)));
+    // Media caps at half the board. Mapping the old six-column spans straight
+    // across turned every full-width block into a four-cell slab, which is
+    // what made a converted board so much bigger than the reference's — there
+    // the tiles are mostly one and two cells. Anything wider is a deliberate
+    // choice to make with the grip, not a default to inherit.
+    let w = Math.max(1, Math.min(2, Math.round(cols6 / 6 * BENTO_COLS)));
     let h;
     if (b.type === 'text' || b.type === 'divider') {
       h = b.type === 'divider' ? 1 : 2;
-      if (b.type === 'text') w = BENTO_COLS;
+      if (b.type === 'text') w = BENTO_COLS;         // text still spans, it reads badly narrow
     } else {
       const aspect = b._freeAspect || 1;             // stored as width / height
-      h = Math.max(1, Math.min(4, Math.round(w / aspect)));
+      h = Math.max(1, Math.min(3, Math.round(w / aspect)));
     }
     b._bw = w; b._bh = h;
     // Scan for the first position that clears everything already placed.
@@ -7122,7 +7148,7 @@ function bentoAutoPlace(blocks) {
     }
     placed.push(b);
   });
-  bentoSettle(blocks, null);
+  bentoResolve(blocks, null);
 }
 
 function layoutBento(list, proj) {
@@ -7158,25 +7184,23 @@ function bentoFitText(list, proj) {
     const need = Math.max(1, Math.ceil((inner.scrollHeight + m.gap) / m.pitch));
     if (need !== b._bh) { b._bh = need; changed = true; }
   });
-  if (changed) { bentoSettle(proj.blocks, null); layoutBento(list, proj); }
+  if (changed) { bentoResolve(proj.blocks, null); layoutBento(list, proj); }
 }
 
 /* Drag a block the way a phone home screen moves an icon: pick it up, it
    follows the finger, and everything else slides out of the way and closes
    the gap behind it. The dragged block is positioned straight from the
    pointer while held, and only snaps to cells on release. */
-const SVG_BENTO_RESIZE = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M11 5v6H5"/><path d="M11 8.5L8.5 11"/></svg>';
-
 /* Every block gets a corner grip, so a photo, a caption and a divider are all
    resized the same way — in whole cells, which is the only size a bento block
-   can be. */
+   can be. It's a bare dot; the shape is the affordance, an icon at 14px would
+   only be noise. */
 function addBentoResizeHandle(el) {
   if (el.querySelector(':scope > .bento-resize')) return;
   const g = document.createElement('button');
   g.className = 'bento-resize';
   g.type = 'button';
   g.title = 'Resize';
-  g.innerHTML = SVG_BENTO_RESIZE;
   el.appendChild(g);
 }
 
@@ -7197,7 +7221,8 @@ function wireBentoDrag(list) {
       const b = proj.blocks.find(x => x.id === el.dataset.id);
       if (!b) return;
       const r = el.getBoundingClientRect();
-      rz = { el, b, proj, left: r.left, top: r.top, m: bentoMetrics(list) };
+      rz = { el, b, proj, left: r.left, top: r.top, m: bentoMetrics(list),
+             snap: bentoSnapshot(proj.blocks) };
       el.classList.add('bento-sizing');
       e.preventDefault();
       e.stopPropagation();
@@ -7212,7 +7237,7 @@ function wireBentoDrag(list) {
     const lr = list.getBoundingClientRect();
     d = { el, b, proj, moved: false,
           grabX: e.clientX - r.left, grabY: e.clientY - r.top,
-          lr, m: bentoMetrics(list) };
+          lr, m: bentoMetrics(list), snap: bentoSnapshot(proj.blocks) };
     e.preventDefault();
   });
 
@@ -7229,7 +7254,8 @@ function wireBentoDrag(list) {
         // Hand-sized from here on, so the text auto-fit stops overruling it.
         // Without this a resized caption springs back on the next relayout.
         if (rz.b.type === 'text') rz.b._bFixedH = true;
-        bentoSettle(rz.proj.blocks, rz.b);
+        bentoRestore(rz.snap, rz.b);
+        bentoResolve(rz.proj.blocks, rz.b);
         layoutBento(list, rz.proj);
       }
       return;
@@ -7249,7 +7275,8 @@ function wireBentoDrag(list) {
     const ny = Math.max(0, Math.round(y / d.m.pitch));
     if (nx !== d.b._bx || ny !== d.b._by) {
       d.b._bx = nx; d.b._by = ny;
-      bentoSettle(d.proj.blocks, d.b);
+      bentoRestore(d.snap, d.b);
+      bentoResolve(d.proj.blocks, d.b);
       // Lay the others out, leaving the dragged one under the pointer.
       const held = { left: d.el.style.left, top: d.el.style.top };
       layoutBento(list, d.proj);
@@ -7262,10 +7289,9 @@ function wireBentoDrag(list) {
       const done = rz;
       rz = null;
       done.el.classList.remove('bento-sizing');
-      // Same reason as after a drag: leave the board fully compacted so a
-      // block that just shrank doesn't leave a hole for the next gesture to
-      // close unexpectedly.
-      bentoSettle(done.proj.blocks, null);
+      // Left exactly as sized. Nothing is pulled up to close the space a
+      // shrunk block just freed — that gap is the point of resizing.
+      bentoResolve(done.proj.blocks, done.b);
       layoutBento(list, done.proj);
       // A text block that was hand-sized keeps that size; refitting here
       // would immediately undo the resize that was just made.
@@ -7277,14 +7303,8 @@ function wireBentoDrag(list) {
     d = null;
     done.el.classList.remove('bento-drag');
     if (!done.moved) return;
-    // Compact with the dropped block taking part, rather than pinning it where
-    // the pointer left it. Pinning looks right for one drop and then bites:
-    // the block sits over a gap it could have filled, and the next time any
-    // other block is dragged the settle pulls it up, so tiles appear to move
-    // on their own long after you placed them. Closing the gap now keeps the
-    // board in one settled state, which is also what makes dropping a tile
-    // beside another one stay put.
-    bentoSettle(done.proj.blocks, null);
+    // Dropped where it was let go of, holes and all.
+    bentoResolve(done.proj.blocks, done.b);
     layoutBento(list, done.proj);
     saveProject(activeKey);
   });
