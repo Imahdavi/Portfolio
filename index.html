@@ -10345,8 +10345,11 @@ document.addEventListener('DOMContentLoaded', () => {
    element.
 
    Videos carry their playback position across so the clip doesn't jump
-   back to zero on the way up, and get controls, since seeing it properly
-   is the whole point of enlarging it. ── */
+   back to zero on the way up, and inherit the tile's own sound state
+   rather than getting a controls bar: enlarging a clip is the same clip
+   seen bigger, so it should still be muted or not exactly as it was on
+   the page, and a second, differently-behaving audio surface is one more
+   thing to reason about for no gain. ── */
 (function () {
   const box = document.getElementById('media-lightbox');
   const stage = document.getElementById('ml-stage');
@@ -10372,8 +10375,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (src.tagName === 'VIDEO') {
       el = document.createElement('video');
       el.src = src.currentSrc || src.getAttribute('src') || src.dataset.lazySrc || '';
-      el.controls = true; el.loop = true; el.playsInline = true;
+      el.loop = true; el.playsInline = true;
+      // Carries the tile's live sound state over, so a clip the page had
+      // muted stays muted and one the user unmuted keeps playing out loud.
       el.muted = src.muted;
+      el.volume = src.volume;
       const at = src.currentTime;
       el.addEventListener('loadedmetadata', () => {
         if (at && isFinite(at) && at < el.duration) { try { el.currentTime = at; } catch (err) {} }
