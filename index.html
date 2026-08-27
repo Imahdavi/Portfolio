@@ -7207,7 +7207,8 @@ function bentoFitText(list, proj) {
   proj.blocks.forEach(b => {
     // Text and the star divider keep the presentation they had on the old
     // grid — full width, height from their own content — rather than being
-    // squared off into cells like media. Hand-sized ones are left alone.
+    // squared off into cells like media. (_bFixedH is still honoured for any
+    // board saved while these were briefly resizable.)
     if ((b.type !== 'text' && b.type !== 'divider') || b._bFixedH) return;
     const el = list.querySelector('.block[data-id="' + b.id + '"]');
     if (!el) return;
@@ -7300,9 +7301,6 @@ function wireBentoDrag(list) {
       const h = round3(Math.max(inY(BENTO_MIN_PX), inY(e.clientY - originY)));
       if (w !== rz.b._bw || h !== rz.b._bh) {
         rz.b._bw = w; rz.b._bh = h;
-        // Hand-sized from here on, so the text auto-fit stops overruling it.
-        // Without this a resized caption springs back on the next relayout.
-        if (rz.b.type === 'text') rz.b._bFixedH = true;
         bentoRestore(rz.snap, rz.b);
         bentoResolve(rz.proj.blocks, rz.b);
         layoutBento(list, rz.proj);
@@ -7393,7 +7391,10 @@ function renderBlocks(animate) {
   }
   proj.blocks.forEach(b => {
     const el = makeBlockEl(b, proj);
-    if (bento) addBentoResizeHandle(el);
+    // Media only. Text and dividers span the board and take their height from
+    // their own content, so there is no size left for a grip to set — one on
+    // them would just be a control that does nothing.
+    if (bento && b.type !== 'text' && b.type !== 'divider') addBentoResizeHandle(el);
     list.appendChild(el);
   });
   if (bento) { layoutBento(list, proj); wireBentoDrag(list); }
