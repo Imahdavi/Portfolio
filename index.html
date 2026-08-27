@@ -7503,7 +7503,16 @@ function startFreeDrag(e, wrap) {
       // relX is measured from the grid's first column; convert the grid line
       // the cursor lands on back to a _colStart.
       const rawRS = Math.round((relX - (cols * colW) / 2) / colW) + 1;
-      const newCS = toCS(Math.max(1, Math.min(maxRS, rawRS)));
+      // Floored at 1 so column 1 always means the board's left edge. Without
+      // it, dropping into one of the spare columns the grid keeps on each
+      // side wrote a _colStart of 0 or less, and since the board measures its
+      // origin from the smallest _colStart on it, that silently redefined
+      // where column 1 was — every other block, still sitting at 1, jumped
+      // right by the same amount. That is what pushed a board out of
+      // alignment as soon as a row grew wide enough to drag into the spares,
+      // and it fed on itself: once the minimum went negative, toCS handed
+      // back another negative for the next block dropped at the left edge.
+      const newCS = Math.max(1, toCS(Math.max(1, Math.min(maxRS, rawRS))));
       if (newCS !== lastCS) {
         lastCS = newCS;
         block._colStart = newCS;
