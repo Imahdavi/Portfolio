@@ -1285,7 +1285,26 @@
       z-index:50; transition:none; cursor:grabbing;
       box-shadow:0 18px 44px rgba(0,0,0,.24);
     }
-    #view-project.edit-mode .block-list.bento .block { cursor:grab; }
+    /* Corner grip to resize a block in whole cells. The media blocks' own
+       .resize-corner writes pixel sizes and aspect ratios, which mean nothing
+       on a cell grid, so it stands down here and this takes over — and unlike
+       that one, this exists on text and dividers too. */
+    .bento-resize {
+      position:absolute; right:5px; bottom:5px; z-index:20;
+      width:22px; height:22px; padding:0; border:none; border-radius:7px;
+      background:rgba(253,251,248,.92); color:#1a1a1a; cursor:nwse-resize;
+      display:none; align-items:center; justify-content:center;
+      box-shadow:0 2px 8px rgba(0,0,0,.18); opacity:0; transition:opacity .15s;
+    }
+    /* Visible at rest, not only on hover: a touch device never hovers, and an
+       invisible-but-tappable grip is worse than a faint one. */
+    .block-list.bento.edit-on .bento-resize { display:flex; opacity:.55; }
+    .block-list.bento.edit-on .block:hover .bento-resize { opacity:1; }
+    .bento-resize svg { width:13px; height:13px; pointer-events:none; }
+    .block-list.bento .resize-corner,
+    .block-list.bento .media-resize-btn { display:none !important; }
+    /* Sized in cells while resizing, so easing the width would lag the grip. */
+    .block-list.bento .block.bento-sizing { transition:none; z-index:40; }
     /* Blocks are cell-sized here, so the media fills the block instead of the
        block being sized from the media's own aspect ratio. Filled by absolute
        inset rather than height:100% — the media sits a couple of wrappers
@@ -7131,10 +7150,11 @@ function bentoFitText(list, proj) {
   const m = bentoMetrics(list);
   let changed = false;
   proj.blocks.forEach(b => {
-    if (b.type !== 'text') return;
+    if (b.type !== 'text' || b._bFixedH) return;   // hand-sized text is left alone
     const el = list.querySelector('.block[data-id="' + b.id + '"]');
     if (!el) return;
     const inner = el.querySelector('.block-text') || el;
+    // Grow to fit, never shrink below what the author set by dragging.
     const need = Math.max(1, Math.ceil((inner.scrollHeight + m.gap) / m.pitch));
     if (need !== b._bh) { b._bh = need; changed = true; }
   });
@@ -7145,14 +7165,44 @@ function bentoFitText(list, proj) {
    follows the finger, and everything else slides out of the way and closes
    the gap behind it. The dragged block is positioned straight from the
    pointer while held, and only snaps to cells on release. */
+const SVG_BENTO_RESIZE = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M11 5v6H5"/><path d="M11 8.5L8.5 11"/></svg>';
+
+/* Every block gets a corner grip, so a photo, a caption and a divider are all
+   resized the same way — in whole cells, which is the only size a bento block
+   can be. */
+function addBentoResizeHandle(el) {
+  if (el.querySelector(':scope > .bento-resize')) return;
+  const g = document.createElement('button');
+  g.className = 'bento-resize';
+  g.type = 'button';
+  g.title = 'Resize';
+  g.innerHTML = SVG_BENTO_RESIZE;
+  el.appendChild(g);
+}
+
 function wireBentoDrag(list) {
   if (list._bentoWired) return;
   list._bentoWired = true;
   let d = null;
+  let rz = null;
 
   list.addEventListener('pointerdown', (e) => {
     const proj = PROJECTS[activeKey];
     if (typeof editMode === 'undefined' || !editMode || !isBentoBoard(proj)) return;
+    // Resize takes precedence over drag — the grip sits inside the block, so
+    // without this a pull on it would pick the whole block up instead.
+    const grip = e.target.closest('.bento-resize');
+    if (grip) {
+      const el = grip.closest('.block');
+      const b = proj.blocks.find(x => x.id === el.dataset.id);
+      if (!b) return;
+      const r = el.getBoundingClientRect();
+      rz = { el, b, proj, left: r.left, top: r.top, m: bentoMetrics(list) };
+      el.classList.add('bento-sizing');
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     if (e.target.closest('button, a, input, [contenteditable], .resize-corner')) return;
     const el = e.target.closest('.block');
     if (!el || !list.contains(el)) return;
@@ -7167,6 +7217,23 @@ function wireBentoDrag(list) {
   });
 
   window.addEventListener('pointermove', (e) => {
+    if (rz) {
+      // Cells that fit between the block's own top-left and the pointer. The
+      // +gap is because n cells span n*cell + (n-1)*gap, so measuring against
+      // the pitch needs one gap added back before rounding.
+      const w = Math.max(1, Math.min(BENTO_COLS - rz.b._bx,
+                Math.round((e.clientX - rz.left + rz.m.gap) / rz.m.pitch)));
+      const h = Math.max(1, Math.round((e.clientY - rz.top + rz.m.gap) / rz.m.pitch));
+      if (w !== rz.b._bw || h !== rz.b._bh) {
+        rz.b._bw = w; rz.b._bh = h;
+        // Hand-sized from here on, so the text auto-fit stops overruling it.
+        // Without this a resized caption springs back on the next relayout.
+        if (rz.b.type === 'text') rz.b._bFixedH = true;
+        bentoSettle(rz.proj.blocks, rz.b);
+        layoutBento(list, rz.proj);
+      }
+      return;
+    }
     if (!d) return;
     if (!d.moved) {
       d.moved = true;
@@ -7191,6 +7258,20 @@ function wireBentoDrag(list) {
   });
 
   window.addEventListener('pointerup', () => {
+    if (rz) {
+      const done = rz;
+      rz = null;
+      done.el.classList.remove('bento-sizing');
+      // Same reason as after a drag: leave the board fully compacted so a
+      // block that just shrank doesn't leave a hole for the next gesture to
+      // close unexpectedly.
+      bentoSettle(done.proj.blocks, null);
+      layoutBento(list, done.proj);
+      // A text block that was hand-sized keeps that size; refitting here
+      // would immediately undo the resize that was just made.
+      saveProject(activeKey);
+      return;
+    }
     if (!d) return;
     const done = d;
     d = null;
@@ -7241,7 +7322,11 @@ function renderBlocks(animate) {
     // reads the right column offset instead of laying out against a stale one.
     layoutBlockGrid(list);
   }
-  proj.blocks.forEach(b => list.appendChild(makeBlockEl(b, proj)));
+  proj.blocks.forEach(b => {
+    const el = makeBlockEl(b, proj);
+    if (bento) addBentoResizeHandle(el);
+    list.appendChild(el);
+  });
   if (bento) { layoutBento(list, proj); wireBentoDrag(list); }
   observeBlockGridWidth(list);
 
