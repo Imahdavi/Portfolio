@@ -7064,7 +7064,16 @@ function saveHomeEdits() {
    arrangement scales with the site-width slider instead of only looking
    right at one shell size. ── */
 const BENTO_COLS = 4;
-const BENTO_GAP_RATIO = 35 / 80;
+// Half the reference's 35/80 — its spacing reads as too airy at this board's
+// width. Still a ratio of the cell rather than a pixel value, so it holds at
+// any site width. Halving the gap widens the cell (the row still fills the
+// board), so blocks grow a few percent as a side effect.
+const BENTO_GAP_RATIO = 35 / 160;
+// Rows sit tighter than columns. A single gap value looked balanced on paper
+// but not on the page: side by side the gap reads as deliberate separation,
+// stacked it just reads as a hole, and a board scrolled vertically shows that
+// far more often than it shows the horizontal one.
+const BENTO_ROW_GAP_RATIO = BENTO_GAP_RATIO / 2;
 // Floor for a freehand resize, in px rather than cell units: a cell-unit
 // floor is a different real size at every board width, and a small enough
 // fraction resolves to a few pixels — a block dragged down to that is
@@ -7075,13 +7084,16 @@ function isBentoBoard(proj) { return !!(proj && proj.layout === 'bento'); }
 
 function bentoMetrics(list) {
   const W = (list && list.clientWidth) || 496;
-  // W = cols*cell + (cols-1)*gap, with gap = cell*ratio
+  // W = cols*cell + (cols-1)*gapX, with gapX = cell*ratio
   const cell = W / (BENTO_COLS + (BENTO_COLS - 1) * BENTO_GAP_RATIO);
-  const gap  = cell * BENTO_GAP_RATIO;
-  return { cell, gap, pitch: cell + gap };
+  const gapX = cell * BENTO_GAP_RATIO;
+  const gapY = cell * BENTO_ROW_GAP_RATIO;
+  return { cell, gapX, gapY, pitchX: cell + gapX, pitchY: cell + gapY };
 }
 
-function bentoSpan(n, m) { return n * m.cell + (n - 1) * m.gap; }
+// n cells span n*cell plus the gaps between them — which is (n-1) of them.
+function bentoSpanX(n, m) { return n * m.cell + (n - 1) * m.gapX; }
+function bentoSpanY(n, m) { return n * m.cell + (n - 1) * m.gapY; }
 
 function bentoHits(a, b) {
   return !(a._bx + a._bw <= b._bx || a._bx >= b._bx + b._bw ||
@@ -7144,8 +7156,12 @@ function bentoAutoPlace(blocks) {
     let w = Math.max(1, Math.min(2, Math.round(cols6 / 6 * BENTO_COLS)));
     let h;
     if (b.type === 'text' || b.type === 'divider') {
-      h = b.type === 'divider' ? 1 : 2;
-      if (b.type === 'text') w = BENTO_COLS;         // text still spans, it reads badly narrow
+      // Both span the board as they did on the old grid — a divider centres
+      // its star across the full width, and text reads badly narrow. The
+      // height here is only a starting guess; bentoFitText measures the real
+      // one as soon as it has rendered.
+      w = BENTO_COLS;
+      h = b.type === 'divider' ? 0.5 : 2;
     } else {
       const aspect = b._freeAspect || 1;             // stored as width / height
       h = Math.max(1, Math.min(3, Math.round(w / aspect)));
@@ -7171,14 +7187,14 @@ function layoutBento(list, proj) {
   proj.blocks.forEach(b => {
     const el = list.querySelector('.block[data-id="' + b.id + '"]');
     if (el) {
-      el.style.left   = (b._bx * m.pitch) + 'px';
-      el.style.top    = (b._by * m.pitch) + 'px';
-      el.style.width  = bentoSpan(b._bw, m) + 'px';
-      el.style.height = bentoSpan(b._bh, m) + 'px';
+      el.style.left   = (b._bx * m.pitchX) + 'px';
+      el.style.top    = (b._by * m.pitchY) + 'px';
+      el.style.width  = bentoSpanX(b._bw, m) + 'px';
+      el.style.height = bentoSpanY(b._bh, m) + 'px';
     }
     rows = Math.max(rows, b._by + b._bh);
   });
-  list.style.height = rows ? (rows * m.pitch - m.gap) + 'px' : '';
+  list.style.height = rows ? (rows * m.pitchY - m.gapY) + 'px' : '';
 }
 
 /* Text can't be guessed at in whole cells the way a photo can — a caption and
@@ -7189,13 +7205,20 @@ function bentoFitText(list, proj) {
   const m = bentoMetrics(list);
   let changed = false;
   proj.blocks.forEach(b => {
-    if (b.type !== 'text' || b._bFixedH) return;   // hand-sized text is left alone
+    // Text and the star divider keep the presentation they had on the old
+    // grid — full width, height from their own content — rather than being
+    // squared off into cells like media. Hand-sized ones are left alone.
+    if ((b.type !== 'text' && b.type !== 'divider') || b._bFixedH) return;
     const el = list.querySelector('.block[data-id="' + b.id + '"]');
     if (!el) return;
-    const inner = el.querySelector('.block-text') || el;
-    // Grow to fit, never shrink below what the author set by dragging.
-    const need = Math.max(1, Math.ceil((inner.scrollHeight + m.gap) / m.pitch));
-    if (need !== b._bh) { b._bh = need; changed = true; }
+    const inner = el.querySelector('.block-text') || el.firstElementChild || el;
+    const content = Math.max(inner.scrollHeight, inner.getBoundingClientRect().height);
+    if (!content) return;
+    // Fractional, not whole cells: rounding a one-line caption or a divider up
+    // to a full cell is most of where the empty space above and below them
+    // came from.
+    const need = Math.max(0.2, Math.round(((content + m.gapY) / m.pitchY) * 1000) / 1000);
+    if (Math.abs(need - b._bh) > 0.01) { b._bh = need; changed = true; }
   });
   if (changed) { bentoResolve(proj.blocks, null); layoutBento(list, proj); }
 }
@@ -7266,15 +7289,15 @@ function wireBentoDrag(list) {
       // and scales with the board rather than being pinned to a pixel size
       // that only holds at one shell width. The +gap converts a pixel span
       // back to that unit: n cells measure n*cell + (n-1)*gap.
-      const inCells = px => (px + rz.m.gap) / rz.m.pitch;
+      const inX = px => (px + rz.m.gapX) / rz.m.pitchX;
+      const inY = px => (px + rz.m.gapY) / rz.m.pitchY;
       const round3 = n => Math.round(n * 1000) / 1000;
-      const min = inCells(BENTO_MIN_PX);
       const lr = list.getBoundingClientRect();
-      const originX = lr.left + rz.b._bx * rz.m.pitch;
-      const originY = lr.top  + rz.b._by * rz.m.pitch;
-      const w = round3(Math.max(min, Math.min(BENTO_COLS - rz.b._bx,
-                inCells(e.clientX - originX))));
-      const h = round3(Math.max(min, inCells(e.clientY - originY)));
+      const originX = lr.left + rz.b._bx * rz.m.pitchX;
+      const originY = lr.top  + rz.b._by * rz.m.pitchY;
+      const w = round3(Math.max(inX(BENTO_MIN_PX), Math.min(BENTO_COLS - rz.b._bx,
+                inX(e.clientX - originX))));
+      const h = round3(Math.max(inY(BENTO_MIN_PX), inY(e.clientY - originY)));
       if (w !== rz.b._bw || h !== rz.b._bh) {
         rz.b._bw = w; rz.b._bh = h;
         // Hand-sized from here on, so the text auto-fit stops overruling it.
@@ -7297,8 +7320,8 @@ function wireBentoDrag(list) {
     d.el.style.top  = y + 'px';
     // Where it would land if dropped now — the others settle around that,
     // not around the free-floating pixel position.
-    const nx = Math.max(0, Math.min(BENTO_COLS - d.b._bw, Math.round(x / d.m.pitch)));
-    const ny = Math.max(0, Math.round(y / d.m.pitch));
+    const nx = Math.max(0, Math.min(BENTO_COLS - d.b._bw, Math.round(x / d.m.pitchX)));
+    const ny = Math.max(0, Math.round(y / d.m.pitchY));
     if (nx !== d.b._bx || ny !== d.b._by) {
       d.b._bx = nx; d.b._by = ny;
       bentoRestore(d.snap, d.b);
