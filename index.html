@@ -3187,14 +3187,11 @@ function spiderSense(x, y) {
   el.addEventListener('animationend', () => el.remove(), {once:true});
 }
 
-/* Flip to true to bring the drawn arrow back.
-
-   Off for now so the machine's own cursor is used. However tightly the drawn
-   one is written it is still a DOM element repainted from an input event,
-   which means it can only ever be as smooth as the main thread is free; the
-   real cursor is composited by the OS and cannot lag at all. Everything below
-   is left intact — this is the only line that decides. */
-const USE_CUSTOM_CURSOR = false;
+/* The drawn arrow is the site's cursor everywhere except inside the enlarged
+   media view, where html.cursor-off hands back the machine's own. Watching a
+   clip is a "look at this" moment rather than a browsing one, and the real
+   cursor is composited by the OS so it cannot lag however busy the page is. */
+const USE_CUSTOM_CURSOR = true;
 
 /* ─── Custom cursor ────────────────────────────────────── */
 (function() {
@@ -3242,6 +3239,10 @@ const USE_CUSTOM_CURSOR = false;
   // event puts it back at input rate; frame() is left to ease the rotation
   // and stretch, which are the parts that actually want smoothing.
   document.addEventListener('pointermove', e => {
+    // Suspended while the enlarged media view is open, which is the one place
+    // the real cursor is wanted. Bailing here rather than in paint() is what
+    // stops pf-cursor-on being re-added on the next move and hiding it again.
+    if (document.documentElement.classList.contains('cursor-off')) return;
     document.documentElement.classList.add('pf-cursor-on');
     targetX = e.clientX;
     targetY = e.clientY;
@@ -11029,6 +11030,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     box.classList.toggle('has-audio', el.tagName === 'VIDEO');
     if (el.tagName === 'VIDEO') paintMute(el);
+    // Hand the pointer back to the OS for as long as this is open.
+    document.documentElement.classList.add('cursor-off');
+    document.documentElement.classList.remove('pf-cursor-on');
+    const arrow = document.getElementById('site-cursor');
+    if (arrow) arrow.style.opacity = '0';
     // The stage node outlives each open, so its grow-in has to be restarted
     // by hand or only the first one ever animates.
     stage.style.animation = 'none';
@@ -11042,6 +11048,9 @@ document.addEventListener('DOMContentLoaded', () => {
     box.classList.remove('show');
     box.setAttribute('aria-hidden', 'true');
     box.classList.remove('has-audio');
+    // The drawn arrow takes over again on the next pointer move, which is
+    // what re-adds pf-cursor-on and fades it back in.
+    document.documentElement.classList.remove('cursor-off');
     // Put a borrowed video back in its slot before emptying the stage, or
     // clearing the stage would destroy the tile's own element.
     if (borrowed) {
