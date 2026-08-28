@@ -6512,34 +6512,62 @@ function closeProject() {
 
 let _revealObs = null;
 let _videoObs = null;
+let _videoPlayObs = null;
 let _audioObs = null;
 
 function teardownScrollReveal() {
   if (_revealObs) { _revealObs.disconnect(); _revealObs = null; }
   if (_videoObs) { _videoObs.disconnect(); _videoObs = null; }
+  if (_videoPlayObs) { _videoPlayObs.disconnect(); _videoPlayObs = null; }
   if (_audioObs) { _audioObs.disconnect(); _audioObs = null; }
 }
 
 // Lazy-load videos: only set src (= start downloading) when a block nears the
 // viewport, and pause when it leaves. rootMargin ~one screen ahead so playback
 // is ready by the time the user scrolls to it. Big Supabase egress saver.
+/* Two observers, because fetching a video and decoding one cost very
+   different amounts.
+
+   Attaching the source early is cheap and worth doing well before a clip
+   scrolls in, so that keeps the generous 700px buffer. Playing is not: every
+   playing video is a live decode competing for the main thread, and with one
+   buffer doing both jobs a board like lina had everything within 700px above
+   AND below the viewport decoding at once — easily a dozen clips for a screen
+   that can show three. That is what makes the whole page, cursor included,
+   feel like it is dragging. Playback now follows the actual viewport, so only
+   what you can nearly see is decoding. */
 function setupLazyVideos() {
   if (_videoObs) { _videoObs.disconnect(); _videoObs = null; }
+  if (_videoPlayObs) { _videoPlayObs.disconnect(); _videoPlayObs = null; }
   const viewEl = document.getElementById('view-project');
   const vids = document.querySelectorAll('#block-list video[data-lazy-src]');
   if (!vids.length) return;
+
   _videoObs = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       const v = entry.target;
+      if (entry.isIntersecting && !v.getAttribute('src') && v.dataset.lazySrc) {
+        v.src = v.dataset.lazySrc;
+      }
+    });
+  }, { root: viewEl, rootMargin: '700px 0px 700px 0px', threshold: 0.01 });
+
+  _videoPlayObs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const v = entry.target;
+      // Left where it is while on loan to the lightbox: its rect is the
+      // enlarged one, and pausing it there would stop the clip being watched.
+      if (v.closest('#ml-stage')) return;
       if (entry.isIntersecting) {
         if (!v.getAttribute('src') && v.dataset.lazySrc) v.src = v.dataset.lazySrc;
         const p = v.play(); if (p && p.catch) p.catch(() => {});
       } else {
-        v.pause(); // keeps src/cache — never re-downloads, just stops playback
+        v.pause();   // keeps src/cache — never re-downloads, just stops decoding
       }
     });
-  }, { root: viewEl, rootMargin: '700px 0px 700px 0px', threshold: 0.01 });
-  vids.forEach(v => _videoObs.observe(v));
+  }, { root: viewEl, rootMargin: '120px 0px 120px 0px', threshold: 0.01 });
+
+  vids.forEach(v => { _videoObs.observe(v); _videoPlayObs.observe(v); });
 }
 
 // Separate from setupLazyVideos on purpose: that observer's 700px rootMargin
@@ -10920,6 +10948,15 @@ document.addEventListener('DOMContentLoaded', () => {
     paused = [...document.querySelectorAll('video')]
       .filter(v => v !== el && !v.paused);
     paused.forEach(v => v.pause());
+    if (el.tagName === 'VIDEO') {
+      // The borrowed tile may have been paused (scrolled past, or never
+      // started because it was lazy), and moving an element between parents
+      // can stop playback on its own — so start it explicitly rather than
+      // assuming it arrives playing.
+      if (!el.getAttribute('src') && el.dataset.lazySrc) el.src = el.dataset.lazySrc;
+      el.loop = true; el.playsInline = true;
+      const p = el.play(); if (p && p.catch) p.catch(() => {});
+    }
     // The stage node outlives each open, so its grow-in has to be restarted
     // by hand or only the first one ever animates.
     stage.style.animation = 'none';
