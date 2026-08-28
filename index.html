@@ -3205,13 +3205,23 @@ function spiderSense(x, y) {
   let vx = 0, vy = 0, angle = 0, seen = false;
   let last = performance.now();
 
-  document.addEventListener('mousemove', e => {
+  // Position is written here, straight off the pointer event, rather than
+  // waiting for the next animation frame. The arrow already tracked the
+  // pointer exactly, but only ever moved inside frame() — so every hitch on
+  // the main thread showed up as the cursor falling behind the real one,
+  // which a native cursor never does because the OS draws it. Painting on the
+  // event puts it back at input rate; frame() is left to ease the rotation
+  // and stretch, which are the parts that actually want smoothing.
+  document.addEventListener('pointermove', e => {
     document.documentElement.classList.add('pf-cursor-on');
     targetX = e.clientX;
     targetY = e.clientY;
     if (!seen) { x = targetX; y = targetY; seen = true; }
+    x = targetX; y = targetY;
     cur.style.opacity = '1';
-  });
+    paint();
+    kick();
+  }, { passive: true });
   document.addEventListener('mouseleave', () => {
     document.documentElement.classList.remove('pf-cursor-on');
     cur.style.opacity = '0';
@@ -3230,7 +3240,22 @@ function spiderSense(x, y) {
   });
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
 
+  // Rotation and stretch live out here so the pointer handler can repaint
+  // with whatever the last eased values were.
+  let squash = 1, stretch = 1;
+  function paint() {
+    if (!seen) return;
+    cur.style.transform =
+      `translate3d(${x}px, ${y}px, 0) rotate(${angle}rad) scale(${squash}, ${stretch})`;
+  }
+
+  // The loop only needs to run while there is easing left to do — a still
+  // cursor has nothing to animate, and this used to tick forever regardless.
+  let rafId = 0;
+  function kick() { if (!rafId) rafId = requestAnimationFrame(frame); }
+
   function frame(now) {
+    rafId = 0;
     // Clamp dt so a backgrounded tab does not fling the cursor.
     const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
     last = now;
@@ -3254,15 +3279,14 @@ function spiderSense(x, y) {
       angle += angleDelta(angle, target) * (1 - Math.exp(-dt / 0.06));
     }
 
-    const stretch = 1 + Math.min(speed / 3000, 0.35);
-    const squash = 1 / Math.sqrt(stretch);
+    stretch = 1 + Math.min(speed / 3000, 0.35);
+    squash = 1 / Math.sqrt(stretch);
 
-    if (seen) {
-      cur.style.transform = `translate(${x}px, ${y}px) rotate(${angle}rad) scale(${squash}, ${stretch})`;
-    }
-    requestAnimationFrame(frame);
+    paint();
+    // Keep going only while the velocity-driven bits are still settling.
+    if (speed > 1 || stretch > 1.001) kick();
   }
-  requestAnimationFrame(frame);
+  kick();
 })();
 
 /* ─── Web-shooter sound — original mp3 embedded as base64 (no network request, IDM cannot grab it) ── */
