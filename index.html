@@ -590,7 +590,12 @@
       position:fixed; inset:0; z-index:6000; display:none;
       align-items:center; justify-content:center; padding:5vh 5vw;
       background:rgba(26,23,20,.42);
-      -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+      /* A backdrop blur spans the whole viewport and its cost climbs with the
+         radius, so this is the smallest one that still reads as "the page
+         went soft behind it". The page underneath is deliberately quiet while
+         this is open — videos paused, home animations idle — which lets the
+         blurred backdrop be computed once instead of every frame. */
+      -webkit-backdrop-filter:blur(9px); backdrop-filter:blur(9px);
       cursor:zoom-out;
     }
     #media-lightbox.show { display:flex; }
@@ -10870,6 +10875,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // audibly doubled — and every other clip on the board carries on decoding
   // behind a blur nobody can see through.
   let paused = [];
+  // The tile's own <video> while it is on loan to the lightbox, with the
+  // placeholder standing in for it on the board.
+  let borrowed = null;
 
   // Matched on the wrapper rather than the img/video itself: board media is
   // pointer-events:none (the tilt and the overlay buttons are driven from the
@@ -10888,25 +10896,27 @@ document.addEventListener('DOMContentLoaded', () => {
     stage.innerHTML = '';
     let el;
     if (src.tagName === 'VIDEO') {
-      el = document.createElement('video');
-      el.src = src.currentSrc || src.getAttribute('src') || src.dataset.lazySrc || '';
-      el.loop = true; el.playsInline = true;
-      // Carries the tile's live sound state over, so a clip the page had
-      // muted stays muted and one the user unmuted keeps playing out loud.
-      el.muted = src.muted;
-      el.volume = src.volume;
-      const at = src.currentTime;
-      el.addEventListener('loadedmetadata', () => {
-        if (at && isFinite(at) && at < el.duration) { try { el.currentTime = at; } catch (err) {} }
-        const p = el.play(); if (p && p.catch) p.catch(() => {});
-      }, { once: true });
+      // The tile's own element is moved up here rather than a second <video>
+      // being built on the same file. A copy meant a whole extra decode for a
+      // clip already decoding on the page, had to reload and seek before it
+      // could show anything, and left two elements playing the same audio.
+      // Moving it costs none of that and starts on the exact frame you
+      // clicked. A placeholder holds the slot open so the board doesn't
+      // reflow while it's away.
+      const holder = document.createElement('div');
+      holder.style.cssText = 'width:100%;height:100%';
+      src.parentNode.insertBefore(holder, src);
+      borrowed = { node: src, holder, transform: src.style.transform };
+      src.style.transform = '';
+      el = src;
     } else {
       el = document.createElement('img');
       el.src = src.currentSrc || src.src;
       el.alt = src.alt || '';
     }
     stage.appendChild(el);
-    // Silence and stop the page behind before the copy starts.
+    // Silence and stop the rest of the board — nothing behind the blur is
+    // worth decoding, and a second clip playing under this one is audible.
     paused = [...document.querySelectorAll('video')]
       .filter(v => v !== el && !v.paused);
     paused.forEach(v => v.pause());
@@ -10922,7 +10932,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function close() {
     box.classList.remove('show');
     box.setAttribute('aria-hidden', 'true');
-    stage.innerHTML = '';   // also stops the video rather than leaving it playing
+    // Put a borrowed video back in its slot before emptying the stage, or
+    // clearing the stage would destroy the tile's own element.
+    if (borrowed) {
+      borrowed.node.style.transform = borrowed.transform || '';
+      borrowed.holder.parentNode.replaceChild(borrowed.node, borrowed.holder);
+      borrowed = null;
+    }
+    stage.innerHTML = '';   // only ever a copied <img> by this point
     // Hand the board back exactly what it was playing.
     paused.forEach(v => { const p = v.play(); if (p && p.catch) p.catch(() => {}); });
     paused = [];
