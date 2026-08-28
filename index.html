@@ -625,6 +625,21 @@
       -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
     }
     #ml-close:hover { background:rgba(255,255,255,.26); }
+    /* Sits next to the close button, same chip. Hidden for stills. */
+    #ml-mute {
+      position:absolute; top:18px; right:66px;
+      width:38px; height:38px; padding:0; border:none; border-radius:50%;
+      background:rgba(255,255,255,.14); color:#fff; cursor:pointer;
+      display:none; align-items:center; justify-content:center;
+      -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+    }
+    #media-lightbox.has-audio #ml-mute { display:flex; }
+    #ml-mute:hover { background:rgba(255,255,255,.26); }
+    #ml-mute svg { width:19px; height:19px; }
+    /* The site's mute icons are drawn near-black for a light chip; on this
+       dark one they have to follow currentColor instead. */
+    #ml-mute svg [stroke] { stroke:currentColor; }
+    #ml-mute svg [fill]:not([fill="none"]) { fill:currentColor; }
     /* On the container, not the img/video: board media carries
        pointer-events:none (the tilt and the overlay controls are driven from
        the wrapper), so a cursor set on it would never be seen. Edit mode has
@@ -2966,6 +2981,8 @@ one keyframe at a time</div>
 <div id="media-lightbox" aria-hidden="true">
   <div id="ml-stage"></div>
   <button id="ml-close" type="button" aria-label="Close">&times;</button>
+  <!-- Video only. Mute alone, not a whole controls bar. -->
+  <button id="ml-mute" type="button" aria-label="Unmute"></button>
 </div>
 
 <div id="lottie-picker-overlay" onclick="if(event.target===this)closeLottiePicker()">
@@ -3170,10 +3187,22 @@ function spiderSense(x, y) {
   el.addEventListener('animationend', () => el.remove(), {once:true});
 }
 
+/* Flip to true to bring the drawn arrow back.
+
+   Off for now so the machine's own cursor is used. However tightly the drawn
+   one is written it is still a DOM element repainted from an input event,
+   which means it can only ever be as smooth as the main thread is free; the
+   real cursor is composited by the OS and cannot lag at all. Everything below
+   is left intact — this is the only line that decides. */
+const USE_CUSTOM_CURSOR = false;
+
 /* ─── Custom cursor ────────────────────────────────────── */
 (function() {
   const cur = document.getElementById('site-cursor');
-  if (!cur || !matchMedia('(pointer:fine)').matches) return;
+  if (!cur || !USE_CUSTOM_CURSOR || !matchMedia('(pointer:fine)').matches) {
+    if (cur) cur.style.display = 'none';
+    return;
+  }
 
   /* Movement/rotation physics ported from the Originkit "Spin Cursor"
      component (https://www.originkit.dev/components/spin-cursor) — the
@@ -10930,6 +10959,23 @@ document.addEventListener('DOMContentLoaded', () => {
   // The tile's own <video> while it is on loan to the lightbox, with the
   // placeholder standing in for it on the board.
   let borrowed = null;
+  const muteBtn = document.getElementById('ml-mute');
+
+  // The enlarged element IS the tile's element, so muting here mutes the one
+  // on the board too — there is nothing to mirror back on close.
+  function paintMute(v) {
+    if (!v) return;
+    muteBtn.innerHTML = v.muted ? SVG_MUTED : SVG_UNMUTED;
+    muteBtn.setAttribute('aria-label', v.muted ? 'Unmute' : 'Mute');
+  }
+  if (muteBtn) muteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();                       // don't reach the close-on-backdrop
+    const v = stage.querySelector('video');
+    if (!v) return;
+    v.muted = !v.muted;
+    if (!v.muted && !v.volume) v.volume = 1;   // or unmuting is silent
+    paintMute(v);
+  });
 
   // Matched on the wrapper rather than the img/video itself: board media is
   // pointer-events:none (the tilt and the overlay buttons are driven from the
@@ -10981,6 +11027,8 @@ document.addEventListener('DOMContentLoaded', () => {
       el.loop = true; el.playsInline = true;
       const p = el.play(); if (p && p.catch) p.catch(() => {});
     }
+    box.classList.toggle('has-audio', el.tagName === 'VIDEO');
+    if (el.tagName === 'VIDEO') paintMute(el);
     // The stage node outlives each open, so its grow-in has to be restarted
     // by hand or only the first one ever animates.
     stage.style.animation = 'none';
@@ -10993,6 +11041,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function close() {
     box.classList.remove('show');
     box.setAttribute('aria-hidden', 'true');
+    box.classList.remove('has-audio');
     // Put a borrowed video back in its slot before emptying the stage, or
     // clearing the stage would destroy the tile's own element.
     if (borrowed) {
