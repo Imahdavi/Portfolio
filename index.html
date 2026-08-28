@@ -11021,7 +11021,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const holder = document.createElement('div');
       holder.style.cssText = 'width:100%;height:100%';
       src.parentNode.insertBefore(holder, src);
-      borrowed = { node: src, holder, transform: src.style.transform };
+      // The sound state is remembered because this is the board's own element:
+      // unmuting to watch a clip would otherwise leave it unmuted back on the
+      // page, still audible after the enlarged view was closed.
+      borrowed = { node: src, holder, transform: src.style.transform,
+                   muted: src.muted, volume: src.volume };
       src.style.transform = '';
       el = src;
     } else {
@@ -11071,6 +11075,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // clearing the stage would destroy the tile's own element.
     if (borrowed) {
       borrowed.node.style.transform = borrowed.transform || '';
+      // Handed back exactly as it was lent, sound included.
+      borrowed.node.muted = borrowed.muted;
+      borrowed.node.volume = borrowed.volume;
       borrowed.holder.parentNode.replaceChild(borrowed.node, borrowed.holder);
       borrowed = null;
     }
