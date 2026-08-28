@@ -3230,6 +3230,7 @@ const USE_CUSTOM_CURSOR = true;
   let x = targetX, y = targetY;
   let vx = 0, vy = 0, angle = 0, seen = false;
   let last = performance.now();
+  let lastMoveT = last;   // timestamp of the previous pointermove, for velocity
 
   // Position is written here, straight off the pointer event, rather than
   // waiting for the next animation frame. The arrow already tracked the
@@ -3244,11 +3245,22 @@ const USE_CUSTOM_CURSOR = true;
     // stops pf-cursor-on being re-added on the next move and hiding it again.
     if (document.documentElement.classList.contains('cursor-off')) return;
     document.documentElement.classList.add('pf-cursor-on');
-    targetX = e.clientX;
-    targetY = e.clientY;
-    if (!seen) { x = targetX; y = targetY; seen = true; }
-    x = targetX; y = targetY;
+    const nx = e.clientX, ny = e.clientY;
+    if (!seen) { x = nx; y = ny; lastMoveT = e.timeStamp || performance.now(); seen = true; }
+    // Velocity is measured here too. It used to be derived in frame() from how
+    // far x had moved since the previous frame, but x is set on this event
+    // now, so by the time frame() ran the difference was always zero — the
+    // arrow stopped turning to face its direction and stopped stretching.
+    const t = e.timeStamp || performance.now();
+    const dt = Math.min(0.05, Math.max(0.001, (t - lastMoveT) / 1000));
+    lastMoveT = t;
+    const vEase = 1 - Math.exp(-dt / VELOCITY_TAU);
+    vx += ((nx - x) / dt - vx) * vEase;
+    vy += ((ny - y) / dt - vy) * vEase;
+    x = nx; y = ny;
+    targetX = nx; targetY = ny;
     cur.style.opacity = '1';
+    orient(dt);
     paint();
     kick();
   }, { passive: true });
@@ -3273,6 +3285,21 @@ const USE_CUSTOM_CURSOR = true;
   // Rotation and stretch live out here so the pointer handler can repaint
   // with whatever the last eased values were.
   let squash = 1, stretch = 1;
+
+  /* Turn the arrow to face the way it is travelling and stretch it with the
+     speed. Called from the pointer event as well as the frame loop, so the
+     turn happens at input rate alongside the movement rather than waiting for
+     the next frame — the loop is then only easing it back to rest. */
+  function orient(dt) {
+    const speed = Math.hypot(vx, vy);
+    if (speed > 40) {
+      const target = Math.atan2(vy, vx) - ARROW_REST;
+      angle += angleDelta(angle, target) * (1 - Math.exp(-dt / 0.06));
+    }
+    stretch = 1 + Math.min(speed / 3000, 0.35);
+    squash = 1 / Math.sqrt(stretch);
+    return speed;
+  }
   function paint() {
     if (!seen) return;
     cur.style.transform =
@@ -3290,28 +3317,17 @@ const USE_CUSTOM_CURSOR = true;
     const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
     last = now;
 
-    const prevX = x, prevY = y;
-    // Position tracks the pointer exactly: the arrow tip has to sit on the
-    // real click point. The smoothed velocity below still drives the
-    // rotation and the stretch, so the spin survives without the lag.
-    x = targetX;
-    y = targetY;
-
+    // Position is already where the pointer is — the event set it, so the tip
+    // sits exactly on the click point. This loop only lets the velocity fall
+    // back to rest, which is what swings the arrow back and unstretches it
+    // once the pointer stops.
     if (dt > 0) {
       const vEase = 1 - Math.exp(-dt / VELOCITY_TAU);
-      vx += ((x - prevX) / dt - vx) * vEase;
-      vy += ((y - prevY) / dt - vy) * vEase;
+      vx += (0 - vx) * vEase;
+      vy += (0 - vy) * vEase;
     }
 
-    const speed = Math.hypot(vx, vy);
-    if (speed > 40) {
-      const target = Math.atan2(vy, vx) - ARROW_REST;
-      angle += angleDelta(angle, target) * (1 - Math.exp(-dt / 0.06));
-    }
-
-    stretch = 1 + Math.min(speed / 3000, 0.35);
-    squash = 1 / Math.sqrt(stretch);
-
+    const speed = orient(dt);
     paint();
     // Keep going only while the velocity-driven bits are still settling.
     if (speed > 1 || stretch > 1.001) kick();
