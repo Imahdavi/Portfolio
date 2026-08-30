@@ -11163,11 +11163,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.addEventListener('click', (e) => {
     if (isOpen()) return;
-    if (typeof editMode !== 'undefined' && editMode) return; // editing owns these clicks
     if (!e.target.closest) return;
     if (e.target.closest(CONTROL)) return;
     const host = e.target.closest(HOST);
     if (!host) return;
+    // Board blocks hand their clicks to editing — selecting, dragging and the
+    // resize corners all live on them. A Projects-list tile has none of that:
+    // dragging it is a drag (caught by the travel check below) and its × is a
+    // CONTROL, so a plain click has nothing else to mean and can preview even
+    // while the list is being edited, which is exactly when you want to check
+    // what a clip is before deciding where to put it.
+    if (typeof editMode !== 'undefined' && editMode && !host.classList.contains('pli-tile')) return;
     const media = host.querySelector('img, video');
     if (!media) return;
     if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 6) return;
