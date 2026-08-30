@@ -3165,6 +3165,28 @@ function isHomeVisible() {
   return !!v && v.classList.contains('active');
 }
 
+/* Paste text, not the page it came from.
+
+   Every editable field here is a contenteditable, which by default accepts
+   whatever HTML the clipboard is carrying — so copying a line out of another
+   site brought its font size, weight and colour along, and a pasted heading
+   stayed bold and oversized inside a paragraph. Only the characters are
+   wanted; the formatting belongs to this page. Bold and italic are still
+   available deliberately through the toolbar.
+
+   execCommand('insertText') rather than replacing the node's text: it inserts
+   at the caret and stays on the browser's own undo stack, so ctrl+z behaves. */
+document.addEventListener('paste', (e) => {
+  const el = e.target && e.target.closest && e.target.closest('[contenteditable]');
+  if (!el || el.getAttribute('contenteditable') === 'false') return;
+  const cb = e.clipboardData || window.clipboardData;
+  if (!cb) return;
+  const text = cb.getData('text/plain');
+  if (text == null) return;
+  e.preventDefault();
+  document.execCommand('insertText', false, text);
+});
+
 /* ─── Spider-sense click effect ─────────────────────────── */
 (function(){
   const s = document.createElement('style');
@@ -5224,7 +5246,9 @@ function hideMediaFromList(key, src) {
   const hidden = getListHidden(key);
   if (!hidden.includes(src)) hidden.push(src);
   setListHidden(key, hidden);
-  refreshProjectsList();
+  // Drop the tile in place; only fall back to a rebuild if it wasn't on screen
+  // to drop (the picker can hide something in a row that isn't rendered).
+  if (!dropTileFromStrip(key, src)) refreshProjectsList();
 }
 
 function unhideMediaInList(key, src) {
@@ -5462,7 +5486,9 @@ function buildProjectListItem(card) {
   // work, so the row shows the media rather than linking off to it.
   const titleRow = document.createElement('div');
   titleRow.className = 'pli-title-row';
-  titleRow.innerHTML = `<span class="pli-title">${card.name}</span>`;
+  // listTitle when the row has been given its own heading, otherwise the
+  // tile's name — see saveProjectsListEdits for why the two are separate.
+  titleRow.innerHTML = `<span class="pli-title">${card.listTitle || card.name}</span>`;
   body.appendChild(titleRow);
 
   const cat = document.createElement('div');
@@ -5843,7 +5869,29 @@ function refreshProjectsList() {
   if (!_lastHomeSections) return;
   const y = window.scrollY;
   renderHomeSections(_lastHomeSections);
+  // Restored synchronously as well as on the next frame. Rebuilding the list
+  // empties the container, so the page is briefly short and the scroll gets
+  // clamped; waiting for the frame to put it back meant one painted frame at
+  // the wrong offset, which is the flick you see on every edit. Doing it now
+  // closes that gap, and the deferred one still corrects for content that
+  // only reaches its final height once media has loaded.
+  window.scrollTo(0, y);
   requestAnimationFrame(() => window.scrollTo(0, y));
+}
+
+/* Take a tile out of the rendered strip without rebuilding the list.
+
+   Removing one tile does not need the whole home view thrown away and
+   recreated — that is what makes a removal feel like the page jumps, and it
+   also restarts every video in every other row. Matching on src because that
+   is what the hidden set is keyed by. */
+function dropTileFromStrip(key, src) {
+  const row = document.querySelector('.proj-list-item[data-key="' + key + '"]');
+  if (!row) return false;
+  const tiles = [...row.querySelectorAll('.pli-tile')].filter(t => t.dataset.src === src);
+  if (!tiles.length) return false;
+  tiles.forEach(t => t.remove());
+  return true;
 }
 
 /* Taking a tile out of a Projects-list row.
@@ -5872,7 +5920,7 @@ function removeFromProjectsList(key, src) {
   // can't linger and suppress the file if it's picked back in later.
   const hidden = getListHidden(key);
   if (hidden.includes(src)) setListHidden(key, hidden.filter(s => s !== src));
-  refreshProjectsList();
+  if (!dropTileFromStrip(key, src)) refreshProjectsList();
 }
 
 // True when taking this file out of the row would delete it rather than
@@ -6188,13 +6236,17 @@ function saveProjectsListEdits() {
       if (v) card[k] = v; else delete card[k];
     });
 
-    // The name is the board's, not just this row's, so it goes to the card
-    // and the board together — the grid reads the same value.
+    // The row's heading is the row's own, kept apart from card.name. It used
+    // to write straight into the card and the board, so renaming a row here
+    // silently renamed the grid tile and the board with it — "Logo Motion"
+    // became "Chillix" on the home page because that is what the write-up
+    // called it. A row can describe the work differently from the tile that
+    // links to it; only listTitle moves.
     const name = item.querySelector('.pli-title')?.textContent.trim();
-    if (name && name !== card.name) {
-      card.name = name;
-      if (PROJECTS[key]) { PROJECTS[key].name = name; saveProject(key); }
-      syncProjectTitleToHome(key, name, card.sub);
+    const shownTitle = card.listTitle || card.name;
+    if (name && name !== shownTitle) {
+      if (name === card.name) delete card.listTitle;   // back in step, drop the override
+      else card.listTitle = name;
       changed = true;
     }
   });
