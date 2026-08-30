@@ -2878,7 +2878,7 @@ one keyframe at a time</div>
   <span>Drop to upload</span>
 </div>
 
-<button id="scroll-top-btn" class="icon-radial-btn" aria-label="Scroll to top" onclick="document.getElementById('view-project').scrollTo({top:0,behavior:'smooth'})">
+<button id="scroll-top-btn" class="icon-radial-btn" aria-label="Scroll to top" onclick="(activeScrollView()||document.getElementById('view-project')).scrollTo({top:0,behavior:'smooth'})">
   <span class="radial-fill" aria-hidden="true"></span>
   <svg viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
 </button>
@@ -6506,6 +6506,9 @@ function showView(toId, anim) {
   to.classList.remove('enter-r','enter-l','enter-fade','enter-project');
   to.classList.add('active', anim);
   to.scrollTop = 0;
+  // The new view starts at the top, and resetting scrollTop fires no event,
+  // so the arrow has to be told rather than waiting to be scrolled.
+  if (typeof syncScrollTopBtn === 'function') syncScrollTopBtn();
   setTimeout(() => to.classList.remove(anim), 400);
 
   // Replay the spider's drop-in whenever home becomes the active view
@@ -9594,13 +9597,23 @@ document.addEventListener('DOMContentLoaded', () => {
   handle.addEventListener('pointercancel', endDrag);
 });
 
-/* ─── Scroll-to-top ────────────────────────────────────── */
+/* ─── Scroll-to-top ──────────────────────────────────────
+   Every view scrolls in its own element, and this was wired to the project
+   one alone — so the arrow never appeared on the home page however far down
+   the Projects list ran. It follows whichever view is on screen now. */
+function activeScrollView() {
+  return document.querySelector('.view.active');
+}
+
+function syncScrollTopBtn() {
+  const btn = document.getElementById('scroll-top-btn');
+  const v = activeScrollView();
+  if (btn) btn.classList.toggle('show', !!v && v.scrollTop > 200);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  const proj = document.getElementById('view-project');
-  const btn  = document.getElementById('scroll-top-btn');
-  proj.addEventListener('scroll', () => {
-    btn.classList.toggle('show', proj.scrollTop > 200);
-  });
+  document.querySelectorAll('.view').forEach(v =>
+    v.addEventListener('scroll', syncScrollTopBtn, { passive: true }));
 });
 
 /* On phones the bottom-nav pill runs nearly edge to edge, so the
