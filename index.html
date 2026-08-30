@@ -11177,8 +11177,21 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('click', (e) => {
     if (isOpen()) return;
     if (!e.target.closest) return;
-    if (e.target.closest(CONTROL)) return;
-    const host = e.target.closest(HOST);
+    /* Which element the click "came from" cannot be trusted here. The
+       Projects strip captures the pointer so it can be dragged to scroll, and
+       once it does, the pointerup and the click that follows are retargeted
+       to the strip itself — so a click that began on a tile arrives claiming
+       to be on .pli-media-strip, matches nothing, and was silently dropped.
+       That is why tapping a clip in the list did nothing while the same code
+       worked when the event was dispatched straight at the tile.
+
+       So: trust e.target when it already names something openable, and
+       otherwise ask what is actually under the pointer. */
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const from = e.target.closest(HOST) ? e.target : (under || e.target);
+    if (!from.closest) return;
+    if (from.closest(CONTROL)) return;
+    const host = from.closest(HOST);
     if (!host) return;
     // Board blocks hand their clicks to editing — selecting, dragging and the
     // resize corners all live on them. A Projects-list tile has none of that:
