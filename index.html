@@ -617,24 +617,34 @@
       border-radius:14px; background:#000;
       box-shadow:0 24px 70px rgba(0,0,0,.45);
     }
+    /* Shrink-wraps the media, so anything positioned against it lands on the
+       media's own corner instead of the far side of the screen.
+
+       Sitting on the artwork rather than the dark backdrop is why both chips
+       are dark with a light glyph: a translucent white one vanished the
+       moment it landed on a pale image, and the media can be any colour. */
+    #ml-frame {
+      position:relative; display:inline-flex;
+      max-width:100%; max-height:100%;
+    }
     #ml-close {
-      position:absolute; top:18px; right:20px;
+      position:absolute; top:12px; right:12px;
       width:38px; height:38px; padding:0; border:none; border-radius:50%;
-      background:rgba(255,255,255,.14); color:#fff; font-size:23px; line-height:1;
+      background:rgba(24,21,18,.6); color:#fff; font-size:23px; line-height:1;
       cursor:pointer; display:flex; align-items:center; justify-content:center;
       -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
     }
-    #ml-close:hover { background:rgba(255,255,255,.26); }
+    #ml-close:hover { background:rgba(24,21,18,.82); }
     /* Sits next to the close button, same chip. Hidden for stills. */
     #ml-mute {
-      position:absolute; top:18px; right:66px;
+      position:absolute; top:12px; right:58px;
       width:38px; height:38px; padding:0; border:none; border-radius:50%;
-      background:rgba(255,255,255,.14); color:#fff; cursor:pointer;
+      background:rgba(24,21,18,.6); color:#fff; cursor:pointer;
       display:none; align-items:center; justify-content:center;
       -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
     }
     #media-lightbox.has-audio #ml-mute { display:flex; }
-    #ml-mute:hover { background:rgba(255,255,255,.26); }
+    #ml-mute:hover { background:rgba(24,21,18,.82); }
     #ml-mute svg { width:19px; height:19px; }
     /* The site's mute icons are drawn near-black for a light chip; on this
        dark one they have to follow currentColor instead. */
@@ -2979,10 +2989,15 @@ one keyframe at a time</div>
 <!-- Click-to-enlarge for board and Projects-list media. Sits outside #app so
      its backdrop-filter has the whole page behind it to blur. -->
 <div id="media-lightbox" aria-hidden="true">
-  <div id="ml-stage"></div>
-  <button id="ml-close" type="button" aria-label="Close">&times;</button>
-  <!-- Video only. Mute alone, not a whole controls bar. -->
-  <button id="ml-mute" type="button" aria-label="Unmute"></button>
+  <!-- The frame shrink-wraps the media so the buttons can sit on its corner
+       rather than the screen's. They live outside #ml-stage because opening
+       empties the stage, which would take them with it. -->
+  <div id="ml-frame">
+    <div id="ml-stage"></div>
+    <button id="ml-close" type="button" aria-label="Close">&times;</button>
+    <!-- Video only. Mute alone, not a whole controls bar. -->
+    <button id="ml-mute" type="button" aria-label="Unmute"></button>
+  </div>
 </div>
 
 <div id="lottie-picker-overlay" onclick="if(event.target===this)closeLottiePicker()">
