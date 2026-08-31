@@ -9440,31 +9440,46 @@ document.getElementById('avatarInput').addEventListener('change', async function
   }
 });
 
-// Lazy-loaded from a CDN since this file has no build step / npm install —
-// @vercel/blob/client is the officially supported way to PUT straight from
-// the browser to Blob storage, so the actual file bytes skip this server
-// entirely (unlike the old Supabase path, which proxied everything through
-// an Edge Function in base64 chunks to dodge its 6MB request-body cap).
-let _blobUploadPromise = null;
-function _getBlobUpload() {
-  if (!_blobUploadPromise) {
-    _blobUploadPromise = import('https://esm.sh/@vercel/blob@2.8.0/client').then(m => m.upload);
-  }
-  return _blobUploadPromise;
+// Vercel Blob got suspended for exceeding its 10GB/mo transfer quota, so
+// media now lives in the repo itself instead — the Worker commits each
+// upload straight to GitHub (Git Data API: blob -> tree -> commit -> ref)
+// and it goes out from there under Vercel's much larger 100GB Fast Data
+// Transfer allowance. New file shows up at the returned path once Vercel
+// finishes redeploying (usually under a minute) — a brief broken-thumbnail
+// window right after upload is expected, not a bug.
+function _fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const s = reader.result;
+      const i = s.indexOf(',');
+      resolve(i >= 0 ? s.slice(i + 1) : s);
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }
 
-// Same signature/return as the old Supabase-backed version (bucket/path in,
-// public URL out) so every existing call site — uploadFiles(), the tool-icon
-// picker, the lottie-tool drop handler — needed no changes beyond this body.
+// Same signature/return as the old Supabase- and Blob-backed versions
+// (bucket/path in, public URL out) so every existing call site —
+// uploadFiles(), the tool-icon picker, the lottie-tool drop handler —
+// needed no changes beyond this body.
 async function tusUpload(file, bucket, path, onProgress) {
-  const upload = await _getBlobUpload();
-  const blob = await upload(`${bucket}/${path}`, file, {
-    access: 'public',
-    handleUploadUrl: '/api/blob-upload',
-    contentType: file.type || 'application/octet-stream',
-    onUploadProgress: onProgress ? (p) => onProgress(p.loaded, p.total) : undefined,
+  const contentBase64 = await _fileToBase64(file);
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_URL}/api/media/upload`);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    if (onProgress) xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded, e.total); };
+    xhr.onload = () => {
+      let data;
+      try { data = JSON.parse(xhr.responseText); } catch (e) { reject(e); return; }
+      if (xhr.status >= 200 && xhr.status < 300 && data.url) resolve(data.url);
+      else reject(new Error(data.error || ('upload failed: ' + xhr.status)));
+    };
+    xhr.onerror = () => reject(new Error('network error during upload'));
+    xhr.send(JSON.stringify({ bucket, path, contentType: file.type || 'application/octet-stream', contentBase64 }));
   });
-  return blob.url;
 }
 
 async function uploadFiles(files) {
