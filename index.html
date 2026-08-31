@@ -440,14 +440,25 @@
        narrow instead of pushing every row's body across. The dash is a
        separator element so it can be hidden when there's no end value. */
     /* One line, not stacked: a column of three put the rail's height above
-       the text beside it and pushed the row taller for no gain. */
+       the text beside it and pushed the row taller for no gain.
+       align-self:flex-start matters here — .proj-list-item is a flex row
+       with the default align-items:stretch, which was pulling .pli-year
+       up to .pli-body's full height (description + media strip). Once
+       stretched, flex-wrap's second line (yTo wrapping under yFrom) landed
+       wherever align-content spread it across that height — hundreds of
+       px below the first line — instead of sitting right underneath it. */
     .pli-year {
-      flex:0 0 auto; width:104px; padding-top:3px;
+      flex:0 0 auto; width:130px; padding-top:3px; align-self:flex-start;
       display:flex; flex-direction:row; flex-wrap:wrap; align-items:baseline; gap:4px;
+      align-content:flex-start;
       font-family:var(--font-body); font-size:12.5px; font-weight:600;
       color:#b4a99a; line-height:1.35;
     }
     .pli-year-sep { font-weight:400; opacity:.65; }
+    /* Row tools (drag handle, delete) are admin chrome, not part of the
+       date — keep them off the date's own line so "2025 – Present" isn't
+       competing with "⠿ ×" for the same 130px. */
+    .pli-year .pli-row-tools { flex-basis:100%; }
     .pli-body { flex:1 1 auto; min-width:0; }
     .pli-title-row { display:flex; align-items:baseline; gap:5px; }
     .pli-title { font-family:var(--font-title); font-size:17px; font-weight:600; line-height:1.3; }
@@ -567,6 +578,89 @@
     .pli-add-tile:hover { border-color:rgba(0,0,0,.4); color:#5a5148; background:rgba(0,0,0,.02); }
     .pli-add-tile span:first-child { font-size:19px; line-height:1; }
 
+    /* ── Click-to-enlarge ──────────────────────────────────────
+       Tap any board or Projects-list media to see it big with the page
+       blurred back behind it. The blur is backdrop-filter on the overlay
+       rather than a filter on #app: filter on an ancestor makes it the
+       containing block for every fixed-position descendant, which would
+       drag the nav and the back button out of their viewport anchoring
+       (the picker sheet above already blurs this way for the same
+       reason). ── */
+    #media-lightbox {
+      position:fixed; inset:0; z-index:6000; display:none;
+      align-items:center; justify-content:center; padding:5vh 5vw;
+      background:rgba(26,23,20,.42);
+      /* A backdrop blur spans the whole viewport and its cost climbs with the
+         radius, so this is the smallest one that still reads as "the page
+         went soft behind it". The page underneath is deliberately quiet while
+         this is open — videos paused, home animations idle — which lets the
+         blurred backdrop be computed once instead of every frame. */
+      -webkit-backdrop-filter:blur(9px); backdrop-filter:blur(9px);
+      cursor:zoom-out;
+    }
+    #media-lightbox.show { display:flex; }
+    #ml-stage {
+      max-width:100%; max-height:100%; display:flex;
+      align-items:center; justify-content:center;
+      animation:mlIn .28s cubic-bezier(.25,.46,.45,.94) both;
+      cursor:default;
+    }
+    /* Opens a touch under full size and settles up into it, so it reads as
+       the thumbnail growing rather than a new panel appearing. */
+    @keyframes mlIn {
+      from { opacity:0; transform:scale(.92); }
+      to   { opacity:1; transform:scale(1); }
+    }
+    #ml-stage img, #ml-stage video {
+      display:block; max-width:min(1100px, 90vw); max-height:88vh;
+      width:auto; height:auto; object-fit:contain;
+      border-radius:14px; background:#000;
+      box-shadow:0 24px 70px rgba(0,0,0,.45);
+    }
+    /* Shrink-wraps the media, so anything positioned against it lands on the
+       media's own corner instead of the far side of the screen.
+
+       Sitting on the artwork rather than the dark backdrop is why both chips
+       are dark with a light glyph: a translucent white one vanished the
+       moment it landed on a pale image, and the media can be any colour. */
+    #ml-frame {
+      position:relative; display:inline-flex;
+      max-width:100%; max-height:100%;
+    }
+    #ml-close {
+      position:absolute; top:12px; right:12px;
+      width:38px; height:38px; padding:0; border:none; border-radius:50%;
+      background:rgba(24,21,18,.6); color:#fff; font-size:23px; line-height:1;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+    }
+    #ml-close:hover { background:rgba(24,21,18,.82); }
+    /* Sits next to the close button, same chip. Hidden for stills. */
+    #ml-mute {
+      position:absolute; top:12px; right:58px;
+      width:38px; height:38px; padding:0; border:none; border-radius:50%;
+      background:rgba(24,21,18,.6); color:#fff; cursor:pointer;
+      display:none; align-items:center; justify-content:center;
+      -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+    }
+    #media-lightbox.has-audio #ml-mute { display:flex; }
+    #ml-mute:hover { background:rgba(24,21,18,.82); }
+    #ml-mute svg { width:19px; height:19px; }
+    /* The site's mute icons are drawn near-black for a light chip; on this
+       dark one they have to follow currentColor instead. */
+    #ml-mute svg [stroke] { stroke:currentColor; }
+    #ml-mute svg [fill]:not([fill="none"]) { fill:currentColor; }
+    /* On the container, not the img/video: board media carries
+       pointer-events:none (the tilt and the overlay controls are driven from
+       the wrapper), so a cursor set on it would never be seen. Edit mode has
+       its own click meaning on these same elements — select, drag, resize. */
+    #block-list .media-inner, .pli-tile { cursor:zoom-in; }
+    #block-list.edit-on .media-inner { cursor:default; }
+    #view-home.home-edit .pli-tile { cursor:grab; }
+    @media (prefers-reduced-motion: reduce) {
+      #ml-stage { animation:none; }
+    }
+
     /* Media picker — same bottom sheet as the animation picker. */
     #media-picker-overlay {
       display:none; position:fixed; inset:0; z-index:5000;
@@ -588,6 +682,21 @@
     .mp-grid {
       display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr));
       gap:8px; overflow-y:auto; padding:2px; flex:1 1 auto; min-height:0;
+      align-items:start;
+      /* grid-auto-rows:auto (the default) measured barely 16px per row —
+         .mp-grid gets a DEFINITE height from the flex column above it
+         (flex:1 1 auto resolves against #media-picker-sheet's max-height),
+         and an auto row track sized against a definite container height
+         collapses toward the items' content-box minimum instead of the
+         84px aspect-ratio:4/3 actually gives them. Every row after the
+         first then rendered on top of the row before it, 84px of image
+         crammed into a 16px slot with only a sliver visible above whatever
+         painted after it — which is what made the sheet look mostly empty
+         and impossible to tell tiles apart. max-content sizes each row
+         from the items' own intrinsic (aspect-ratio) size regardless of
+         the container's resolved height, which is what auto was supposed
+         to do here in the first place. */
+      grid-auto-rows:max-content;
     }
     .mp-item {
       position:relative; aspect-ratio:4 / 3; border-radius:10px; overflow:hidden;
@@ -609,6 +718,19 @@
       font-size:10px; display:flex; align-items:center; justify-content:center;
     }
     .mp-empty { grid-column:1/-1; text-align:center; color:#aaa; font-size:12.5px; padding:24px 0; font-family:var(--font-body); }
+    /* Section headings splitting "already in this project" from the rest
+       of the site's media — plain grid children so they can just span
+       every column instead of needing a separate layout. */
+    .mp-group-label {
+      grid-column:1/-1; font-family:var(--font-body); font-size:11.5px;
+      font-weight:600; color:#8a8178; text-transform:uppercase; letter-spacing:.02em;
+      margin:10px 0 2px;
+    }
+    .mp-group-label:first-child { margin-top:0; }
+    .mp-group-label-sub {
+      font-size:10.5px; font-weight:500; color:#aaa; text-transform:none;
+      letter-spacing:0; margin:6px 0 2px;
+    }
     .mp-actions { display:flex; gap:8px; margin-top:12px; }
     .mp-actions button {
       flex:1; padding:11px; border:none; border-radius:12px;
@@ -1166,6 +1288,82 @@
        site width, so nothing moves at the default. */
     .block-list { display:grid; grid-template-columns:repeat(6, 1fr); column-gap:10px; row-gap:0; grid-auto-rows:1px; margin-bottom:20px; align-items:start; }
 
+    /* ── Bento board ───────────────────────────────────────────
+       An opt-in per-board layout (proj.layout === 'bento') modelled on the
+       square-cell arrangement the reference site uses: four columns of
+       equal square cells with a wide gap, every block sized in whole
+       cells, and items free to be dragged around each other.
+
+       Absolutely positioned rather than a CSS grid, for the same reason
+       the reference does it: dragging needs to move one block over the
+       others and settle them around it, which means animating positions
+       independently of document flow. The gap is a ratio of the cell
+       (35/80, straight off the reference) so it scales with site width
+       instead of being a fixed pixel value that only looks right at one
+       shell size. ── */
+    .block-list.bento {
+      display:block; position:relative;
+      grid-template-columns:none; grid-auto-rows:auto;
+    }
+    .block-list.bento .block {
+      position:absolute; margin:0; grid-column:auto; grid-row:auto;
+      transition:left .18s cubic-bezier(.2,.8,.3,1), top .18s cubic-bezier(.2,.8,.3,1);
+    }
+    /* The block being dragged tracks the pointer directly, so it must not
+       ease toward its position the way the ones settling around it do. */
+    .block-list.bento .block.bento-drag {
+      z-index:50; transition:none; cursor:grabbing;
+      box-shadow:0 18px 44px rgba(0,0,0,.24);
+    }
+    /* Corner grip to resize a block in whole cells. The media blocks' own
+       .resize-corner writes pixel sizes and aspect ratios, which mean nothing
+       on a cell grid, so it stands down here and this takes over — and unlike
+       that one, this exists on text and dividers too. */
+    /* A small grey dot just off the block's bottom-right corner, sitting in
+       the gap between tiles — the reference's grip, rather than a button
+       parked on top of the artwork. The hit area is padded out well past the
+       dot so it stays easy to grab at this size. */
+    .bento-resize {
+      position:absolute; right:-7px; bottom:-7px; z-index:20;
+      width:14px; height:14px; padding:0; border:none; border-radius:50%;
+      background:#8a8178; cursor:nwse-resize; display:none;
+      box-shadow:0 0 0 2px var(--bg, #fdfbf8);
+      opacity:0; transition:opacity .15s, transform .12s;
+    }
+    .bento-resize::after {
+      content:''; position:absolute; inset:-10px;   /* generous grab area */
+    }
+    /* Visible at rest, not only on hover: a touch device never hovers, and an
+       invisible-but-tappable grip is worse than a faint one. */
+    .block-list.bento.edit-on .bento-resize { display:block; opacity:.5; }
+    .block-list.bento.edit-on .block:hover .bento-resize { opacity:1; transform:scale(1.15); }
+    .block-list.bento .resize-corner,
+    .block-list.bento .media-resize-btn { display:none !important; }
+    /* Sized in cells while resizing, so easing the width would lag the grip. */
+    .block-list.bento .block.bento-sizing { transition:none; z-index:40; }
+    /* Blocks are cell-sized here, so the media fills the block instead of the
+       block being sized from the media's own aspect ratio. Filled by absolute
+       inset rather than height:100% — the media sits a couple of wrappers
+       down from .block, and a percentage height only resolves against an
+       ancestor with a definite one, so it was falling back to the media's
+       intrinsic size and overflowing the cell. The !important is for the
+       dimensions applyPreset writes inline per media. */
+    /* Not overflow:hidden — the resize dot deliberately sits just outside the
+       corner, and clipping the block would swallow it. The media clips itself
+       (.media-inner already rounds and hides its own overflow) and text is
+       scrolled by the rule further down, so nothing needs clipping here. */
+    .block-list.bento .block { overflow:visible; }
+    .block-list.bento .media-wrap,
+    .block-list.bento .media-inner {
+      position:absolute; inset:0;
+      width:auto !important; height:auto !important;
+      max-width:none !important; margin:0 !important;
+      aspect-ratio:auto !important;
+    }
+    .block-list.bento .media-inner img,
+    .block-list.bento .media-inner video { width:100%; height:100%; object-fit:cover; }
+    .block-list.bento .block-text { height:100%; overflow:auto; }
+
     .block {
       position:relative;
       display:flex; align-items:flex-start; gap:8px;
@@ -1181,6 +1379,18 @@
     .block.drop-right  { box-shadow: 3px 0 0 0 rgba(26,23,20,.7); border-radius:14px; }
     .block.drop-center { outline:2px solid rgba(66,133,244,.5); outline-offset:2px; border-radius:14px; }
     .block.col-dragging .media-inner { outline:2px solid rgba(66,133,244,.7) !important; outline-offset:2px; }
+    /* Lifted while dragging so it rides over its neighbours. The block keeps
+       its grid slot underneath — that reserved gap is the drop preview, so
+       there's no separate placeholder element to keep in sync. */
+    .block.col-dragging {
+      z-index:60; will-change:transform; cursor:grabbing;
+      transition:none !important;
+    }
+    .block.col-dragging .media-inner,
+    .block.col-dragging .block-text { box-shadow:0 16px 38px rgba(0,0,0,.22); }
+    /* The others glide to their new slots instead of teleporting, which is
+       what makes it read as things moving out of the way. */
+    #block-list.edit-on .block { transition:transform .16s cubic-bezier(.2,.8,.3,1); }
 
     /* Border follows the actual content (media-inner), not the wrapper */
     .edit-on .media-inner {
@@ -1703,7 +1913,7 @@
       width:26px; height:26px; border-radius:7px;
       background:rgba(253,251,248,.88); border:none; cursor:s-resize;
       display:none; align-items:center; justify-content:center;
-      z-index:15; backdrop-filter:blur(4px);
+      z-index:15;
       box-shadow:0 2px 8px rgba(0,0,0,.18);
     }
     .edit-on .media-inner .resize-corner { display:flex; }
@@ -1728,7 +1938,7 @@
       background:rgba(253,251,248,.88); border:none; cursor:pointer;
       display:flex; align-items:center; justify-content:center;
       opacity:0; transition:opacity .2s, transform .15s;
-      z-index:10; backdrop-filter:blur(6px);
+      z-index:10;
     }
     .media-wrap:hover .media-mute-btn { opacity:1; }
     .media-mute-btn:hover  { transform:scale(1.1); }
@@ -1742,7 +1952,7 @@
       background:rgba(253,251,248,.88); border:none; cursor:pointer;
       display:flex; align-items:center; justify-content:center;
       opacity:0; transition:opacity .2s, transform .15s;
-      z-index:10; backdrop-filter:blur(6px);
+      z-index:10;
       text-decoration:none; color:inherit;
     }
     .media-wrap:hover .media-link-btn.has-link { opacity:1; }
@@ -1765,7 +1975,7 @@
       width:28px; height:28px; border-radius:8px;
       background:rgba(253,251,248,.88); border:none; cursor:pointer;
       display:none; align-items:center; justify-content:center;
-      z-index:12; backdrop-filter:blur(6px); transition:transform .15s;
+      z-index:12; transition:transform .15s;
     }
     .edit-on .media-link-edit-btn { display:flex; }
     .media-link-edit-btn.active { background:rgba(60,120,255,.92); }
@@ -1794,7 +2004,7 @@
       width:28px; height:28px; border-radius:8px;
       background:rgba(253,251,248,.88); border:none; cursor:pointer;
       display:none; align-items:center; justify-content:center;
-      z-index:10; backdrop-filter:blur(6px); transition:transform .15s;
+      z-index:10; transition:transform .15s;
     }
     .edit-on .media-resize-btn { display:flex; }
     .media-resize-btn:hover  { transform:scale(1.1); }
@@ -2668,7 +2878,7 @@ one keyframe at a time</div>
   <span>Drop to upload</span>
 </div>
 
-<button id="scroll-top-btn" class="icon-radial-btn" aria-label="Scroll to top" onclick="document.getElementById('view-project').scrollTo({top:0,behavior:'smooth'})">
+<button id="scroll-top-btn" class="icon-radial-btn" aria-label="Scroll to top" onclick="(activeScrollView()||document.getElementById('view-project')).scrollTo({top:0,behavior:'smooth'})">
   <span class="radial-fill" aria-hidden="true"></span>
   <svg viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
 </button>
@@ -2775,6 +2985,20 @@ one keyframe at a time</div>
   </div>
 </div>
 <input type="file" id="mediaPickerInput" accept="image/*,video/*" multiple style="display:none"/>
+
+<!-- Click-to-enlarge for board and Projects-list media. Sits outside #app so
+     its backdrop-filter has the whole page behind it to blur. -->
+<div id="media-lightbox" aria-hidden="true">
+  <!-- The frame shrink-wraps the media so the buttons can sit on its corner
+       rather than the screen's. They live outside #ml-stage because opening
+       empties the stage, which would take them with it. -->
+  <div id="ml-frame">
+    <div id="ml-stage"></div>
+    <button id="ml-close" type="button" aria-label="Close">&times;</button>
+    <!-- Video only. Mute alone, not a whole controls bar. -->
+    <button id="ml-mute" type="button" aria-label="Unmute"></button>
+  </div>
+</div>
 
 <div id="lottie-picker-overlay" onclick="if(event.target===this)closeLottiePicker()">
   <div id="lottie-picker-sheet">
@@ -2931,6 +3155,38 @@ function revealProfileName() {
 // Fallback: reveal even if settings fail to load
 setTimeout(revealProfileName, 2800);
 
+/* Whether the home view is the one on screen. Several animations only ever
+   drive elements that live inside it, and a hidden view still runs their rAF
+   loops at full rate — style writes and layout reads for a display:none
+   subtree. A class check rather than an offsetParent read, so asking costs
+   nothing and can't itself force a layout. */
+function isHomeVisible() {
+  const v = document.getElementById('view-home');
+  return !!v && v.classList.contains('active');
+}
+
+/* Paste text, not the page it came from.
+
+   Every editable field here is a contenteditable, which by default accepts
+   whatever HTML the clipboard is carrying — so copying a line out of another
+   site brought its font size, weight and colour along, and a pasted heading
+   stayed bold and oversized inside a paragraph. Only the characters are
+   wanted; the formatting belongs to this page. Bold and italic are still
+   available deliberately through the toolbar.
+
+   execCommand('insertText') rather than replacing the node's text: it inserts
+   at the caret and stays on the browser's own undo stack, so ctrl+z behaves. */
+document.addEventListener('paste', (e) => {
+  const el = e.target && e.target.closest && e.target.closest('[contenteditable]');
+  if (!el || el.getAttribute('contenteditable') === 'false') return;
+  const cb = e.clipboardData || window.clipboardData;
+  if (!cb) return;
+  const text = cb.getData('text/plain');
+  if (text == null) return;
+  e.preventDefault();
+  document.execCommand('insertText', false, text);
+});
+
 /* ─── Spider-sense click effect ─────────────────────────── */
 (function(){
   const s = document.createElement('style');
@@ -2940,6 +3196,10 @@ setTimeout(revealProfileName, 2800);
 })();
 function spiderSense(x, y) {
   if (typeof editMode !== 'undefined' && editMode) return; // no web while editing
+  // The web paints at z-index 99998, well above the lightbox, so without this
+  // closing an enlarged photo would fling webs across the top of it.
+  const lb = document.getElementById('media-lightbox');
+  if (lb && lb.classList.contains('show')) return;
   const S = 48;
   const ns = 'http://www.w3.org/2000/svg';
   const el = document.createElementNS(ns, 'svg');
@@ -2964,10 +3224,19 @@ function spiderSense(x, y) {
   el.addEventListener('animationend', () => el.remove(), {once:true});
 }
 
+/* The drawn arrow is the site's cursor everywhere except inside the enlarged
+   media view, where html.cursor-off hands back the machine's own. Watching a
+   clip is a "look at this" moment rather than a browsing one, and the real
+   cursor is composited by the OS so it cannot lag however busy the page is. */
+const USE_CUSTOM_CURSOR = true;
+
 /* ─── Custom cursor ────────────────────────────────────── */
 (function() {
   const cur = document.getElementById('site-cursor');
-  if (!cur || !matchMedia('(pointer:fine)').matches) return;
+  if (!cur || !USE_CUSTOM_CURSOR || !matchMedia('(pointer:fine)').matches) {
+    if (cur) cur.style.display = 'none';
+    return;
+  }
 
   /* Movement/rotation physics ported from the Originkit "Spin Cursor"
      component (https://www.originkit.dev/components/spin-cursor) — the
@@ -2998,14 +3267,40 @@ function spiderSense(x, y) {
   let x = targetX, y = targetY;
   let vx = 0, vy = 0, angle = 0, seen = false;
   let last = performance.now();
+  let lastMoveT = last;   // timestamp of the previous pointermove, for velocity
 
-  document.addEventListener('mousemove', e => {
+  // Position is written here, straight off the pointer event, rather than
+  // waiting for the next animation frame. The arrow already tracked the
+  // pointer exactly, but only ever moved inside frame() — so every hitch on
+  // the main thread showed up as the cursor falling behind the real one,
+  // which a native cursor never does because the OS draws it. Painting on the
+  // event puts it back at input rate; frame() is left to ease the rotation
+  // and stretch, which are the parts that actually want smoothing.
+  document.addEventListener('pointermove', e => {
+    // Suspended while the enlarged media view is open, which is the one place
+    // the real cursor is wanted. Bailing here rather than in paint() is what
+    // stops pf-cursor-on being re-added on the next move and hiding it again.
+    if (document.documentElement.classList.contains('cursor-off')) return;
     document.documentElement.classList.add('pf-cursor-on');
-    targetX = e.clientX;
-    targetY = e.clientY;
-    if (!seen) { x = targetX; y = targetY; seen = true; }
+    const nx = e.clientX, ny = e.clientY;
+    if (!seen) { x = nx; y = ny; lastMoveT = e.timeStamp || performance.now(); seen = true; }
+    // Velocity is measured here too. It used to be derived in frame() from how
+    // far x had moved since the previous frame, but x is set on this event
+    // now, so by the time frame() ran the difference was always zero — the
+    // arrow stopped turning to face its direction and stopped stretching.
+    const t = e.timeStamp || performance.now();
+    const dt = Math.min(0.05, Math.max(0.001, (t - lastMoveT) / 1000));
+    lastMoveT = t;
+    const vEase = 1 - Math.exp(-dt / VELOCITY_TAU);
+    vx += ((nx - x) / dt - vx) * vEase;
+    vy += ((ny - y) / dt - vy) * vEase;
+    x = nx; y = ny;
+    targetX = nx; targetY = ny;
     cur.style.opacity = '1';
-  });
+    orient(dt);
+    paint();
+    kick();
+  }, { passive: true });
   document.addEventListener('mouseleave', () => {
     document.documentElement.classList.remove('pf-cursor-on');
     cur.style.opacity = '0';
@@ -3024,39 +3319,57 @@ function spiderSense(x, y) {
   });
   document.addEventListener('mouseup', () => cur.classList.remove('pressing'));
 
-  function frame(now) {
-    // Clamp dt so a backgrounded tab does not fling the cursor.
-    const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
-    last = now;
+  // Rotation and stretch live out here so the pointer handler can repaint
+  // with whatever the last eased values were.
+  let squash = 1, stretch = 1;
 
-    const prevX = x, prevY = y;
-    // Position tracks the pointer exactly: the arrow tip has to sit on the
-    // real click point. The smoothed velocity below still drives the
-    // rotation and the stretch, so the spin survives without the lag.
-    x = targetX;
-    y = targetY;
-
-    if (dt > 0) {
-      const vEase = 1 - Math.exp(-dt / VELOCITY_TAU);
-      vx += ((x - prevX) / dt - vx) * vEase;
-      vy += ((y - prevY) / dt - vy) * vEase;
-    }
-
+  /* Turn the arrow to face the way it is travelling and stretch it with the
+     speed. Called from the pointer event as well as the frame loop, so the
+     turn happens at input rate alongside the movement rather than waiting for
+     the next frame — the loop is then only easing it back to rest. */
+  function orient(dt) {
     const speed = Math.hypot(vx, vy);
     if (speed > 40) {
       const target = Math.atan2(vy, vx) - ARROW_REST;
       angle += angleDelta(angle, target) * (1 - Math.exp(-dt / 0.06));
     }
-
-    const stretch = 1 + Math.min(speed / 3000, 0.35);
-    const squash = 1 / Math.sqrt(stretch);
-
-    if (seen) {
-      cur.style.transform = `translate(${x}px, ${y}px) rotate(${angle}rad) scale(${squash}, ${stretch})`;
-    }
-    requestAnimationFrame(frame);
+    stretch = 1 + Math.min(speed / 3000, 0.35);
+    squash = 1 / Math.sqrt(stretch);
+    return speed;
   }
-  requestAnimationFrame(frame);
+  function paint() {
+    if (!seen) return;
+    cur.style.transform =
+      `translate3d(${x}px, ${y}px, 0) rotate(${angle}rad) scale(${squash}, ${stretch})`;
+  }
+
+  // The loop only needs to run while there is easing left to do — a still
+  // cursor has nothing to animate, and this used to tick forever regardless.
+  let rafId = 0;
+  function kick() { if (!rafId) rafId = requestAnimationFrame(frame); }
+
+  function frame(now) {
+    rafId = 0;
+    // Clamp dt so a backgrounded tab does not fling the cursor.
+    const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+    last = now;
+
+    // Position is already where the pointer is — the event set it, so the tip
+    // sits exactly on the click point. This loop only lets the velocity fall
+    // back to rest, which is what swings the arrow back and unstretches it
+    // once the pointer stops.
+    if (dt > 0) {
+      const vEase = 1 - Math.exp(-dt / VELOCITY_TAU);
+      vx += (0 - vx) * vEase;
+      vy += (0 - vy) * vEase;
+    }
+
+    const speed = orient(dt);
+    paint();
+    // Keep going only while the velocity-driven bits are still settling.
+    if (speed > 1 || stretch > 1.001) kick();
+  }
+  kick();
 })();
 
 /* ─── Web-shooter sound — original mp3 embedded as base64 (no network request, IDM cannot grab it) ── */
@@ -3350,6 +3663,14 @@ function layoutBlockGrid(list) {
 function relayoutBlockGrid() {
   const list = document.getElementById('block-list');
   if (!list) return;
+  const bentoProj = PROJECTS[activeKey];
+  if (isBentoBoard(bentoProj)) {
+    // Width changed, so the cell changed, so the number of cells a given
+    // paragraph needs changed with it.
+    layoutBento(list, bentoProj);
+    bentoFitText(list, bentoProj);
+    return;
+  }
   layoutBlockGrid(list);
   const proj = PROJECTS[activeKey];
   if (!proj) return;
@@ -3407,13 +3728,27 @@ function migrateBlockLayout(block) {
 }
 
 function applyBlockGrid(el, block) {
+  // Bento boards place blocks themselves; column maths has nothing to say
+  // there and would only write inline grid positions that fight it.
+  if (isBentoBoard(PROJECTS[activeKey])) return;
   const cols  = block._cols || 6;
   const cs    = block._colStart || 1;
   const align = block._align || 'left';
 
   // _colStart lives on an open-ended axis; the grid starts at the board's own
   // first column (minStart) plus however many spare columns sit on the left.
-  const m = blockGridMetrics(el.parentElement);
+  //
+  // Falls back to the list itself when the block has no parent yet:
+  // renderBlocks builds every element through makeBlockEl (which lands here)
+  // BEFORE appending it, so el.parentElement is null on first paint and
+  // blockGridMetrics answers with its no-list default of a plain 6-column
+  // frame. Any board wider than that — four across, say, which needs eight —
+  // then had its right-hand blocks clamped back inside column 6, stacking
+  // them on top of each other and pushing everything out of alignment. It
+  // only looked intermittent because relayoutBlockGrid re-applies correct
+  // metrics whenever the parent happens to resize, so the board would
+  // sometimes snap right a moment later and sometimes stay broken.
+  const m = blockGridMetrics(el.parentElement || document.getElementById('block-list'));
   let span, start;
   if (align === 'center') {
     // Spans the whole board so the media can centre across it; the real width
@@ -3878,10 +4213,15 @@ async function loadAnalytics(days, btn) {
 async function saveProject(key) {
   const proj = PROJECTS[key];
   const clean = proj.blocks.map(({ _muted, _lottieInst, ...b }) => b);
+  const data = { name: proj.name, sub: proj.sub, blocks: clean };
+  // Which layout the board uses has to travel with it: openProject re-reads
+  // the row it just saved, so a board left off here comes back as the default
+  // grid and its bento coordinates go unread.
+  if (proj.layout) data.layout = proj.layout;
   await fetch(`${API_URL}/api/projects`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ key, data: { name: proj.name, sub: proj.sub, blocks: clean } })
+    body: JSON.stringify({ key, data })
   });
 }
 
@@ -4307,6 +4647,10 @@ function renderWorkExp(items) {
   grid.addEventListener('pointercancel', endDrag);
 
   (function spin() {
+    // Nothing to spin while the home view is off screen. This kept running on
+    // every project page — rotating and writing a transform per cell, every
+    // frame, for a grid inside a display:none view.
+    if (!isHomeVisible()) { requestAnimationFrame(spin); return; }
     if (!dragging) {
       rotY += AUTO_SPEED + velY;
       rotX += velX;
@@ -4872,15 +5216,56 @@ function setProjectsListKeys(keys) {
   saveSettings();
 }
 
+/* Media the Projects list hides for a board, per board, by src.
+
+   The strip renders the board's real blocks, so "take this out of the
+   strip" used to be spliced straight out of proj.blocks — which quietly
+   deleted it from the project page too. Curating which clips a summary
+   row shows off is not the same intent as removing work from the
+   portfolio, and there was no confirm or undo between the two, so a
+   mistap on a browsing surface permanently destroyed board content.
+   Hiding is recorded here instead; the block stays exactly where it is
+   and the project page is untouched. Deleting for real still lives on
+   the board editor, where that is unambiguously what you came to do. */
+function getListHidden(key) {
+  const all = _cachedSettings && _cachedSettings.projectsListHidden;
+  const saved = all && all[key];
+  return Array.isArray(saved) ? saved.slice() : [];
+}
+
+function setListHidden(key, srcs) {
+  if (!_cachedSettings) _cachedSettings = {};
+  if (!_cachedSettings.projectsListHidden) _cachedSettings.projectsListHidden = {};
+  if (srcs.length) _cachedSettings.projectsListHidden[key] = srcs.slice();
+  else delete _cachedSettings.projectsListHidden[key];
+  saveSettings();
+}
+
+function hideMediaFromList(key, src) {
+  if (!src) return;
+  const hidden = getListHidden(key);
+  if (!hidden.includes(src)) hidden.push(src);
+  setListHidden(key, hidden);
+  // Drop the tile in place; only fall back to a rebuild if it wasn't on screen
+  // to drop (the picker can hide something in a row that isn't rendered).
+  if (!dropTileFromStrip(key, src)) refreshProjectsList();
+}
+
+function unhideMediaInList(key, src) {
+  setListHidden(key, getListHidden(key).filter(s => s !== src));
+  refreshProjectsList();
+}
+
 // The strip shows the board's actual media, so it takes video blocks too —
 // these boards are mostly video (tosan is 13 videos and no images), and an
 // images-only strip left them blank. Order is board order. Falls back to
 // the card's own thumbnail so a board with no media still shows one tile.
 function listMediaFor(key, fallbackThumb) {
   const proj = PROJECTS[key];
+  const hidden = new Set(getListHidden(key));
   const media = proj
     ? (proj.blocks || [])
-        .filter(b => (b.type === 'image' || b.type === 'video') && b.content)
+        .filter(b => (b.type === 'image' || b.type === 'video') && b.content && !hidden.has(b.content))
         .map(b => ({ id: b.id, type: b.type, src: b.content }))
     : [];
   // Every media block, not a capped preview: edit mode wraps the strip so
@@ -5101,7 +5486,9 @@ function buildProjectListItem(card) {
   // work, so the row shows the media rather than linking off to it.
   const titleRow = document.createElement('div');
   titleRow.className = 'pli-title-row';
-  titleRow.innerHTML = `<span class="pli-title">${card.name}</span>`;
+  // listTitle when the row has been given its own heading, otherwise the
+  // tile's name — see saveProjectsListEdits for why the two are separate.
+  titleRow.innerHTML = `<span class="pli-title">${card.listTitle || card.name}</span>`;
   body.appendChild(titleRow);
 
   const cat = document.createElement('div');
@@ -5131,6 +5518,9 @@ function buildProjectListItem(card) {
       // by identity — two blocks can legitimately share the same src, and
       // matching on that would confuse them for each other.
       if (m.id) tile.dataset.blockId = m.id;
+      // Hiding is keyed by src, not block id — the hidden set has to survive
+      // the board being re-saved (which can hand the same file a new block).
+      tile.dataset.src = m.src;
       tile.style.setProperty('--pli-uv', STRIP_UV_SCALE);
 
       const el = document.createElement(m.type === 'video' ? 'video' : 'img');
@@ -5160,17 +5550,19 @@ function buildProjectListItem(card) {
       }
       tile.appendChild(el);
 
-      // Edit-mode only (CSS keeps it hidden otherwise). Removes the block
-      // from the board, same as deleting it on the project page would.
+      // Edit-mode only (CSS keeps it hidden otherwise). Takes the tile out
+      // of THIS list and nothing else — the board keeps the block.
       const del = document.createElement('button');
       del.className = 'pli-tile-del';
       del.type = 'button';
       del.textContent = '×';
-      del.title = 'Remove from this project';
+      del.title = isListOwnedMedia(card.key, m.src)
+        ? 'Remove — added here, so this takes it out for good'
+        : 'Hide from this list (stays on the project page)';
       del.addEventListener('pointerdown', e => e.stopPropagation()); // don't start a reorder drag
       del.addEventListener('click', (e) => {
         e.stopPropagation();
-        removeMediaFromProject(card.key, tile.dataset.blockId);
+        removeFromProjectsList(card.key, tile.dataset.src);
       });
       tile.appendChild(del);
 
@@ -5301,15 +5693,21 @@ function openProjectRowPicker() {
 }
 
 /* A brand-new board, created from the Projects list rather than the grid.
-   It has to exist in settings.sections too, otherwise the list would have
-   a key with no card behind it and simply skip the row. */
+
+   The card still has to exist in settings.sections — the row is built from
+   one, and a list key with no card behind it is simply skipped — but it is
+   created hidden, so adding a project to this list doesn't also plant an
+   empty placeholder card in the home grid, which is not what "add a project
+   row" asked for. .proj-card[data-hidden] is display:none on the grid and
+   only shows (dimmed) in home edit mode, so it stays available to unhide
+   there if it should appear in the grid later. */
 function createEmptyProjectRow() {
   if (!_cachedSettings) _cachedSettings = {};
   if (!Array.isArray(_cachedSettings.sections) || !_cachedSettings.sections.length) {
     _cachedSettings.sections = [{ title: 'Projects', cards: [] }];
   }
   const key = 'card-' + uid();
-  const card = { key, name: 'New Project', sub: '' };
+  const card = { key, name: 'New Project', sub: '', hidden: true };
 
   // Into the last section, which is where the grid's own "+" adds cards.
   _cachedSettings.sections[_cachedSettings.sections.length - 1].cards.push(card);
@@ -5471,17 +5869,67 @@ function refreshProjectsList() {
   if (!_lastHomeSections) return;
   const y = window.scrollY;
   renderHomeSections(_lastHomeSections);
+  // Restored synchronously as well as on the next frame. Rebuilding the list
+  // empties the container, so the page is briefly short and the scroll gets
+  // clamped; waiting for the frame to put it back meant one painted frame at
+  // the wrong offset, which is the flick you see on every edit. Doing it now
+  // closes that gap, and the deferred one still corrects for content that
+  // only reaches its final height once media has loaded.
+  window.scrollTo(0, y);
   requestAnimationFrame(() => window.scrollTo(0, y));
 }
 
-function removeMediaFromProject(key, blockId) {
+/* Take a tile out of the rendered strip without rebuilding the list.
+
+   Removing one tile does not need the whole home view thrown away and
+   recreated — that is what makes a removal feel like the page jumps, and it
+   also restarts every video in every other row. Matching on src because that
+   is what the hidden set is keyed by. */
+function dropTileFromStrip(key, src) {
+  const row = document.querySelector('.proj-list-item[data-key="' + key + '"]');
+  if (!row) return false;
+  const tiles = [...row.querySelectorAll('.pli-tile')].filter(t => t.dataset.src === src);
+  if (!tiles.length) return false;
+  tiles.forEach(t => t.remove());
+  return true;
+}
+
+/* Taking a tile out of a Projects-list row.
+
+   What that should mean depends on where the block came from, which is
+   why addMediaToProject stamps _fromList on the ones it creates:
+
+   - Media that belongs to the board (added on the project page) is only
+     hidden. It's someone else's work on another surface; a curation
+     click here must not reach into the board and delete it.
+   - Media added through this list only exists because of this list, so
+     taking it out here removes it outright — leaving an invisible block
+     behind on the board would be its own surprise.
+
+   Matching on the block object rather than filtering by src, because
+   two blocks may legitimately hold the same file and only the one this
+   tile stands for should go. */
+function removeFromProjectsList(key, src) {
   const proj = PROJECTS[key];
-  if (!proj || !proj.blocks || !blockId) return;
-  const i = proj.blocks.findIndex(b => b.id === blockId);
-  if (i < 0) return;
-  proj.blocks.splice(i, 1);
+  const block = ((proj && proj.blocks) || [])
+    .find(b => b.content === src && (b.type === 'image' || b.type === 'video'));
+  if (!block || !block._fromList) { hideMediaFromList(key, src); return; }
+  proj.blocks = proj.blocks.filter(b => b !== block);
   saveProject(key);
-  refreshProjectsList();
+  // Drop any hide left over from before it was re-added, so the entry
+  // can't linger and suppress the file if it's picked back in later.
+  const hidden = getListHidden(key);
+  if (hidden.includes(src)) setListHidden(key, hidden.filter(s => s !== src));
+  if (!dropTileFromStrip(key, src)) refreshProjectsList();
+}
+
+// True when taking this file out of the row would delete it rather than
+// just hide it — used to label the × honestly per tile.
+function isListOwnedMedia(key, src) {
+  const proj = PROJECTS[key];
+  const block = ((proj && proj.blocks) || [])
+    .find(b => b.content === src && (b.type === 'image' || b.type === 'video'));
+  return !!(block && block._fromList);
 }
 
 function addMediaToProject(key, media, atIndex) {
@@ -5490,7 +5938,9 @@ function addMediaToProject(key, media, atIndex) {
   if (!proj.blocks) proj.blocks = [];
   // A fresh id per placement: the same file can sit in several projects,
   // and reordering matches tiles to blocks by id.
-  const block = { id: uid(), type: media.type, content: media.src };
+  // _fromList marks it as this list's own, so removing it here removes it
+  // for real instead of hiding a block the board never asked for.
+  const block = { id: uid(), type: media.type, content: media.src, _fromList: true };
   if (media.aspect) block._freeAspect = media.aspect;
   if (typeof atIndex === 'number' && atIndex >= 0 && atIndex <= proj.blocks.length) {
     proj.blocks.splice(atIndex, 0, block);
@@ -5562,8 +6012,12 @@ async function renderMediaPicker() {
   const sub  = document.getElementById('mp-sub');
   if (!key || !grid) return;
 
+  // Ticked means "showing in this list", not merely "exists on the board" —
+  // a hidden block is still on the project page, so ticking it back on has
+  // to be offered rather than looking like it was never there.
+  const listHidden = new Set(getListHidden(key));
   const inProject = new Set((PROJECTS[key]?.blocks || [])
-    .filter(b => (b.type === 'image' || b.type === 'video') && b.content)
+    .filter(b => (b.type === 'image' || b.type === 'video') && b.content && !listHidden.has(b.content))
     .map(b => b.content));
   const all = await loadSiteMedia();
   if (_mpKey !== key) return;   // picker moved on while the listing loaded
@@ -5577,7 +6031,7 @@ async function renderMediaPicker() {
     return;
   }
 
-  all.forEach(m => {
+  function makeTile(m) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'mp-item' + (inProject.has(m.src) ? ' in-project' : '');
@@ -5603,12 +6057,71 @@ async function renderMediaPicker() {
     btn.addEventListener('click', () => {
       const proj = PROJECTS[key];
       const existing = (proj.blocks || []).find(b => b.content === m.src && (b.type === 'image' || b.type === 'video'));
-      if (existing) removeMediaFromProject(key, existing.id);
+      const isHidden = getListHidden(key).includes(m.src);
+      // Unticking hides a board's own media and removes what this list added
+      // itself — see removeFromProjectsList. Either way a board block that
+      // predates this list is never deleted from here.
+      if (existing && !isHidden) removeFromProjectsList(key, m.src);
+      else if (existing) unhideMediaInList(key, m.src);
       else { addMediaToProject(key, m); refreshProjectsList(); }
       renderMediaPicker();
     });
-    grid.appendChild(btn);
-  });
+    return btn;
+  }
+
+  // Split so this project's own media isn't lost in the hundred-plus
+  // files every other project has ever uploaded — the flat list made it
+  // hard to tell "belongs here" from "everything that's ever existed".
+  const mine = all.filter(m => inProject.has(m.src));
+  const rest = all.filter(m => !inProject.has(m.src));
+
+  if (mine.length) {
+    const label = document.createElement('div');
+    label.className = 'mp-group-label';
+    label.textContent = `In this project (${mine.length})`;
+    grid.appendChild(label);
+    mine.forEach(m => grid.appendChild(makeTile(m)));
+  }
+  if (rest.length) {
+    // "All media" on its own was still one undifferentiated wall of every
+    // file any project has ever used — fine once a project already has a
+    // few of its own tiles up top, useless for a brand-new empty board,
+    // which is exactly when picking the right file out of a hundred
+    // unrelated ones matters most. Group by whichever other project
+    // already uses each file (first one found wins — a file reused across
+    // several only needs one home for browsing purposes), backups
+    // excluded since they're history, not a real place to browse from.
+    const ownerOf = new Map();
+    for (const k in PROJECTS) {
+      if (k === key || /^zz_backup/.test(k)) continue;
+      (PROJECTS[k].blocks || []).forEach(b => {
+        if ((b.type === 'image' || b.type === 'video') && b.content && !ownerOf.has(b.content)) {
+          ownerOf.set(b.content, PROJECTS[k].name || k);
+        }
+      });
+    }
+    const groups = new Map(); // owner name -> media[], insertion order
+    rest.forEach(m => {
+      const owner = ownerOf.get(m.src) || 'Unused uploads';
+      if (!groups.has(owner)) groups.set(owner, []);
+      groups.get(owner).push(m);
+    });
+    const ownerNames = [...groups.keys()].filter(n => n !== 'Unused uploads').sort();
+    if (groups.has('Unused uploads')) ownerNames.push('Unused uploads');
+
+    const allLabel = document.createElement('div');
+    allLabel.className = 'mp-group-label';
+    allLabel.textContent = mine.length ? 'All media' : 'All media — tap to add';
+    grid.appendChild(allLabel);
+
+    ownerNames.forEach(owner => {
+      const sub = document.createElement('div');
+      sub.className = 'mp-group-label mp-group-label-sub';
+      sub.textContent = `${owner} (${groups.get(owner).length})`;
+      grid.appendChild(sub);
+      groups.get(owner).forEach(m => grid.appendChild(makeTile(m)));
+    });
+  }
 
   mountMediaPickerPreviews(grid);
 }
@@ -5736,13 +6249,17 @@ function saveProjectsListEdits() {
       if (v) card[k] = v; else delete card[k];
     });
 
-    // The name is the board's, not just this row's, so it goes to the card
-    // and the board together — the grid reads the same value.
+    // The row's heading is the row's own, kept apart from card.name. It used
+    // to write straight into the card and the board, so renaming a row here
+    // silently renamed the grid tile and the board with it — "Logo Motion"
+    // became "Chillix" on the home page because that is what the write-up
+    // called it. A row can describe the work differently from the tile that
+    // links to it; only listTitle moves.
     const name = item.querySelector('.pli-title')?.textContent.trim();
-    if (name && name !== card.name) {
-      card.name = name;
-      if (PROJECTS[key]) { PROJECTS[key].name = name; saveProject(key); }
-      syncProjectTitleToHome(key, name, card.sub);
+    const shownTitle = card.listTitle || card.name;
+    if (name && name !== shownTitle) {
+      if (name === card.name) delete card.listTitle;   // back in step, drop the override
+      else card.listTitle = name;
       changed = true;
     }
   });
@@ -5815,8 +6332,15 @@ function setupStripVideos() {
     entries.forEach(entry => {
       const v = entry.target;
       if (entry.isIntersecting) {
-        if (!v.getAttribute('src') && v.dataset.lazySrc) v.src = v.dataset.lazySrc;
-        const p = v.play(); if (p && p.catch) p.catch(() => {});
+        // Same as the boards: paint one frame rather than stream the clip.
+        // This page is the worst case for it — the strips pull media from
+        // every listed project onto a single page, so scrolling it once used
+        // to start dozens of videos from boards you never opened.
+        if (!v.getAttribute('src') && v.dataset.lazySrc) {
+          v.preload = 'metadata';
+          v.src = v.dataset.lazySrc + '#t=0.1';
+        }
+        if (AUTOPLAY_TILES) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
       } else {
         v.pause();
       }
@@ -6002,6 +6526,9 @@ function showView(toId, anim) {
   to.classList.remove('enter-r','enter-l','enter-fade','enter-project');
   to.classList.add('active', anim);
   to.scrollTop = 0;
+  // The new view starts at the top, and resetting scrollTop fires no event,
+  // so the arrow has to be told rather than waiting to be scrolled.
+  if (typeof syncScrollTopBtn === 'function') syncScrollTopBtn();
   setTimeout(() => to.classList.remove(anim), 400);
 
   // Replay the spider's drop-in whenever home becomes the active view
@@ -6120,7 +6647,12 @@ async function openProject(key) {
     const res  = await fetch(`${API_URL}/api/projects`, { cache: 'no-store' });
     const rows = await res.json();
     const row  = Array.isArray(rows) ? rows.find(r => r.key === key) : null;
-    if (row?.data?.blocks) PROJECTS[key].blocks = row.data.blocks;
+    if (row?.data?.blocks) {
+      PROJECTS[key].blocks = row.data.blocks;
+      // Carried over with the blocks, since the coordinates on them are only
+      // meaningful to whichever layout the board was saved in.
+      PROJECTS[key].layout = row.data.layout;
+    }
   } catch(e) {}
   const p = PROJECTS[key];
   document.getElementById('d-title').textContent = p.name || '';
@@ -6138,37 +6670,105 @@ function closeProject() {
   showView(prevMain, 'enter-l');
 }
 
+/* Tiles paint a still and play on hover, rather than every visible clip
+   streaming on its own. A board of fifteen multi-megabyte videos autoplaying
+   costs tens of megabytes on every visit, which is what exhausted the Blob
+   store's monthly transfer allowance and had it blocked outright. Flip to
+   true to go back to autoplaying tiles. */
+const AUTOPLAY_TILES = false;
+
 let _revealObs = null;
 let _videoObs = null;
+let _videoPlayObs = null;
 let _audioObs = null;
 
 function teardownScrollReveal() {
   if (_revealObs) { _revealObs.disconnect(); _revealObs = null; }
   if (_videoObs) { _videoObs.disconnect(); _videoObs = null; }
+  if (_videoPlayObs) { _videoPlayObs.disconnect(); _videoPlayObs = null; }
   if (_audioObs) { _audioObs.disconnect(); _audioObs = null; }
 }
 
 // Lazy-load videos: only set src (= start downloading) when a block nears the
 // viewport, and pause when it leaves. rootMargin ~one screen ahead so playback
 // is ready by the time the user scrolls to it. Big Supabase egress saver.
+/* Two observers, because fetching a video and decoding one cost very
+   different amounts.
+
+   Attaching the source early is cheap and worth doing well before a clip
+   scrolls in, so that keeps the generous 700px buffer. Playing is not: every
+   playing video is a live decode competing for the main thread, and with one
+   buffer doing both jobs a board like lina had everything within 700px above
+   AND below the viewport decoding at once — easily a dozen clips for a screen
+   that can show three. That is what makes the whole page, cursor included,
+   feel like it is dragging. Playback now follows the actual viewport, so only
+   what you can nearly see is decoding. */
 function setupLazyVideos() {
   if (_videoObs) { _videoObs.disconnect(); _videoObs = null; }
+  if (_videoPlayObs) { _videoPlayObs.disconnect(); _videoPlayObs = null; }
   const viewEl = document.getElementById('view-project');
   const vids = document.querySelectorAll('#block-list video[data-lazy-src]');
   if (!vids.length) return;
+
   _videoObs = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       const v = entry.target;
-      if (entry.isIntersecting) {
-        if (!v.getAttribute('src') && v.dataset.lazySrc) v.src = v.dataset.lazySrc;
-        const p = v.play(); if (p && p.catch) p.catch(() => {});
-      } else {
-        v.pause(); // keeps src/cache — never re-downloads, just stops playback
+      if (entry.isIntersecting && !v.getAttribute('src') && v.dataset.lazySrc) {
+        v.src = v.dataset.lazySrc;
       }
     });
   }, { root: viewEl, rootMargin: '700px 0px 700px 0px', threshold: 0.01 });
-  vids.forEach(v => _videoObs.observe(v));
+
+  _videoPlayObs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const v = entry.target;
+      // Left where it is while on loan to the lightbox: its rect is the
+      // enlarged one, and pausing it there would stop the clip being watched.
+      if (v.closest('#ml-stage')) return;
+      if (entry.isIntersecting) {
+        if (!v.getAttribute('src') && v.dataset.lazySrc) {
+          // #t=0.1 makes the browser seek to and paint one frame. With
+          // preload="metadata" that is a range request for the file's header
+          // and a little of the first frame — a few hundred KB — instead of
+          // streaming the whole clip, which is what a board full of
+          // autoplaying video costs on every single visit.
+          v.preload = 'metadata';
+          v.src = v.dataset.lazySrc + '#t=0.1';
+        }
+        if (AUTOPLAY_TILES) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
+      } else {
+        v.pause();   // keeps src/cache — never re-downloads, just stops decoding
+      }
+    });
+  }, { root: viewEl, rootMargin: '120px 0px 120px 0px', threshold: 0.01 });
+
+  vids.forEach(v => { _videoObs.observe(v); _videoPlayObs.observe(v); });
 }
+
+/* Play a tile while the pointer is on it, since they no longer autoplay.
+   Delegated once on the document rather than bound per tile, so it covers
+   board media and Projects-list tiles alike and survives every re-render.
+   Touch has no hover: there, tapping opens the enlarged view, which plays. */
+(function () {
+  if (AUTOPLAY_TILES) return;
+  const vidIn = el => el && el.querySelector && el.querySelector('video');
+  document.addEventListener('pointerover', (e) => {
+    if (!e.target.closest) return;
+    const host = e.target.closest('#block-list .media-inner, .pli-tile');
+    const v = vidIn(host);
+    if (!v || v.closest('#ml-stage')) return;
+    if (!v.getAttribute('src') && v.dataset.lazySrc) v.src = v.dataset.lazySrc;
+    const p = v.play(); if (p && p.catch) p.catch(() => {});
+  });
+  document.addEventListener('pointerout', (e) => {
+    if (!e.target.closest) return;
+    const host = e.target.closest('#block-list .media-inner, .pli-tile');
+    if (!host || (e.relatedTarget && host.contains(e.relatedTarget))) return;
+    const v = vidIn(host);
+    if (!v || v.closest('#ml-stage')) return;
+    v.pause();
+  });
+})();
 
 // Separate from setupLazyVideos on purpose: that observer's 700px rootMargin
 // is a preload buffer, so a video is still "intersecting" (and playing) long
@@ -6711,8 +7311,316 @@ function saveHomeEdits() {
   saveSettings();
 }
 
+/* ─── Bento board layout ──────────────────────────────────
+   A per-board alternative to the six-column masonry grid, modelled on the
+   reference site's arrangement: four equal square cells across, a wide gap
+   between them, and every block occupying a whole number of cells. Blocks
+   carry _bx/_by/_bw/_bh in cell units; nothing here reads _cols/_colStart,
+   so a board can be switched back and forth without losing either.
+
+   Measured off the reference: 4 columns, 80px cells, 35px gaps. The gap is
+   kept as a ratio of the cell rather than those literal pixels so the whole
+   arrangement scales with the site-width slider instead of only looking
+   right at one shell size. ── */
+const BENTO_COLS = 4;
+// Half the reference's 35/80 — its spacing reads as too airy at this board's
+// width. Still a ratio of the cell rather than a pixel value, so it holds at
+// any site width. Halving the gap widens the cell (the row still fills the
+// board), so blocks grow a few percent as a side effect.
+const BENTO_GAP_RATIO = 35 / 160;
+// Rows sit tighter than columns. A single gap value looked balanced on paper
+// but not on the page: side by side the gap reads as deliberate separation,
+// stacked it just reads as a hole, and a board scrolled vertically shows that
+// far more often than it shows the horizontal one.
+const BENTO_ROW_GAP_RATIO = BENTO_GAP_RATIO / 2;
+// Floor for a freehand resize, in px rather than cell units: a cell-unit
+// floor is a different real size at every board width, and a small enough
+// fraction resolves to a few pixels — a block dragged down to that is
+// impossible to grab again.
+const BENTO_MIN_PX = 44;
+
+function isBentoBoard(proj) { return !!(proj && proj.layout === 'bento'); }
+
+function bentoMetrics(list) {
+  const W = (list && list.clientWidth) || 496;
+  // W = cols*cell + (cols-1)*gapX, with gapX = cell*ratio
+  const cell = W / (BENTO_COLS + (BENTO_COLS - 1) * BENTO_GAP_RATIO);
+  const gapX = cell * BENTO_GAP_RATIO;
+  const gapY = cell * BENTO_ROW_GAP_RATIO;
+  return { cell, gapX, gapY, pitchX: cell + gapX, pitchY: cell + gapY };
+}
+
+// n cells span n*cell plus the gaps between them — which is (n-1) of them.
+function bentoSpanX(n, m) { return n * m.cell + (n - 1) * m.gapX; }
+function bentoSpanY(n, m) { return n * m.cell + (n - 1) * m.gapY; }
+
+function bentoHits(a, b) {
+  return !(a._bx + a._bw <= b._bx || a._bx >= b._bx + b._bw ||
+           a._by + a._bh <= b._by || a._by >= b._by + b._bh);
+}
+
+/* Resolve overlaps around `pinned` (the block under the pointer, which stays
+   exactly where the gesture put it) by pushing whatever it lands on downward.
+
+   Deliberately never pulls a block upward. Gravity looks tidy in the abstract
+   but it fights the author: leave a deliberate gap beside a tile and the next
+   block slides into it, and shrinking a block has the one below jump up to
+   take the space you just made. The reference board keeps its holes, so this
+   does too — a block only ever moves because something was actually dropped
+   on top of it. */
+function bentoResolve(blocks, pinned) {
+  const placed = pinned ? [pinned] : [];
+  blocks.filter(b => b !== pinned)
+        .sort((a, b) => a._by - b._by || a._bx - b._bx)
+        .forEach(b => {
+          // Moved to just clear of whatever it hit rather than nudged down a
+          // cell at a time: sizes are free-form, so the thing in the way is
+          // rarely a whole number of cells tall and stepping would either
+          // stop short or overshoot into a gap.
+          let guard = 0;
+          for (;;) {
+            const hit = placed.find(p => bentoHits(b, p));
+            if (!hit || guard++ > 300) break;
+            b._by = hit._by + hit._bh;
+          }
+          placed.push(b);
+        });
+}
+
+/* Positions as they were when the gesture began. Each pointermove restores
+   this before resolving, so a block shoved aside mid-drag returns once the
+   pointer moves off it — without it the pushes accumulate and the board
+   creeps downward over one long drag. */
+function bentoSnapshot(blocks) {
+  return blocks.map(b => ({ b, x: b._bx, y: b._by, w: b._bw, h: b._bh }));
+}
+function bentoRestore(snap, except) {
+  snap.forEach(s => { if (s.b !== except) { s.b._bx = s.x; s.b._by = s.y; } });
+}
+
+/* First-time coordinates for a board that has never been laid out as bento.
+   Width comes from the block's six-column span, height from the media's own
+   aspect ratio so a portrait clip stays portrait, then each block drops into
+   the first slot it fits scanning left-to-right, top-to-bottom. */
+function bentoAutoPlace(blocks) {
+  const placed = [];
+  blocks.forEach(b => {
+    if (b._bw && b._bh) { placed.push(b); return; }
+    const cols6 = b._cols || 6;
+    // Media caps at half the board. Mapping the old six-column spans straight
+    // across turned every full-width block into a four-cell slab, which is
+    // what made a converted board so much bigger than the reference's — there
+    // the tiles are mostly one and two cells. Anything wider is a deliberate
+    // choice to make with the grip, not a default to inherit.
+    let w = Math.max(1, Math.min(2, Math.round(cols6 / 6 * BENTO_COLS)));
+    let h;
+    if (b.type === 'text' || b.type === 'divider') {
+      // Both span the board as they did on the old grid — a divider centres
+      // its star across the full width, and text reads badly narrow. The
+      // height here is only a starting guess; bentoFitText measures the real
+      // one as soon as it has rendered.
+      w = BENTO_COLS;
+      h = b.type === 'divider' ? 0.5 : 2;
+    } else {
+      const aspect = b._freeAspect || 1;             // stored as width / height
+      h = Math.max(1, Math.min(3, Math.round(w / aspect)));
+    }
+    b._bw = w; b._bh = h;
+    // Scan for the first position that clears everything already placed.
+    outer:
+    for (let y = 0; ; y++) {
+      for (let x = 0; x + w <= BENTO_COLS; x++) {
+        b._bx = x; b._by = y;
+        if (!placed.some(p => bentoHits(b, p))) break outer;
+      }
+    }
+    placed.push(b);
+  });
+  bentoResolve(blocks, null);
+}
+
+function layoutBento(list, proj) {
+  if (!list || !proj) return;
+  const m = bentoMetrics(list);
+  let rows = 0;
+  proj.blocks.forEach(b => {
+    const el = list.querySelector('.block[data-id="' + b.id + '"]');
+    if (el) {
+      el.style.left   = (b._bx * m.pitchX) + 'px';
+      el.style.top    = (b._by * m.pitchY) + 'px';
+      el.style.width  = bentoSpanX(b._bw, m) + 'px';
+      el.style.height = bentoSpanY(b._bh, m) + 'px';
+    }
+    rows = Math.max(rows, b._by + b._bh);
+  });
+  list.style.height = rows ? (rows * m.pitchY - m.gapY) + 'px' : '';
+}
+
+/* Text can't be guessed at in whole cells the way a photo can — a caption and
+   three paragraphs want very different boxes — so text blocks are measured
+   once they've actually rendered and grown to whatever they need. Runs after
+   layout, and only re-lays out if something actually changed. */
+function bentoFitText(list, proj) {
+  const m = bentoMetrics(list);
+  let changed = false;
+  proj.blocks.forEach(b => {
+    // Text and the star divider keep the presentation they had on the old
+    // grid — full width, height from their own content — rather than being
+    // squared off into cells like media. (_bFixedH is still honoured for any
+    // board saved while these were briefly resizable.)
+    if ((b.type !== 'text' && b.type !== 'divider') || b._bFixedH) return;
+    const el = list.querySelector('.block[data-id="' + b.id + '"]');
+    if (!el) return;
+    const inner = el.querySelector('.block-text') || el.firstElementChild || el;
+    const content = Math.max(inner.scrollHeight, inner.getBoundingClientRect().height);
+    if (!content) return;
+    // Fractional, not whole cells: rounding a one-line caption or a divider up
+    // to a full cell is most of where the empty space above and below them
+    // came from.
+    const need = Math.max(0.2, Math.round(((content + m.gapY) / m.pitchY) * 1000) / 1000);
+    if (Math.abs(need - b._bh) > 0.01) { b._bh = need; changed = true; }
+  });
+  if (changed) { bentoResolve(proj.blocks, null); layoutBento(list, proj); }
+}
+
+/* Drag a block the way a phone home screen moves an icon: pick it up, it
+   follows the finger, and everything else slides out of the way and closes
+   the gap behind it. The dragged block is positioned straight from the
+   pointer while held, and only snaps to cells on release. */
+/* Every block gets a corner grip, so a photo, a caption and a divider are all
+   resized the same way — in whole cells, which is the only size a bento block
+   can be. It's a bare dot; the shape is the affordance, an icon at 14px would
+   only be noise. */
+function addBentoResizeHandle(el) {
+  if (el.querySelector(':scope > .bento-resize')) return;
+  const g = document.createElement('button');
+  g.className = 'bento-resize';
+  g.type = 'button';
+  g.title = 'Resize';
+  el.appendChild(g);
+}
+
+function wireBentoDrag(list) {
+  if (list._bentoWired) return;
+  list._bentoWired = true;
+  let d = null;
+  let rz = null;
+
+  list.addEventListener('pointerdown', (e) => {
+    const proj = PROJECTS[activeKey];
+    if (typeof editMode === 'undefined' || !editMode || !isBentoBoard(proj)) return;
+    // Resize takes precedence over drag — the grip sits inside the block, so
+    // without this a pull on it would pick the whole block up instead.
+    const grip = e.target.closest('.bento-resize');
+    if (grip) {
+      const el = grip.closest('.block');
+      const b = proj.blocks.find(x => x.id === el.dataset.id);
+      if (!b) return;
+      // No cached corner: the block's own rect is a viewport coordinate, and
+      // resizing changes the board's height, which can scroll the view out
+      // from under it. A stale origin then reads the pointer as being far
+      // below the block and a shrink comes out as a huge block instead.
+      // Deriving the corner from the list's live rect plus the block's grid
+      // position each move is immune to both.
+      rz = { el, b, proj, m: bentoMetrics(list), snap: bentoSnapshot(proj.blocks) };
+      el.classList.add('bento-sizing');
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    if (e.target.closest('button, a, input, [contenteditable], .resize-corner')) return;
+    const el = e.target.closest('.block');
+    if (!el || !list.contains(el)) return;
+    const b = proj.blocks.find(x => x.id === el.dataset.id);
+    if (!b) return;
+    const r = el.getBoundingClientRect();
+    const lr = list.getBoundingClientRect();
+    d = { el, b, proj, moved: false,
+          grabX: e.clientX - r.left, grabY: e.clientY - r.top,
+          lr, m: bentoMetrics(list), snap: bentoSnapshot(proj.blocks) };
+    e.preventDefault();
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (rz) {
+      // Free-form: the size follows the pointer exactly instead of stepping
+      // cell by cell. Sizes are kept in cell units all the same, just
+      // fractional ones, so a block still sits on the same axis as the rest
+      // and scales with the board rather than being pinned to a pixel size
+      // that only holds at one shell width. The +gap converts a pixel span
+      // back to that unit: n cells measure n*cell + (n-1)*gap.
+      const inX = px => (px + rz.m.gapX) / rz.m.pitchX;
+      const inY = px => (px + rz.m.gapY) / rz.m.pitchY;
+      const round3 = n => Math.round(n * 1000) / 1000;
+      const lr = list.getBoundingClientRect();
+      const originX = lr.left + rz.b._bx * rz.m.pitchX;
+      const originY = lr.top  + rz.b._by * rz.m.pitchY;
+      const w = round3(Math.max(inX(BENTO_MIN_PX), Math.min(BENTO_COLS - rz.b._bx,
+                inX(e.clientX - originX))));
+      const h = round3(Math.max(inY(BENTO_MIN_PX), inY(e.clientY - originY)));
+      if (w !== rz.b._bw || h !== rz.b._bh) {
+        rz.b._bw = w; rz.b._bh = h;
+        bentoRestore(rz.snap, rz.b);
+        bentoResolve(rz.proj.blocks, rz.b);
+        layoutBento(list, rz.proj);
+      }
+      return;
+    }
+    if (!d) return;
+    if (!d.moved) {
+      d.moved = true;
+      d.el.classList.add('bento-drag');
+    }
+    const x = e.clientX - d.lr.left - d.grabX;
+    const y = e.clientY - d.lr.top  - d.grabY;
+    d.el.style.left = x + 'px';
+    d.el.style.top  = y + 'px';
+    // Where it would land if dropped now — the others settle around that,
+    // not around the free-floating pixel position.
+    const nx = Math.max(0, Math.min(BENTO_COLS - d.b._bw, Math.round(x / d.m.pitchX)));
+    const ny = Math.max(0, Math.round(y / d.m.pitchY));
+    if (nx !== d.b._bx || ny !== d.b._by) {
+      d.b._bx = nx; d.b._by = ny;
+      bentoRestore(d.snap, d.b);
+      bentoResolve(d.proj.blocks, d.b);
+      // Lay the others out, leaving the dragged one under the pointer.
+      const held = { left: d.el.style.left, top: d.el.style.top };
+      layoutBento(list, d.proj);
+      d.el.style.left = held.left; d.el.style.top = held.top;
+    }
+  });
+
+  window.addEventListener('pointerup', () => {
+    if (rz) {
+      const done = rz;
+      rz = null;
+      done.el.classList.remove('bento-sizing');
+      // Left exactly as sized. Nothing is pulled up to close the space a
+      // shrunk block just freed — that gap is the point of resizing.
+      bentoResolve(done.proj.blocks, done.b);
+      layoutBento(list, done.proj);
+      // A text block that was hand-sized keeps that size; refitting here
+      // would immediately undo the resize that was just made.
+      saveProject(activeKey);
+      return;
+    }
+    if (!d) return;
+    const done = d;
+    d = null;
+    done.el.classList.remove('bento-drag');
+    if (!done.moved) return;
+    // Dropped where it was let go of, holes and all.
+    bentoResolve(done.proj.blocks, done.b);
+    layoutBento(list, done.proj);
+    saveProject(activeKey);
+  });
+}
+
 /* ─── Row span for masonry layout ─────────────────────── */
 function setBlockRowSpan(el) {
+  // Bento boards position their blocks outright; a masonry row span would
+  // fight that (and the list is not a grid there at all).
+  if (isBentoBoard(PROJECTS[activeKey])) return;
   const h = el.offsetHeight;
   if (!h) return;
   el.style.gridRow = 'span ' + (h + 10);
@@ -6728,13 +7636,40 @@ function renderBlocks(animate) {
   // New board, so any centred scroll position belongs to the old one.
   delete list.dataset.scrollCentred;
   const proj = PROJECTS[activeKey];
-  // Size the grid before the blocks go in, so makeBlockEl's applyBlockGrid
-  // reads the right column offset instead of laying out against a stale one.
-  layoutBlockGrid(list);
-  proj.blocks.forEach(b => list.appendChild(makeBlockEl(b, proj)));
+  const bento = isBentoBoard(proj);
+  list.classList.toggle('bento', bento);
+  if (bento) {
+    // Give any block that has never been placed a slot before anything is
+    // measured, so the first paint is already the real arrangement.
+    bentoAutoPlace(proj.blocks);
+  } else {
+    list.style.height = '';
+    // Size the grid before the blocks go in, so makeBlockEl's applyBlockGrid
+    // reads the right column offset instead of laying out against a stale one.
+    layoutBlockGrid(list);
+  }
+  proj.blocks.forEach(b => {
+    const el = makeBlockEl(b, proj);
+    // Media only. Text and dividers span the board and take their height from
+    // their own content, so there is no size left for a grip to set — one on
+    // them would just be a control that does nothing.
+    if (bento && b.type !== 'text' && b.type !== 'divider') addBentoResizeHandle(el);
+    list.appendChild(el);
+  });
+  if (bento) { layoutBento(list, proj); wireBentoDrag(list); }
   observeBlockGridWidth(list);
 
   requestAnimationFrame(() => {
+    if (bento) {
+      bentoFitText(list, proj);
+      // Again once webfonts and media have actually settled — the first pass
+      // measures text that may still be laid out in a fallback face, which
+      // reads shorter than the real thing and leaves the block clipping it.
+      setTimeout(() => bentoFitText(list, proj), 350);
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => bentoFitText(list, proj));
+      }
+    }
     list.querySelectorAll('.block').forEach(setBlockRowSpan);
     setupLazyVideos();
     setupAudioAutoMute();
@@ -7184,7 +8119,9 @@ function makeBlockEl(block, proj) {
   applyBlockGrid(wrap, block);
 
   // Free 2D drag: left/right = column position, up/down = order
-  wrap.addEventListener('mousedown', (e) => {
+  // pointerdown, not mousedown: the same gesture then works under a finger,
+  // which is the whole point of it feeling like moving an app icon.
+  wrap.addEventListener('pointerdown', (e) => {
     if (!editMode) return;
     if (e.target.closest('button, video, [contenteditable], .resize-corner, .media-mute-btn')) return;
     e.preventDefault();
@@ -7214,6 +8151,10 @@ function startFreeDrag(e, wrap) {
   let lastAlign = block._align || 'left';
   let hasMoved  = false;
   const startX  = e.clientX, startY = e.clientY;
+  // Where in the block it was picked up, so it hangs off the pointer at the
+  // same spot rather than jumping its own corner to the cursor.
+  const grabRect = wrap.getBoundingClientRect();
+  const grabX = e.clientX - grabRect.left, grabY = e.clientY - grabRect.top;
 
   // Measured once at drag-start, not on every mousemove — the list's
   // rect (and so the column count derived from it) can't change
@@ -7243,7 +8184,12 @@ function startFreeDrag(e, wrap) {
     const relX = ev.clientX - lr.left;
 
     // ── X → column position (with center snap zone) ──────────────────────────────
-    if (Math.abs(relX - centerX) < colW * 0.75) {
+    // The zone was three quarters of a column either side of centre, which on
+    // a six-column board is a wide band right where the middle columns are:
+    // aiming a block at the middle of a row snapped it to full-width centred
+    // instead, so two blocks could never be paired up there. Narrow enough now
+    // to be a deliberate gesture rather than something you fall into.
+    if (Math.abs(relX - centerX) < colW * 0.22) {
       // Center snap zone — snap to perfect center alignment
       if (lastAlign !== 'center') {
         lastAlign = 'center';
@@ -7259,7 +8205,16 @@ function startFreeDrag(e, wrap) {
       // relX is measured from the grid's first column; convert the grid line
       // the cursor lands on back to a _colStart.
       const rawRS = Math.round((relX - (cols * colW) / 2) / colW) + 1;
-      const newCS = toCS(Math.max(1, Math.min(maxRS, rawRS)));
+      // Floored at 1 so column 1 always means the board's left edge. Without
+      // it, dropping into one of the spare columns the grid keeps on each
+      // side wrote a _colStart of 0 or less, and since the board measures its
+      // origin from the smallest _colStart on it, that silently redefined
+      // where column 1 was — every other block, still sitting at 1, jumped
+      // right by the same amount. That is what pushed a board out of
+      // alignment as soon as a row grew wide enough to drag into the spares,
+      // and it fed on itself: once the minimum went negative, toCS handed
+      // back another negative for the next block dropped at the left edge.
+      const newCS = Math.max(1, toCS(Math.max(1, Math.min(maxRS, rawRS))));
       if (newCS !== lastCS) {
         lastCS = newCS;
         block._colStart = newCS;
@@ -7281,17 +8236,43 @@ function startFreeDrag(e, wrap) {
       else list.appendChild(wrap);
     }
 
+    // Ride the pointer. Measured against the slot the block currently occupies
+    // rather than accumulated from the drag's start: the slot moves underneath
+    // it as the column and the DOM order change, and a running delta would
+    // drift away from the cursor every time that happened. Clearing the
+    // transform before measuring is what makes the rect the slot's, not the
+    // transformed box's.
+    wrap.style.transform = '';
+    const slot = wrap.getBoundingClientRect();
+    wrap.style.transform =
+      'translate(' + ((ev.clientX - grabX) - slot.left) + 'px,' +
+                     ((ev.clientY - grabY) - slot.top)  + 'px)';
+
     requestAnimationFrame(() => list.querySelectorAll('.block').forEach(setBlockRowSpan));
   }
 
   function onUp() {
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
     wrap.classList.remove('col-dragging');
+    wrap.style.transform = '';   // hand it back to its slot
 
-    // Sync proj.blocks order to DOM order
-    const newOrder = [...list.querySelectorAll('.block')].map(el => el.dataset.id);
-    proj.blocks = newOrder.map(id => proj.blocks.find(b => b.id === id)).filter(Boolean);
+    // Sync proj.blocks order to DOM order.
+    //
+    // Rebuilt from the DOM, but never *reduced* to it. This used to be a plain
+    // map-and-filter over the rendered elements, which silently dropped any
+    // block that wasn't in the DOM at that moment — and since the very next
+    // line saves, an absent block was deleted from the board for good. A block
+    // can be missing for reasons that have nothing to do with the drag (a
+    // re-render mid-gesture, a media element that never mounted), so anything
+    // not on screen keeps its old position instead of being thrown away.
+    const domIds = [...list.querySelectorAll('.block')].map(el => el.dataset.id);
+    const inDom = new Set(domIds);
+    const reordered = domIds.map(id => proj.blocks.find(b => b.id === id)).filter(Boolean);
+    proj.blocks.forEach((b, i) => {
+      if (!inDom.has(b.id)) reordered.splice(Math.min(i, reordered.length), 0, b);
+    });
+    proj.blocks = reordered;
 
     // The board's extent may have moved with this block — re-centre on it.
     relayoutBlockGrid();
@@ -7299,8 +8280,8 @@ function startFreeDrag(e, wrap) {
     if (activeKey) saveProject(activeKey);
   }
 
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
 }
 
 /* ─── Drag-to-reorder (iOS-style grid snap) ───────────── */
@@ -8676,13 +9657,23 @@ document.addEventListener('DOMContentLoaded', () => {
   handle.addEventListener('pointercancel', endDrag);
 });
 
-/* ─── Scroll-to-top ────────────────────────────────────── */
+/* ─── Scroll-to-top ──────────────────────────────────────
+   Every view scrolls in its own element, and this was wired to the project
+   one alone — so the arrow never appeared on the home page however far down
+   the Projects list ran. It follows whichever view is on screen now. */
+function activeScrollView() {
+  return document.querySelector('.view.active');
+}
+
+function syncScrollTopBtn() {
+  const btn = document.getElementById('scroll-top-btn');
+  const v = activeScrollView();
+  if (btn) btn.classList.toggle('show', !!v && v.scrollTop > 200);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  const proj = document.getElementById('view-project');
-  const btn  = document.getElementById('scroll-top-btn');
-  proj.addEventListener('scroll', () => {
-    btn.classList.toggle('show', proj.scrollTop > 200);
-  });
+  document.querySelectorAll('.view').forEach(v =>
+    v.addEventListener('scroll', syncScrollTopBtn, { passive: true }));
 });
 
 /* On phones the bottom-nav pill runs nearly edge to edge, so the
@@ -8953,6 +9944,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   var t = 0;
 
   function tick() {
+    if (!isHomeVisible()) { requestAnimationFrame(tick); return; }  // avatar is home-only
     t += 0.016;
     var idle = Math.sin(t * 0.4) * 0.006;
     vel += -angle * stiffness + idle; // spring always pulls back to center
@@ -9018,7 +10010,11 @@ let _spiderThreadLen = 0;
 // resize) just snap straight to the new length.
 let _spiderEntranceDone = false;
 
-function positionSiteSpider(animate) {
+// anchorOnly skips the thread-length assignment below — used by the
+// pendulum tick's periodic re-sync so it can keep the spider glued to
+// the M (cheap, no visible effect either way) without also stomping
+// _spiderThreadLen mid-tween and cutting the entrance animation short.
+function positionSiteSpider(animate, anchorOnly) {
   const spider = document.querySelector('.site-spider');
   const wrap = document.querySelector('.profile-header-wrap');
   const disp = document.getElementById('profileNameDisplay');
@@ -9032,6 +10028,7 @@ function positionSiteSpider(animate) {
   spider.style.left = (mRect.left + mRect.width / 2 - wrapRect.left) + 'px';
   spider.style.marginLeft = '-10px';
   spider.style.top = (mRect.top - wrapRect.top) + 'px';
+  if (anchorOnly) return;
 
   const contactRow = document.querySelector('.contact-row');
   const targetLen = contactRow
@@ -9070,6 +10067,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const disp = document.getElementById('profileNameDisplay');
   if (disp && window.ResizeObserver) new ResizeObserver(() => positionSiteSpider(true)).observe(disp);
   window.addEventListener('resize', () => positionSiteSpider(false));
+  // A font swap that lands after this (fonts.load() resolving before the
+  // browser actually repaints the real glyphs is a known gap, and a swap
+  // at the same font-size doesn't change the display box's overall size,
+  // so the ResizeObserver above won't catch it either) used to leave the
+  // spider glued to the fallback font's letter position with nothing to
+  // correct it. Superseded by the pendulum tick's own periodic re-measure
+  // below, which fixes that plus every other way this measurement can go
+  // stale (a resize mid-animation, a name edit, anything) instead of
+  // chasing each one with its own one-off trigger here.
 });
 
 /* ── Site spider pendulum physics ──────────────────────────
@@ -9120,10 +10126,29 @@ document.addEventListener('DOMContentLoaded', () => {
   let angle = 0, vel = 0;
   const damping = 0.92, stiffness = 0.02;
   let t = 0;
+  let anchorFrame = 0;
   const BODY_TOP_GAP = 17.6; // (26 - 5.2) / 26 * 22px SVG height
 
   function tick() {
+    // The spider hangs off the home header; on any other view it is inside a
+    // display:none subtree, and this was still redrawing its rope and
+    // re-measuring the name text ten times a second to place it.
+    if (!isHomeVisible()) { requestAnimationFrame(tick); return; }
     t += 0.016;
+    // Re-measuring the M anchor here rather than trusting whatever
+    // positionSiteSpider() last computed is what makes this actually
+    // self-healing: that function only runs off specific triggers
+    // (DOMContentLoaded, a ResizeObserver, fonts.ready), and every one
+    // of those is a guess at "the name text has definitely finished its
+    // real layout" that can still be wrong — a font finishing its swap
+    // a frame later than fonts.ready fired, a transform/animation still
+    // settling, anything. This tick already runs unconditionally at 60fps
+    // for the pendulum physics, so piggybacking the same cheap
+    // getBoundingClientRect reads on every 6th frame (~10/sec, plenty to
+    // read as instant) means the spider corrects itself within a sixth
+    // of a second of the name box settling wherever it actually is,
+    // instead of needing yet another one-off trigger to be right.
+    if (anchorFrame++ % 6 === 0) positionSiteSpider(false, true);
     const idle = Math.sin(t * 0.4) * 0.006;
     vel += -angle * stiffness + idle;
     vel *= damping;
@@ -10061,6 +11086,190 @@ document.addEventListener('DOMContentLoaded', () => {
     kick();
     if (activeEl) { const g = activeEl.querySelector(':scope > .media-tilt-glare'); if (g) g.style.opacity = '0'; }
   }, true);
+})();
+
+/* ── Click-to-enlarge ──────────────────────────────────────
+   Opens board media and Projects-list tiles big over a blurred page.
+   The enlarged node is a fresh element rather than the tile itself moved
+   into the overlay: the tile is mid-layout in a grid or a parallax strip
+   that measures it every frame, and lifting it out would collapse the
+   row it came from and leave the strip's shift maths reading a detached
+   element.
+
+   Videos carry their playback position across so the clip doesn't jump
+   back to zero on the way up, and inherit the tile's own sound state
+   rather than getting a controls bar: enlarging a clip is the same clip
+   seen bigger, so it should still be muted or not exactly as it was on
+   the page, and a second, differently-behaving audio surface is one more
+   thing to reason about for no gain. ── */
+(function () {
+  const box = document.getElementById('media-lightbox');
+  const stage = document.getElementById('ml-stage');
+  const closeBtn = document.getElementById('ml-close');
+  if (!box || !stage || !closeBtn) return;
+  // Videos paused for the duration of an open lightbox, to be resumed on
+  // close. The enlarged copy is a second <video> playing the same file, so
+  // without this the tile underneath keeps playing too and an unmuted clip is
+  // audibly doubled — and every other clip on the board carries on decoding
+  // behind a blur nobody can see through.
+  let paused = [];
+  // The tile's own <video> while it is on loan to the lightbox, with the
+  // placeholder standing in for it on the board.
+  let borrowed = null;
+  const muteBtn = document.getElementById('ml-mute');
+
+  // The enlarged element IS the tile's element, so muting here mutes the one
+  // on the board too — there is nothing to mirror back on close.
+  function paintMute(v) {
+    if (!v) return;
+    muteBtn.innerHTML = v.muted ? SVG_MUTED : SVG_UNMUTED;
+    muteBtn.setAttribute('aria-label', v.muted ? 'Unmute' : 'Mute');
+  }
+  if (muteBtn) muteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();                       // don't reach the close-on-backdrop
+    const v = stage.querySelector('video');
+    if (!v) return;
+    v.muted = !v.muted;
+    if (!v.muted && !v.volume) v.volume = 1;   // or unmuting is silent
+    paintMute(v);
+  });
+
+  // Matched on the wrapper rather than the img/video itself: board media is
+  // pointer-events:none (the tilt and the overlay buttons are driven from the
+  // wrapper), so the click never actually lands on the media node and a
+  // selector aimed at it matched nothing at all.
+  const HOST = '#block-list .media-inner, .pli-tile';
+  // Everything layered over the media that has its own job — mute, resize,
+  // link, duplicate, delete, the drag handle. A click on any of those is not
+  // a request to enlarge.
+  const CONTROL = 'button, a, input, label, .resize-corner';
+  let downAt = null;
+
+  function isOpen() { return box.classList.contains('show'); }
+
+  function open(src) {
+    stage.innerHTML = '';
+    let el;
+    if (src.tagName === 'VIDEO') {
+      // The tile's own element is moved up here rather than a second <video>
+      // being built on the same file. A copy meant a whole extra decode for a
+      // clip already decoding on the page, had to reload and seek before it
+      // could show anything, and left two elements playing the same audio.
+      // Moving it costs none of that and starts on the exact frame you
+      // clicked. A placeholder holds the slot open so the board doesn't
+      // reflow while it's away.
+      const holder = document.createElement('div');
+      holder.style.cssText = 'width:100%;height:100%';
+      src.parentNode.insertBefore(holder, src);
+      // The sound state is remembered because this is the board's own element:
+      // unmuting to watch a clip would otherwise leave it unmuted back on the
+      // page, still audible after the enlarged view was closed.
+      borrowed = { node: src, holder, transform: src.style.transform,
+                   muted: src.muted, volume: src.volume };
+      src.style.transform = '';
+      el = src;
+    } else {
+      el = document.createElement('img');
+      el.src = src.currentSrc || src.src;
+      el.alt = src.alt || '';
+    }
+    stage.appendChild(el);
+    // Silence and stop the rest of the board — nothing behind the blur is
+    // worth decoding, and a second clip playing under this one is audible.
+    paused = [...document.querySelectorAll('video')]
+      .filter(v => v !== el && !v.paused);
+    paused.forEach(v => v.pause());
+    if (el.tagName === 'VIDEO') {
+      // The borrowed tile may have been paused (scrolled past, or never
+      // started because it was lazy), and moving an element between parents
+      // can stop playback on its own — so start it explicitly rather than
+      // assuming it arrives playing.
+      if (!el.getAttribute('src') && el.dataset.lazySrc) el.src = el.dataset.lazySrc;
+      el.loop = true; el.playsInline = true;
+      const p = el.play(); if (p && p.catch) p.catch(() => {});
+    }
+    box.classList.toggle('has-audio', el.tagName === 'VIDEO');
+    if (el.tagName === 'VIDEO') paintMute(el);
+    // Hand the pointer back to the OS for as long as this is open.
+    document.documentElement.classList.add('cursor-off');
+    document.documentElement.classList.remove('pf-cursor-on');
+    const arrow = document.getElementById('site-cursor');
+    if (arrow) arrow.style.opacity = '0';
+    // The stage node outlives each open, so its grow-in has to be restarted
+    // by hand or only the first one ever animates.
+    stage.style.animation = 'none';
+    void stage.offsetWidth;
+    stage.style.animation = '';
+    box.classList.add('show');
+    box.setAttribute('aria-hidden', 'false');
+  }
+
+  function close() {
+    box.classList.remove('show');
+    box.setAttribute('aria-hidden', 'true');
+    box.classList.remove('has-audio');
+    // The drawn arrow takes over again on the next pointer move, which is
+    // what re-adds pf-cursor-on and fades it back in.
+    document.documentElement.classList.remove('cursor-off');
+    // Put a borrowed video back in its slot before emptying the stage, or
+    // clearing the stage would destroy the tile's own element.
+    if (borrowed) {
+      borrowed.node.style.transform = borrowed.transform || '';
+      // Handed back exactly as it was lent, sound included.
+      borrowed.node.muted = borrowed.muted;
+      borrowed.node.volume = borrowed.volume;
+      borrowed.holder.parentNode.replaceChild(borrowed.node, borrowed.holder);
+      borrowed = null;
+    }
+    stage.innerHTML = '';   // only ever a copied <img> by this point
+    // Hand the board back exactly what it was playing.
+    paused.forEach(v => { const p = v.play(); if (p && p.catch) p.catch(() => {}); });
+    paused = [];
+  }
+
+  // Pointer travel is measured rather than trusting a drag flag: the strip is
+  // drag-scrollable and a drag ends in a click event too, so without this
+  // every flick through a row would open whatever it landed on.
+  document.addEventListener('pointerdown', (e) => {
+    downAt = { x: e.clientX, y: e.clientY };
+  }, true);
+
+  document.addEventListener('click', (e) => {
+    if (isOpen()) return;
+    if (!e.target.closest) return;
+    /* Which element the click "came from" cannot be trusted here. The
+       Projects strip captures the pointer so it can be dragged to scroll, and
+       once it does, the pointerup and the click that follows are retargeted
+       to the strip itself — so a click that began on a tile arrives claiming
+       to be on .pli-media-strip, matches nothing, and was silently dropped.
+       That is why tapping a clip in the list did nothing while the same code
+       worked when the event was dispatched straight at the tile.
+
+       So: trust e.target when it already names something openable, and
+       otherwise ask what is actually under the pointer. */
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const from = e.target.closest(HOST) ? e.target : (under || e.target);
+    if (!from.closest) return;
+    if (from.closest(CONTROL)) return;
+    const host = from.closest(HOST);
+    if (!host) return;
+    // Board blocks hand their clicks to editing — selecting, dragging and the
+    // resize corners all live on them. A Projects-list tile has none of that:
+    // dragging it is a drag (caught by the travel check below) and its × is a
+    // CONTROL, so a plain click has nothing else to mean and can preview even
+    // while the list is being edited, which is exactly when you want to check
+    // what a clip is before deciding where to put it.
+    if (typeof editMode !== 'undefined' && editMode && !host.classList.contains('pli-tile')) return;
+    const media = host.querySelector('img, video');
+    if (!media) return;
+    if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 6) return;
+    e.preventDefault();
+    open(media);
+  });
+
+  box.addEventListener('click', (e) => { if (e.target === box) close(); });
+  closeBtn.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen()) close(); });
 })();
 </script>
 </body>
