@@ -5629,6 +5629,19 @@ function mountMediaPickerPreviews(grid) {
   };
 
   if (!('IntersectionObserver' in window)) { pending.forEach(load); return; }
+
+  // Whatever is already within the grid's viewport loads now rather than
+  // waiting on the observer — otherwise a sheet whose observer never fires
+  // opens as a wall of empty tiles.
+  const gr = grid.getBoundingClientRect();
+  const deferred = [];
+  pending.forEach(el => {
+    const r = el.getBoundingClientRect();
+    if (r.top < gr.bottom + 250 && r.bottom > gr.top - 250) load(el);
+    else deferred.push(el);
+  });
+  if (!deferred.length) return;
+
   _mpPreviewObs = new IntersectionObserver((entries) => {
     entries.forEach(e => {
       if (!e.isIntersecting) return;
@@ -5636,7 +5649,7 @@ function mountMediaPickerPreviews(grid) {
       _mpPreviewObs.unobserve(e.target);
     });
   }, { root: grid, rootMargin: '250px 0px', threshold: 0.01 });
-  pending.forEach(el => _mpPreviewObs.observe(el));
+  deferred.forEach(el => _mpPreviewObs.observe(el));
 }
 
 function mediaPickerUpload() {
