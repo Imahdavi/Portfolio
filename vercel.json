@@ -4,5 +4,13 @@
     { "source": "/exp", "destination": "/index.html" },
     { "source": "/soon", "destination": "/index.html" },
     { "source": "/game", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)\\.(mp4|webm|mov|png|jpg|jpeg|webp|gif|svg|ico|mp3|wav|woff|woff2|ttf)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    }
   ]
 }
