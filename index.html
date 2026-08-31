@@ -4653,10 +4653,17 @@ function renderWorkExp(items) {
     // any uncaught throw in here meant the sphere rendered its first frame
     // and then never moved again, with no visible error tying it back here.
     try {
-      // Nothing to spin while the home view is off screen. This kept running on
-      // every project page — rotating and writing a transform per cell, every
-      // frame, for a grid inside a display:none view.
-      if (!isHomeVisible()) return;
+      // Nothing to spin while the grid itself is off screen — it kept running on
+      // every other page, rotating and writing a transform per cell, every frame,
+      // for a grid inside a display:none view.
+      //
+      // Gate on the grid's OWN visibility, not on any one named view: this sphere
+      // lives in #view-exp, so the previous isHomeVisible() check had it exactly
+      // backwards — it froze the sphere whenever you were on the Experience page
+      // actually looking at it, and only animated it while Home was up and the
+      // whole thing was display:none. offsetParent is null precisely when the
+      // element or an ancestor is display:none, which is how .view hides itself.
+      if (grid.offsetParent === null) return;
       if (!dragging) {
         rotY += AUTO_SPEED + velY;
         rotX += velX;
