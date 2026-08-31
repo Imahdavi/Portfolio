@@ -4626,7 +4626,7 @@ function renderWorkExp(items) {
 
   grid.addEventListener('pointerdown', (e) => {
     dragging = true;
-    grid.setPointerCapture(e.pointerId);
+    try { grid.setPointerCapture(e.pointerId); } catch (err) { /* unsupported in some browsers — drag still works without it, just loses the mouse if it leaves the circle */ }
     grid.style.cursor = 'grabbing';
     lastX = e.clientX; lastY = e.clientY; lastT = performance.now();
     velX = 0; velY = 0;
@@ -4647,33 +4647,43 @@ function renderWorkExp(items) {
   grid.addEventListener('pointercancel', endDrag);
 
   (function spin() {
-    // Nothing to spin while the home view is off screen. This kept running on
-    // every project page — rotating and writing a transform per cell, every
-    // frame, for a grid inside a display:none view.
-    if (!isHomeVisible()) { requestAnimationFrame(spin); return; }
-    if (!dragging) {
-      rotY += AUTO_SPEED + velY;
-      rotX += velX;
-      velY *= MOMENTUM_DECAY;
-      velX *= MOMENTUM_DECAY;
-      if (Math.abs(velY) < 0.00006) velY = 0;
-      if (Math.abs(velX) < 0.00006) velX = 0;
+    // Wrapped in try/finally so one bad frame (a NaN slipping into rotY/rotX,
+    // a browser quirk on setPointerCapture, anything) can't silently kill the
+    // self-rescheduling requestAnimationFrame chain forever — before this,
+    // any uncaught throw in here meant the sphere rendered its first frame
+    // and then never moved again, with no visible error tying it back here.
+    try {
+      // Nothing to spin while the home view is off screen. This kept running on
+      // every project page — rotating and writing a transform per cell, every
+      // frame, for a grid inside a display:none view.
+      if (!isHomeVisible()) return;
+      if (!dragging) {
+        rotY += AUTO_SPEED + velY;
+        rotX += velX;
+        velY *= MOMENTUM_DECAY;
+        velX *= MOMENTUM_DECAY;
+        if (Math.abs(velY) < 0.00006) velY = 0;
+        if (Math.abs(velX) < 0.00006) velX = 0;
+      }
+      const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+      const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+      cells.forEach((cell, i) => {
+        const p = points[i];
+        const rx = p.x * cosY - p.z * sinY;
+        const rz1 = p.x * sinY + p.z * cosY;
+        const ry = p.y * cosX - rz1 * sinX;
+        const rz = p.y * sinX + rz1 * cosX;
+        const X = rx * R, Y = ry * R, Z = rz * R;
+        const scale = P / (P + Z);
+        cell.style.transform = `translate(${X.toFixed(1)}px,${Y.toFixed(1)}px) translate(-50%,-50%) scale(${scale.toFixed(3)})`;
+        cell.style.zIndex = Math.round((Z + R) * 10);
+        cell.style.opacity = Math.max(.35, Math.min(1, (scale - .58) / .55));
+      });
+    } catch (e) {
+      console.warn('[brand sphere] frame failed, still rescheduling:', e);
+    } finally {
+      requestAnimationFrame(spin);
     }
-    const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
-    const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
-    cells.forEach((cell, i) => {
-      const p = points[i];
-      const rx = p.x * cosY - p.z * sinY;
-      const rz1 = p.x * sinY + p.z * cosY;
-      const ry = p.y * cosX - rz1 * sinX;
-      const rz = p.y * sinX + rz1 * cosX;
-      const X = rx * R, Y = ry * R, Z = rz * R;
-      const scale = P / (P + Z);
-      cell.style.transform = `translate(${X.toFixed(1)}px,${Y.toFixed(1)}px) translate(-50%,-50%) scale(${scale.toFixed(3)})`;
-      cell.style.zIndex = Math.round((Z + R) * 10);
-      cell.style.opacity = Math.max(.35, Math.min(1, (scale - .58) / .55));
-    });
-    requestAnimationFrame(spin);
   })();
 })();
 
