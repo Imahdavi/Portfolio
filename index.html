@@ -6332,15 +6332,8 @@ function setupStripVideos() {
     entries.forEach(entry => {
       const v = entry.target;
       if (entry.isIntersecting) {
-        // Same as the boards: paint one frame rather than stream the clip.
-        // This page is the worst case for it — the strips pull media from
-        // every listed project onto a single page, so scrolling it once used
-        // to start dozens of videos from boards you never opened.
-        if (!v.getAttribute('src') && v.dataset.lazySrc) {
-          v.preload = 'metadata';
-          v.src = v.dataset.lazySrc + '#t=0.1';
-        }
-        if (AUTOPLAY_TILES) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
+        if (!v.getAttribute('src') && v.dataset.lazySrc) v.src = v.dataset.lazySrc;
+        const p = v.play(); if (p && p.catch) p.catch(() => {});
       } else {
         v.pause();
       }
@@ -6670,13 +6663,6 @@ function closeProject() {
   showView(prevMain, 'enter-l');
 }
 
-/* Tiles paint a still and play on hover, rather than every visible clip
-   streaming on its own. A board of fifteen multi-megabyte videos autoplaying
-   costs tens of megabytes on every visit, which is what exhausted the Blob
-   store's monthly transfer allowance and had it blocked outright. Flip to
-   true to go back to autoplaying tiles. */
-const AUTOPLAY_TILES = false;
-
 let _revealObs = null;
 let _videoObs = null;
 let _videoPlayObs = null;
@@ -6726,16 +6712,8 @@ function setupLazyVideos() {
       // enlarged one, and pausing it there would stop the clip being watched.
       if (v.closest('#ml-stage')) return;
       if (entry.isIntersecting) {
-        if (!v.getAttribute('src') && v.dataset.lazySrc) {
-          // #t=0.1 makes the browser seek to and paint one frame. With
-          // preload="metadata" that is a range request for the file's header
-          // and a little of the first frame — a few hundred KB — instead of
-          // streaming the whole clip, which is what a board full of
-          // autoplaying video costs on every single visit.
-          v.preload = 'metadata';
-          v.src = v.dataset.lazySrc + '#t=0.1';
-        }
-        if (AUTOPLAY_TILES) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
+        if (!v.getAttribute('src') && v.dataset.lazySrc) v.src = v.dataset.lazySrc;
+        const p = v.play(); if (p && p.catch) p.catch(() => {});
       } else {
         v.pause();   // keeps src/cache — never re-downloads, just stops decoding
       }
@@ -6744,31 +6722,6 @@ function setupLazyVideos() {
 
   vids.forEach(v => { _videoObs.observe(v); _videoPlayObs.observe(v); });
 }
-
-/* Play a tile while the pointer is on it, since they no longer autoplay.
-   Delegated once on the document rather than bound per tile, so it covers
-   board media and Projects-list tiles alike and survives every re-render.
-   Touch has no hover: there, tapping opens the enlarged view, which plays. */
-(function () {
-  if (AUTOPLAY_TILES) return;
-  const vidIn = el => el && el.querySelector && el.querySelector('video');
-  document.addEventListener('pointerover', (e) => {
-    if (!e.target.closest) return;
-    const host = e.target.closest('#block-list .media-inner, .pli-tile');
-    const v = vidIn(host);
-    if (!v || v.closest('#ml-stage')) return;
-    if (!v.getAttribute('src') && v.dataset.lazySrc) v.src = v.dataset.lazySrc;
-    const p = v.play(); if (p && p.catch) p.catch(() => {});
-  });
-  document.addEventListener('pointerout', (e) => {
-    if (!e.target.closest) return;
-    const host = e.target.closest('#block-list .media-inner, .pli-tile');
-    if (!host || (e.relatedTarget && host.contains(e.relatedTarget))) return;
-    const v = vidIn(host);
-    if (!v || v.closest('#ml-stage')) return;
-    v.pause();
-  });
-})();
 
 // Separate from setupLazyVideos on purpose: that observer's 700px rootMargin
 // is a preload buffer, so a video is still "intersecting" (and playing) long
