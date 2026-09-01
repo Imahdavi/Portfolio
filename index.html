@@ -17,6 +17,8 @@
       --font-name-size: 56px;
       --font-title: 'Inter', sans-serif;
       --font-intro: 'Antic', serif;
+      --thumb-a:#e8e0d8;   /* no-image card placeholder */
+      --thumb-b:#c8bdb4;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
@@ -2176,59 +2178,136 @@
     #sound-toggle-btn .nav-tip { bottom:calc(100% + 10px); }
     #sound-toggle-btn:hover .nav-tip { opacity:1; transform:translateX(-50%) translateY(0); }
 
-    /* ── "Ink sky" background ─────────────────────────────────
-       Sumizora: MOON PEARL → QUIET PEWTER → RAIN MIST → CLOUD GREY,
-       toggled from the bottom nav and remembered per visitor.
+    /* ── Dark mode ───────────────────────────────────
+       Written as an additive override rather than by rewriting the ~300
+       colour-bearing rules above: light mode stays exactly as it was, and
+       everything dark lives in this one block where it can be read and
+       tuned together.
 
-       It paints on its own fixed layer rather than on <body>, because
-       both body AND .view carry background:#fff — a gradient on body
-       alone would sit under every view and never be seen. The layer is
-       fixed so the gradient stays put while a view scrolls over it,
-       and .view goes transparent only while the theme is on. */
-    #bg-skin { display:none; }
-    body.bg-ink #bg-skin {
-      display:block;
-      position:fixed; inset:0; z-index:0; pointer-events:none;
-      /* fallback first: engines without oklab interpolation take this one */
-      background: linear-gradient(135deg, #F2F2F0 12.5%, #C4C6C9 37.5%, #8E9094 62.5%, #55585E 87.5%);
-      background: linear-gradient(135deg in oklab, #F2F2F0 12.5%, #C4C6C9 37.5%, #8E9094 62.5%, #55585E 87.5%);
-    }
-    /* Grain, kept as a separate layer so it can carry its own blend mode
-       and opacity — a second background layer on the gradient could do
-       neither. */
-    body.bg-ink #bg-skin::after {
-      content:''; position:absolute; inset:0;
-      background:url(/media/site/ink-grain.png) repeat;
-      background-size:256px 256px;
-      image-rendering:pixelated;
-      mix-blend-mode:overlay;
-      opacity:.05;
-      pointer-events:none;
-    }
-    /* Aozora: MISTED SKY -> SKY HAZE -> RIVER INDIGO. Same layer and the
-       same grain file as Ink sky, only the ramp and the grain's weight
-       differ, so the two stay one mechanism rather than two. */
-    body.bg-sky #bg-skin {
-      display:block;
-      position:fixed; inset:0; z-index:0; pointer-events:none;
-      /* fallback first: engines without oklab interpolation take this one */
-      background: linear-gradient(135deg, #E6F2FF 12.5%, #B3D9FF 37.5%, #80B3FF 62.5%, #6699E6 87.5%);
-      background: linear-gradient(135deg in oklab, #E6F2FF 12.5%, #B3D9FF 37.5%, #80B3FF 62.5%, #6699E6 87.5%);
-    }
-    body.bg-sky #bg-skin::after {
-      content:''; position:absolute; inset:0;
-      background:url(/media/site/ink-grain.png) repeat;
-      background-size:256px 256px;
-      image-rendering:pixelated;
-      mix-blend-mode:overlay;
-      opacity:.02;
-      pointer-events:none;
-    }
-    body.bg-ink .view, body.bg-sky .view { background:transparent; }
-    /* #app is position:relative with auto z-index, so without this the
-       fixed layer above would paint over the content, not behind it. */
-    body.bg-ink #app, body.bg-sky #app { z-index:1; }
+       The greys are warm rather than neutral, because the light theme is
+       warm too (#fdfbf8 nav, #f5f4f2 cards) — a cold grey dark mode next
+       to those reads as a different site.
 
+       Note what is deliberately NOT here: the resize menu, the format
+       toolbar and the enlarged-media chrome are already dark surfaces
+       with light text, so they are correct in dark mode untouched. */
+    body.dark {
+      --d-bg:#131110;          /* page */
+      --d-surface:#1c1a18;     /* cards, sheets, inputs */
+      --d-raised:#242120;      /* hover / raised */
+      --d-text:#ece7e1;
+      --d-text-2:#b3aca4;
+      --d-text-3:#857e76;
+      --d-line:rgba(255,255,255,.10);
+      --d-line-2:rgba(255,255,255,.18);
+      --thumb-a:#2b2724; --thumb-b:#211e1c;
+      background:var(--d-bg); color:var(--d-text);
+    }
+    body.dark .view { background:var(--d-bg); }
+
+    /* Type tiers */
+    body.dark .proj-title, body.dark .tool-name, body.dark .exp-title,
+    body.dark .block-text, body.dark .pli-title, body.dark .hvt-opt.active,
+    body.dark .nav-btn.active { color:var(--d-text); }
+    body.dark .profile-role, body.dark .exp-role, body.dark .pli-desc,
+    body.dark .tools-bulk-count, body.dark .nav-color-hex,
+    body.dark .mp-project-name-only { color:var(--d-text-2); }
+    body.dark .proj-sub, body.dark .contact-lbl, body.dark .pli-category,
+    body.dark .exp-date, body.dark .tool-sub, body.dark .mp-sub,
+    body.dark .mp-empty, body.dark .mp-group-label-sub, body.dark .note-desc,
+    body.dark .game-sub, body.dark .nav-color-lbl, body.dark .tool-size-pct,
+    body.dark .tool-size-lbl, body.dark .tools-bulk-clear,
+    body.dark .pli-row-handle { color:var(--d-text-3); }
+    body.dark .nav-btn { color:var(--d-text-3); }
+    body.dark .nav-btn:hover, body.dark .tools-bulk-clear:hover { color:var(--d-text); }
+
+    /* Surfaces */
+    body.dark .note-card, body.dark .game-stage, body.dark #media-picker-sheet,
+    body.dark .tool-card, body.dark .block-uploading .media-inner,
+    body.dark .mp-item { background:var(--d-surface); }
+    body.dark .tool-card { border-color:var(--d-line); }
+    body.dark .back-btn, body.dark #scroll-top-btn {
+      background:rgba(36,33,32,.92); border-color:var(--d-line-2); color:var(--d-text);
+    }
+    body.dark .back-btn:hover, body.dark #scroll-top-btn:hover {
+      background:var(--d-raised); border-color:rgba(255,255,255,.28);
+    }
+    body.dark .bottom-nav-group { background:rgba(28,26,24,.72); }
+    body.dark .card-grid:has(.proj-card:hover) .proj-card:not(:hover) {
+      background:rgba(0,0,0,.38);
+    }
+
+    /* Hairlines */
+    body.dark .exp-item, body.dark .proj-list-item { border-bottom-color:var(--d-line); }
+    body.dark .note-sep { background:var(--d-line); }
+
+    /* Fields keep their own surface so they read as inputs, not as page */
+    body.dark .note-field input, body.dark .note-msg { color:var(--d-text); }
+    body.dark .note-msg::placeholder, body.dark .note-field input::placeholder,
+    body.dark .note-field-ico { color:var(--d-text-3); }
+    body.dark .tool-size-input {
+      background:var(--d-raised); border-color:var(--d-line-2); color:var(--d-text);
+    }
+
+    /* The two brand-wall greys are set as rgba(0,0,0,...) on purpose —
+       they need inverting, not re-tinting. */
+    body.dark .brand-text { color:rgba(255,255,255,.34); }
+    body.dark .brand-cell:hover .brand-text { color:rgba(255,255,255,.9); }
+    body.dark .brand-grid-label { color:rgba(255,255,255,.5); }
+
+    /* The display name is its own element from the editable one, and it
+       carries the only hardcoded near-black left on the home page. */
+    body.dark .profile-name-display { color:var(--d-text); }
+    body.dark .tools-label { color:rgba(255,255,255,.55); }
+    body.dark .game-overlay { background:rgba(19,17,16,.86); }
+    body.dark .game-overlay-title { color:var(--d-text); }
+    body.dark .game-score-sep { color:rgba(255,255,255,.34); }
+
+    /* Analytics: bars and dots are painted in the ink colour, which
+       disappears on a dark card — they become the light tone instead, and
+       the cards they sit on go dark with the rest. */
+    body.dark .an-stat { background:var(--d-surface); }
+    body.dark .an-lbl { color:var(--d-text-2); }
+    body.dark .an-val { color:var(--d-text); }
+    body.dark .an-sub, body.dark .an-sh, body.dark .an-cap, body.dark .an-empty,
+    body.dark .an-bar-date, body.dark .an-bitem-cnt, body.dark .an-proj-cnt,
+    body.dark .an-proj-num, body.dark .an-split-legend { color:var(--d-text-3); }
+    body.dark .an-split-legend b { color:var(--d-text); }
+    body.dark .an-bar, body.dark .an-bitem-bar, body.dark .an-split-new,
+    body.dark .an-dot-new { background:var(--d-text); }
+    body.dark .an-dot-ret { background:var(--d-text-3); }
+    body.dark .an-split, body.dark .an-bar-zero,
+    body.dark .an-bitem-bar-wrap { background:rgba(255,255,255,.10); }
+    body.dark .an-proj-item { border-bottom-color:var(--d-line); }
+    body.dark .an-range-btn {
+      background:var(--d-surface); border-color:var(--d-line-2); color:var(--d-text-2);
+    }
+    body.dark .an-range-btn.active {
+      background:var(--d-text); color:var(--d-bg); border-color:var(--d-text);
+    }
+
+    /* Contact pills */
+    body.dark .pill {
+      background:var(--d-surface); border-color:var(--d-line-2); color:var(--d-text-2);
+    }
+    body.dark .pill:hover { background:var(--d-raised); border-color:rgba(255,255,255,.3); }
+
+    /* The "trusted by" label's shine sweep is painted with black through
+       background-clip:text, which is invisible on a dark page. */
+    body.dark .brand-grid-label-pill:hover { background:rgba(255,255,255,.07); }
+    body.dark .brand-grid-label-pill:hover .brand-grid-label { color:rgba(255,255,255,.9); }
+
+    /* Dashed "add" affordances */
+    body.dark .card-add-btn, body.dark .tools-add-btn, body.dark .pli-add-row,
+    body.dark .pli-add-tile, body.dark .mp-new-project {
+      border-color:var(--d-line-2); color:var(--d-text-3);
+    }
+    body.dark .card-add-btn:hover, body.dark .tools-add-btn:hover,
+    body.dark .pli-add-row:hover, body.dark .pli-add-tile:hover,
+    body.dark .mp-new-project:hover {
+      border-color:rgba(255,255,255,.38); color:var(--d-text-2);
+      background:rgba(255,255,255,.04);
+    }
     #bg-toggle-btn {
       position:relative;
       background:none; border:none; cursor:pointer;
@@ -2242,8 +2321,8 @@
     #bg-toggle-btn svg { width:22px; height:22px; display:block; }
     #bg-toggle-btn .nav-tip { bottom:calc(100% + 10px); }
     #bg-toggle-btn:hover .nav-tip { opacity:1; transform:translateX(-50%) translateY(0); }
-    body.bg-ink #bg-toggle-btn { color:#55585E; }
-    body.bg-sky #bg-toggle-btn { color:#6699E6; }
+    body.dark #bg-toggle-btn { color:var(--d-text-2); }
+    body.dark #bg-toggle-btn:hover { color:var(--d-text); }
 
     /* Scroll-to-top button — mirrors back-btn position on the right.
        Same --site-width fix as back-btn: right was hardcoded assuming
@@ -2622,21 +2701,11 @@
   </style>
 </head>
 <body>
-<!-- Background layer for the "Ink sky" / "Blue sky" themes. Empty and
-     display:none until the bottom-nav toggle cycles one on; see #bg-skin
-     in the stylesheet. -->
-<div id="bg-skin" aria-hidden="true"></div>
 <script>
   /* Restored here, inline and before anything renders — doing it from the
-     main script at the bottom would paint the white default first and
-     flash on every load for anyone who chose the ink background. */
-  try {
-    const v = localStorage.getItem('pf_bg_ink');
-    /* '1' is what the ink-only version wrote, so anyone who had it on
-       before this second skin existed keeps it. */
-    if (v === '1' || v === 'ink') document.body.classList.add('bg-ink');
-    else if (v === 'sky') document.body.classList.add('bg-sky');
-  } catch (e) {}
+     main script at the bottom would paint the white page first and flash
+     on every load for anyone who reads the site dark. */
+  try { if (localStorage.getItem('pf_theme') === 'dark') document.body.classList.add('dark'); } catch (e) {}
 </script>
 <div id="site-cursor">
   <svg width="28" height="33" viewBox="0 0 171 205" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -3021,8 +3090,8 @@ one keyframe at a time</div>
   </div>
  </div>
  <div class="bottom-nav-group">
-  <button id="bg-toggle-btn" onclick="toggleInkSky()" aria-label="Toggle background">
-  <span class="nav-tip">Background</span>
+  <button id="bg-toggle-btn" onclick="toggleDarkMode()" aria-label="Toggle dark mode">
+  <span class="nav-tip">Dark mode</span>
   <!-- half-filled circle: the usual "switch the surface" mark -->
   <svg viewBox="0 0 24 24" fill="none">
     <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
@@ -3549,19 +3618,15 @@ function toggleWebSound() {
   document.getElementById('sound-toggle-btn').classList.toggle('muted', window._webShotMuted);
 }
 
-/* ─── "Ink sky" background toggle ─────────────────────────
+/* ─── Dark mode ───────────────────────────────────────────
    Per-visitor and remembered, so it is a viewing preference rather than
    anything stored with the site's content. Applied before first paint
-   further down (see the bg-ink restore), or the white default would show
+   near <body> (see the pf_theme restore), or the light page would show
    for a frame and flash. */
-const BG_SKINS = ['', 'ink', 'sky'];          // '' is the plain white page
-function toggleInkSky() {
-  const cur = document.body.classList.contains('bg-ink') ? 'ink'
-            : document.body.classList.contains('bg-sky') ? 'sky' : '';
-  const next = BG_SKINS[(BG_SKINS.indexOf(cur) + 1) % BG_SKINS.length];
-  document.body.classList.toggle('bg-ink', next === 'ink');
-  document.body.classList.toggle('bg-sky', next === 'sky');
-  try { localStorage.setItem('pf_bg_ink', next || '0'); } catch (e) {}
+function toggleDarkMode() {
+  const on = !document.body.classList.contains('dark');
+  document.body.classList.toggle('dark', on);
+  try { localStorage.setItem('pf_theme', on ? 'dark' : 'light'); } catch (e) {}
 }
 
 /* ─── Spider web catch SVG — dense, realistic cobweb drawn on click ───── */
@@ -6560,14 +6625,14 @@ function renderHomeSections(sections) {
       const el = document.createElement('div');
       el.className = 'proj-card';
       el.onclick = () => openProject(card.key);
-      const thumbBg = card.thumb ? '' : ' style="background:linear-gradient(135deg,#e8e0d8,#c8bdb4)"';
+      const thumbBg = card.thumb ? '' : ' style="background:linear-gradient(135deg,var(--thumb-a),var(--thumb-b))"';
       // Same gradient the no-thumb case uses, reapplied if the image itself
       // fails to load (backend down, or the thumb was deleted) so the card
       // degrades to a clean placeholder instead of a broken-image icon.
       // Paint the parent before remove() — removing first nulls parentNode.
       // The if(p) guard covers the image erroring after a re-render already
       // detached it, which would otherwise throw on p.style.
-      const thumbImg = card.thumb ? `<img src="${card.thumb}" alt="${card.name}" onerror="var p=this.parentNode;if(p)p.style.background='linear-gradient(135deg,#e8e0d8,#c8bdb4)';this.remove()"/>` : '';
+      const thumbImg = card.thumb ? `<img src="${card.thumb}" alt="${card.name}" onerror="var p=this.parentNode;if(p)p.style.background='linear-gradient(135deg,var(--thumb-a),var(--thumb-b))';this.remove()"/>` : '';
       el.dataset.key = card.key;
       if (card.hidden) el.dataset.hidden = 'true';
       el.innerHTML = `<div class="proj-thumb"${thumbBg}>${thumbImg}</div><div class="proj-title">${card.name}</div><div class="proj-sub">${card.sub||''}</div>`;
@@ -7300,7 +7365,7 @@ function _addHomeCard(grid, addBtn) {
   el.className = 'proj-card';
   el.dataset.key = newKey;
   el.onclick = () => openProject(newKey);
-  el.innerHTML = `<div class="proj-thumb" style="background:linear-gradient(135deg,#e8e0d8,#c8bdb4)"></div><div class="proj-title">New Project</div><div class="proj-sub"></div>`;
+  el.innerHTML = `<div class="proj-thumb" style="background:linear-gradient(135deg,var(--thumb-a),var(--thumb-b))"></div><div class="proj-title">New Project</div><div class="proj-sub"></div>`;
   const del = document.createElement('button');
   del.className = 'home-card-del';
   del.textContent = '×';
@@ -9677,7 +9742,7 @@ document.getElementById('thumbInput').addEventListener('change', async function(
 
   const thumbEl = card.querySelector('.proj-thumb');
   const origBg  = thumbEl.style.background;
-  thumbEl.style.background = 'linear-gradient(135deg,#e8e0d8,#c8bdb4)';
+  thumbEl.style.background = 'linear-gradient(135deg,var(--thumb-a),var(--thumb-b))';
   showUploadToast('Uploading…');
 
   const small = await shrinkThumb(file);
