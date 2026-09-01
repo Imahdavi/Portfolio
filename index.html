@@ -843,14 +843,20 @@
 
     .proj-card { position:relative; cursor:pointer; transition:opacity .25s, filter .25s, transform .55s cubic-bezier(.34,1.56,.64,1); }
 
-    /* white-lift overlay on non-hovered cards */
-    .proj-card::after {
-      content:''; position:absolute; top:0; left:0; right:0;
-      height:calc(100% - 34px); border-radius:16px;
+    /* Veil that pushes non-hovered cards back. It belongs to the artwork,
+       so it is drawn on the thumb and inherits its exact box and radius.
+       It used to hang off the card with height:calc(100% - 34px), guessing
+       where the text began — 34px is short of the real title+subtitle, so
+       the veil's edge cut a hard line across the middle of every title. In
+       light mode that read as a faint smudge and went unnoticed; against
+       the dark theme it was an obvious black band.
+       ::after on the thumb is already the cobweb, hence ::before. */
+    .proj-thumb::before {
+      content:''; position:absolute; inset:0; z-index:2;
       background:rgba(255,255,255,0); pointer-events:none;
       transition:background .25s;
     }
-    .card-grid:has(.proj-card:hover) .proj-card:not(:hover)::after {
+    .card-grid:has(.proj-card:hover) .proj-card:not(:hover) .proj-thumb::before {
       background: rgba(255,255,255,.38);
     }
     .card-grid:has(.proj-card:hover) .proj-card:not(:hover) {
@@ -2254,7 +2260,7 @@
        reads as milky haze instead of distance, so it inverts. It has to be
        the ::after, not the card: the card's own background sits behind the
        artwork and never shows. */
-    body.dark .card-grid:has(.proj-card:hover) .proj-card:not(:hover)::after {
+    body.dark .card-grid:has(.proj-card:hover) .proj-card:not(:hover) .proj-thumb::before {
       background:rgba(0,0,0,.45);
     }
 
