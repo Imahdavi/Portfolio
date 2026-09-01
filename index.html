@@ -2233,8 +2233,21 @@
       background:var(--d-raised); border-color:rgba(255,255,255,.28);
     }
     body.dark .bottom-nav-group { background:rgba(28,26,24,.72); }
-    body.dark .card-grid:has(.proj-card:hover) .proj-card:not(:hover) {
-      background:rgba(0,0,0,.38);
+    /* Hovering one card lifts it and pushes the rest back with a white veil
+       over their artwork (.proj-card::after) — on a dark page that veil
+       reads as milky haze instead of distance, so it inverts. It has to be
+       the ::after, not the card: the card's own background sits behind the
+       artwork and never shows. */
+    body.dark .card-grid:has(.proj-card:hover) .proj-card:not(:hover)::after {
+      background:rgba(0,0,0,.45);
+    }
+
+    /* The avatar sits in a white glass frame that overlaps the name — on a
+       dark page it reads as a lit panel stuck to the type. Same glass,
+       inverted. */
+    body.dark .pbc-avatar {
+      background:linear-gradient(155deg, rgba(255,255,255,.16), rgba(255,255,255,.06));
+      border-color:rgba(255,255,255,.24);
     }
 
     /* Hairlines */
