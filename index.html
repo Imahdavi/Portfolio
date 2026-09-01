@@ -6738,6 +6738,10 @@ function teardownScrollReveal() {
    block the queue. Videos actually on screen bypass all of this — see the
    play observer, which loads them immediately. */
 const MAX_VIDEO_LOADS = 2;
+// loadeddata is the real signal (first frame decoded — the video is now
+// displayable, so the next one may start); canplay and error cover the cases
+// where it doesn't arrive.
+const RELEASE_EVENTS = ['loadeddata', 'canplay', 'error'];
 let _vidQueue = [], _vidActive = 0;
 
 function _pumpVideoQueue() {
@@ -6750,13 +6754,15 @@ function _pumpVideoQueue() {
       if (released) return;
       released = true;
       _vidActive--;
-      v.removeEventListener('loadeddata', release);
-      v.removeEventListener('error', release);
+      RELEASE_EVENTS.forEach(ev => v.removeEventListener(ev, release));
       _pumpVideoQueue();
     };
-    v.addEventListener('loadeddata', release);
-    v.addEventListener('error', release);
-    setTimeout(release, 8000);
+    RELEASE_EVENTS.forEach(ev => v.addEventListener(ev, release));
+    // Safety net only — the events above normally fire within a second. Kept
+    // short so that if they somehow don't (a tab that decodes nothing, a file
+    // that stalls), the queue still drains at a reasonable pace instead of
+    // making the board slower than having no queue at all.
+    setTimeout(release, 2500);
     v.src = v.dataset.lazySrc;
   }
 }
