@@ -6722,20 +6722,70 @@ function teardownScrollReveal() {
    that can show three. That is what makes the whole page, cursor included,
    feel like it is dragging. Playback now follows the actual viewport, so only
    what you can nearly see is decoding. */
+/* Preloading is queued rather than fired all at once.
+
+   The 700px buffer below means a short board can have every one of its
+   videos "intersecting" the moment it opens — the Ui board is only ~2400px
+   tall, so all seven started downloading together, split the connection
+   seven ways, and the one actually on screen took several times longer to
+   show a frame than it would have alone. Taller boards hid the problem
+   simply by not fitting.
+
+   So buffer loads go through a small gate: at most MAX_VIDEO_LOADS at a
+   time, the rest waiting in document order. A slot is released as soon as
+   the video has a frame (loadeddata) rather than when it finishes, and a
+   timeout releases it regardless, so one stalled or broken file can never
+   block the queue. Videos actually on screen bypass all of this — see the
+   play observer, which loads them immediately. */
+const MAX_VIDEO_LOADS = 2;
+let _vidQueue = [], _vidActive = 0;
+
+function _pumpVideoQueue() {
+  while (_vidActive < MAX_VIDEO_LOADS && _vidQueue.length) {
+    const v = _vidQueue.shift();
+    if (!v.isConnected || v.getAttribute('src') || !v.dataset.lazySrc) continue;
+    _vidActive++;
+    let released = false;
+    const release = () => {
+      if (released) return;
+      released = true;
+      _vidActive--;
+      v.removeEventListener('loadeddata', release);
+      v.removeEventListener('error', release);
+      _pumpVideoQueue();
+    };
+    v.addEventListener('loadeddata', release);
+    v.addEventListener('error', release);
+    setTimeout(release, 8000);
+    v.src = v.dataset.lazySrc;
+  }
+}
+
+// Straight to the network, no queueing — used for anything actually visible.
+function _loadVideoNow(v) {
+  if (v.getAttribute('src') || !v.dataset.lazySrc) return;
+  _vidQueue = _vidQueue.filter(q => q !== v);
+  v.src = v.dataset.lazySrc;
+}
+
 function setupLazyVideos() {
   if (_videoObs) { _videoObs.disconnect(); _videoObs = null; }
   if (_videoPlayObs) { _videoPlayObs.disconnect(); _videoPlayObs = null; }
   const viewEl = document.getElementById('view-project');
   const vids = document.querySelectorAll('#block-list video[data-lazy-src]');
+  // Queued elements belong to the board being left — drop them, or opening a
+  // new project would still be feeding the old one's videos.
+  _vidQueue = [];
   if (!vids.length) return;
 
   _videoObs = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       const v = entry.target;
       if (entry.isIntersecting && !v.getAttribute('src') && v.dataset.lazySrc) {
-        v.src = v.dataset.lazySrc;
+        if (!_vidQueue.includes(v)) _vidQueue.push(v);
       }
     });
+    _pumpVideoQueue();
   }, { root: viewEl, rootMargin: '700px 0px 700px 0px', threshold: 0.01 });
 
   _videoPlayObs = new IntersectionObserver((entries) => {
@@ -6745,7 +6795,8 @@ function setupLazyVideos() {
       // enlarged one, and pausing it there would stop the clip being watched.
       if (v.closest('#ml-stage')) return;
       if (entry.isIntersecting) {
-        if (!v.getAttribute('src') && v.dataset.lazySrc) v.src = v.dataset.lazySrc;
+        // On screen: jump the preload queue, this is the one being looked at.
+        _loadVideoNow(v);
         const p = v.play(); if (p && p.catch) p.catch(() => {});
       } else {
         v.pause();   // keeps src/cache — never re-downloads, just stops decoding
