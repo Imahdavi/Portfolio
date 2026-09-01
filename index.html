@@ -2176,6 +2176,55 @@
     #sound-toggle-btn .nav-tip { bottom:calc(100% + 10px); }
     #sound-toggle-btn:hover .nav-tip { opacity:1; transform:translateX(-50%) translateY(0); }
 
+    /* ── "Ink sky" background ─────────────────────────────────
+       Sumizora: MOON PEARL → QUIET PEWTER → RAIN MIST → CLOUD GREY,
+       toggled from the bottom nav and remembered per visitor.
+
+       It paints on its own fixed layer rather than on <body>, because
+       both body AND .view carry background:#fff — a gradient on body
+       alone would sit under every view and never be seen. The layer is
+       fixed so the gradient stays put while a view scrolls over it,
+       and .view goes transparent only while the theme is on. */
+    #bg-skin { display:none; }
+    body.bg-ink #bg-skin {
+      display:block;
+      position:fixed; inset:0; z-index:0; pointer-events:none;
+      /* fallback first: engines without oklab interpolation take this one */
+      background: linear-gradient(135deg, #F2F2F0 12.5%, #C4C6C9 37.5%, #8E9094 62.5%, #55585E 87.5%);
+      background: linear-gradient(135deg in oklab, #F2F2F0 12.5%, #C4C6C9 37.5%, #8E9094 62.5%, #55585E 87.5%);
+    }
+    /* Grain, kept as a separate layer so it can carry its own blend mode
+       and opacity — a second background layer on the gradient could do
+       neither. */
+    body.bg-ink #bg-skin::after {
+      content:''; position:absolute; inset:0;
+      background:url(/media/site/ink-grain.png) repeat;
+      background-size:256px 256px;
+      image-rendering:pixelated;
+      mix-blend-mode:overlay;
+      opacity:.05;
+      pointer-events:none;
+    }
+    body.bg-ink .view { background:transparent; }
+    /* #app is position:relative with auto z-index, so without this the
+       fixed layer above would paint over the content, not behind it. */
+    body.bg-ink #app { z-index:1; }
+
+    #bg-toggle-btn {
+      position:relative;
+      background:none; border:none; cursor:pointer;
+      color:#bbb; display:flex; align-items:center; justify-content:center;
+      width:26px; height:26px;
+      transition:color .2s, transform .15s;
+    }
+    #bg-toggle-btn::before { content:''; position:absolute; inset:-12px -10px; }
+    #bg-toggle-btn:hover  { color:#444; transform:translateY(-2px); }
+    #bg-toggle-btn:active { transform:scale(.86); }
+    #bg-toggle-btn svg { width:22px; height:22px; display:block; }
+    #bg-toggle-btn .nav-tip { bottom:calc(100% + 10px); }
+    #bg-toggle-btn:hover .nav-tip { opacity:1; transform:translateX(-50%) translateY(0); }
+    body.bg-ink #bg-toggle-btn { color:#55585E; }
+
     /* Scroll-to-top button — mirrors back-btn position on the right.
        Same --site-width fix as back-btn: right was hardcoded assuming
        a fixed 540px #app (280 = 540/2 + 10px clearance). */
@@ -2553,6 +2602,15 @@
   </style>
 </head>
 <body>
+<!-- Background layer for the "Ink sky" theme. Empty and display:none until
+     the bottom-nav toggle turns it on; see #bg-skin in the stylesheet. -->
+<div id="bg-skin" aria-hidden="true"></div>
+<script>
+  /* Restored here, inline and before anything renders — doing it from the
+     main script at the bottom would paint the white default first and
+     flash on every load for anyone who chose the ink background. */
+  try { if (localStorage.getItem('pf_bg_ink') === '1') document.body.classList.add('bg-ink'); } catch (e) {}
+</script>
 <div id="site-cursor">
   <svg width="28" height="33" viewBox="0 0 171 205" fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs><clipPath id="spc0"><rect width="170.09" height="204.61"/></clipPath></defs>
@@ -2936,6 +2994,14 @@ one keyframe at a time</div>
   </div>
  </div>
  <div class="bottom-nav-group">
+  <button id="bg-toggle-btn" onclick="toggleInkSky()" aria-label="Toggle background">
+  <span class="nav-tip">Background</span>
+  <!-- half-filled circle: the usual "switch the surface" mark -->
+  <svg viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+    <path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor"/>
+  </svg>
+  </button>
   <button id="sound-toggle-btn" class="muted" onclick="toggleWebSound()" aria-label="Toggle web-shot sound">
   <span class="nav-tip">Web Sound</span>
   <!-- active: speaker + web-ray lines -->
@@ -3454,6 +3520,17 @@ const USE_CUSTOM_CURSOR = true;
 function toggleWebSound() {
   window._webShotMuted = !window._webShotMuted;
   document.getElementById('sound-toggle-btn').classList.toggle('muted', window._webShotMuted);
+}
+
+/* ─── "Ink sky" background toggle ─────────────────────────
+   Per-visitor and remembered, so it is a viewing preference rather than
+   anything stored with the site's content. Applied before first paint
+   further down (see the bg-ink restore), or the white default would show
+   for a frame and flash. */
+function toggleInkSky() {
+  const on = !document.body.classList.contains('bg-ink');
+  document.body.classList.toggle('bg-ink', on);
+  try { localStorage.setItem('pf_bg_ink', on ? '1' : '0'); } catch (e) {}
 }
 
 /* ─── Spider web catch SVG — dense, realistic cobweb drawn on click ───── */
