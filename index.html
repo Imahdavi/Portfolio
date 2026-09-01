@@ -4016,11 +4016,16 @@ function _getBrowser() {
 async function trackView(project = null) {
   if (document.body.classList.contains('is-admin')) return;
   const country = await _getCountry();
-  fetch(`${SB_URL}/rest/v1/analytics`, {
+  // Recorded through the Worker into D1. This used to POST straight to
+  // Supabase, whose project is dead — so every visit threw an uncaught
+  // "Failed to fetch" and nothing was ever counted. The catch is what keeps
+  // a tracking failure invisible to the visitor: this is fire-and-forget,
+  // and must never surface as an error on the page.
+  fetch(`${API_URL}/api/analytics`, {
     method: 'POST',
-    headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ session_id: _SID, visitor_id: _VID, referrer: _getReferrer(), country, device: _getDevice(), browser: _getBrowser(), project, event: 'view' })
-  });
+  }).catch(() => {});
 }
 
 /* ─── Analytics dashboard ──────────────────────────────── */
@@ -4038,10 +4043,10 @@ async function loadAnalytics(days, btn) {
 
   // Always pull the full history so we can tell new vs returning visitors
   // (a visitor's *first ever* visit may predate the selected range).
-  const url = `${SB_URL}/rest/v1/analytics?select=ts,session_id,visitor_id,referrer,country,device,browser,project&order=ts.desc&limit=20000`;
+  const url = `${API_URL}/api/analytics?limit=20000`;
   let all;
   try {
-    all = await (await fetch(url, { headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` } })).json();
+    all = await (await fetch(url)).json();
   } catch(e) { return; }
   if (!Array.isArray(all)) return;
 
@@ -7911,25 +7916,37 @@ function makeBlockEl(block, proj) {
       vid._forceMute = () => setMuted(true);
       inner.appendChild(muteBtn);
 
-      // Hide mute button for videos with no audio track.
-      // audioTracks reflects file tracks (not playback), so works even when muted.
-      // Chrome 37+, Firefox 53+, Safari 7+ all support it.
-      // mozHasAudio is checked first for older Firefox builds.
+      /* Only offer mute/unmute on videos that actually carry sound.
+
+         This used to rely on HTMLMediaElement.audioTracks, which Chromium
+         does not ship (it sits behind a flag) — so `vid.audioTracks` was
+         undefined, the check bailed out before deciding, and every silent
+         clip kept a mute button. mozHasAudio covers Firefox and audioTracks
+         covers Safari; for Chromium the workable signal is
+         webkitAudioDecodedByteCount, which stays 0 for a file with no audio
+         stream and climbs as soon as one is decoded (verified against
+         ffprobe on the real files, including while muted).
+
+         The button therefore starts hidden and is only revealed once audio
+         is positively found. That direction matters: the Chromium counter is
+         0 before decoding starts too, so defaulting to visible would flash a
+         button onto every silent video, while defaulting to hidden merely
+         reveals it a moment late on the ones that do have sound. */
+      muteBtn.hidden = true;
       const resolveAudio = () => {
-        let has;
-        if (typeof vid.mozHasAudio === 'boolean') {
-          has = vid.mozHasAudio;
-        } else if (vid.audioTracks) {
-          has = vid.audioTracks.length > 0;
-        } else {
-          return; // can't tell yet — wait for next event
+        let has = null;                                   // null = still unknown
+        if (typeof vid.mozHasAudio === 'boolean') has = vid.mozHasAudio;
+        else if (vid.audioTracks && typeof vid.audioTracks.length === 'number') has = vid.audioTracks.length > 0;
+        else if (typeof vid.webkitAudioDecodedByteCount === 'number') {
+          if (vid.webkitAudioDecodedByteCount > 0) has = true;   // only ever conclusive upward
         }
+        if (has === null) return;                          // keep listening
         muteBtn.hidden = !has;
-        vid.removeEventListener('loadedmetadata', resolveAudio);
-        vid.removeEventListener('timeupdate', resolveAudio);
+        ['loadedmetadata','timeupdate','progress','playing'].forEach(ev =>
+          vid.removeEventListener(ev, resolveAudio));
       };
-      vid.addEventListener('loadedmetadata', resolveAudio);
-      vid.addEventListener('timeupdate', resolveAudio);
+      ['loadedmetadata','timeupdate','progress','playing'].forEach(ev =>
+        vid.addEventListener(ev, resolveAudio));
     }
 
     // layout button + menu (bottom-right of inner, visible in edit mode)
