@@ -138,6 +138,15 @@
       position:absolute; top:0; left:0; width:100%; height:100%;
     }
     .site-spider .rope-path { fill:none; stroke:rgba(0,0,0,.3); stroke-width:1px; }
+    body.dark .site-spider .rope-path { stroke:rgba(255,255,255,.32); }
+    /* The spider is a near-black silhouette — on a dark page it vanishes
+       along with its web, so it prints as a negative. The eyes stay the
+       page colour and the pupils the body colour, which keeps the
+       cursor-tracking readable instead of a blank light blob. */
+    body.dark .site-spider .spider-body g { stroke:var(--d-text); }
+    body.dark .site-spider .spider-body ellipse[rx="8.3"] { fill:var(--d-text); }
+    body.dark .site-spider .spider-body ellipse[rx="3.0"] { fill:var(--d-bg); }
+    body.dark .site-spider .spider-body .pupil { fill:var(--d-text); }
     .site-spider .spider-body {
       position:absolute; bottom:0; left:50%; margin-left:-11.5px;
       transform-origin:50% 0%; display:block;
@@ -2229,8 +2238,10 @@
     body.dark .back-btn, body.dark #scroll-top-btn {
       background:rgba(36,33,32,.92); border-color:var(--d-line-2); color:var(--d-text);
     }
+    /* Light mode darkens these chips on hover; dark mode does the mirror
+       image and lights them right up, icon included. */
     body.dark .back-btn:hover, body.dark #scroll-top-btn:hover {
-      background:var(--d-raised); border-color:rgba(255,255,255,.28);
+      background:var(--d-text); border-color:var(--d-text); color:var(--d-bg);
     }
     body.dark .bottom-nav-group { background:rgba(28,26,24,.72); }
     /* Hovering one card lifts it and pushes the rest back with a white veil
@@ -10077,6 +10088,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 /* ─── Spider-Man web shot ──────────────────────────────── */
+/* Silk is near-black on the light page; on the dark one that draws an
+   invisible web, so it flips to off-white. Read per draw rather than
+   cached, because the theme can be toggled mid-flight. */
+function webInk(a) {
+  return document.body.classList.contains('dark')
+    ? 'rgba(236,231,225,' + a + ')'
+    : 'rgba(12,10,8,' + a + ')';
+}
 (function(){
   const cvs = document.createElement('canvas');
   cvs.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:8000;';
@@ -10148,7 +10167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     drawRope(fx,fy,ex,ey,cpx,cpy,a){
-      ctx.strokeStyle='rgba(12,10,8,'+a+')';
+      ctx.strokeStyle=webInk(a);
       ctx.lineWidth=1.8;
       ctx.globalAlpha=1;
       ctx.beginPath(); ctx.moveTo(fx,fy);
@@ -10177,9 +10196,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       if(expT<=0){ctx.restore();return;}
       const R=this.maxR*easeOut(expT);
 
-      ctx.strokeStyle='#0c0a08';
+      ctx.strokeStyle=webInk(1);
       // Anchor dot
-      ctx.fillStyle='#0c0a08'; ctx.globalAlpha=alpha*.80;
+      ctx.fillStyle=webInk(1); ctx.globalAlpha=alpha*.80;
       ctx.beginPath(); ctx.arc(this.tx,this.ty,2.2,0,Math.PI*2); ctx.fill();
 
       // Radials — each with own length, some extend past rings
@@ -11219,7 +11238,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!ctx) return;
     const t = table();
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#f2efe9';
+    /* The canvas paints its own backdrop, so the stage's dark surface
+       behind it never shows through — it has to match the theme itself. */
+    ctx.fillStyle = document.body.classList.contains('dark') ? '#1c1a18' : '#f2efe9';
     ctx.fillRect(0, 0, W, H);
 
     // Table
