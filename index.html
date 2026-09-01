@@ -7933,20 +7933,34 @@ function makeBlockEl(block, proj) {
          button onto every silent video, while defaulting to hidden merely
          reveals it a moment late on the ones that do have sound. */
       muteBtn.hidden = true;
-      const resolveAudio = () => {
-        let has = null;                                   // null = still unknown
-        if (typeof vid.mozHasAudio === 'boolean') has = vid.mozHasAudio;
-        else if (vid.audioTracks && typeof vid.audioTracks.length === 'number') has = vid.audioTracks.length > 0;
-        else if (typeof vid.webkitAudioDecodedByteCount === 'number') {
-          if (vid.webkitAudioDecodedByteCount > 0) has = true;   // only ever conclusive upward
-        }
-        if (has === null) return;                          // keep listening
+      const AUDIO_EVENTS = ['loadedmetadata', 'timeupdate', 'progress', 'playing'];
+      let audioResolved = false;
+      const finishAudio = (has) => {
+        audioResolved = true;
         muteBtn.hidden = !has;
-        ['loadedmetadata','timeupdate','progress','playing'].forEach(ev =>
-          vid.removeEventListener(ev, resolveAudio));
+        AUDIO_EVENTS.forEach(ev => vid.removeEventListener(ev, resolveAudio));
       };
-      ['loadedmetadata','timeupdate','progress','playing'].forEach(ev =>
-        vid.addEventListener(ev, resolveAudio));
+      function resolveAudio() {
+        if (audioResolved) return;
+        if (typeof vid.mozHasAudio === 'boolean') return finishAudio(vid.mozHasAudio);
+        if (vid.audioTracks && typeof vid.audioTracks.length === 'number') return finishAudio(vid.audioTracks.length > 0);
+        // Chromium: only ever conclusive upward — 0 means "no audio yet OR none at all".
+        if (vid.webkitAudioDecodedByteCount > 0) return finishAudio(true);
+      }
+      AUDIO_EVENTS.forEach(ev => vid.addEventListener(ev, resolveAudio));
+
+      /* Events alone aren't enough on Chromium: the byte counter crosses zero
+         only once audio is actually decoded, which can happen after the last
+         media event has fired — and a throttled or background tab may emit no
+         timeupdate at all. Left there, a video WITH sound kept its button
+         hidden. So poll briefly alongside the events, capped at ~6s, and stop
+         the moment either source decides. */
+      let audioPolls = 0;
+      const pollAudio = () => {
+        resolveAudio();
+        if (!audioResolved && audioPolls++ < 24) setTimeout(pollAudio, 250);
+      };
+      vid.addEventListener('playing', () => { audioPolls = 0; pollAudio(); });
     }
 
     // layout button + menu (bottom-right of inner, visible in edit mode)
