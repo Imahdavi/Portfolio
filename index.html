@@ -7253,17 +7253,20 @@ function saveHomeEdits() {
   // DOM at all (they're edited in the list view), so they'd read as empty
   // here and get dropped on every grid save if they weren't carried over.
   const _prevMeta = {};
-  // List-only projects have no tile in the grid at all (renderHomeSections
-  // skips them), so the DOM rebuild below cannot see them — without carrying
-  // them over here, one save from the Grid view would delete every project
-  // added from the Projects list. Remembered per section title so they go
-  // back where they were.
-  const _listOnly = [];
+  // The Grid and the Projects list are independent views, and this rebuild is
+  // the one place that could break that: it reconstructs sections purely from
+  // the grid DOM, so any card without a tile there would be dropped. Two kinds
+  // of card legitimately have no tile — ones created from the list (listOnly,
+  // never drawn in the grid) and ones just deleted from the Grid that the list
+  // still shows. Both are carried over below; everything else the DOM omits is
+  // a real deletion. Remembered per section title so they go back where they
+  // were.
+  const _carry = [];
   (_cachedSettings.sections || []).forEach(sec =>
     (sec.cards || []).forEach(c => {
       if (c.thumb) _prevThumbs[c.key] = c.thumb;
       _prevMeta[c.key] = { year: c.year, yearEnd: c.yearEnd, category: c.category, desc: c.desc };
-      if (c.listOnly) _listOnly.push({ card: c, section: sec.title });
+      _carry.push({ card: c, section: sec.title });
     }));
 
   const sections = [];
@@ -7294,11 +7297,17 @@ function saveHomeEdits() {
     sections.push({ title: labelEl.textContent.trim(), cards });
   });
 
-  // Put the list-only projects back — into the section they came from, or the
-  // last one if that section has since been renamed or removed.
-  _listOnly.forEach(({ card, section }) => {
+  // Put back the cards the Projects list still needs, into the section they
+  // came from (or the last one, if that section was renamed or removed). A
+  // card deleted from the Grid while the list still shows it becomes listOnly
+  // from here on: gone from the grid, untouched in the list.
+  const _listed = new Set(getProjectsListKeys());
+  const _present = new Set(sections.flatMap(s => s.cards.map(c => c.key)));
+  _carry.forEach(({ card, section }) => {
+    if (_present.has(card.key)) return;
+    if (!card.listOnly && !_listed.has(card.key)) return;  // a real deletion
     const target = sections.find(s => s.title === section) || sections[sections.length - 1];
-    if (target) target.cards.push(card);
+    if (target) target.cards.push({ ...card, listOnly: true });
   });
 
   _cachedSettings.sections = sections;
