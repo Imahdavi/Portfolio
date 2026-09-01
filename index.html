@@ -2238,11 +2238,16 @@
     body.dark .back-btn, body.dark #scroll-top-btn {
       background:rgba(36,33,32,.92); border-color:var(--d-line-2); color:var(--d-text);
     }
-    /* Light mode darkens these chips on hover; dark mode does the mirror
-       image and lights them right up, icon included. */
     body.dark .back-btn:hover, body.dark #scroll-top-btn:hover {
-      background:var(--d-text); border-color:var(--d-text); color:var(--d-bg);
+      border-color:rgba(255,255,255,.28);
     }
+    /* Hovering these chips grows an ink circle from the pointer and flips the
+       icon against it. The ink is what the eye reads as the hover, not the
+       button's own background — so the ink is what inverts. Setting the
+       background here instead only flashed light for the moment before the
+       still-dark circle covered it. */
+    body.dark .icon-radial-btn .radial-fill { background:var(--d-text); }
+    body.dark .icon-radial-btn.radial-active svg { color:var(--d-bg); }
     body.dark .bottom-nav-group { background:rgba(28,26,24,.72); }
     /* Hovering one card lifts it and pushes the rest back with a white veil
        over their artwork (.proj-card::after) — on a dark page that veil
@@ -2721,6 +2726,9 @@
       }
       #site-cursor svg { display:block; transform:translate(-14px,-19px); transition:transform .12s cubic-bezier(.34,1.56,.64,1); }
       #site-cursor.pressing svg { transform:translate(-14px,-19px) scale(.82); }
+      /* The drawn pointer is filled black in the markup; on a dark page it
+         is a hole rather than a cursor. */
+      body.dark #site-cursor svg path { fill:var(--d-text); }
     }
   </style>
 </head>
