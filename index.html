@@ -8175,7 +8175,11 @@ function makeBlockEl(block, proj) {
       // screen (that's the point, it's a preload buffer), so an unmuted
       // video could still be heard long after scrolling past it. This is
       // the hook a separate, true-viewport observer uses to cut it.
-      vid._forceMute = () => setMuted(true);
+      // While a clip is on loan to the enlarged view it sits outside
+      // #view-project, so the observer below sees it leave the root and
+      // reads that as "scrolled past" — muting the very clip being watched
+      // and leaving the enlarged view's own button showing sound-on.
+      vid._forceMute = () => { if (vid.closest('#ml-stage')) return; setMuted(true); };
       inner.appendChild(muteBtn);
 
       /* Only offer mute/unmute on videos that actually carry sound.
@@ -11487,6 +11491,13 @@ document.addEventListener('DOMContentLoaded', () => {
     muteBtn.innerHTML = v.muted ? SVG_MUTED : SVG_UNMUTED;
     muteBtn.setAttribute('aria-label', v.muted ? 'Unmute' : 'Mute');
   }
+  // Anything can change the sound while the view is open (the board's own
+  // auto-mute, the tile's button, the browser). Following the element's own
+  // event means the icon states what is true rather than what was true when
+  // it opened.
+  stage.addEventListener('volumechange', (e) => {
+    if (e.target && e.target.tagName === 'VIDEO') paintMute(e.target);
+  }, true);
   if (muteBtn) muteBtn.addEventListener('click', (e) => {
     e.stopPropagation();                       // don't reach the close-on-backdrop
     const v = stage.querySelector('video');
