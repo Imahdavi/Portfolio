@@ -2205,10 +2205,29 @@
       opacity:.05;
       pointer-events:none;
     }
-    body.bg-ink .view { background:transparent; }
+    /* Aozora: MISTED SKY -> SKY HAZE -> RIVER INDIGO. Same layer and the
+       same grain file as Ink sky, only the ramp and the grain's weight
+       differ, so the two stay one mechanism rather than two. */
+    body.bg-sky #bg-skin {
+      display:block;
+      position:fixed; inset:0; z-index:0; pointer-events:none;
+      /* fallback first: engines without oklab interpolation take this one */
+      background: linear-gradient(135deg, #E6F2FF 12.5%, #B3D9FF 37.5%, #80B3FF 62.5%, #6699E6 87.5%);
+      background: linear-gradient(135deg in oklab, #E6F2FF 12.5%, #B3D9FF 37.5%, #80B3FF 62.5%, #6699E6 87.5%);
+    }
+    body.bg-sky #bg-skin::after {
+      content:''; position:absolute; inset:0;
+      background:url(/media/site/ink-grain.png) repeat;
+      background-size:256px 256px;
+      image-rendering:pixelated;
+      mix-blend-mode:overlay;
+      opacity:.02;
+      pointer-events:none;
+    }
+    body.bg-ink .view, body.bg-sky .view { background:transparent; }
     /* #app is position:relative with auto z-index, so without this the
        fixed layer above would paint over the content, not behind it. */
-    body.bg-ink #app { z-index:1; }
+    body.bg-ink #app, body.bg-sky #app { z-index:1; }
 
     #bg-toggle-btn {
       position:relative;
@@ -2224,6 +2243,7 @@
     #bg-toggle-btn .nav-tip { bottom:calc(100% + 10px); }
     #bg-toggle-btn:hover .nav-tip { opacity:1; transform:translateX(-50%) translateY(0); }
     body.bg-ink #bg-toggle-btn { color:#55585E; }
+    body.bg-sky #bg-toggle-btn { color:#6699E6; }
 
     /* Scroll-to-top button — mirrors back-btn position on the right.
        Same --site-width fix as back-btn: right was hardcoded assuming
@@ -2602,14 +2622,21 @@
   </style>
 </head>
 <body>
-<!-- Background layer for the "Ink sky" theme. Empty and display:none until
-     the bottom-nav toggle turns it on; see #bg-skin in the stylesheet. -->
+<!-- Background layer for the "Ink sky" / "Blue sky" themes. Empty and
+     display:none until the bottom-nav toggle cycles one on; see #bg-skin
+     in the stylesheet. -->
 <div id="bg-skin" aria-hidden="true"></div>
 <script>
   /* Restored here, inline and before anything renders — doing it from the
      main script at the bottom would paint the white default first and
      flash on every load for anyone who chose the ink background. */
-  try { if (localStorage.getItem('pf_bg_ink') === '1') document.body.classList.add('bg-ink'); } catch (e) {}
+  try {
+    const v = localStorage.getItem('pf_bg_ink');
+    /* '1' is what the ink-only version wrote, so anyone who had it on
+       before this second skin existed keeps it. */
+    if (v === '1' || v === 'ink') document.body.classList.add('bg-ink');
+    else if (v === 'sky') document.body.classList.add('bg-sky');
+  } catch (e) {}
 </script>
 <div id="site-cursor">
   <svg width="28" height="33" viewBox="0 0 171 205" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -3527,10 +3554,14 @@ function toggleWebSound() {
    anything stored with the site's content. Applied before first paint
    further down (see the bg-ink restore), or the white default would show
    for a frame and flash. */
+const BG_SKINS = ['', 'ink', 'sky'];          // '' is the plain white page
 function toggleInkSky() {
-  const on = !document.body.classList.contains('bg-ink');
-  document.body.classList.toggle('bg-ink', on);
-  try { localStorage.setItem('pf_bg_ink', on ? '1' : '0'); } catch (e) {}
+  const cur = document.body.classList.contains('bg-ink') ? 'ink'
+            : document.body.classList.contains('bg-sky') ? 'sky' : '';
+  const next = BG_SKINS[(BG_SKINS.indexOf(cur) + 1) % BG_SKINS.length];
+  document.body.classList.toggle('bg-ink', next === 'ink');
+  document.body.classList.toggle('bg-sky', next === 'sky');
+  try { localStorage.setItem('pf_bg_ink', next || '0'); } catch (e) {}
 }
 
 /* ─── Spider web catch SVG — dense, realistic cobweb drawn on click ───── */
