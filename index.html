@@ -1914,15 +1914,18 @@
       width:100%; height:100%; object-fit:cover; display:block; pointer-events:none;
     }
 
-    /* Media tilt glare — ported from a shadcn/motion "TiltCard" component's
-       radial-gradient sheen (see mediaTilt IIFE near the end of the script
-       for the cursor-tracked rotate + this layer's position, which are the
-       source's own math). overlay blend reads as a glass reflection on top
-       of real photos/video instead of a flat white wash. */
-    .media-tilt-glare {
-      position:absolute; inset:0; z-index:5; pointer-events:none;
-      opacity:0; transition:opacity .25s ease; mix-blend-mode:overlay;
+    /* Ascii lens canvas — one per page, moved over whichever media is
+       hovered (see the "Media ascii lens" IIFE near the end of the script).
+       Positioned in viewport coordinates rather than inside the block,
+       because a board tile sits in a grid that measures its children and
+       an extra absolutely-positioned canvas inside it would be measured
+       too. z-index clears the media but stays under the nav and overlays. */
+    .media-ascii-canvas {
+      position:fixed; z-index:40; pointer-events:none;
+      opacity:0; transition:opacity .18s ease;
+      border-radius:inherit;
     }
+    .media-ascii-canvas.on { opacity:1; }
 
     /* Custom freehand resize corner — lives inside media-inner */
     .resize-corner {
@@ -11378,86 +11381,378 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <script>
-/* ── Media tilt + glare ──────────────────────────────────────
-   Ported from a shadcn/motion "TiltCard" component. The cursor-driven
-   3D tilt (rotateX/rotateY toward the pointer, eased rather than
-   snapping) and the radial-gradient glare that tracks the same
-   pointer position are the source's own math, unchanged — re-done as
-   a plain rAF lerp loop since this page has no framer-motion/`motion`
-   library, and wired to every media block's .media-inner through one
-   delegated listener on #block-list instead of a per-card React
-   component. Gated exactly like the source's own hooks: skipped on
-   touch/coarse pointers and prefers-reduced-motion (useHoverCapable +
-   useReducedMotion), and also skipped in edit mode here, since that's
-   when resize-corner dragging needs uncontested mouse control over
-   the same element. */
+/* ── Media ascii lens ────────────────────────────────────────
+   Ported from the Canvas UI "Asciify" component. The effect itself is
+   the source's: a WebGL2 lens that follows the cursor, chops the frame
+   into cells, and picks a 5x5 bitmap glyph per cell from the ramp by
+   how bright that cell is — the glyph ramps, the bit unpacking, the
+   softness falloff, the dithered coverage and the chromatic fringe are
+   all its own maths, unchanged.
+
+   What is NOT ported is the bulk of that file: it exists to screenshot
+   arbitrary HTML into a texture (drawElementImage, a hand-rolled DOM
+   painter that redraws every element's background/text/borders, and a
+   text mask to switch glyphs for dots over real text). None of that is
+   needed here — the thing being asciified is a <video> or <img>, which
+   WebGL can take as a texture directly. That also makes it steadier
+   than the original: no capture step to go stale, no fallback path.
+
+   One canvas and one GL context for the whole page, moved over
+   whichever media is hovered. Browsers cap live WebGL contexts at
+   around 16, so a per-block instance — which is what the React
+   component would give you — would run out on any real board.
+
+   Replaces the previous tilt + glare hover effect. Gated the same way:
+   fine pointers only, off under prefers-reduced-motion, and off in
+   edit mode, where resize dragging needs the mouse. */
 (function () {
   if (!window.matchMedia) return;
   if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-  const MAX_TILT = 12; // degrees — the component's own default
   const list = document.getElementById('block-list');
   if (!list) return;
 
-  let activeEl = null;
-  let targetRX = 0, targetRY = 0, curRX = 0, curRY = 0, rafId = 0;
+  // Tunables — the source's option names, kept so they're recognisable.
+  const OPT = {
+    radius: 0.42,        // lens radius, fraction of the canvas height
+    softness: 0.85,      // edge feather, 0..1 of the radius
+    scale: 2.4,          // glyph pixel size in CSS px (a char is 5 of these)
+    spacing: 1,          // blank glyph pixels around each char
+    charset: 'ascii',    // 'ascii' | 'blocks' | 'binary'
+    contrast: 1.15,
+    brightness: 0.0,
+    invert: 0,
+    strength: 1,         // coverage inside the lens
+    baseStrength: 0,     // coverage everywhere else
+    followSpeed: 9,      // how fast the lens chases the cursor
+    aberration: 0.75,
+    bg: [0, 0, 0],       // "paper" behind the glyphs
+    bgOpacity: 0.92,
+  };
 
-  function ensureGlare(el) {
-    let g = el.querySelector(':scope > .media-tilt-glare');
-    if (!g) { g = document.createElement('div'); g.className = 'media-tilt-glare'; el.appendChild(g); }
-    return g;
-  }
+  const CHARSETS = {
+    ascii:  [0, 128, 131200, 14336, 459200, 469440, 4357252, 18157905, 11512810, 15724526],
+    blocks: [0, 328000, 22041621, 22369621, 11512810, 33554431],
+    binary: [0, 4591758, 15324974],
+  };
+  const MAX_GLYPHS = 16;
 
-  function clear(el) {
-    if (!el) return;
-    el.style.transform = '';
-    const g = el.querySelector(':scope > .media-tilt-glare');
-    if (g) g.style.opacity = '0';
-  }
+  const VERT = `#version 300 es
+precision highp float;
+layout(location = 0) in vec2 aPos;
+out vec2 vUv;
+void main () {
+  vUv = aPos * 0.5 + 0.5;
+  gl_Position = vec4(aPos, 0.0, 1.0);
+}`;
 
-  function tick() {
-    curRX += (targetRX - curRX) * 0.18;
-    curRY += (targetRY - curRY) * 0.18;
-    if (activeEl) {
-      activeEl.style.transform = `perspective(1000px) rotateX(${curRX.toFixed(3)}deg) rotateY(${curRY.toFixed(3)}deg)`;
+  const FRAG = `#version 300 es
+precision highp float;
+in vec2 vUv;
+out vec4 outColor;
+uniform sampler2D uContent;
+uniform vec2 uResolution;
+uniform float uGlyphPx;
+uniform float uSpacing;
+uniform uint uGlyphs[${MAX_GLYPHS}];
+uniform int uGlyphCount;
+uniform float uRadius;
+uniform float uSoftness;
+uniform vec2 uPointer;
+uniform float uActive;
+uniform vec3 uBg;
+uniform float uBgOpacity;
+uniform float uLod;
+uniform float uContrast;
+uniform float uBrightness;
+uniform float uInvert;
+uniform float uStrength;
+uniform float uBase;
+uniform float uAberration;
+
+#define S(a, b, t) smoothstep(a, b, t)
+
+float glyphBit (int index, ivec2 p) {
+  if (p.x < 0 || p.x > 4 || p.y < 0 || p.y > 4) return 0.0;
+  uint bits = uGlyphs[index];
+  return float((bits >> uint((4 - p.x) + 5 * p.y)) & 1u);
+}
+
+float hash21 (vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+vec4 sampleFringe (vec2 uv, float lod, vec2 off) {
+  vec4 c = textureLod(uContent, uv, lod);
+  c.r = textureLod(uContent, uv + off, lod).r;
+  c.b = textureLod(uContent, uv - off, lod).b;
+  return c;
+}
+
+void main () {
+  vec2 uv = vUv;
+  float cellPx = (5.0 + 2.0 * uSpacing) * uGlyphPx;
+  vec2 frag = uv * uResolution;
+  vec2 cell = floor(frag / cellPx);
+  vec2 cellUv = (cell + 0.5) * cellPx / uResolution;
+
+  float aspect = uResolution.x / uResolution.y;
+  float dist = length((cellUv - uPointer) * vec2(aspect, 1.0));
+  float radius = max(uRadius * uActive, 1e-4);
+  float inner = radius * (1.0 - clamp(uSoftness, 0.0, 1.0));
+  float lens = (1.0 - S(inner, radius, dist)) * uActive;
+  float mask = clamp(max(lens, clamp(uBase, 0.0, 1.0)), 0.0, 1.0)
+    * clamp(uStrength, 0.0, 1.0);
+
+  // Dithered coverage: a cell is asciified or left alone, never blended,
+  // so the lens edge breaks up into characters instead of fading as a ring.
+  float apply = mask < 0.003 ? 0.0 : step(hash21(cell), mask);
+  if (apply < 0.5) { outColor = vec4(0.0); return; }
+
+  vec2 lensDir = (cellUv - uPointer) * vec2(aspect, 1.0);
+  vec2 fringe = normalize(lensDir + 1e-5)
+    * clamp(uAberration, 0.0, 1.0) * 0.005
+    * S(uRadius * 0.15, uRadius, dist) * max(uActive, S(0.0, 0.25, uBase));
+  fringe = vec2(fringe.x / aspect, fringe.y);
+
+  vec4 pixel = sampleFringe(cellUv, uLod, fringe);
+
+  // Density is plain luminance here. The original measures contrast against
+  // the page's own background colour, because it sits over a web page; over
+  // a photo or a video frame, brightness itself is the signal.
+  float lum = dot(pixel.rgb, vec3(0.299, 0.587, 0.114));
+  float amount = clamp((lum - 0.5) * uContrast + 0.5 + uBrightness, 0.0, 1.0);
+  amount = mix(amount, 1.0 - amount, clamp(uInvert, 0.0, 1.0));
+
+  int index = min(int(amount * float(uGlyphCount)), uGlyphCount - 1);
+
+  ivec2 local = ivec2(floor((frag - cell * cellPx) / uGlyphPx));
+  int pad = int(uSpacing);
+  float on = glyphBit(index, ivec2(local.x - pad, local.y - pad));
+
+  vec3 col = mix(uBg, pixel.rgb, on);
+  float alpha = mix(clamp(uBgOpacity, 0.0, 1.0), 1.0, on);
+  outColor = vec4(col * alpha, alpha);
+}`;
+
+  let canvas = null, gl = null, program = null, uniforms = null;
+  let contentTexture = null, glyphData = null;
+  let activeEl = null, activeMedia = null, rafId = 0;
+  const pointer = { x: .5, y: .5, tx: .5, ty: .5, active: 0, target: 0 };
+  let lastTime = 0, failed = false;
+
+  function compile(type, src) {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, src);
+    gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+      const msg = gl.getShaderInfoLog(sh) || 'shader error';
+      gl.deleteShader(sh);
+      throw new Error(msg);
     }
-    if (Math.abs(targetRX - curRX) > 0.02 || Math.abs(targetRY - curRY) > 0.02) {
-      rafId = requestAnimationFrame(tick);
-    } else {
-      rafId = 0;
+    return sh;
+  }
+
+  function init() {
+    if (canvas || failed) return !failed;
+    try {
+      canvas = document.createElement('canvas');
+      canvas.className = 'media-ascii-canvas';
+      canvas.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(canvas);
+
+      gl = canvas.getContext('webgl2', {
+        alpha: true, depth: false, stencil: false,
+        antialias: false, premultipliedAlpha: true,
+      });
+      if (!gl) throw new Error('no webgl2');
+
+      const vs = compile(gl.VERTEX_SHADER, VERT);
+      const fs = compile(gl.FRAGMENT_SHADER, FRAG);
+      program = gl.createProgram();
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        throw new Error(gl.getProgramInfoLog(program) || 'link error');
+      }
+
+      uniforms = {};
+      const n = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
+      for (let i = 0; i < n; i++) {
+        const info = gl.getActiveUniform(program, i);
+        uniforms[info.name] = gl.getUniformLocation(program, info.name);
+      }
+
+      const quad = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+      contentTexture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, contentTexture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+      const ramp = CHARSETS[OPT.charset] || CHARSETS.ascii;
+      glyphData = new Uint32Array(MAX_GLYPHS);
+      for (let i = 0; i < Math.min(ramp.length, MAX_GLYPHS); i++) glyphData[i] = ramp[i] >>> 0;
+      glyphData._count = Math.min(ramp.length, MAX_GLYPHS);
+      return true;
+    } catch (e) {
+      // Any GPU/driver refusal just means no effect — never a broken page.
+      console.warn('[ascii lens] unavailable:', e.message);
+      failed = true;
+      if (canvas) canvas.remove();
+      canvas = null; gl = null;
+      return false;
     }
   }
-  function kick() { if (!rafId) rafId = requestAnimationFrame(tick); }
 
-  list.addEventListener('mousemove', (e) => {
-    if (typeof editMode !== 'undefined' && editMode) {
-      if (activeEl) { clear(activeEl); activeEl = null; curRX = curRY = targetRX = targetRY = 0; }
+  // The media element is only usable as a texture once it has real pixels:
+  // a video needs readyState >= 2, an image needs to have decoded.
+  function mediaReady(m) {
+    if (!m) return false;
+    if (m.tagName === 'VIDEO') return m.readyState >= 2 && m.videoWidth > 0;
+    return m.complete && m.naturalWidth > 0;
+  }
+
+  function place(el) {
+    const r = el.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.style.left = r.left + 'px';
+    canvas.style.top = r.top + 'px';
+    canvas.style.width = r.width + 'px';
+    canvas.style.height = r.height + 'px';
+    const w = Math.max(1, Math.round(r.width * dpr));
+    const h = Math.max(1, Math.round(r.height * dpr));
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    return r;
+  }
+
+  function render() {
+    if (!activeEl || !activeMedia) return;
+    const rect = place(activeEl);
+    if (!rect.width || !rect.height) return;
+
+    try {
+      gl.bindTexture(gl.TEXTURE_2D, contentTexture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, activeMedia);
+      gl.generateMipmap(gl.TEXTURE_2D);
+    } catch (e) {
+      // A cross-origin frame taints the texture; drop the effect for this one
+      // rather than throwing every frame.
+      stop();
       return;
     }
+
+    gl.useProgram(program);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, contentTexture);
+    gl.uniform1i(uniforms.uContent, 0);
+
+    const dpr = canvas.width / Math.max(rect.width, 1);
+    const glyphCss = Math.max(OPT.scale, 0.5);
+    const spacing = Math.round(Math.min(Math.max(OPT.spacing, 0), 3));
+
+    gl.uniform2f(uniforms.uResolution, canvas.width, canvas.height);
+    gl.uniform1f(uniforms.uGlyphPx, glyphCss * dpr);
+    gl.uniform1f(uniforms.uSpacing, spacing);
+    gl.uniform1f(uniforms.uLod, Math.max(0, Math.log2((5 + 2 * spacing) * glyphCss) - 1));
+    gl.uniform1uiv(uniforms['uGlyphs[0]'], glyphData);
+    gl.uniform1i(uniforms.uGlyphCount, glyphData._count);
+    gl.uniform1f(uniforms.uRadius, Math.max(OPT.radius, 0.01));
+    gl.uniform1f(uniforms.uSoftness, OPT.softness);
+    gl.uniform2f(uniforms.uPointer, pointer.x, pointer.y);
+    gl.uniform1f(uniforms.uActive, pointer.active);
+    gl.uniform3f(uniforms.uBg, OPT.bg[0], OPT.bg[1], OPT.bg[2]);
+    gl.uniform1f(uniforms.uBgOpacity, OPT.bgOpacity);
+    gl.uniform1f(uniforms.uContrast, Math.max(OPT.contrast, 0));
+    gl.uniform1f(uniforms.uBrightness, OPT.brightness);
+    gl.uniform1f(uniforms.uInvert, OPT.invert);
+    gl.uniform1f(uniforms.uStrength, OPT.strength);
+    gl.uniform1f(uniforms.uBase, OPT.baseStrength);
+    gl.uniform1f(uniforms.uAberration, OPT.aberration);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  function frame(now) {
+    rafId = 0;
+    if (!activeEl) return;
+    const delta = Math.min((now - lastTime) / 1000, 1 / 30);
+    lastTime = now;
+    const ease = 1 - Math.exp(-delta * Math.max(OPT.followSpeed, 0.5));
+    pointer.x += (pointer.tx - pointer.x) * ease;
+    pointer.y += (pointer.ty - pointer.y) * ease;
+    pointer.active += (pointer.target - pointer.active) * ease;
+
+    render();
+
+    const settled =
+      Math.abs(pointer.tx - pointer.x) < 5e-4 &&
+      Math.abs(pointer.ty - pointer.y) < 5e-4 &&
+      Math.abs(pointer.target - pointer.active) < 1e-3;
+
+    // A video keeps changing under the lens, so it has to keep drawing even
+    // once the cursor has settled; a still image can stop.
+    const live = activeMedia && activeMedia.tagName === 'VIDEO' && !activeMedia.paused;
+    if (settled && pointer.target === 0) { stop(); return; }
+    if (!settled || live) kick();
+  }
+
+  function kick() { if (!rafId && activeEl) { if (!lastTime) lastTime = performance.now(); rafId = requestAnimationFrame(frame); } }
+
+  function stop() {
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = 0; lastTime = 0;
+    activeEl = null; activeMedia = null;
+    if (canvas) canvas.classList.remove('on');
+  }
+
+  list.addEventListener('mousemove', (e) => {
+    if (typeof editMode !== 'undefined' && editMode) { if (activeEl) stop(); return; }
     const inner = e.target.closest('.media-inner');
     if (!inner) return;
+
+    const media = inner.querySelector('video, img');
+    if (!mediaReady(media)) { if (activeEl) stop(); return; }
+    if (!init()) return;
+
     if (inner !== activeEl) {
-      clear(activeEl);
       activeEl = inner;
-      curRX = 0; curRY = 0;
+      activeMedia = media;
+      pointer.active = 0;
+      canvas.classList.add('on');
     }
-    const rect = inner.getBoundingClientRect();
-    const px = (e.clientX - rect.left) / rect.width;
-    const py = (e.clientY - rect.top) / rect.height;
-    targetRY = (px - 0.5) * MAX_TILT;
-    targetRX = (0.5 - py) * MAX_TILT;
+    const r = inner.getBoundingClientRect();
+    pointer.tx = (e.clientX - r.left) / Math.max(r.width, 1);
+    pointer.ty = 1 - (e.clientY - r.top) / Math.max(r.height, 1);
+    pointer.target = 1;
     kick();
-    const g = ensureGlare(inner);
-    g.style.background = `radial-gradient(circle at ${(px * 100).toFixed(1)}% ${(py * 100).toFixed(1)}%, rgba(255,255,255,.35), transparent 50%)`;
-    g.style.opacity = '0.6';
   });
 
   list.addEventListener('mouseleave', () => {
-    targetRX = 0; targetRY = 0;
+    pointer.target = 0;
     kick();
-    if (activeEl) { const g = activeEl.querySelector(':scope > .media-tilt-glare'); if (g) g.style.opacity = '0'; }
   }, true);
+
+  // The canvas is positioned in viewport coordinates, so anything that moves
+  // the element under it has to either follow or give up.
+  window.addEventListener('scroll', () => { if (activeEl) { pointer.target = 0; kick(); } }, true);
+  window.addEventListener('resize', () => { if (activeEl) stop(); });
 })();
 
 /* ── Click-to-enlarge ──────────────────────────────────────
