@@ -2196,6 +2196,30 @@
     #sound-toggle-btn .nav-tip { bottom:calc(100% + 10px); }
     #sound-toggle-btn:hover .nav-tip { opacity:1; transform:translateX(-50%) translateY(0); }
 
+    /* TEST: scroll-drawn stroke (see #scroll-stroke in the project view).
+       Sits behind the blocks and takes no pointer events, so nothing on the
+       board changes behaviour while this is being tried out. */
+    #scroll-stroke {
+      /* Height is written from JS to the board's full scroll height: a
+         percentage here would resolve against the scroller's visible box,
+         so the stroke would scroll away in the first screen and there would
+         be nothing left to "follow". */
+      position:absolute; top:0; left:50%; width:150%;
+      transform:translateX(-50%);
+      z-index:0; pointer-events:none; overflow:visible;
+      opacity:.5;
+    }
+    #scroll-stroke-path {
+      fill:none; stroke:#C2F84F; stroke-width:20;
+      /* pathLength="1" normalises the geometry, so the dash maths is just
+         progress — no getTotalLength() call, no reflow. */
+      stroke-dasharray:1; stroke-dashoffset:.5;
+    }
+    body.dark #scroll-stroke { opacity:.42; }
+    /* The blocks have to sit above it; .block-list has no stacking context
+       of its own otherwise. */
+    #view-project .block-list { position:relative; z-index:1; }
+
     /* ── Dark mode ───────────────────────────────────
        Written as an additive override rather than by rewriting the ~300
        colour-bearing rules above: light mode stays exactly as it was, and
@@ -3028,6 +3052,14 @@ one keyframe at a time</div>
       ↕ Drag up/down to reorder &nbsp;·&nbsp; ↔ Drag left/right to reposition
     </div>
 
+    <!-- TEST: scroll-drawn stroke behind the board. Port of a Framer Motion
+         component (useScroll -> pathLength); this site has no React, so the
+         same idea runs off the view's own scroll. Remove this node and the
+         #scroll-stroke rules/IIFE to drop it. -->
+    <svg id="scroll-stroke" viewBox="0 0 1278 2319" fill="none" preserveAspectRatio="xMidYMin slice" aria-hidden="true">
+      <path id="scroll-stroke-path" pathLength="1"
+        d="M876.605 394.131C788.982 335.917 696.198 358.139 691.836 416.303C685.453 501.424 853.722 498.43 941.95 409.714C1016.1 335.156 1008.64 186.907 906.167 142.846C807.014 100.212 712.699 198.494 789.049 245.127C889.053 306.207 986.062 116.979 840.548 43.3233C743.932 -5.58141 678.027 57.1682 672.279 112.188C666.53 167.208 712.538 172.943 736.353 163.088C760.167 153.234 764.14 120.924 746.651 93.3868C717.461 47.4252 638.894 77.8642 601.018 116.979C568.164 150.908 557 201.079 576.467 246.924C593.342 286.664 630.24 310.55 671.68 302.614C756.114 286.446 729.747 206.546 681.86 186.442C630.54 164.898 492 209.318 495.026 287.644C496.837 334.494 518.402 366.466 582.455 367.287C680.013 368.538 771.538 299.456 898.634 292.434C1007.02 286.446 1192.67 309.384 1242.36 382.258C1266.99 418.39 1273.65 443.108 1247.75 474.477C1217.32 511.33 1149.4 511.259 1096.84 466.093C1044.29 420.928 1029.14 380.576 1033.97 324.172C1038.31 273.428 1069.55 228.986 1117.2 216.384C1152.2 207.128 1188.29 213.629 1194.45 245.127C1201.49 281.062 1132.22 280.104 1100.44 272.673C1065.32 264.464 1044.22 234.837 1032.77 201.413C1019.29 162.061 1029.71 131.126 1056.44 100.965C1086.19 67.4032 1143.96 54.5526 1175.78 86.1513C1207.02 117.17 1186.81 143.379 1156.22 166.691C1112.57 199.959 1052.57 186.238 999.784 155.164C957.312 130.164 899.171 63.7054 931.284 26.3214C952.068 2.12513 996.288 3.87363 1007.22 43.58C1018.15 83.2749 1003.56 122.644 975.969 163.376C948.377 204.107 907.272 255.122 913.558 321.045C919.727 385.734 990.968 497.068 1063.84 503.35C1111.46 507.456 1166.79 511.984 1175.68 464.527C1191.52 379.956 1101.26 334.985 1030.29 377.017C971.109 412.064 956.297 483.647 953.797 561.655C947.587 755.413 1197.56 941.828 936.039 1140.66C745.771 1285.32 321.926 950.737 134.536 1202.19C-6.68295 1391.68 -53.4837 1655.38 131.935 1760.5C478.381 1956.91 1124.19 1515 1201.28 1997.83C1273.66 2451.23 100.805 1864.7 303.794 2668.89"/>
+    </svg>
     <div class="block-list" id="block-list"></div>
 
     <div class="add-bar" id="addBar">
@@ -10110,6 +10142,44 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   _restoringState = false;
 });
+
+/* ─── TEST: scroll-drawn stroke on the board ───────────────
+   Port of a Framer Motion piece (useScroll + useTransform driving a path's
+   pathLength). There is no React here, so the same idea runs off the
+   project view's own scrollTop.
+
+   pathLength="1" on the <path> normalises the geometry to 0..1, so the dash
+   maths never needs getTotalLength() — which would force a layout of a
+   2319-unit path on every frame.
+
+   Scroll fires far more often than the screen repaints, so the handler only
+   records the position and a single rAF does the write. Passive, so it
+   never delays the scroll itself. */
+(function () {
+  const view = document.getElementById('view-project');
+  const path = document.getElementById('scroll-stroke-path');
+  if (!view || !path) return;
+  let ticking = false;
+
+  const svg = document.getElementById('scroll-stroke');
+  function paint() {
+    ticking = false;
+    // Span the whole board so the line is still being drawn at the bottom.
+    if (svg) svg.style.height = view.scrollHeight + 'px';
+    const max = view.scrollHeight - view.clientHeight;
+    const p = max > 0 ? Math.min(1, Math.max(0, view.scrollTop / max)) : 0;
+    // Same mapping as the original: half drawn at rest, whole at the end.
+    const drawn = 0.5 + p * 0.5;
+    path.style.strokeDasharray = drawn + ' 1';
+    path.style.strokeDashoffset = 1 - drawn;
+  }
+  view.addEventListener('scroll', () => {
+    if (!ticking) { ticking = true; requestAnimationFrame(paint); }
+  }, { passive: true });
+  // Boards are built after this runs, and opening one resets the scroll.
+  window._paintScrollStroke = paint;
+  paint();
+})();
 
 /* ─── Spider-Man web shot ──────────────────────────────── */
 /* Silk is near-black on the light page; on the dark one that draws an
