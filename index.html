@@ -1914,6 +1914,16 @@
       width:100%; height:100%; object-fit:cover; display:block; pointer-events:none;
     }
 
+    /* Scroll fold — see the "Scroll fold" IIFE near the end of the script.
+       backface-visibility matters here: a block folded past 90deg would
+       otherwise show its mirrored back face instead of turning away. */
+    .fold-wrap { perspective-origin: 50% 50%; }
+    .fold-item {
+      backface-visibility: hidden;
+      transition: filter .12s linear;
+      will-change: transform;
+    }
+
     /* Ascii lens canvas — one per page, moved over whichever media is
        hovered (see the "Media ascii lens" IIFE near the end of the script).
        Positioned in viewport coordinates rather than inside the block,
@@ -11771,6 +11781,178 @@ void main () {
   // the element under it has to either follow or give up.
   window.addEventListener('scroll', () => { if (activeEl) { pointer.target = 0; kick(); } }, true);
   window.addEventListener('resize', () => { if (activeEl) stop(); });
+})();
+
+/* ── Scroll fold ─────────────────────────────────────────────
+   The look Canvas UI's "Bend" component gives a page: content folds
+   over a virtual edge at the top and bottom of the scroller and
+   flattens out again in the middle and at the scroll ends.
+
+   Not a port. Bend re-maps the whole page surface in a WebGL shader,
+   which means first turning the entire scrollable DOM into a texture —
+   it does that with drawElementImage, an experimental html-in-canvas
+   API that this browser does not ship (checked: drawElementImage and
+   requestPaint are both absent on Chrome 148). Its own code has no
+   fallback for that: with html-in-canvas missing it sets uCover to 0
+   and draws nothing at all, so shipping it would have added a dead
+   canvas and no effect for any visitor.
+
+   So the fold is done in CSS 3D instead, on the blocks themselves. The
+   difference is real and worth knowing: Bend bends one continuous
+   surface, this hinges each block separately. On a page built out of
+   full-width stacked blocks — which these boards are — they read
+   closely, but they are not the same thing. In exchange it works in
+   every browser, costs a transform per visible block instead of a GPU
+   pass over the whole page, and leaves text selectable and links
+   clickable with no pointer remapping.
+
+   The prop names and defaults are Bend's own, so they are tunable the
+   same way. `angle` is the exception: 80deg across a continuous surface
+   is a cube edge, but applied to a whole block it turns it edge-on and
+   unreadable, so the default here is much shallower. */
+(function () {
+  if (!window.matchMedia) return;
+
+  const OPT = {
+    zone: 240,           // px at each edge where folding happens
+    angle: 34,           // max fold in degrees (Bend uses 80 for a continuous surface)
+    perspective: 700,    // px focal length; smaller pinches the fold harder
+    ease: 240,           // px of scroll over which an edge flattens at its end
+    smoothing: 0.1,      // seconds for the fold to settle
+    direction: 'in',     // 'in' tilts toward the viewer, 'out' away
+    top: true,
+    bottom: true,
+    fade: 0.55,          // extra dimming at full fold (0 = none). Not a Bend prop:
+                         // a hinged block has no shading of its own, and without
+                         // this the fold reads as a squash rather than a turn.
+  };
+
+  const TARGETS = [
+    { scroller: '#view-project', wrap: '#block-list', items: ':scope > .block' },
+    { scroller: '#view-home',    wrap: '#home-sections', items: ':scope > *' },
+  ];
+
+  const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const DIR = OPT.direction === 'in' ? 1 : -1;
+
+  let raf = 0;
+  // Eased 0..1 per edge, shared by every block so the whole face flattens
+  // together at a scroll end the way Bend's uTopAmt/uBotAmt do.
+  const amt = { top: 0, bottom: 0, tTop: 0, tBottom: 0 };
+  let lastTime = 0;
+
+  function ramp(v) {
+    const x = Math.min(Math.max(v / Math.max(OPT.ease, 1), 0), 1);
+    return x * x * (3 - 2 * x);   // smoothstep, as in Bend's syncScroll
+  }
+
+  function active() {
+    for (const t of TARGETS) {
+      const scroller = document.querySelector(t.scroller);
+      if (!scroller || !scroller.classList.contains('active')) continue;
+      const wrap = scroller.querySelector(t.wrap);
+      if (!wrap) continue;
+      return { scroller, wrap, items: t.items };
+    }
+    return null;
+  }
+
+  function clearAll() {
+    document.querySelectorAll('.fold-item').forEach(el => {
+      el.style.transform = '';
+      el.style.filter = '';
+      el.style.transformOrigin = '';
+      el.classList.remove('fold-item');
+    });
+    document.querySelectorAll('.fold-wrap').forEach(el => el.classList.remove('fold-wrap'));
+  }
+
+  function apply() {
+    raf = 0;
+    if (motion.matches || (typeof editMode !== 'undefined' && editMode)) { clearAll(); return; }
+
+    const ctx = active();
+    if (!ctx) { clearAll(); return; }
+    const { scroller, wrap, items } = ctx;
+    wrap.classList.add('fold-wrap');
+    wrap.style.perspective = OPT.perspective + 'px';
+
+    const max = scroller.scrollHeight - scroller.clientHeight;
+    const st = scroller.scrollTop;
+    amt.tTop    = (max > 1 && OPT.top)    ? ramp(st) : 0;
+    amt.tBottom = (max > 1 && OPT.bottom) ? ramp(max - st) : 0;
+
+    const now = performance.now();
+    const delta = Math.min((now - (lastTime || now)) / 1000, 1 / 30);
+    lastTime = now;
+    const k = OPT.smoothing <= 0 ? 1 : 1 - Math.exp(-delta / Math.max(OPT.smoothing, 1e-4));
+    amt.top    += (amt.tTop - amt.top) * k;
+    amt.bottom += (amt.tBottom - amt.bottom) * k;
+    if (Math.abs(amt.tTop - amt.top) < 1e-3) amt.top = amt.tTop;
+    if (Math.abs(amt.tBottom - amt.bottom) < 1e-3) amt.bottom = amt.tBottom;
+
+    const view = scroller.getBoundingClientRect();
+    const zone = Math.max(OPT.zone, 8);
+    let animating = Math.abs(amt.tTop - amt.top) > 1e-3 || Math.abs(amt.tBottom - amt.bottom) > 1e-3;
+
+    wrap.querySelectorAll(items).forEach(el => {
+      const r = el.getBoundingClientRect();
+      if (r.height === 0 || r.bottom < view.top - zone || r.top > view.bottom + zone) {
+        if (el.classList.contains('fold-item')) {
+          el.style.transform = ''; el.style.filter = '';
+          el.classList.remove('fold-item');
+        }
+        return;
+      }
+
+      // How far the block has pushed past each crease, 0..1.
+      const intoTop = Math.min(Math.max((view.top + zone - r.top) / zone, 0), 1) * amt.top;
+      const intoBot = Math.min(Math.max((r.bottom - (view.bottom - zone)) / zone, 0), 1) * amt.bottom;
+
+      if (intoTop < 0.002 && intoBot < 0.002) {
+        if (el.classList.contains('fold-item')) {
+          el.style.transform = ''; el.style.filter = '';
+          el.classList.remove('fold-item');
+        }
+        return;
+      }
+
+      el.classList.add('fold-item');
+      // Hinge from the edge nearest the flat middle of the face, so the block
+      // swings away over the crease instead of pivoting about its own centre.
+      let deg, origin;
+      if (intoTop >= intoBot) {
+        deg = -OPT.angle * intoTop * DIR;
+        origin = 'center bottom';
+      } else {
+        deg = OPT.angle * intoBot * DIR;
+        origin = 'center top';
+      }
+      const t = Math.max(intoTop, intoBot);
+      el.style.transformOrigin = origin;
+      el.style.transform = `rotateX(${deg.toFixed(2)}deg)`;
+      el.style.filter = OPT.fade > 0 ? `brightness(${(1 - OPT.fade * t).toFixed(3)})` : '';
+    });
+
+    if (animating) kick();
+  }
+
+  function kick() { if (!raf) raf = requestAnimationFrame(apply); }
+
+  // Scroll fires on the view, not the window — each .view is its own scroller.
+  document.addEventListener('scroll', kick, true);
+  window.addEventListener('resize', kick);
+  motion.addEventListener('change', () => { clearAll(); kick(); });
+
+  // Views swap by class, and a board's blocks are rebuilt on open, so recompute
+  // whenever either changes rather than only on scroll.
+  const mo = new MutationObserver(kick);
+  mo.observe(document.getElementById('app') || document.body, {
+    attributes: true, attributeFilter: ['class'], subtree: true, childList: true,
+  });
+
+  kick();
+  window.__scrollFold = OPT;   // so the values can be tried live from the console
 })();
 
 /* ── Click-to-enlarge ──────────────────────────────────────
