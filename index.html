@@ -11742,8 +11742,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const reduce = window.matchMedia &&
                  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const COLORS = ['#e5e7eb', '#9ca3af', '#6b7280'];
-  const GAP = 6;            // source default is 5; one more keeps it subtle
+  // Kept deliberately faint: at the source's own density and full-strength
+  // greys this fills the box with static and the placeholder disappears into
+  // it. A wider grid, smaller squares and a low alpha read as texture behind
+  // the text rather than noise over it.
+  const COLORS = ['#9ca3af', '#6b7280', '#4b5563'];
+  const ALPHA = 0.42;
+  const GAP = 9;
   const SPEED = 0.06;
   const ctx = canvas.getContext('2d');
   let pixels = [], raf = 0, dpr = 1;
@@ -11765,7 +11770,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pixels.push({
           x: x * dpr, y: y * dpr,
           color: COLORS[(Math.random() * COLORS.length) | 0],
-          size: 0, maxSize: (Math.random() * 1.6 + 1.2) * dpr,
+          size: 0, maxSize: (Math.random() * 1.1 + 0.9) * dpr,
           delay: Math.sqrt(dx * dx + dy * dy) * 0.7,
           counter: 0
         });
@@ -11775,6 +11780,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function draw(dir) {          // dir: 1 appearing, -1 disappearing
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = ALPHA;
     let busy = false;
     for (const p of pixels) {
       if (p.counter < p.delay) { p.counter += 8; busy = true;
