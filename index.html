@@ -1914,16 +1914,6 @@
       width:100%; height:100%; object-fit:cover; display:block; pointer-events:none;
     }
 
-    /* Scroll fold — see the "Scroll fold" IIFE near the end of the script.
-       backface-visibility matters here: a block folded past 90deg would
-       otherwise show its mirrored back face instead of turning away. */
-    .fold-wrap { perspective-origin: 50% 50%; }
-    .fold-item {
-      backface-visibility: hidden;
-      transition: filter .12s linear;
-      will-change: transform;
-    }
-
     /* Ascii lens canvas — one per page, moved over whichever media is
        hovered (see the "Media ascii lens" IIFE near the end of the script).
        Positioned in viewport coordinates rather than inside the block,
@@ -4776,6 +4766,8 @@ function renderWorkExp(items) {
   // translate/untranslate pair, kept as-is rather than pre-collapsed.
   const SSCHAUMA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 107.84001 23.463739"><g transform="translate(-163.22285,-460.63031)"><path d="M 29.75,0 C 28.70251,0 27.03125,0.45500004 27.03125,2.4375 L 27.03125,21 C 27.03125,22.96877 28.722509,23.40625 29.78125,23.40625 C 30.84125,23.40625 32.562501,22.953729 32.5625,20.96875 L 32.5625,11.65625 C 32.5625,10.40876 33.038751,10.03125 33.875,10.03125 C 34.715,10.03125 35.187498,10.4775 35.1875,11.65625 L 35.1875,21.03125 C 35.1875,22.96877 36.908761,23.375 37.96875,23.375 C 39.06376,23.375 40.781251,22.958729 40.78125,21 L 40.78125,10.03125 C 40.78125,6.6512 38.94252,4.7187501 36.15625,4.71875 C 34.18875,4.71875 33.048758,5.52375 32.5,6.0625 L 32.5,2.375 C 32.5,0.40876 30.79376,2.4808671e-17 29.75,0 z M 48.90625,4.71875 C 44.6175,4.71875 41.906249,7.5362699 41.90625,9.84375 C 41.90625,11.23626 42.745012,12.3125 44,12.3125 C 44.69876,12.3125 45.199988,11.8225 45.625,11.34375 C 46.57751,10.26999 47.26875,9.4374998 48.90625,9.4375 C 49.86377,9.4375 50.374999,9.9462598 50.375,10.6875 C 50.375,11.7938 49.546281,12.25999 47.59375,12.71875 C 44.48625,13.44876 41.562501,14.621279 41.5625,18.59375 C 41.5625,22.34124 44.555,23.468751 46.65625,23.46875 C 47.99,23.46875 49.345002,23.06627 50.40625,22.25 L 50.5,22.15625 C 50.87874,23.035 51.43876,23.438751 52.53125,23.4375 C 52.87751,23.4375 53.123748,23.437501 53.59375,23.4375 C 55.38125,23.43875 55.656252,22.57124 55.65625,21.1875 L 55.65625,10.875 C 55.65751,7.13123 53.72498,4.7187501 48.90625,4.71875 z M 59.6875,4.71875 C 58.59127,4.71875 56.874999,5.1350102 56.875,7.09375 L 56.875,18.09375 C 56.875,21.4725 58.715019,23.40625 61.5,23.40625 C 62.91251,23.40625 64.373752,22.95375 65.375,21.84375 C 65.83501,22.91125 66.838748,23.406251 68,23.40625 C 69.86125,23.40625 70.656253,22.29 70.65625,20.9375 L 70.65625,7.09375 C 70.65625,5.12501 68.93375,4.71875 67.875,4.71875 C 66.81375,4.71875 65.093751,5.1725399 65.09375,7.15625 L 65.09375,16.46875 C 65.09375,17.71501 64.647501,18.062501 63.8125,18.0625 C 62.96999,18.0625 62.499998,17.646281 62.5,16.46875 L 62.5,7.09375 C 62.5,5.15626 60.746252,4.7187502 59.6875,4.71875 z M 81,4.71875 C 79.57623,4.71875 78.203752,5.23123 77.21875,6.34375 C 76.89124,5.45374 76.178739,4.7499998 74.625,4.75 C 73.03625,4.75 71.968746,5.7312502 71.96875,7.25 L 71.96875,20.875 C 71.96875,22.39877 72.98625,23.4375 74.71875,23.4375 C 76.44875,23.4375 77.468748,22.471239 77.46875,20.9375 L 77.46875,11.875 C 77.46875,10.88375 77.848748,10.46875 78.5625,10.46875 C 79.2225,10.46875 79.687497,10.89749 79.6875,11.875 L 79.6875,20.90625 C 79.6875,22.36747 80.610022,23.44375 82.34375,23.4375 C 84.18625,23.43124 85.125001,22.473749 85.125,20.9375 L 85.125,11.875 C 85.125,10.88753 85.5425,10.46875 86.28125,10.46875 C 86.91375,10.46875 87.437497,10.90874 87.4375,11.875 L 87.4375,20.90625 C 87.4375,22.21248 88.206243,23.43124 90.1875,23.4375 C 91.91375,23.44375 92.843749,22.38499 92.84375,20.9375 L 92.84375,9.5625 C 92.84375,6.79124 91.602498,4.7187502 88.375,4.71875 C 86.96,4.71875 85.601248,5.2662298 84.59375,6.25 L 84.46875,6.375 L 84.40625,6.28125 C 83.6025,5.23873 82.31247,4.71875 81,4.71875 z M 101.09375,4.71875 C 96.805,4.71875 94.093752,7.5362699 94.09375,9.84375 C 94.09375,11.23626 94.930019,12.3125 96.1875,12.3125 C 96.88502,12.3125 97.386252,11.8225 97.8125,11.34375 C 98.76499,10.26999 99.456247,9.4374998 101.09375,9.4375 C 102.05,9.4375 102.5625,9.9462598 102.5625,10.6875 C 102.5625,11.7938 101.73373,12.25999 99.78125,12.71875 C 96.675,13.44876 93.750003,14.621279 93.75,18.59375 C 93.75,22.34124 96.741252,23.468751 98.84375,23.46875 C 100.17624,23.46875 101.5325,23.06627 102.59375,22.25 L 102.6875,22.15625 C 103.06751,23.035 103.62627,23.438751 104.71875,23.4375 C 105.06375,23.4375 105.31001,23.437501 105.78125,23.4375 C 107.56751,23.43875 107.84375,22.57124 107.84375,21.1875 L 107.84375,10.875 C 107.84375,7.13123 105.91252,4.7187501 101.09375,4.71875 z M 6.21875,4.75 C 2.7149968,4.9964155 0.49999999,7.0780879 0.5,10.21875 C 0.5,13.22869 2.2700001,14.53623 4,15.40625 C 4.85125,15.83498 5.7062399,16.16 6.34375,16.53125 C 6.97375,16.8975 7.3125,17.28748 7.3125,17.8125 C 7.3125,18.42747 6.8899899,18.781249 6.1875,18.78125 C 4.445,18.78125 3.5249999,16.500001 2.15625,16.5 C 0.885,16.5 6.1583377e-18,17.531259 0,18.96875 C 0,21.15374 2.3350098,23.40625 6.15625,23.40625 C 10.30001,23.40625 12.78125,20.95626 12.78125,17.4375 C 12.78125,14.49126 11.05625,13.17874 9.375,12.3125 C 8.54877,11.8875 7.7137499,11.58626 7.09375,11.21875 C 6.4825,10.85624 6.1562501,10.48126 6.15625,9.96875 C 6.15625,9.52376 6.5250298,9.0312495 7.25,9.03125 C 8.77626,9.03125 9.1162702,11 10.4375,11 C 11.63373,11 12.46875,10.0363 12.46875,8.6875 C 12.46875,6.76249 10.76876,4.7499998 6.9375,4.75 C 6.69289,4.75 6.4523335,4.7335723 6.21875,4.75 z M 21.15625,4.75 C 17.06125,4.75 13.15625,7.76375 13.15625,14.53125 C 13.15625,21.13125 16.997501,23.468751 20.84375,23.46875 C 23.92375,23.46875 26.281249,21.562511 26.28125,19.40625 C 26.28125,18.17501 25.525,17.343749 24.40625,17.34375 C 23.385,17.34375 22.472501,18.531251 21.09375,18.53125 C 19.65875,18.53125 18.625,17.25375 18.625,14.125 C 18.625,11.43751 19.76251,9.7499995 21.28125,9.75 C 22.69,9.75 23.25251,11 24.375,11 C 25.51,11 26.25,10.02501 26.25,8.6875 C 26.25,6.52625 24.28249,4.7500002 21.15625,4.75 z M 50.28125,15.25 L 50.3125,17.28125 C 50.3125,18.35749 49.815001,19.34375 48.4375,19.34375 C 47.5375,19.34375 46.968748,18.73623 46.96875,17.8125 C 46.96875,16.96751 47.464978,16.56749 48.1875,16.21875 C 48.87873,15.88752 49.62498,15.65878 50.28125,15.25 z M 102.46875,15.25 L 102.5,17.28125 C 102.5,18.35749 102.00251,19.34375 100.625,19.34375 C 99.72503,19.34375 99.156252,18.73623 99.15625,17.8125 C 99.15625,16.96751 99.652501,16.56749 100.375,16.21875 C 101.06751,15.88752 101.81374,15.65878 102.46875,15.25 z " transform="translate(163.22285,460.63031)" style="fill:#13255d;fill-opacity:1;fill-rule:nonzero;stroke:none"/></g></svg>';
 
+  const SRAJ = '<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080"> <path d="M799.13,472.52c-3.22-.24-6.52.33-9.77.69-3.52.4-7.08,1.64-10.53,1.37-17.52-1.36-35-3.07-52.5-4.7-12.44-1.16-24.9-2.18-37.3-3.67-13.97-1.68-28-3.22-41.72.59-5.44,1.51-10.37,5.17-15.2,8.35-1.6,1.06-3.72,3.92-1.02,5.81,1.4.97,4.2.53,6.16-.02,4.43-1.24,8.64-3.85,13.1-4.29,15.13-1.48,30.16.4,45.14,2.55,7.18,1.03,14.37,1.99,21.55,3.05,7.9,1.17,15.78,2.42,23.67,3.64-2.44,1.84-4.98,2.95-7.61,3.78-10.51,3.32-21.07,6.48-31.57,9.83-7.38,2.36-14.67,5.04-22.05,7.41-10.85,3.49-21.77,6.74-32.61,10.26-8.67,2.81-17.23,5.93-25.89,8.79-10.44,3.44-20.97,6.65-31.4,10.13-8.51,2.84-16.91,5.97-25.39,8.88-14,4.82-28.05,9.5-42.03,14.39-9.49,3.32-18.89,6.9-28.34,10.32-13.4,4.85-26.82,9.64-40.22,14.49-9.69,3.51-19.38,7.03-29.03,10.65-9.91,3.71-19.81,7.46-29.66,11.33-10.98,4.31-21.88,8.84-32.86,13.15-8.84,3.47-17.81,6.64-26.62,10.18-14.73,5.91-29.42,11.95-44.06,18.07-4.9,2.05-9.61,4.54-14.41,6.82.08.41.16.81.24,1.22,1.11.08,2.31.47,3.31.18,5.61-1.61,11.19-3.35,16.76-5.12,9.32-2.96,18.59-6.06,27.93-8.96,10.62-3.3,21.32-6.36,31.93-9.71,9.35-2.95,18.59-6.24,27.94-9.21,9.44-2.99,18.96-5.71,28.41-8.66,9.1-2.85,18.15-5.89,27.24-8.76,8.95-2.83,17.96-5.47,26.89-8.34,10.75-3.45,21.43-7.1,32.17-10.59,8.51-2.77,17.09-5.31,25.56-8.19,10.17-3.46,20.23-7.27,30.39-10.75,14.26-4.88,28.59-9.53,42.85-14.4,9.88-3.37,19.66-7.02,29.54-10.38,8.75-2.97,17.61-5.66,26.38-8.57,10.45-3.46,20.83-7.11,31.29-10.53,9.04-2.96,18.16-5.65,27.2-8.57,10.61-3.43,21.17-7.03,31.78-10.47,8.92-2.89,17.87-5.72,26.85-8.44,5.73-1.74,11.47-4.2,17.32-4.57,6.92-.44,10.93-3.29,13.33-9.41,1.77-4.5.44-9.38-3.14-9.65Z"/> <path d="M790.46,532.22c-4.54.81-9.02,2.08-13.46,3.38-10.31,3.03-20.59,6.18-30.88,9.29-15.91,4.81-31.85,9.51-47.7,14.49-10.23,3.22-20.3,6.94-30.48,10.33-10.3,3.42-20.68,6.57-30.95,10.09-13.99,4.8-27.93,9.74-41.82,14.79-14.3,5.2-28.56,10.5-42.76,15.98-12.19,4.7-24.24,9.74-36.37,14.59-13.1,5.24-26.23,10.42-39.33,15.65-9.05,3.61-18.1,7.24-27.13,10.91-8.04,3.28-16.07,6.56-24.05,9.98-11.31,4.85-22.56,9.81-33.83,14.75-7.34,3.22-14.7,6.4-21.97,9.76-1.42.66-2.5,2.07-3.73,3.14.37.39.74.77,1.11,1.16,2.07-.62,4.18-1.15,6.22-1.87,8.16-2.92,16.28-5.99,24.47-8.85,8.34-2.92,16.75-5.63,25.1-8.49,10.27-3.52,20.52-7.12,30.79-10.68,9.36-3.25,18.73-6.45,28.08-9.74,8.59-3.02,17.14-6.17,25.74-9.18,9.46-3.31,18.99-6.44,28.43-9.8,13.81-4.92,27.56-10.02,41.37-14.95,11.76-4.2,23.58-8.24,35.35-12.41,11.52-4.08,22.98-8.35,34.53-12.34,14.12-4.88,28.31-9.54,42.45-14.34,10.17-3.45,20.29-7.05,30.48-10.42,10.05-3.33,20.19-6.39,30.25-9.7,12.65-4.16,25.3-8.32,37.84-12.79,2.49-.89,4.99-2.81,6.54-4.94,1.02-1.41.92-4.26.22-6.04-.41-1.05-3.08-1.98-4.51-1.73Z"/> <path d="M579.17,631.03c-1.21-.69-2.85-.61-5.38-1.1,3.78,6.66,5.05,12.63,4.3,19.08-.82,7.03-5.02,11.16-13.93,12.03.86,1.92,1.23,3.61,2.21,4.79,6.8,8.21,15.25,14.49,24.08,20.37,6.38,4.25,16.01,2.13,19.8-4.44,5.48-9.53,1.94-21.67-4.1-29.42-7.18-9.2-16.91-15.58-26.97-21.31Z"/> <path d="M631.52,441.34c12.18-3.76,24.39-7.42,36.5-11.4,18.45-6.06,36.84-12.29,55.22-18.56,14.76-5.03,29.48-10.17,44.17-15.42,3.33-1.19,6.96-2.37,8.03-6.48-49.26,17.26-98.28,34.43-147.3,51.6,1.27.59,2.37.56,3.39.25Z"/></svg>';
+
   const BRANDS = [
     { name:'Tosan Tools', img:'/tosan-logo.webp' },
     { name:'Netbina',     ch:26, img:'data:image/png;base64,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' },
@@ -4791,6 +4783,7 @@ function renderWorkExp(items) {
     { name:'Fanta',       img:'/fanta-logo.svg', ch:46 },
     { name:'Irancell',    img:'/irancell-logo.svg', ch:62 },
     { name:'Schauma',     svg:SSCHAUMA },
+    { name:'Raj',         svg:SRAJ },
   ];
 
   // Exposed so the Avatar Group block's image picker (Experience page)
@@ -11781,195 +11774,6 @@ void main () {
   // the element under it has to either follow or give up.
   window.addEventListener('scroll', () => { if (activeEl) { pointer.target = 0; kick(); } }, true);
   window.addEventListener('resize', () => { if (activeEl) stop(); });
-})();
-
-/* ── Scroll fold ─────────────────────────────────────────────
-   The look Canvas UI's "Bend" component gives a page: content folds
-   over a virtual edge at the top and bottom of the scroller and
-   flattens out again in the middle and at the scroll ends.
-
-   Not a port. Bend re-maps the whole page surface in a WebGL shader,
-   which means first turning the entire scrollable DOM into a texture —
-   it does that with drawElementImage, an experimental html-in-canvas
-   API that this browser does not ship (checked: drawElementImage and
-   requestPaint are both absent on Chrome 148). Its own code has no
-   fallback for that: with html-in-canvas missing it sets uCover to 0
-   and draws nothing at all, so shipping it would have added a dead
-   canvas and no effect for any visitor.
-
-   So the fold is done in CSS 3D instead, on the blocks themselves. The
-   difference is real and worth knowing: Bend bends one continuous
-   surface, this hinges each block separately. On a page built out of
-   full-width stacked blocks — which these boards are — they read
-   closely, but they are not the same thing. In exchange it works in
-   every browser, costs a transform per visible block instead of a GPU
-   pass over the whole page, and leaves text selectable and links
-   clickable with no pointer remapping.
-
-   The prop names and defaults are Bend's own, so they are tunable the
-   same way. `angle` is the exception: 80deg across a continuous surface
-   is a cube edge, but applied to a whole block it turns it edge-on and
-   unreadable, so the default here is much shallower. */
-(function () {
-  if (!window.matchMedia) return;
-
-  const OPT = {
-    zone: 240,           // px at each edge where folding happens
-    angle: 52,           // max fold in degrees, scaled down per block by its height
-                         // (Bend uses 80 across a continuous surface)
-    perspective: 700,    // px focal length; smaller pinches the fold harder
-    ease: 240,           // px of scroll over which an edge flattens at its end
-    smoothing: 0.1,      // seconds for the fold to settle
-    direction: 'in',     // 'in' tilts toward the viewer, 'out' away
-    top: true,
-    bottom: true,
-    fade: 0.55,          // extra dimming at full fold (0 = none). Not a Bend prop:
-                         // a hinged block has no shading of its own, and without
-                         // this the fold reads as a squash rather than a turn.
-  };
-
-  const TARGETS = [
-    { scroller: '#view-project', wrap: '#block-list', items: ':scope > .block' },
-    { scroller: '#view-home',    wrap: '#home-sections', items: ':scope > *' },
-  ];
-
-  const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const DIR = OPT.direction === 'in' ? 1 : -1;
-
-  let raf = 0;
-  // Eased 0..1 per edge, shared by every block so the whole face flattens
-  // together at a scroll end the way Bend's uTopAmt/uBotAmt do.
-  const amt = { top: 0, bottom: 0, tTop: 0, tBottom: 0 };
-  let lastTime = 0;
-
-  function ramp(v) {
-    const x = Math.min(Math.max(v / Math.max(OPT.ease, 1), 0), 1);
-    return x * x * (3 - 2 * x);   // smoothstep, as in Bend's syncScroll
-  }
-
-  function active() {
-    for (const t of TARGETS) {
-      const scroller = document.querySelector(t.scroller);
-      if (!scroller || !scroller.classList.contains('active')) continue;
-      const wrap = scroller.querySelector(t.wrap);
-      if (!wrap) continue;
-      return { scroller, wrap, items: t.items };
-    }
-    return null;
-  }
-
-  function clearAll() {
-    document.querySelectorAll('.fold-item').forEach(el => {
-      el.style.transform = '';
-      el.style.filter = '';
-      el.style.transformOrigin = '';
-      el.classList.remove('fold-item');
-    });
-    document.querySelectorAll('.fold-wrap').forEach(el => el.classList.remove('fold-wrap'));
-  }
-
-  function apply() {
-    raf = 0;
-    if (motion.matches || (typeof editMode !== 'undefined' && editMode)) { clearAll(); return; }
-
-    const ctx = active();
-    if (!ctx) { clearAll(); return; }
-    const { scroller, wrap, items } = ctx;
-    wrap.classList.add('fold-wrap');
-    wrap.style.perspective = OPT.perspective + 'px';
-
-    const max = scroller.scrollHeight - scroller.clientHeight;
-    const st = scroller.scrollTop;
-    amt.tTop    = (max > 1 && OPT.top)    ? ramp(st) : 0;
-    amt.tBottom = (max > 1 && OPT.bottom) ? ramp(max - st) : 0;
-
-    const now = performance.now();
-    const delta = Math.min((now - (lastTime || now)) / 1000, 1 / 30);
-    lastTime = now;
-    const k = OPT.smoothing <= 0 ? 1 : 1 - Math.exp(-delta / Math.max(OPT.smoothing, 1e-4));
-    amt.top    += (amt.tTop - amt.top) * k;
-    amt.bottom += (amt.tBottom - amt.bottom) * k;
-    if (Math.abs(amt.tTop - amt.top) < 1e-3) amt.top = amt.tTop;
-    if (Math.abs(amt.tBottom - amt.bottom) < 1e-3) amt.bottom = amt.tBottom;
-
-    const view = scroller.getBoundingClientRect();
-    const zone = Math.max(OPT.zone, 8);
-    let animating = Math.abs(amt.tTop - amt.top) > 1e-3 || Math.abs(amt.tBottom - amt.bottom) > 1e-3;
-
-    wrap.querySelectorAll(items).forEach(el => {
-      const r = el.getBoundingClientRect();
-      // Cull on the viewport itself, not a zone-padded box: with a centre-based
-      // angle a block just outside the view contributes nothing anyway, and the
-      // padding only kept offscreen blocks alive to be transformed for nothing.
-      if (r.height === 0 || r.bottom < view.top || r.top > view.bottom) {
-        if (el.classList.contains('fold-item')) {
-          el.style.transform = ''; el.style.filter = '';
-          el.classList.remove('fold-item');
-        }
-        return;
-      }
-
-      // Progress is taken from the leading edge, so the fold starts the moment
-      // a block reaches the band and is visible while it happens. Measuring
-      // from the centre instead put the whole fold off screen for anything
-      // taller than the band: a 432px block only qualified once it was three
-      // quarters gone, which is why it looked like nothing was happening.
-      const intoTop = Math.min(Math.max((view.top + zone - r.top) / zone, 0), 1) * amt.top;
-      const intoBot = Math.min(Math.max((r.bottom - (view.bottom - zone)) / zone, 0), 1) * amt.bottom;
-
-      if (intoTop < 0.002 && intoBot < 0.002) {
-        if (el.classList.contains('fold-item')) {
-          el.style.transform = ''; el.style.filter = '';
-          el.classList.remove('fold-item');
-        }
-        return;
-      }
-
-      el.classList.add('fold-item');
-      // A block much taller than the fold band gets a shallower maximum. In
-      // Bend such an element would be part folded and part flat; a rigid block
-      // takes one angle for its whole height, and giving a screen-filling
-      // panel the full angle reads as a slab tipping over rather than a page
-      // folding. Scaling by how much of it the band actually covers keeps
-      // short blocks folding fully and tall ones merely leaning.
-      const reach = Math.min(1, zone / Math.max(r.height, 1));
-      const maxDeg = OPT.angle * (0.4 + 0.6 * reach);
-
-      // Hinge from the edge nearest the flat middle of the face, so the block
-      // swings away over the crease instead of pivoting about its own centre.
-      let deg, origin;
-      if (intoTop >= intoBot) {
-        deg = -maxDeg * intoTop * DIR;
-        origin = 'center bottom';
-      } else {
-        deg = maxDeg * intoBot * DIR;
-        origin = 'center top';
-      }
-      const t = Math.max(intoTop, intoBot);
-      el.style.transformOrigin = origin;
-      el.style.transform = `rotateX(${deg.toFixed(2)}deg)`;
-      el.style.filter = OPT.fade > 0 ? `brightness(${(1 - OPT.fade * t).toFixed(3)})` : '';
-    });
-
-    if (animating) kick();
-  }
-
-  function kick() { if (!raf) raf = requestAnimationFrame(apply); }
-
-  // Scroll fires on the view, not the window — each .view is its own scroller.
-  document.addEventListener('scroll', kick, true);
-  window.addEventListener('resize', kick);
-  motion.addEventListener('change', () => { clearAll(); kick(); });
-
-  // Views swap by class, and a board's blocks are rebuilt on open, so recompute
-  // whenever either changes rather than only on scroll.
-  const mo = new MutationObserver(kick);
-  mo.observe(document.getElementById('app') || document.body, {
-    attributes: true, attributeFilter: ['class'], subtree: true, childList: true,
-  });
-
-  kick();
-  window.__scrollFold = OPT;   // so the values can be tried live from the console
 })();
 
 /* ── Click-to-enlarge ──────────────────────────────────────
