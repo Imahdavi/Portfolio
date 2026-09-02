@@ -1870,6 +1870,16 @@
       width:100%; height:100%; object-fit:cover; display:block; pointer-events:none;
     }
 
+    /* Media tilt glare — ported from a shadcn/motion "TiltCard" component's
+       radial-gradient sheen (see mediaTilt IIFE near the end of the script
+       for the cursor-tracked rotate + this layer's position, which are the
+       source's own math). overlay blend reads as a glass reflection on top
+       of real photos/video instead of a flat white wash. */
+    .media-tilt-glare {
+      position:absolute; inset:0; z-index:5; pointer-events:none;
+      opacity:0; transition:opacity .25s ease; mix-blend-mode:overlay;
+    }
+
     /* Ascii lens canvas — one per page, moved over whichever media is
        hovered (see the "Media ascii lens" IIFE near the end of the script).
        Positioned in viewport coordinates rather than inside the block,
@@ -11692,6 +11702,93 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <script>
+/* ── Media tilt + glare ──────────────────────────────────────
+   Ported from a shadcn/motion "TiltCard" component. The cursor-driven
+   3D tilt (rotateX/rotateY toward the pointer, eased rather than
+   snapping) and the radial-gradient glare that tracks the same
+   pointer position are the source's own math, unchanged — re-done as
+   a plain rAF lerp loop since this page has no framer-motion/`motion`
+   library, and wired to every media block's .media-inner through one
+   delegated listener on #block-list instead of a per-card React
+   component. Gated exactly like the source's own hooks: skipped on
+   touch/coarse pointers and prefers-reduced-motion (useHoverCapable +
+   useReducedMotion), and also skipped in edit mode here, since that's
+   when resize-corner dragging needs uncontested mouse control over
+   the same element. */
+(function () {
+  if (!window.matchMedia) return;
+  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const MAX_TILT = 12; // degrees — the component's own default
+  const list = document.getElementById('block-list');
+  if (!list) return;
+
+  let activeEl = null;
+  let targetRX = 0, targetRY = 0, curRX = 0, curRY = 0, rafId = 0;
+
+  function ensureGlare(el) {
+    let g = el.querySelector(':scope > .media-tilt-glare');
+    if (!g) { g = document.createElement('div'); g.className = 'media-tilt-glare'; el.appendChild(g); }
+    return g;
+  }
+
+  function clear(el) {
+    if (!el) return;
+    el.style.transform = '';
+    el._tiltT = '';
+    const g = el.querySelector(':scope > .media-tilt-glare');
+    if (g) g.style.opacity = '0';
+  }
+
+  function tick() {
+    curRX += (targetRX - curRX) * 0.18;
+    curRY += (targetRY - curRY) * 0.18;
+    if (activeEl) {
+      // Published so the ascii lens can wear the same transform and stay
+      // welded to the media instead of sliding out from under it.
+      const t = `perspective(1000px) rotateX(${curRX.toFixed(3)}deg) rotateY(${curRY.toFixed(3)}deg)`;
+      activeEl.style.transform = t;
+      activeEl._tiltT = t;
+    }
+    if (Math.abs(targetRX - curRX) > 0.02 || Math.abs(targetRY - curRY) > 0.02) {
+      rafId = requestAnimationFrame(tick);
+    } else {
+      rafId = 0;
+    }
+  }
+  function kick() { if (!rafId) rafId = requestAnimationFrame(tick); }
+
+  list.addEventListener('mousemove', (e) => {
+    if (typeof editMode !== 'undefined' && editMode) {
+      if (activeEl) { clear(activeEl); activeEl = null; curRX = curRY = targetRX = targetRY = 0; }
+      return;
+    }
+    const inner = e.target.closest('.media-inner');
+    if (!inner) return;
+    if (inner !== activeEl) {
+      clear(activeEl);
+      activeEl = inner;
+      curRX = 0; curRY = 0;
+    }
+    const rect = inner.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width;
+    const py = (e.clientY - rect.top) / rect.height;
+    targetRY = (px - 0.5) * MAX_TILT;
+    targetRX = (0.5 - py) * MAX_TILT;
+    kick();
+    const g = ensureGlare(inner);
+    g.style.background = `radial-gradient(circle at ${(px * 100).toFixed(1)}% ${(py * 100).toFixed(1)}%, rgba(255,255,255,.35), transparent 50%)`;
+    g.style.opacity = '0.6';
+  });
+
+  list.addEventListener('mouseleave', () => {
+    targetRX = 0; targetRY = 0;
+    kick();
+    if (activeEl) { const g = activeEl.querySelector(':scope > .media-tilt-glare'); if (g) g.style.opacity = '0'; }
+  }, true);
+})();
+
 /* ── Media ascii lens ────────────────────────────────────────
    Ported from the Canvas UI "Asciify" component. The effect itself is
    the source's: a WebGL2 lens that follows the cursor, chops the frame
@@ -11952,12 +12049,23 @@ void main () {
   }
 
   function place(el) {
-    const r = el.getBoundingClientRect();
+    // The media tilts under the cursor, and a rotated element reports a
+    // grown bounding box — measuring that directly would swell and shift the
+    // lens every frame. A rotation about the centre leaves the centre where
+    // it was, so the untransformed box is the centre plus the layout size,
+    // which costs no extra reflow. The canvas then wears the same transform
+    // and rides the tilt with the media.
+    const b = el.getBoundingClientRect();
+    const w0 = el.offsetWidth || b.width, h0 = el.offsetHeight || b.height;
+    const r = { left: b.left + b.width / 2 - w0 / 2,
+                top:  b.top  + b.height / 2 - h0 / 2,
+                width: w0, height: h0 };
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.style.left = r.left + 'px';
     canvas.style.top = r.top + 'px';
     canvas.style.width = r.width + 'px';
     canvas.style.height = r.height + 'px';
+    canvas.style.transform = el._tiltT || '';
     const w = Math.max(1, Math.round(r.width * dpr));
     const h = Math.max(1, Math.round(r.height * dpr));
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
