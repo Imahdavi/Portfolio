@@ -2190,12 +2190,12 @@
     /* Contents sit above the composer's own layers, and the cipher over
        them again — it is what you look through to reach the form. */
     .pib > * { position:relative; z-index:1; }
-    .pib-cipher {
-      position:absolute; inset:0; z-index:2; pointer-events:none;
+    /* Behind the contents, never over them — the text stays the top layer,
+       so the effect can never be what makes the form hard to read. */
+    .pib-pixels {
+      position:absolute; inset:0; z-index:0; pointer-events:none;
       display:block; border-radius:inherit;
-      transition:opacity .45s ease;
     }
-    .pib-cipher.gone { opacity:0; }
 
     .pib-ta {
       display:block; width:100%; min-height:44px; max-height:240px;
@@ -2995,7 +2995,7 @@ one keyframe at a time</div>
          their full-size dialog, paste and drop, and the recorder replacing
          the text are all from that component. -->
     <div class="pib" id="note-card">
-      <canvas class="pib-cipher" id="pib-cipher" aria-hidden="true"></canvas>
+      <canvas class="pib-pixels" id="pib-pixels" aria-hidden="true"></canvas>
       <div class="pib-files" id="note-attach"></div>
 
       <textarea class="pib-ta" id="note-msg" rows="1" placeholder="Type your message here..."></textarea>
@@ -11731,187 +11731,34 @@ document.addEventListener('DOMContentLoaded', () => {
 <script>
 
 
-/* ── Decrypt reveal ──────────────────────────────────────────
-   Port of Canvas UI's DecryptReveal, at the prop values you passed.
 
-   The part that makes it this component rather than "random letters on
-   top": the cipher is an ASCII rendering OF THE UI UNDERNEATH. Every cell
-   samples the content behind it, picks the glyph whose density matches that
-   cell's brightness, and inherits that cell's colour. The cursor then
-   decrypts a circle back to the real UI, trailing a bright tinted
-   wavefront.
+/* ── Pixel canvas ────────────────────────────────────────────
+   Port of the 21st.dev "pixel-canvas" component: a grid of squares that
+   grow in from nothing when the pointer enters and shrink back out when it
+   leaves, each on its own delay so the fill reads as a wave.
 
-   Sampling needs the content as pixels, and a browser will not hand you a
-   raster of live DOM. So a stand-in is drawn instead: the composer's own
-   text runs and controls, read from the DOM with their computed fonts,
-   colours and positions, painted to an offscreen canvas. That is enough to
-   match glyphs against, and it costs one pass per layout rather than a
-   screenshot every frame. */
+   Tuned for legibility rather than for the demo's density. Two things keep
+   it out of the way of the text: it is painted behind the contents, never
+   over them, so it can never be what makes a field hard to read; and it is
+   sparse and faint, because at the source's spacing and full-strength greys
+   this box fills with static and the placeholder disappears into it.
+
+   The loop only runs while something is actually moving, so an idle
+   composer costs nothing on a page already paying for a cursor loop, a
+   spider and video decoding. */
 (function () {
-  const canvas = document.getElementById('pib-cipher');
+  const canvas = document.getElementById('pib-pixels');
   const host = document.getElementById('note-card');
   if (!canvas || !host) return;
   const reduce = window.matchMedia &&
                  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduce) { canvas.classList.add('gone'); return; }
 
-  // ── the component's props, at the values you passed ──
-  // The demo's 400 is set against a card several times this size; at that
-  // radius the whole composer decrypts at once and the cipher is never seen.
-  const RADIUS = 95;
-  const SOFTNESS = 0.5, CELL = 10, ASPECT = 0.75;
-  const COLORED = 1, BRIGHTNESS = 1, CONTRAST = 1, EXPOSURE = 1;
-  const SCRAMBLE = 0.1, SCRAMBLE_SPEED = 6;
-  const EDGE_WIDTH = 0.2, EDGE_FLICKER = 1, EDGE_GLOW = 2, EDGE_TINT = 0.75;
-  const ABERRATION = 10, PASSTHROUGH = 0.15, THRESHOLD = 0.025, SMOOTHING = 0.2;
-  const COLOR_RGB = [74, 222, 128];               // #4ade80
-
-  // Ordered light to dense: a cell takes the glyph carrying as much ink as
-  // the content under it.
-  const RAMP = ' .,:;i1tfLCG08@';
-  const CW = CELL * ASPECT, CH = CELL;
-
+  const COLORS = ['#9ca3af', '#6b7280', '#4b5563'];
+  const ALPHA = 0.38;
+  const GAP = 10;
+  const SPEED = 0.07;
   const ctx = canvas.getContext('2d');
-  const off = document.createElement('canvas');
-  const octx = off.getContext('2d', { willReadFrequently: true });
-  let cols = 0, rows = 0, cells = [], dpr = 1;
-  let mx = -1e4, my = -1e4, rx = -1e4, ry = -1e4;   // raw and smoothed cursor
-  let raf = 0, dead = false, last = 0;
-
-  /* Real pixels, not an approximation.
-
-     A browser will not hand you a raster of live DOM, but it will draw an
-     SVG <foreignObject> containing XHTML — so the composer is cloned, its
-     computed styles are inlined onto the clone (the clone is detached and
-     inherits no stylesheet), serialised into an SVG and loaded as an image.
-     What comes back is the component as the browser actually painted it,
-     which is what the cipher is supposed to be sampling.
-
-     Two details the technique needs: form controls do not render their value
-     or placeholder inside foreignObject, so they are swapped for styled
-     divs carrying that text; and a data: SVG cannot fetch anything, so the
-     webfont falls back. At a 7.5x10 cell that is invisible in the output.
-
-     If any of it is refused — CSP, a tainted canvas, a browser that will not
-     draw foreignObject — sampling falls back to the hand-drawn stand-in
-     rather than the effect disappearing. */
-  const COPY_PROPS = [
-    'display','position','left','top','right','bottom','width','height',
-    'margin','padding','border','borderRadius','boxSizing','background',
-    'backgroundColor','color','font','fontFamily','fontSize','fontWeight',
-    'fontStyle','lineHeight','letterSpacing','textAlign','opacity','overflow',
-    'flex','flexDirection','alignItems','justifyContent','gap','whiteSpace',
-    'boxShadow','transform','minWidth','minHeight','maxWidth','maxHeight'
-  ];
-
-  function inlineStyles(src, dst) {
-    const cs = getComputedStyle(src);
-    let text = '';
-    for (const p of COPY_PROPS) {
-      const v = cs[p];
-      if (v) text += p.replace(/[A-Z]/g, m => '-' + m.toLowerCase()) + ':' + v + ';';
-    }
-    dst.setAttribute('style', text);
-    const a = src.children, b = dst.children;
-    for (let i = 0; i < a.length && i < b.length; i++) inlineStyles(a[i], b[i]);
-  }
-
-  // Controls do not paint their text inside foreignObject; give the clone a
-  // div that does, in the same place with the same type.
-  function swapControls(src, dst) {
-    const srcFields = src.querySelectorAll('textarea, input');
-    const dstFields = dst.querySelectorAll('textarea, input');
-    for (let i = 0; i < srcFields.length && i < dstFields.length; i++) {
-      const f = srcFields[i], d = dstFields[i];
-      if (f.type === 'file' || f.getAttribute('aria-hidden') === 'true') { d.remove(); continue; }
-      const cs = getComputedStyle(f);
-      const div = document.createElement('div');
-      div.setAttribute('style', d.getAttribute('style') || '');
-      div.style.color = f.value ? cs.color : '#6b7280';
-      div.style.whiteSpace = 'pre';
-      div.textContent = f.value || f.placeholder || '';
-      d.parentNode.replaceChild(div, d);
-    }
-  }
-
-  let rasterBusy = false;
-  function rasteriseDOM(w, h, done) {
-    if (rasterBusy) return;
-    rasterBusy = true;
-    try {
-      const clone = host.cloneNode(true);
-      const cc = clone.querySelector('#pib-cipher');
-      if (cc) cc.remove();
-      inlineStyles(host, clone);
-      swapControls(host, clone);
-      clone.style.margin = '0';
-      clone.style.position = 'static';
-      clone.style.width = w + 'px';
-      clone.style.height = h + 'px';
-
-      const xml = new XMLSerializer().serializeToString(clone);
-      const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">' +
-                  '<foreignObject width="100%" height="100%">' +
-                  '<div xmlns="http://www.w3.org/1999/xhtml">' + xml + '</div>' +
-                  '</foreignObject></svg>';
-      const img = new Image();
-      img.onload = () => {
-        try {
-          off.width = Math.max(1, Math.round(w));
-          off.height = Math.max(1, Math.round(h));
-          octx.clearRect(0, 0, off.width, off.height);
-          octx.drawImage(img, 0, 0, off.width, off.height);
-          done(octx.getImageData(0, 0, off.width, off.height));
-        } catch (e) { done(rasteriseFallback(w, h)); }
-        rasterBusy = false;
-      };
-      img.onerror = () => { done(rasteriseFallback(w, h)); rasterBusy = false; };
-      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-    } catch (e) {
-      done(rasteriseFallback(w, h));
-      rasterBusy = false;
-    }
-  }
-
-  function rasteriseFallback(w, h) {
-    off.width = Math.max(1, Math.round(w));
-    off.height = Math.max(1, Math.round(h));
-    const hr = host.getBoundingClientRect();
-    octx.clearRect(0, 0, off.width, off.height);
-    octx.fillStyle = '#1f2023';
-    octx.fillRect(0, 0, off.width, off.height);
-
-    const paintText = (el, text, colour) => {
-      if (!text) return;
-      const r = el.getBoundingClientRect();
-      const cs = getComputedStyle(el);
-      octx.fillStyle = colour || cs.color;
-      octx.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
-      octx.textBaseline = 'top';
-      const padL = parseFloat(cs.paddingLeft) || 0;
-      const padT = parseFloat(cs.paddingTop) || 0;
-      octx.fillText(text, r.left - hr.left + padL, r.top - hr.top + padT);
-    };
-
-    const ta = document.getElementById('note-msg');
-    if (ta) paintText(ta, ta.value || ta.placeholder, ta.value ? '#f3f4f6' : '#6b7280');
-    ['note-email', 'note-telegram'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) paintText(el, el.value || el.placeholder, el.value ? '#e5e7eb' : '#6b7280');
-    });
-    // The two controls read as solid marks rather than as glyph shapes.
-    [document.getElementById('note-pick-btn'), document.getElementById('note-send-btn')]
-      .forEach(b => {
-        if (!b) return;
-        const r = b.getBoundingClientRect();
-        octx.fillStyle = b.id === 'note-send-btn' ? '#ffffff' : '#9ca3af';
-        octx.beginPath();
-        octx.arc(r.left - hr.left + r.width / 2, r.top - hr.top + r.height / 2,
-                 Math.max(1, r.width / 2 - 2), 0, Math.PI * 2);
-        octx.fill();
-      });
-    return octx.getImageData(0, 0, off.width, off.height);
-  }
+  let pixels = [], raf = 0, dpr = 1;
 
   function build() {
     const r = host.getBoundingClientRect();
@@ -11921,186 +11768,76 @@ document.addEventListener('DOMContentLoaded', () => {
     canvas.height = Math.round(r.height * dpr);
     canvas.style.width = r.width + 'px';
     canvas.style.height = r.height + 'px';
-    cols = Math.ceil(r.width / CW); rows = Math.ceil(r.height / CH);
-
-    // Rasterising the DOM goes through an image load, so cells are filled
-    // when it returns. The previous grid keeps drawing until then, which is
-    // why a resize never shows an empty frame.
-    rasteriseDOM(r.width, r.height, (img) => { sampleInto(img); kick(); });
-    if (!cells.length) sampleInto(rasteriseFallback(r.width, r.height));
+    pixels = [];
+    for (let x = 0; x < r.width; x += GAP) {
+      for (let y = 0; y < r.height; y += GAP) {
+        // Distance from the centre drives the delay, so the fill reads as
+        // one wave out of the middle rather than as random noise.
+        const dx = x - r.width / 2, dy = y - r.height / 2;
+        pixels.push({
+          x: x * dpr, y: y * dpr,
+          color: COLORS[(Math.random() * COLORS.length) | 0],
+          size: 0, maxSize: (Math.random() * 1.0 + 0.8) * dpr,
+          delay: Math.sqrt(dx * dx + dy * dy) * 0.7,
+          counter: 0
+        });
+      }
+    }
     return true;
   }
 
-  function sampleInto(img) {
-    const d = img.data, W = off.width;
-    cells = new Array(cols * rows);
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        let sr = 0, sg = 0, sb = 0, n = 0;
-        const x0 = Math.floor(x * CW), y0 = Math.floor(y * CH);
-        for (let yy = y0; yy < y0 + CH && yy < off.height; yy += 2) {
-          for (let xx = x0; xx < x0 + CW && xx < W; xx += 2) {
-            const i = (yy * W + xx) * 4;
-            sr += d[i]; sg += d[i + 1]; sb += d[i + 2]; n++;
-          }
-        }
-        if (!n) n = 1;
-        sr /= n; sg /= n; sb /= n;
-        const lum = (0.2126 * sr + 0.7152 * sg + 0.0722 * sb) / 255;
-        // The box itself is the background; only ink above it counts as UI,
-        // which is what threshold decides.
-        // The composer is a flat dark panel, so measuring against its own
-        // brightness leaves almost every cell below threshold and the cipher
-        // comes out as a few letters over the text. Referencing the page
-        // behind it instead lets the panel itself count as UI, which is how
-        // the demo's card reads.
-        const base = 0.02;
-        const signal = Math.max(0, (lum - base) / (1 - base)) * EXPOSURE;
-        cells[y * cols + x] = {
-          on: signal > THRESHOLD,
-          lum: Math.min(1, Math.pow(signal, 1 / Math.max(0.01, CONTRAST))),
-          col: [sr, sg, sb],
-          c: ' '
-        };
-      }
-    }
-    reroll(1);
-  }
-
-  // Glyph choice is the density match; a share of them keeps rerolling at
-  // idle, between neighbours in the ramp so the picture holds together.
-  function reroll(fraction) {
-    for (const cell of cells) {
-      if (!cell.on) { cell.c = ' '; continue; }
-      if (fraction < 1 && Math.random() > fraction) continue;
-      const i = Math.min(RAMP.length - 1,
-                Math.max(1, Math.round(cell.lum * (RAMP.length - 1))));
-      const j = Math.max(1, Math.min(RAMP.length - 1,
-                i + ((Math.random() * 3) | 0) - 1));
-      cell.c = RAMP[j];
-    }
-  }
-
-  function draw(now) {
-    raf = 0;
-    if (dead) return;
-    const hr = host.getBoundingClientRect();
-    if (!hr.width || !hr.height) return;
-    if (Math.abs(hr.width - canvas.width / dpr) > 1 ||
-        Math.abs(hr.height - canvas.height / dpr) > 1) { if (!build()) return; }
-
-    const dt = last ? Math.min(0.05, (now - last) / 1000) : 0.016;
-    last = now;
-    // smoothing: the reveal chases the cursor rather than snapping to it
-    const k = SMOOTHING > 0 ? 1 - Math.exp(-dt / SMOOTHING) : 1;
-    rx += (mx - rx) * k; ry += (my - ry) * k;
-
-    if (Math.random() < SCRAMBLE_SPEED * dt) reroll(SCRAMBLE);
-
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const w = canvas.width / dpr, h = canvas.height / dpr;
-    ctx.clearRect(0, 0, w, h);
-
-    // The veil the cipher is written on. passthrough leaves the real UI
-    // faintly visible through it — the component never fully hides content.
-    ctx.fillStyle = 'rgba(24,26,29,' + (1 - PASSTHROUGH).toFixed(3) + ')';
-    ctx.fillRect(0, 0, w, h);
-
-    ctx.font = CELL + 'px ui-monospace, SFMono-Regular, Menlo, monospace';
-    ctx.textBaseline = 'top';
-    const clearTo = RADIUS * (1 - EDGE_WIDTH) * (1 - SOFTNESS * 0.35);
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        const cell = cells[y * cols + x];
-        if (!cell.on) continue;
-        const px = x * CW, py = y * CH;
-        const dx = px - rx, dy = py - ry;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < clearTo) continue;               // decrypted: real UI shows
-        let a = cell.lum * BRIGHTNESS;
-        let col = cell.col;
-        // Wavefront: glyphs caught in the ring flare, tint toward the cipher
-        // colour and churn harder than the ones at rest.
-        if (dist < RADIUS) {
-          const t = 1 - (dist - clearTo) / Math.max(1, RADIUS - clearTo);
-          if (Math.random() < 0.3 * EDGE_FLICKER * t) {
-            cell.c = RAMP[1 + ((Math.random() * (RAMP.length - 1)) | 0)];
-          }
-          a = Math.min(1, a * (1 + (EDGE_GLOW - 1) * t));
-          const tint = EDGE_TINT * t;
-          col = [ col[0] + (COLOR_RGB[0] - col[0]) * tint,
-                  col[1] + (COLOR_RGB[1] - col[1]) * tint,
-                  col[2] + (COLOR_RGB[2] - col[2]) * tint ];
-        }
-        // colored: how far the glyph takes the colour of the UI beneath it
-        const r0 = COLOR_RGB[0] + (col[0] - COLOR_RGB[0]) * COLORED;
-        const g0 = COLOR_RGB[1] + (col[1] - COLOR_RGB[1]) * COLORED;
-        const b0 = COLOR_RGB[2] + (col[2] - COLOR_RGB[2]) * COLORED;
-        ctx.globalAlpha = Math.max(0.10, Math.min(1, a));
-        ctx.fillStyle = 'rgb(' + (r0 | 0) + ',' + (g0 | 0) + ',' + (b0 | 0) + ')';
-        ctx.fillText(cell.c, px, py);
+  function draw(dir) {            // dir: 1 appearing, -1 disappearing
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = ALPHA;
+    let busy = false;
+    for (const p of pixels) {
+      if (p.counter < p.delay) { p.counter += 8; busy = true;
+                                 if (p.size <= 0) continue; }
+      p.size += dir * SPEED * p.maxSize * 2.2;
+      if (p.size < 0) p.size = 0;
+      if (p.size > p.maxSize) p.size = p.maxSize;
+      if ((dir > 0 && p.size < p.maxSize) || (dir < 0 && p.size > 0)) busy = true;
+      if (p.size > 0) {
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
       }
     }
     ctx.globalAlpha = 1;
-
-    // Cut the veil away inside the reveal so the real UI is actually visible
-    // there. Skipping the glyphs alone was not enough — the veil they are
-    // written on still covered the content underneath.
-    if (rx > -1e3) {
-      ctx.globalCompositeOperation = 'destination-out';
-      const hole = ctx.createRadialGradient(rx, ry, 0, rx, ry, RADIUS);
-      hole.addColorStop(0, 'rgba(0,0,0,1)');
-      hole.addColorStop(Math.max(0.02, clearTo / RADIUS), 'rgba(0,0,0,1)');
-      hole.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = hole;
-      ctx.fillRect(rx - RADIUS, ry - RADIUS, RADIUS * 2, RADIUS * 2);
-      ctx.globalCompositeOperation = 'source-over';
-    }
-
-    // Chromatic aberration on the decrypted content, strongest at the
-    // wavefront and absent at the centre.
-    if (rx > -1e3 && ABERRATION > 0) {
-      ctx.globalCompositeOperation = 'lighter';
-      const ring = ctx.createRadialGradient(rx, ry, clearTo * 0.88, rx, ry, RADIUS);
-      ring.addColorStop(0, 'rgba(255,70,70,0)');
-      ring.addColorStop(0.5, 'rgba(255,70,70,' + (0.010 * ABERRATION).toFixed(3) + ')');
-      ring.addColorStop(1, 'rgba(70,150,255,0)');
-      ctx.fillStyle = ring;
-      ctx.fillRect(rx - RADIUS, ry - RADIUS, RADIUS * 2, RADIUS * 2);
-      ctx.globalCompositeOperation = 'source-over';
-    }
-
-    kick();
-  }
-  function kick() { if (!raf && !dead) raf = requestAnimationFrame(draw); }
-
-  // The demo is a showcase and never has to be filled in; this is a form, so
-  // the cipher clears for good once you mean to type. Wiping a curtain away
-  // with the mouse to write a message would be miserable, and the effect has
-  // been seen by then.
-  function retire() {
-    if (dead) return;
-    dead = true;
-    cancelAnimationFrame(raf); raf = 0;
-    canvas.classList.add('gone');
+    return busy;
   }
 
-  host.addEventListener('pointermove', (e) => {
-    const r = host.getBoundingClientRect();
-    mx = e.clientX - r.left; my = e.clientY - r.top;
-    if (rx < -1e3) { rx = mx; ry = my; }
-    kick();
+  function run(dir) {
+    cancelAnimationFrame(raf);
+    const step = () => {
+      const busy = draw(dir);
+      if (busy) raf = requestAnimationFrame(step);
+      else { raf = 0; if (dir < 0) ctx.clearRect(0, 0, canvas.width, canvas.height); }
+    };
+    raf = requestAnimationFrame(step);
+  }
+
+  function enter() {
+    if (reduce) return;
+    // The composer starts inside a hidden view, so it is measured here
+    // rather than once at load, when the box is still 0x0.
+    if (!build()) return;
+    pixels.forEach(p => { p.counter = 0; });
+    run(1);
+  }
+  function leave() {
+    if (reduce || !pixels.length) return;
+    pixels.forEach(p => { p.counter = p.delay; });
+    run(-1);
+  }
+
+  host.addEventListener('pointerenter', enter);
+  host.addEventListener('pointerleave', leave);
+  // Focus counts as entering, so it is reachable from the keyboard too.
+  host.addEventListener('focusin', enter);
+  host.addEventListener('focusout', (e) => {
+    if (!host.contains(e.relatedTarget)) leave();
   });
-  host.addEventListener('pointerleave', () => { mx = my = -1e4; kick(); });
-  host.addEventListener('focusin', retire);
-  host.addEventListener('pointerdown', retire);
-  window.addEventListener('resize', () => { if (!dead && build()) kick(); }, { passive: true });
-
-  const view = document.getElementById('view-soon');
-  if (view) new MutationObserver(() => {
-    if (!dead && view.classList.contains('active')) { build(); kick(); }
-  }).observe(view, { attributes: true, attributeFilter: ['class'] });
-  build(); kick();
+  window.addEventListener('resize', () => { if (raf) build(); }, { passive: true });
 })();
 
 /* ── Media tilt + glare ──────────────────────────────────────
