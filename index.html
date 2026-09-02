@@ -2176,12 +2176,22 @@
     #view-soon.active { display:flex; flex-direction:column; justify-content:center; }
 
     .pib {
-      position:relative; background:#1F2023; border:1px solid #444;
-      border-radius:24px; padding:8px;
+      position:relative; isolation:isolate;
+      width:100%; max-width:470px; margin:0 auto;
+      background:rgba(31,32,35,.72); border:1px solid rgba(255,255,255,.16);
+      -webkit-backdrop-filter:blur(18px) saturate(140%);
+      backdrop-filter:blur(18px) saturate(140%);
+      border-radius:24px; padding:8px; overflow:hidden;
       box-shadow:0 8px 30px rgba(0,0,0,.24);
       transition:border-color .3s;
     }
     .pib.recording { border-color:rgba(239,68,68,.7); }
+
+    /* Pixel canvas — a port of the 21st.dev pixel-canvas component. It paints
+       under the composer's contents, so everything above it needs a layer of
+       its own or the canvas would cover the text. */
+    .pib-pixels { position:absolute; inset:0; z-index:0; pointer-events:none; display:block; }
+    .pib > *:not(.pib-pixels) { position:relative; z-index:1; }
 
     .pib-ta {
       display:block; width:100%; min-height:44px; max-height:240px;
@@ -2199,11 +2209,16 @@
     .pib.recording .pib-left { display:none; }
 
     /* Email line — not in the component, kept so a note can be answered */
-    .pib-mail { padding:0 12px 6px; }
+    /* Email and the optional telegram handle share one line; the handle
+       takes the smaller share since it is the optional half. */
+    .pib-mail { display:flex; align-items:center; gap:10px; padding:0 12px 6px; }
     .pib-mail input {
-      width:100%; background:none; border:none; outline:none;
+      min-width:0; background:none; border:none; outline:none;
       font-family:inherit; font-size:13.5px; color:#e5e7eb;
     }
+    .pib-mail #note-email    { flex:1 1 58%; }
+    .pib-mail #note-telegram { flex:1 1 42%; }
+    .pib-mail-sep { width:1px; align-self:stretch; background:rgba(255,255,255,.14); flex:none; }
     .pib-mail input::placeholder { color:#6b7280; }
     .pib-mail input.error::placeholder { color:rgba(248,113,113,.8); }
 
@@ -2976,6 +2991,7 @@ one keyframe at a time</div>
          their full-size dialog, paste and drop, and the recorder replacing
          the text are all from that component. -->
     <div class="pib" id="note-card">
+      <canvas class="pib-pixels" id="pib-pixels" aria-hidden="true"></canvas>
       <div class="pib-files" id="note-attach"></div>
 
       <textarea class="pib-ta" id="note-msg" rows="1" placeholder="Type your message here..."></textarea>
@@ -2992,6 +3008,8 @@ one keyframe at a time</div>
            with no way to answer it is not much use. -->
       <div class="pib-mail">
         <input type="email" id="note-email" placeholder="your@email.com" autocomplete="email">
+        <span class="pib-mail-sep"></span>
+        <input type="text" id="note-telegram" placeholder="@telegram (optional)" autocomplete="off">
       </div>
       <input type="text" id="note-website" tabindex="-1" autocomplete="off" aria-hidden="true"
              style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
@@ -7467,10 +7485,6 @@ async function noteToggleRecord() {
 
   const autosize = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 240) + 'px'; };
   ta.addEventListener('input', () => { autosize(); paintNoteGo(); });
-  ta.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitNote(); }
-  });
-
   pick.addEventListener('click', () => file.click());
   file.addEventListener('change', async () => {
     const f = file.files && file.files[0];
@@ -7526,7 +7540,8 @@ async function submitNote() {
   playKeyClick();
   const raw      = document.getElementById('note-msg').value.trim();
   const emailVal = document.getElementById('note-email').value.trim();
-  const igVal = '', tgVal = '';
+  const igVal = '';
+  const tgVal = (document.getElementById('note-telegram')?.value || '').trim();
   const msg = raw;
 
   let ok = true;
@@ -11710,6 +11725,104 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <script>
+/* ── Pixel canvas ────────────────────────────────────────────
+   Port of the 21st.dev "pixel-canvas" component. Its behaviour is the
+   source's: a grid of squares, each given a random delay, that grow in from
+   nothing when the pointer enters and shrink back out when it leaves, with
+   the colour picked per pixel from a small palette.
+
+   Written against the canvas directly rather than as a custom element with
+   a shadow root, and the loop only runs while something is actually
+   animating — an idle composer costs nothing, which matters on a page that
+   already has a cursor loop, a spider and video decoding to pay for. */
+(function () {
+  const canvas = document.getElementById('pib-pixels');
+  const host = document.getElementById('note-card');
+  if (!canvas || !host) return;
+  const reduce = window.matchMedia &&
+                 window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const COLORS = ['#e5e7eb', '#9ca3af', '#6b7280'];
+  const GAP = 6;            // source default is 5; one more keeps it subtle
+  const SPEED = 0.06;
+  const ctx = canvas.getContext('2d');
+  let pixels = [], raf = 0, dpr = 1;
+
+  function build() {
+    const r = host.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(r.width * dpr);
+    canvas.height = Math.round(r.height * dpr);
+    canvas.style.width = r.width + 'px';
+    canvas.style.height = r.height + 'px';
+    pixels = [];
+    for (let x = 0; x < r.width; x += GAP) {
+      for (let y = 0; y < r.height; y += GAP) {
+        // Distance from the centre drives the delay, so the fill reads as one
+        // wave out of the middle rather than random noise.
+        const dx = x - r.width / 2, dy = y - r.height / 2;
+        pixels.push({
+          x: x * dpr, y: y * dpr,
+          color: COLORS[(Math.random() * COLORS.length) | 0],
+          size: 0, maxSize: (Math.random() * 1.6 + 1.2) * dpr,
+          delay: Math.sqrt(dx * dx + dy * dy) * 0.7,
+          counter: 0
+        });
+      }
+    }
+  }
+
+  function draw(dir) {          // dir: 1 appearing, -1 disappearing
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let busy = false;
+    for (const p of pixels) {
+      if (p.counter < p.delay) { p.counter += 8; busy = true;
+                                 if (p.size <= 0) continue; }
+      p.size += dir * SPEED * p.maxSize * 2.2;
+      if (p.size < 0) p.size = 0;
+      if (p.size > p.maxSize) p.size = p.maxSize;
+      if ((dir > 0 && p.size < p.maxSize) || (dir < 0 && p.size > 0)) busy = true;
+      if (p.size > 0) {
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+      }
+    }
+    return busy;
+  }
+
+  function run(dir) {
+    cancelAnimationFrame(raf);
+    const step = () => {
+      const busy = draw(dir);
+      if (busy) raf = requestAnimationFrame(step);
+      else { raf = 0; if (dir < 0) ctx.clearRect(0, 0, canvas.width, canvas.height); }
+    };
+    raf = requestAnimationFrame(step);
+  }
+
+  function enter() {
+    if (reduce) return;
+    build();
+    pixels.forEach(p => { p.counter = 0; });
+    run(1);
+  }
+  function leave() {
+    if (reduce) return;
+    pixels.forEach(p => { p.counter = p.delay; });
+    run(-1);
+  }
+
+  host.addEventListener('pointerenter', enter);
+  host.addEventListener('pointerleave', leave);
+  // Focus counts as entering, so it is reachable from the keyboard too.
+  host.addEventListener('focusin', enter);
+  host.addEventListener('focusout', (e) => {
+    if (!host.contains(e.relatedTarget)) leave();
+  });
+  window.addEventListener('resize', () => { if (raf) build(); }, { passive: true });
+})();
+
 /* ── Media tilt + glare ──────────────────────────────────────
    Ported from a shadcn/motion "TiltCard" component. The cursor-driven
    3D tilt (rotateX/rotateY toward the pointer, eased rather than
