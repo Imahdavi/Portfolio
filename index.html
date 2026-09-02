@@ -2167,6 +2167,14 @@
        border and shadow-[0_8px_30px_rgba(0,0,0,0.24)], p-2, and a textarea
        that starts at 44px and grows to 240px. It stays this dark in both of
        the site's themes because the component is dark by design. */
+    /* The note page holds one short composer, so it sat pinned under the
+       top padding with the rest of the screen empty below it. Centring the
+       column puts it in the middle of the space it actually has — the view
+       is already padded clear of the bottom nav, so this stays clear of it
+       too, and it falls back to normal flow the moment the content grows
+       taller than the screen. */
+    #view-soon.active { display:flex; flex-direction:column; justify-content:center; }
+
     .pib {
       position:relative; background:#1F2023; border:1px solid #444;
       border-radius:24px; padding:8px;
