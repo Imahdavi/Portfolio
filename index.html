@@ -11756,7 +11756,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (reduce) { canvas.classList.add('gone'); return; }
 
   // ── the component's props, at the values you passed ──
-  const RADIUS = 190;          // demo default is 400; scaled to this composer
+  // The demo's 400 is set against a card several times this size; at that
+  // radius the whole composer decrypts at once and the cipher is never seen.
+  const RADIUS = 95;
   const SOFTNESS = 0.5, CELL = 10, ASPECT = 0.75;
   const COLORED = 1, BRIGHTNESS = 1, CONTRAST = 1, EXPOSURE = 1;
   const SCRAMBLE = 0.1, SCRAMBLE_SPEED = 6;
@@ -11947,7 +11949,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const lum = (0.2126 * sr + 0.7152 * sg + 0.0722 * sb) / 255;
         // The box itself is the background; only ink above it counts as UI,
         // which is what threshold decides.
-        const base = 0.12;
+        // The composer is a flat dark panel, so measuring against its own
+        // brightness leaves almost every cell below threshold and the cipher
+        // comes out as a few letters over the text. Referencing the page
+        // behind it instead lets the panel itself count as UI, which is how
+        // the demo's card reads.
+        const base = 0.02;
         const signal = Math.max(0, (lum - base) / (1 - base)) * EXPOSURE;
         cells[y * cols + x] = {
           on: signal > THRESHOLD,
