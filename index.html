@@ -12051,15 +12051,22 @@ void main () {
   function place(el) {
     // The media tilts under the cursor, and a rotated element reports a
     // grown bounding box — measuring that directly would swell and shift the
-    // lens every frame. A rotation about the centre leaves the centre where
-    // it was, so the untransformed box is the centre plus the layout size,
-    // which costs no extra reflow. The canvas then wears the same transform
-    // and rides the tilt with the media.
+    // lens every frame. Under perspective that box also grows asymmetrically
+    // (the near edge magnifies, the far edge shrinks), so it cannot be
+    // recovered from the centre either. The parent .media-wrap is never
+    // transformed and shares the element's box exactly, which makes it a
+    // free and exact read of the untransformed geometry; the canvas then
+    // wears the tilt's own transform and rides it with the media.
     const b = el.getBoundingClientRect();
     const w0 = el.offsetWidth || b.width, h0 = el.offsetHeight || b.height;
-    const r = { left: b.left + b.width / 2 - w0 / 2,
-                top:  b.top  + b.height / 2 - h0 / 2,
-                width: w0, height: h0 };
+    let r = b;
+    const par = el.parentElement;
+    if (par) {
+      const pr = par.getBoundingClientRect();
+      // Only when the parent really is this element's box, so an unexpected
+      // wrapper can never drag the lens off the media.
+      if (Math.abs(pr.width - w0) < 1 && Math.abs(pr.height - h0) < 1) r = pr;
+    }
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.style.left = r.left + 'px';
     canvas.style.top = r.top + 'px';
