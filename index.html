@@ -1062,13 +1062,24 @@
     /* ─────────────────── NOTE PAGE ─────────────────── */
     .note-title { font-family:var(--font-heading); font-size:27px; font-weight:600; margin-bottom:10px; line-height:1.2; }
     .note-desc  { font-size:14px; color:#888; line-height:1.6; margin-bottom:28px; }
-    .note-card  { background:#F5F4F2; border-radius:20px; padding:18px 18px 14px; }
+    /* Composer, following the reference: one rounded bordered box with a
+       deep shadow holding previews, text, fields and actions. The reference
+       is dark-only (#1F2023 on #444); this site has two themes, so the shape
+       and spacing are matched exactly and the palette follows the page. */
+    .note-card  {
+      background:#F5F4F2; border:1px solid rgba(0,0,0,.09);
+      border-radius:24px; padding:8px;
+      box-shadow:0 8px 30px rgba(0,0,0,.10);
+      transition:border-color .3s, box-shadow .3s;
+    }
+    .note-card.recording { border-color:rgba(208,65,58,.7); }
+    body.dark .note-card { border-color:var(--d-line-2); box-shadow:0 8px 30px rgba(0,0,0,.5); }
     .note-msg   { width:100%; min-height:100px; background:none; border:none; outline:none; resize:none; font-size:15px; font-family:inherit; color:#111; line-height:1.55; padding:0; margin-bottom:14px; display:block; }
     .note-msg::placeholder { color:#c0bdb8; }
     @keyframes noteShake { 0%,100%{transform:none} 30%{transform:translateX(-5px)} 70%{transform:translateX(5px)} }
     .note-msg.shake { animation:noteShake .25s ease; }
-    .note-sep   { height:1px; background:rgba(0,0,0,.07); margin-bottom:12px; }
-    .note-fields { display:flex; flex-direction:column; gap:2px; margin-bottom:14px; }
+    .note-sep   { height:1px; background:rgba(0,0,0,.07); margin:2px 12px 10px; }
+    .note-fields { display:flex; flex-direction:column; gap:2px; margin-bottom:6px; padding:0 12px; }
     .note-field { display:flex; align-items:center; gap:8px; height:34px; border-bottom:1px solid rgba(0,0,0,.045); }
     .note-field:last-child { border-bottom:none; }
     .note-field-ico { width:18px; text-align:center; flex-shrink:0; color:#c8c5c0; font-size:13px; line-height:1; }
@@ -1076,7 +1087,7 @@
     .note-field input { flex:1; background:none; border:none; outline:none; font-size:13.5px; font-family:inherit; color:#222; }
     .note-field input::placeholder { color:#c8c5c0; }
     .note-field input.error::placeholder { color:rgba(200,60,60,.55); }
-    .note-bottom { display:flex; justify-content:flex-end; align-items:center; padding-top:2px; }
+    .note-bottom { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:2px 2px 0; }
     /* 3-D Enter key wrapper */
     .key-3d {
       position:relative; display:inline-block;
@@ -2196,64 +2207,101 @@
     #sound-toggle-btn .nav-tip { bottom:calc(100% + 10px); }
     #sound-toggle-btn:hover .nav-tip { opacity:1; transform:translateX(-50%) translateY(0); }
 
-    /* ── Note attachments (image + voice) ─────────────── */
-    .note-tools { display:flex; align-items:center; gap:2px; }
+    /* ── Note attachments, laid out like the reference ────
+       64px rounded preview tiles above the text, a paperclip on the left of
+       the action row, and one circular button on the right that is the mic,
+       the send arrow and the stop control depending on state. */
     .note-tool {
-      width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+      width:32px; height:32px; flex-shrink:0; position:relative;
+      display:flex; align-items:center; justify-content:center;
       border:none; background:none; cursor:pointer; border-radius:50%;
-      color:#a9a49e; transition:color .18s, background .18s, transform .12s;
+      color:#9CA3AF; transition:color .2s, background .2s, transform .12s;
     }
-    .note-tool svg { width:17px; height:17px; }
-    .note-tool:hover  { color:#4a443e; background:rgba(0,0,0,.05); }
+    .note-tool svg { width:19px; height:19px; }
+    .note-tool:hover  { color:#4a443e; background:rgba(0,0,0,.06); }
     .note-tool:active { transform:scale(.9); }
-    .note-tool.on { color:#d0413a; background:rgba(208,65,58,.1); }
     body.dark .note-tool { color:var(--d-text-3); }
-    body.dark .note-tool:hover { color:var(--d-text); background:rgba(255,255,255,.07); }
+    body.dark .note-tool:hover { color:var(--d-text); background:rgba(255,255,255,.08); }
 
-    /* Attachment chip */
-    .note-attach { display:none; gap:8px; align-items:center; margin-bottom:10px; }
+    /* The one button: mic -> arrow -> stop */
+    .note-go {
+      width:32px; height:32px; flex-shrink:0; border:none; cursor:pointer;
+      border-radius:50%; display:flex; align-items:center; justify-content:center;
+      background:none; color:#9CA3AF;
+      transition:background .2s, color .2s, transform .12s;
+    }
+    .note-go svg { width:18px; height:18px; }
+    .note-go:hover { background:rgba(0,0,0,.06); color:#4a443e; }
+    .note-go:active { transform:scale(.9); }
+    .note-go.ready { background:#1a1a1a; color:#fff; }
+    .note-go.ready:hover { background:#333; color:#fff; }
+    .note-go.rec { color:#d0413a; }
+    .note-go.rec:hover { background:rgba(208,65,58,.12); color:#d0413a; }
+    .note-go:disabled { opacity:.45; cursor:default; }
+    body.dark .note-go { color:var(--d-text-3); }
+    body.dark .note-go:hover { background:rgba(255,255,255,.08); color:var(--d-text); }
+    body.dark .note-go.ready { background:var(--d-text); color:var(--d-bg); }
+    body.dark .note-go.ready:hover { background:#fff; color:var(--d-bg); }
+
+    /* 64px preview tiles, as in the reference */
+    .note-attach { display:none; flex-wrap:wrap; gap:8px; padding:4px 4px 6px; }
     .note-attach.show { display:flex; }
-    .note-chip {
-      position:relative; display:flex; align-items:center; gap:8px;
-      padding:5px 9px 5px 5px; border-radius:11px;
-      background:rgba(0,0,0,.05); font-size:12px; color:#5a5148;
-      font-family:var(--font-body); max-width:100%;
+    .note-thumb {
+      position:relative; width:64px; height:64px; border-radius:12px;
+      overflow:hidden; cursor:pointer; flex-shrink:0;
+      background:rgba(0,0,0,.05);
     }
-    body.dark .note-chip { background:rgba(255,255,255,.07); color:var(--d-text-2); }
-    .note-chip img { width:34px; height:34px; border-radius:7px; object-fit:cover; display:block; }
-    .note-chip audio { height:30px; max-width:190px; }
-    .note-chip-x {
-      width:17px; height:17px; flex-shrink:0; border:none; cursor:pointer;
-      border-radius:50%; background:rgba(0,0,0,.16); color:#fff;
-      font-size:11px; line-height:1; display:flex; align-items:center; justify-content:center;
+    body.dark .note-thumb { background:rgba(255,255,255,.07); }
+    .note-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+    .note-thumb-x {
+      position:absolute; top:3px; right:3px; width:16px; height:16px;
+      border:none; cursor:pointer; border-radius:50%;
+      background:rgba(0,0,0,.7); color:#fff; font-size:11px; line-height:1;
+      display:flex; align-items:center; justify-content:center; padding:0;
     }
-    .note-chip-x:hover { background:#dc2626; }
-    .note-chip-size { opacity:.6; font-variant-numeric:tabular-nums; }
+    .note-thumb-x:hover { background:#dc2626; }
+    /* A voice note has no image to show, so the tile carries a waveform mark
+       and the duration instead. */
+    .note-thumb.voice {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:3px; color:#5a5148; font-size:10px; font-family:var(--font-name);
+    }
+    body.dark .note-thumb.voice { color:var(--d-text-2); }
+    .note-thumb.voice svg { width:19px; height:19px; }
 
-    /* Recording strip — the bars are decorative, so they are plain CSS
-       animation rather than a live analyser reading the mic. */
-    .note-rec { display:none; align-items:center; gap:9px; margin-bottom:10px; padding:0 2px; }
+    /* Recording replaces the text, centred, with the bar field under it */
+    .note-rec { display:none; flex-direction:column; align-items:center;
+                justify-content:center; width:100%; padding:12px 0; }
     .note-rec.show { display:flex; }
+    .note-rec-head { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
     .note-rec-dot {
-      width:7px; height:7px; border-radius:50%; background:#d0413a; flex-shrink:0;
+      width:8px; height:8px; border-radius:50%; background:#ef4444;
       animation:noteRecPulse 1.1s ease-in-out infinite;
     }
     @keyframes noteRecPulse { 0%,100%{opacity:1} 50%{opacity:.25} }
     .note-rec-time {
-      font-family:var(--font-name); font-size:12px; color:#8a8178;
-      font-variant-numeric:tabular-nums; flex-shrink:0;
+      font-family:var(--font-name); font-size:13px; color:#5a5148;
+      font-variant-numeric:tabular-nums;
     }
     body.dark .note-rec-time { color:var(--d-text-2); }
-    .note-rec-bars { display:flex; align-items:center; gap:2px; height:20px; flex:1; overflow:hidden; }
+    .note-rec-bars {
+      display:flex; align-items:center; justify-content:center; gap:2px;
+      width:100%; height:40px; padding:0 16px;
+    }
     .note-rec-bars i {
-      width:2px; border-radius:2px; background:rgba(0,0,0,.28);
+      width:2px; border-radius:2px; background:rgba(0,0,0,.35);
       animation:noteRecBar .9s ease-in-out infinite alternate;
     }
-    body.dark .note-rec-bars i { background:rgba(255,255,255,.34); }
+    body.dark .note-rec-bars i { background:rgba(255,255,255,.5); }
     @keyframes noteRecBar { from { height:15% } to { height:100% } }
     @media (prefers-reduced-motion:reduce) {
       .note-rec-dot, .note-rec-bars i { animation:none; }
     }
+    /* The text hides while recording, exactly as the reference does it. */
+    .note-card.recording .note-msg,
+    .note-card.recording .note-sep,
+    .note-card.recording .note-fields,
+    .note-card.recording .note-attach { display:none; }
 
     /* ── Dark mode ───────────────────────────────────
        Written as an additive override rather than by rewriting the ~300
@@ -2953,6 +3001,7 @@ one keyframe at a time</div>
     <div class="note-desc" id="note-desc">Whether you're a designer or motion artist looking to collab, or a client with a project in mind — I'd love to hear from you.</div>
 
     <div class="note-card" id="note-card">
+      <div class="note-attach" id="note-attach"></div>
       <textarea class="note-msg" id="note-msg" placeholder="What's on your mind..."></textarea>
       <div class="note-sep"></div>
       <div class="note-fields">
@@ -2977,30 +3026,23 @@ one keyframe at a time</div>
       <input type="text" id="note-website" tabindex="-1" autocomplete="off"
              aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
 
-      <div class="note-attach" id="note-attach"></div>
-
       <div class="note-rec" id="note-rec">
-        <span class="note-rec-dot"></span>
-        <span class="note-rec-time" id="note-rec-time">00:00</span>
+        <div class="note-rec-head">
+          <span class="note-rec-dot"></span>
+          <span class="note-rec-time" id="note-rec-time">00:00</span>
+        </div>
         <div class="note-rec-bars" id="note-rec-bars"></div>
       </div>
 
       <div class="note-bottom">
-        <div class="note-tools">
-          <button type="button" class="note-tool" id="note-pick-btn" title="Attach an image" aria-label="Attach an image">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-            <input type="file" id="note-file" accept="image/*" hidden>
-          </button>
-          <button type="button" class="note-tool" id="note-mic-btn" title="Record a voice note" aria-label="Record a voice note">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
-          </button>
-        </div>
-        <div class="key-3d">
-          <button class="note-send" id="note-send-btn" onclick="submitNote()">
-            <span id="note-send-txt">Send</span>
-            <span class="note-send-ico" id="note-send-ico">↵</span>
-          </button>
-        </div>
+        <button type="button" class="note-tool" id="note-pick-btn" title="Attach an image" aria-label="Attach an image">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          <input type="file" id="note-file" accept="image/*" hidden>
+        </button>
+        <!-- One button, three jobs, exactly as in the reference: microphone
+             while the form is empty, arrow once there is something to send,
+             stop-circle while recording. -->
+        <button type="button" class="note-go" id="note-send-btn" aria-label="Record a voice note"></button>
       </div>
     </div>
 
@@ -7298,39 +7340,66 @@ const fmtBytes = (n) => n < 1024 * 1024
   ? Math.round(n / 1024) + ' KB'
   : (n / 1048576).toFixed(1) + ' MB';
 
+const SVG_NOTE_MIC  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>';
+const SVG_NOTE_SEND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>';
+const SVG_NOTE_STOP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor"/></svg>';
+const SVG_NOTE_WAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="10" x2="4" y2="14"/><line x1="8" y1="7" x2="8" y2="17"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="16" y1="8" x2="16" y2="16"/><line x1="20" y1="11" x2="20" y2="13"/></svg>';
+
+/* The action button is the whole control surface, so it is repainted from
+   state rather than toggled: empty -> microphone, anything to send -> arrow,
+   recording -> stop. */
+function paintNoteGo() {
+  const btn = document.getElementById('note-send-btn');
+  if (!btn) return;
+  const recording = !!(noteRec && noteRec.state === 'recording');
+  const hasText = (document.getElementById('note-msg')?.value || '').trim() !== '';
+  const ready = hasText || !!noteImage || !!noteVoice;
+  btn.classList.toggle('rec', recording);
+  btn.classList.toggle('ready', !recording && ready);
+  btn.innerHTML = recording ? SVG_NOTE_STOP : (ready ? SVG_NOTE_SEND : SVG_NOTE_MIC);
+  btn.setAttribute('aria-label',
+    recording ? 'Stop recording' : (ready ? 'Send message' : 'Record a voice note'));
+  btn.title = btn.getAttribute('aria-label');
+}
+
 function renderNoteAttach() {
   const row = document.getElementById('note-attach');
   if (!row) return;
   row.innerHTML = '';
   if (noteImage) {
-    const chip = document.createElement('div');
-    chip.className = 'note-chip';
+    const tile = document.createElement('div');
+    tile.className = 'note-thumb';
     const img = document.createElement('img');
     img.src = URL.createObjectURL(noteImage.file);
+    img.alt = 'attachment';
     img.onload = () => URL.revokeObjectURL(img.src);
-    const size = document.createElement('span');
-    size.className = 'note-chip-size';
-    size.textContent = fmtBytes(noteImage.file.size);
     const x = document.createElement('button');
-    x.type = 'button'; x.className = 'note-chip-x'; x.textContent = '×';
+    x.type = 'button'; x.className = 'note-thumb-x'; x.textContent = '×';
     x.title = 'Remove image';
-    x.onclick = () => { noteImage = null; renderNoteAttach(); };
-    chip.append(img, size, x);
-    row.appendChild(chip);
+    x.onclick = (e) => { e.stopPropagation(); noteImage = null; renderNoteAttach(); };
+    tile.append(img, x);
+    row.appendChild(tile);
   }
   if (noteVoice) {
-    const chip = document.createElement('div');
-    chip.className = 'note-chip';
-    const au = document.createElement('audio');
-    au.controls = true; au.src = URL.createObjectURL(noteVoice.file);
+    const tile = document.createElement('div');
+    tile.className = 'note-thumb voice';
+    tile.innerHTML = SVG_NOTE_WAVE;
+    const secs = document.createElement('span');
+    secs.textContent = noteVoice.seconds != null
+      ? String(Math.floor(noteVoice.seconds / 60)).padStart(2, '0') + ':' +
+        String(noteVoice.seconds % 60).padStart(2, '0')
+      : 'voice';
     const x = document.createElement('button');
-    x.type = 'button'; x.className = 'note-chip-x'; x.textContent = '×';
+    x.type = 'button'; x.className = 'note-thumb-x'; x.textContent = '×';
     x.title = 'Remove voice note';
-    x.onclick = () => { URL.revokeObjectURL(au.src); noteVoice = null; renderNoteAttach(); };
-    chip.append(au, x);
-    row.appendChild(chip);
+    x.onclick = (e) => { e.stopPropagation(); noteVoice = null; renderNoteAttach(); };
+    tile.append(secs, x);
+    // Tapping the tile plays it back.
+    tile.onclick = () => { new Audio(URL.createObjectURL(noteVoice.file)).play().catch(() => {}); };
+    row.appendChild(tile);
   }
   row.classList.toggle('show', !!(noteImage || noteVoice));
+  paintNoteGo();
 }
 
 function noteRecPaintBars() {
@@ -7345,7 +7414,6 @@ function noteRecPaintBars() {
 }
 
 async function noteToggleRecord() {
-  const btn  = document.getElementById('note-mic-btn');
   const strip = document.getElementById('note-rec');
   const timeEl = document.getElementById('note-rec-time');
 
@@ -7372,22 +7440,24 @@ async function noteToggleRecord() {
   noteRec.onstop = () => {
     stream.getTracks().forEach(t => t.stop());
     clearInterval(noteRecTimer);
+    const secs = Math.round((Date.now() - noteRecStart) / 1000);
     strip.classList.remove('show');
-    btn.classList.remove('on');
+    document.getElementById('note-card').classList.remove('recording');
     const blob = new Blob(noteRecChunks, { type: noteRec.mimeType || 'audio/webm' });
     noteRec = null;
+    paintNoteGo();
     if (!blob.size) return;
     if (blob.size > NOTE_MAX_BYTES) {
       alert('That recording is too long to send. Try a shorter one.');
       return;
     }
-    noteVoice = { file: new File([blob], 'voice.webm', { type: blob.type }) };
+    noteVoice = { file: new File([blob], 'voice.webm', { type: blob.type }), seconds: secs };
     renderNoteAttach();
   };
 
   noteRecPaintBars();
   strip.classList.add('show');
-  btn.classList.add('on');
+  document.getElementById('note-card').classList.add('recording');
   noteRecStart = Date.now();
   timeEl.textContent = '00:00';
   noteRecTimer = setInterval(() => {
@@ -7397,14 +7467,33 @@ async function noteToggleRecord() {
     if (t >= NOTE_MAX_SECONDS && noteRec) noteRec.stop();   // hard cap on size
   }, 250);
   noteRec.start();
+  paintNoteGo();
 }
 
 (function wireNoteTools() {
   const pick = document.getElementById('note-pick-btn');
   const file = document.getElementById('note-file');
-  const mic  = document.getElementById('note-mic-btn');
-  if (!pick || !file || !mic) return;
+  const go   = document.getElementById('note-send-btn');
+  const ta   = document.getElementById('note-msg');
+  if (!pick || !file || !go) return;
   pick.addEventListener('click', () => file.click());
+
+  // Grows with the text up to the reference's 240px ceiling.
+  const autosize = () => {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 240) + 'px';
+  };
+  ta.addEventListener('input', () => { autosize(); paintNoteGo(); });
+  // Enter sends, Shift+Enter makes a new line — as the reference does.
+  ta.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitNote(); }
+  });
+  go.addEventListener('click', () => {
+    if (noteRec && noteRec.state === 'recording') { noteToggleRecord(); return; }
+    const ready = ta.value.trim() || noteImage || noteVoice;
+    if (ready) submitNote(); else noteToggleRecord();
+  });
+  autosize(); paintNoteGo();
   file.addEventListener('change', async () => {
     const f = file.files && file.files[0];
     file.value = '';
@@ -7419,7 +7508,6 @@ async function noteToggleRecord() {
     noteImage = { file: small };
     renderNoteAttach();
   });
-  mic.addEventListener('click', noteToggleRecord);
 })();
 
 function fileToBase64(file) {
@@ -7453,9 +7541,7 @@ async function submitNote() {
   if (!ok) return;
 
   const btn = document.getElementById('note-send-btn');
-  const txt = document.getElementById('note-send-txt');
-  const ico = document.getElementById('note-send-ico');
-  btn.disabled = true; txt.textContent = 'Sending…'; ico.style.display = 'none';
+  btn.disabled = true;
 
   try {
     // Supabase used to take these; it is quota-blocked, so the note now goes
@@ -7477,7 +7563,7 @@ async function submitNote() {
     document.getElementById('note-card').style.display = 'none';
     document.getElementById('note-success').classList.add('show');
   } catch(e) {
-    btn.disabled = false; txt.textContent = 'Send'; ico.style.display = '';
+    btn.disabled = false; paintNoteGo();
     const body = encodeURIComponent(`${msg}\n\n---\nEmail: ${emailVal}${igVal ? '\nInstagram: ' + igVal : ''}${tgVal ? '\nTelegram: ' + tgVal : ''}`);
     window.location.href = `mailto:halirezamahdavi@gmail.com?subject=Portfolio note&body=${body}`;
   }
