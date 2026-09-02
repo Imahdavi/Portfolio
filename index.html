@@ -11897,7 +11897,10 @@ void main () {
 
     wrap.querySelectorAll(items).forEach(el => {
       const r = el.getBoundingClientRect();
-      if (r.height === 0 || r.bottom < view.top - zone || r.top > view.bottom + zone) {
+      // Cull on the viewport itself, not a zone-padded box: with a centre-based
+      // angle a block just outside the view contributes nothing anyway, and the
+      // padding only kept offscreen blocks alive to be transformed for nothing.
+      if (r.height === 0 || r.bottom < view.top || r.top > view.bottom) {
         if (el.classList.contains('fold-item')) {
           el.style.transform = ''; el.style.filter = '';
           el.classList.remove('fold-item');
@@ -11905,9 +11908,16 @@ void main () {
         return;
       }
 
-      // How far the block has pushed past each crease, 0..1.
-      const intoTop = Math.min(Math.max((view.top + zone - r.top) / zone, 0), 1) * amt.top;
-      const intoBot = Math.min(Math.max((r.bottom - (view.bottom - zone)) / zone, 0), 1) * amt.bottom;
+      // Measured from the block's CENTRE, not its leading edge. Bend folds a
+      // band of the surface, so a tall element there is part folded and part
+      // flat; a rigid block can only take one angle, and keying that off the
+      // edge meant anything whose top had merely entered the zone rotated
+      // whole — on these boards that is a 432px panel filling most of the
+      // screen tipping 34deg. Off the centre, a tall block barely leans until
+      // it is genuinely at the edge, while a short one still folds fully.
+      const mid = (r.top + r.bottom) / 2 - view.top;
+      const intoTop = Math.min(Math.max((zone - mid) / zone, 0), 1) * amt.top;
+      const intoBot = Math.min(Math.max((mid - (view.height - zone)) / zone, 0), 1) * amt.bottom;
 
       if (intoTop < 0.002 && intoBot < 0.002) {
         if (el.classList.contains('fold-item')) {
