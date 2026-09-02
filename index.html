@@ -2187,19 +2187,15 @@
     }
     .pib.recording { border-color:rgba(239,68,68,.7); }
 
-    /* Contents sit above the composer's own layers. */
+    /* Contents sit above the composer's own layers, and the cipher over
+       them again — it is what you look through to reach the form. */
     .pib > * { position:relative; z-index:1; }
-
-    /* The placeholder is drawn as its own element rather than the native
-       one, because ::placeholder text cannot be animated per character. It
-       is inert to the pointer, so clicking it still lands in the textarea. */
-    .pib-ta-wrap { position:relative; }
-    .pib-ph {
-      position:absolute; left:12px; top:10px; pointer-events:none;
-      font-size:15px; line-height:1.55; color:#6b7280;
-      font-family:inherit; white-space:pre; transition:opacity .15s;
+    .pib-cipher {
+      position:absolute; inset:0; z-index:2; pointer-events:none;
+      display:block; border-radius:inherit;
+      transition:opacity .45s ease;
     }
-    .pib-ph.hide { opacity:0; }
+    .pib-cipher.gone { opacity:0; }
 
     .pib-ta {
       display:block; width:100%; min-height:44px; max-height:240px;
@@ -2999,12 +2995,10 @@ one keyframe at a time</div>
          their full-size dialog, paste and drop, and the recorder replacing
          the text are all from that component. -->
     <div class="pib" id="note-card">
+      <canvas class="pib-cipher" id="pib-cipher" aria-hidden="true"></canvas>
       <div class="pib-files" id="note-attach"></div>
 
-      <div class="pib-ta-wrap">
-        <textarea class="pib-ta" id="note-msg" rows="1" aria-label="Your message"></textarea>
-        <span class="pib-ph" id="pib-ph" aria-hidden="true">Type your message here...</span>
-      </div>
+      <textarea class="pib-ta" id="note-msg" rows="1" placeholder="Type your message here..."></textarea>
 
       <div class="pib-rec" id="note-rec">
         <div class="pib-rec-head">
@@ -11736,60 +11730,125 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <script>
 
-/* ── Decrypt reveal ──────────────────────────────────────────
-   Port of the Canvas UI "Decrypt Reveal" component. The behaviour is the
-   source's: the text starts scrambled and resolves left to right, each
-   character cycling through random glyphs for a few frames before it
-   settles. Runs on hover here, and once when the note page is first opened.
 
-   Driven by one interval over a character array rather than per-character
-   timers — a settled character is never touched again, so the work falls
-   off as the reveal progresses instead of staying flat. */
+/* ── Decrypt reveal ──────────────────────────────────────────
+   Port of Canvas UI's "Decrypt Reveal". The component covers its contents
+   with a field of cipher glyphs and lets the cursor decrypt a hole through
+   it, so the real UI is only readable where you point.
+
+   Done as a canvas over the composer with the hole punched by
+   destination-out, rather than by scrambling the text itself: the form
+   underneath stays a real textarea and real inputs the whole time, so it
+   keeps its selection, focus and accessibility while the cipher is up.
+
+   One departure from the demo, which is a showcase and never has to be
+   filled in: the cipher clears for good the moment you focus the field.
+   Typing a message behind a curtain you have to keep wiping away with the
+   mouse would be miserable, and the effect has already been seen by then. */
 (function () {
-  const el = document.getElementById('pib-ph');
-  if (!el) return;
-  const FINAL = el.textContent;
-  const GLYPHS = '!<>-_\/[]{}—=+*^?#________';
+  const canvas = document.getElementById('pib-cipher');
+  const host = document.getElementById('note-card');
+  if (!canvas || !host) return;
   const reduce = window.matchMedia &&
                  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let timer = 0, frame = 0;
+  if (reduce) { canvas.classList.add('gone'); return; }
 
-  function run() {
-    if (reduce) { el.textContent = FINAL; return; }
-    clearInterval(timer);
-    frame = 0;
-    // Each character gets a start and end frame, so the resolve sweeps
-    // across rather than every glyph settling at once.
-    const plan = [...FINAL].map((ch, i) => ({
-      ch, start: i * 1.6, end: i * 1.6 + 8 + Math.random() * 8,
-      glyph: GLYPHS[(Math.random() * GLYPHS.length) | 0]
-    }));
-    timer = setInterval(() => {
-      let done = 0;
-      el.textContent = plan.map(p => {
-        if (frame >= p.end) { done++; return p.ch; }
-        if (frame < p.start) return ' ';
-        if (Math.random() < 0.28) p.glyph = GLYPHS[(Math.random() * GLYPHS.length) | 0];
-        return p.glyph;
-      }).join('');
-      frame++;
-      if (done === plan.length) { clearInterval(timer); timer = 0; el.textContent = FINAL; }
-    }, 28);
+  const ctx = canvas.getContext('2d');
+  const GLYPHS = '01<>[]{}/\|=+*#%&$@?!ABCDEFGHJKLMNPQRSTUVWXYZ';
+  // Mostly dim, with the occasional coloured character — the demo's cipher
+  // is chromatic rather than a flat green wall.
+  const TINTS = ['rgba(226,232,240,.85)', 'rgba(148,163,184,.75)',
+                 'rgba(248,113,113,.75)', 'rgba(74,222,128,.7)',
+                 'rgba(96,165,250,.75)', 'rgba(250,204,21,.7)'];
+  const CW = 9, CH = 13;
+  let cols = 0, rows = 0, cells = [], dpr = 1;
+  let mx = -1e4, my = -1e4, raf = 0, dead = false;
+
+  function build() {
+    const r = host.getBoundingClientRect();
+    if (!r.width || !r.height) return false;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(r.width * dpr);
+    canvas.height = Math.round(r.height * dpr);
+    canvas.style.width = r.width + 'px';
+    canvas.style.height = r.height + 'px';
+    cols = Math.ceil(r.width / CW); rows = Math.ceil(r.height / CH);
+    cells = new Array(cols * rows);
+    for (let i = 0; i < cells.length; i++) {
+      cells[i] = { c: GLYPHS[(Math.random() * GLYPHS.length) | 0],
+                   t: TINTS[(Math.random() * (Math.random() < .78 ? 2 : TINTS.length)) | 0] };
+    }
+    return true;
   }
 
-  const card = document.getElementById('note-card');
-  const ta = document.getElementById('note-msg');
-  if (card) card.addEventListener('pointerenter', run);
-  // The placeholder only exists while the field is empty.
-  function sync() { el.classList.toggle('hide', !!ta.value); }
-  if (ta) ta.addEventListener('input', sync);
+  function draw() {
+    raf = 0;
+    if (dead) return;
+    // The composer starts inside a hidden view, so the first build measures a
+    // 0x0 box. Re-measuring here means it also survives the page being opened
+    // later, the site-width slider and any reflow, without a watcher.
+    const hr = host.getBoundingClientRect();
+    if (!hr.width || !hr.height) return;
+    if (Math.abs(hr.width - canvas.width / dpr) > 1 ||
+        Math.abs(hr.height - canvas.height / dpr) > 1) {
+      if (!build()) return;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const w = canvas.width / dpr, h = canvas.height / dpr;
+    ctx.clearRect(0, 0, w, h);
 
-  // First open of the note page also plays it.
-  let played = false;
+    // The cipher itself: an opaque wall of glyphs over the form.
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(20,21,24,.97)';
+    ctx.fillRect(0, 0, w, h);
+    ctx.font = '11px ui-monospace, SFMono-Regular, Menlo, monospace';
+    ctx.textBaseline = 'top';
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        const cell = cells[y * cols + x];
+        // A few characters churn each frame so the wall reads as live cipher.
+        if (Math.random() < 0.012) cell.c = GLYPHS[(Math.random() * GLYPHS.length) | 0];
+        ctx.fillStyle = cell.t;
+        ctx.fillText(cell.c, x * CW, y * CH);
+      }
+    }
+
+    // ...and the cursor decrypts a hole straight through it.
+    ctx.globalCompositeOperation = 'destination-out';
+    const g = ctx.createRadialGradient(mx, my, 0, mx, my, 78);
+    g.addColorStop(0, 'rgba(0,0,0,1)');
+    g.addColorStop(0.62, 'rgba(0,0,0,.96)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(mx - 80, my - 80, 160, 160);
+    ctx.globalCompositeOperation = 'source-over';
+
+    kick();
+  }
+  function kick() { if (!raf && !dead) raf = requestAnimationFrame(draw); }
+
+  function retire() {                       // focus means they want to type
+    if (dead) return;
+    dead = true;
+    cancelAnimationFrame(raf); raf = 0;
+    canvas.classList.add('gone');
+  }
+
+  host.addEventListener('pointermove', (e) => {
+    const r = host.getBoundingClientRect();
+    mx = e.clientX - r.left; my = e.clientY - r.top;
+    kick();
+  });
+  host.addEventListener('pointerleave', () => { mx = my = -1e4; kick(); });
+  host.addEventListener('focusin', retire);
+  host.addEventListener('pointerdown', retire);
+  window.addEventListener('resize', () => { if (!dead && build()) kick(); }, { passive: true });
+
   const view = document.getElementById('view-soon');
   if (view) new MutationObserver(() => {
-    if (view.classList.contains('active') && !played) { played = true; run(); }
+    if (!dead && view.classList.contains('active')) { build(); kick(); }
   }).observe(view, { attributes: true, attributeFilter: ['class'] });
+  build(); kick();
 })();
 
 /* ── Media tilt + glare ──────────────────────────────────────
