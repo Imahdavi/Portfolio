@@ -11776,7 +11776,102 @@ document.addEventListener('DOMContentLoaded', () => {
   let mx = -1e4, my = -1e4, rx = -1e4, ry = -1e4;   // raw and smoothed cursor
   let raf = 0, dead = false, last = 0;
 
-  function rasterise(w, h) {
+  /* Real pixels, not an approximation.
+
+     A browser will not hand you a raster of live DOM, but it will draw an
+     SVG <foreignObject> containing XHTML — so the composer is cloned, its
+     computed styles are inlined onto the clone (the clone is detached and
+     inherits no stylesheet), serialised into an SVG and loaded as an image.
+     What comes back is the component as the browser actually painted it,
+     which is what the cipher is supposed to be sampling.
+
+     Two details the technique needs: form controls do not render their value
+     or placeholder inside foreignObject, so they are swapped for styled
+     divs carrying that text; and a data: SVG cannot fetch anything, so the
+     webfont falls back. At a 7.5x10 cell that is invisible in the output.
+
+     If any of it is refused — CSP, a tainted canvas, a browser that will not
+     draw foreignObject — sampling falls back to the hand-drawn stand-in
+     rather than the effect disappearing. */
+  const COPY_PROPS = [
+    'display','position','left','top','right','bottom','width','height',
+    'margin','padding','border','borderRadius','boxSizing','background',
+    'backgroundColor','color','font','fontFamily','fontSize','fontWeight',
+    'fontStyle','lineHeight','letterSpacing','textAlign','opacity','overflow',
+    'flex','flexDirection','alignItems','justifyContent','gap','whiteSpace',
+    'boxShadow','transform','minWidth','minHeight','maxWidth','maxHeight'
+  ];
+
+  function inlineStyles(src, dst) {
+    const cs = getComputedStyle(src);
+    let text = '';
+    for (const p of COPY_PROPS) {
+      const v = cs[p];
+      if (v) text += p.replace(/[A-Z]/g, m => '-' + m.toLowerCase()) + ':' + v + ';';
+    }
+    dst.setAttribute('style', text);
+    const a = src.children, b = dst.children;
+    for (let i = 0; i < a.length && i < b.length; i++) inlineStyles(a[i], b[i]);
+  }
+
+  // Controls do not paint their text inside foreignObject; give the clone a
+  // div that does, in the same place with the same type.
+  function swapControls(src, dst) {
+    const srcFields = src.querySelectorAll('textarea, input');
+    const dstFields = dst.querySelectorAll('textarea, input');
+    for (let i = 0; i < srcFields.length && i < dstFields.length; i++) {
+      const f = srcFields[i], d = dstFields[i];
+      if (f.type === 'file' || f.getAttribute('aria-hidden') === 'true') { d.remove(); continue; }
+      const cs = getComputedStyle(f);
+      const div = document.createElement('div');
+      div.setAttribute('style', d.getAttribute('style') || '');
+      div.style.color = f.value ? cs.color : '#6b7280';
+      div.style.whiteSpace = 'pre';
+      div.textContent = f.value || f.placeholder || '';
+      d.parentNode.replaceChild(div, d);
+    }
+  }
+
+  let rasterBusy = false;
+  function rasteriseDOM(w, h, done) {
+    if (rasterBusy) return;
+    rasterBusy = true;
+    try {
+      const clone = host.cloneNode(true);
+      const cc = clone.querySelector('#pib-cipher');
+      if (cc) cc.remove();
+      inlineStyles(host, clone);
+      swapControls(host, clone);
+      clone.style.margin = '0';
+      clone.style.position = 'static';
+      clone.style.width = w + 'px';
+      clone.style.height = h + 'px';
+
+      const xml = new XMLSerializer().serializeToString(clone);
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">' +
+                  '<foreignObject width="100%" height="100%">' +
+                  '<div xmlns="http://www.w3.org/1999/xhtml">' + xml + '</div>' +
+                  '</foreignObject></svg>';
+      const img = new Image();
+      img.onload = () => {
+        try {
+          off.width = Math.max(1, Math.round(w));
+          off.height = Math.max(1, Math.round(h));
+          octx.clearRect(0, 0, off.width, off.height);
+          octx.drawImage(img, 0, 0, off.width, off.height);
+          done(octx.getImageData(0, 0, off.width, off.height));
+        } catch (e) { done(rasteriseFallback(w, h)); }
+        rasterBusy = false;
+      };
+      img.onerror = () => { done(rasteriseFallback(w, h)); rasterBusy = false; };
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    } catch (e) {
+      done(rasteriseFallback(w, h));
+      rasterBusy = false;
+    }
+  }
+
+  function rasteriseFallback(w, h) {
     off.width = Math.max(1, Math.round(w));
     off.height = Math.max(1, Math.round(h));
     const hr = host.getBoundingClientRect();
@@ -11826,7 +11921,15 @@ document.addEventListener('DOMContentLoaded', () => {
     canvas.style.height = r.height + 'px';
     cols = Math.ceil(r.width / CW); rows = Math.ceil(r.height / CH);
 
-    const img = rasterise(r.width, r.height);
+    // Rasterising the DOM goes through an image load, so cells are filled
+    // when it returns. The previous grid keeps drawing until then, which is
+    // why a resize never shows an empty frame.
+    rasteriseDOM(r.width, r.height, (img) => { sampleInto(img); kick(); });
+    if (!cells.length) sampleInto(rasteriseFallback(r.width, r.height));
+    return true;
+  }
+
+  function sampleInto(img) {
     const d = img.data, W = off.width;
     cells = new Array(cols * rows);
     for (let y = 0; y < rows; y++) {
@@ -11855,7 +11958,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     reroll(1);
-    return true;
   }
 
   // Glyph choice is the density match; a share of them keeps rerolling at
