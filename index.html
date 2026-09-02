@@ -11815,7 +11815,8 @@ void main () {
 
   const OPT = {
     zone: 240,           // px at each edge where folding happens
-    angle: 34,           // max fold in degrees (Bend uses 80 for a continuous surface)
+    angle: 52,           // max fold in degrees, scaled down per block by its height
+                         // (Bend uses 80 across a continuous surface)
     perspective: 700,    // px focal length; smaller pinches the fold harder
     ease: 240,           // px of scroll over which an edge flattens at its end
     smoothing: 0.1,      // seconds for the fold to settle
@@ -11908,16 +11909,13 @@ void main () {
         return;
       }
 
-      // Measured from the block's CENTRE, not its leading edge. Bend folds a
-      // band of the surface, so a tall element there is part folded and part
-      // flat; a rigid block can only take one angle, and keying that off the
-      // edge meant anything whose top had merely entered the zone rotated
-      // whole — on these boards that is a 432px panel filling most of the
-      // screen tipping 34deg. Off the centre, a tall block barely leans until
-      // it is genuinely at the edge, while a short one still folds fully.
-      const mid = (r.top + r.bottom) / 2 - view.top;
-      const intoTop = Math.min(Math.max((zone - mid) / zone, 0), 1) * amt.top;
-      const intoBot = Math.min(Math.max((mid - (view.height - zone)) / zone, 0), 1) * amt.bottom;
+      // Progress is taken from the leading edge, so the fold starts the moment
+      // a block reaches the band and is visible while it happens. Measuring
+      // from the centre instead put the whole fold off screen for anything
+      // taller than the band: a 432px block only qualified once it was three
+      // quarters gone, which is why it looked like nothing was happening.
+      const intoTop = Math.min(Math.max((view.top + zone - r.top) / zone, 0), 1) * amt.top;
+      const intoBot = Math.min(Math.max((r.bottom - (view.bottom - zone)) / zone, 0), 1) * amt.bottom;
 
       if (intoTop < 0.002 && intoBot < 0.002) {
         if (el.classList.contains('fold-item')) {
@@ -11928,14 +11926,23 @@ void main () {
       }
 
       el.classList.add('fold-item');
+      // A block much taller than the fold band gets a shallower maximum. In
+      // Bend such an element would be part folded and part flat; a rigid block
+      // takes one angle for its whole height, and giving a screen-filling
+      // panel the full angle reads as a slab tipping over rather than a page
+      // folding. Scaling by how much of it the band actually covers keeps
+      // short blocks folding fully and tall ones merely leaning.
+      const reach = Math.min(1, zone / Math.max(r.height, 1));
+      const maxDeg = OPT.angle * (0.4 + 0.6 * reach);
+
       // Hinge from the edge nearest the flat middle of the face, so the block
       // swings away over the crease instead of pivoting about its own centre.
       let deg, origin;
       if (intoTop >= intoBot) {
-        deg = -OPT.angle * intoTop * DIR;
+        deg = -maxDeg * intoTop * DIR;
         origin = 'center bottom';
       } else {
-        deg = OPT.angle * intoBot * DIR;
+        deg = maxDeg * intoBot * DIR;
         origin = 'center top';
       }
       const t = Math.max(intoTop, intoBot);
