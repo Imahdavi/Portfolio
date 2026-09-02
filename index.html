@@ -11413,22 +11413,30 @@ document.addEventListener('DOMContentLoaded', () => {
   const list = document.getElementById('block-list');
   if (!list) return;
 
-  // Tunables — the source's option names, kept so they're recognisable.
+  // Tunables — the source's option names and its documented defaults,
+  // except where noted. bgOpacity in particular is 0 on purpose: that is
+  // what makes this a lens over the media rather than a patch covering it,
+  // since the "paper" behind the glyphs then draws nothing at all.
   const OPT = {
-    radius: 0.42,        // lens radius, fraction of the canvas height
-    softness: 0.85,      // edge feather, 0..1 of the radius
-    scale: 2.4,          // glyph pixel size in CSS px (a char is 5 of these)
+    radius: 0.4,         // lens radius, fraction of the canvas height
+    softness: 1,         // edge feather, 0..1 of the radius
+    scale: 1.1,          // glyph pixel size in CSS px (a char is 5 of these)
     spacing: 1,          // blank glyph pixels around each char
     charset: 'ascii',    // 'ascii' | 'blocks' | 'binary'
-    contrast: 1.15,
-    brightness: 0.0,
+    contrast: 1,
+    brightness: 0,
     invert: 0,
     strength: 1,         // coverage inside the lens
     baseStrength: 0,     // coverage everywhere else
-    followSpeed: 9,      // how fast the lens chases the cursor
+    followSpeed: 3,      // how fast the lens chases the cursor
     aberration: 0.75,
     bg: [0, 0, 0],       // "paper" behind the glyphs
-    bgOpacity: 0.92,
+    bgOpacity: 0,        // 0 = media shows through untouched
+    // Not in the original, which always tints glyphs with the pixel under
+    // them. Flat white at low alpha keeps the media readable underneath.
+    glyphColor: [1, 1, 1],
+    glyphAlpha: 0.55,
+    useSourceColor: 0,   // 1 = colour glyphs from the media instead
   };
 
   const CHARSETS = {
@@ -11470,6 +11478,9 @@ uniform float uInvert;
 uniform float uStrength;
 uniform float uBase;
 uniform float uAberration;
+uniform vec3 uGlyphColor;
+uniform float uGlyphAlpha;
+uniform float uUseSourceColor;
 
 #define S(a, b, t) smoothstep(a, b, t)
 
@@ -11531,8 +11542,12 @@ void main () {
   int pad = int(uSpacing);
   float on = glyphBit(index, ivec2(local.x - pad, local.y - pad));
 
-  vec3 col = mix(uBg, pixel.rgb, on);
-  float alpha = mix(clamp(uBgOpacity, 0.0, 1.0), 1.0, on);
+  // Paper alpha is uBgOpacity, glyph alpha is uGlyphAlpha — separating the
+  // two is what lets the lens sit ON the media instead of over it: at
+  // uBgOpacity 0 every cell is empty except the lit glyph pixels.
+  vec3 ink = mix(uGlyphColor, pixel.rgb, clamp(uUseSourceColor, 0.0, 1.0));
+  vec3 col = mix(uBg, ink, on);
+  float alpha = mix(clamp(uBgOpacity, 0.0, 1.0), clamp(uGlyphAlpha, 0.0, 1.0), on);
   outColor = vec4(col * alpha, alpha);
 }`;
 
@@ -11681,6 +11696,9 @@ void main () {
     gl.uniform1f(uniforms.uStrength, OPT.strength);
     gl.uniform1f(uniforms.uBase, OPT.baseStrength);
     gl.uniform1f(uniforms.uAberration, OPT.aberration);
+    gl.uniform3f(uniforms.uGlyphColor, OPT.glyphColor[0], OPT.glyphColor[1], OPT.glyphColor[2]);
+    gl.uniform1f(uniforms.uGlyphAlpha, OPT.glyphAlpha);
+    gl.uniform1f(uniforms.uUseSourceColor, OPT.useSourceColor);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, canvas.width, canvas.height);
