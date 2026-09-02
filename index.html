@@ -1062,18 +1062,31 @@
     /* ─────────────────── NOTE PAGE ─────────────────── */
     .note-title { font-family:var(--font-heading); font-size:27px; font-weight:600; margin-bottom:10px; line-height:1.2; }
     .note-desc  { font-size:14px; color:#888; line-height:1.6; margin-bottom:28px; }
-    /* Composer, following the reference: one rounded bordered box with a
-       deep shadow holding previews, text, fields and actions. The reference
-       is dark-only (#1F2023 on #444); this site has two themes, so the shape
-       and spacing are matched exactly and the palette follows the page. */
+    /* Composer — the reference component's own palette, kept dark in both
+       themes because that dark box against a light page IS the look. Every
+       colour inside it is therefore set here rather than inherited from the
+       page, or light mode would put dark text on a dark box. */
     .note-card  {
-      background:#F5F4F2; border:1px solid rgba(0,0,0,.09);
-      border-radius:24px; padding:8px;
-      box-shadow:0 8px 30px rgba(0,0,0,.10);
+      background:#1F2023; border:1px solid #444; border-radius:24px; padding:8px;
+      box-shadow:0 8px 30px rgba(0,0,0,.24);
       transition:border-color .3s, box-shadow .3s;
     }
-    .note-card.recording { border-color:rgba(208,65,58,.7); }
-    body.dark .note-card { border-color:var(--d-line-2); box-shadow:0 8px 30px rgba(0,0,0,.5); }
+    .note-card.recording { border-color:rgba(239,68,68,.7); }
+
+    /* Contents, pinned to the component's greys */
+    .note-card .note-msg { color:#f3f4f6; }
+    .note-card .note-msg::placeholder { color:#9ca3af; }
+    .note-card .note-sep { background:rgba(255,255,255,.10); }
+    .note-card .note-field { border-bottom-color:rgba(255,255,255,.08); }
+    .note-card .note-field input { color:#e5e7eb; }
+    .note-card .note-field input::placeholder,
+    .note-card .note-field-ico { color:#9ca3af; }
+    .note-card .note-field input.error::placeholder { color:rgba(248,113,113,.75); }
+    /* Its scrollbar, from the component's embedded styles */
+    .note-card .note-msg::-webkit-scrollbar { width:6px; }
+    .note-card .note-msg::-webkit-scrollbar-track { background:transparent; }
+    .note-card .note-msg::-webkit-scrollbar-thumb { background-color:#444; border-radius:3px; }
+    .note-card .note-msg::-webkit-scrollbar-thumb:hover { background-color:#555; }
     .note-msg   { width:100%; min-height:100px; background:none; border:none; outline:none; resize:none; font-size:15px; font-family:inherit; color:#111; line-height:1.55; padding:0; margin-bottom:14px; display:block; }
     .note-msg::placeholder { color:#c0bdb8; }
     @keyframes noteShake { 0%,100%{transform:none} 30%{transform:translateX(-5px)} 70%{transform:translateX(5px)} }
@@ -2217,31 +2230,27 @@
       border:none; background:none; cursor:pointer; border-radius:50%;
       color:#9CA3AF; transition:color .2s, background .2s, transform .12s;
     }
-    .note-tool svg { width:19px; height:19px; }
-    .note-tool:hover  { color:#4a443e; background:rgba(0,0,0,.06); }
+    .note-tool svg { width:20px; height:20px; }
+    .note-tool:hover  { color:#D1D5DB; background:rgba(75,85,99,.3); }
     .note-tool:active { transform:scale(.9); }
-    body.dark .note-tool { color:var(--d-text-3); }
-    body.dark .note-tool:hover { color:var(--d-text); background:rgba(255,255,255,.08); }
 
-    /* The one button: mic -> arrow -> stop */
+    /* The action button: white disc with a dark glyph, as in the reference —
+       microphone while empty, arrow once there is something to send, and a
+       red stop while recording. */
     .note-go {
       width:32px; height:32px; flex-shrink:0; border:none; cursor:pointer;
       border-radius:50%; display:flex; align-items:center; justify-content:center;
-      background:none; color:#9CA3AF;
+      background:#fff; color:#1F2023;
       transition:background .2s, color .2s, transform .12s;
     }
     .note-go svg { width:18px; height:18px; }
-    .note-go:hover { background:rgba(0,0,0,.06); color:#4a443e; }
+    .note-go:hover  { background:rgba(255,255,255,.8); }
     .note-go:active { transform:scale(.9); }
-    .note-go.ready { background:#1a1a1a; color:#fff; }
-    .note-go.ready:hover { background:#333; color:#fff; }
-    .note-go.rec { color:#d0413a; }
-    .note-go.rec:hover { background:rgba(208,65,58,.12); color:#d0413a; }
-    .note-go:disabled { opacity:.45; cursor:default; }
-    body.dark .note-go { color:var(--d-text-3); }
-    body.dark .note-go:hover { background:rgba(255,255,255,.08); color:var(--d-text); }
-    body.dark .note-go.ready { background:var(--d-text); color:var(--d-bg); }
-    body.dark .note-go.ready:hover { background:#fff; color:var(--d-bg); }
+    .note-go.rec {
+      background:transparent; color:#ef4444;
+    }
+    .note-go.rec:hover { background:rgba(75,85,99,.3); color:#f87171; }
+    .note-go:disabled { opacity:.5; cursor:default; }
 
     /* 64px preview tiles, as in the reference */
     .note-attach { display:none; flex-wrap:wrap; gap:8px; padding:4px 4px 6px; }
@@ -2249,9 +2258,8 @@
     .note-thumb {
       position:relative; width:64px; height:64px; border-radius:12px;
       overflow:hidden; cursor:pointer; flex-shrink:0;
-      background:rgba(0,0,0,.05);
+      background:rgba(255,255,255,.06);
     }
-    body.dark .note-thumb { background:rgba(255,255,255,.07); }
     .note-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
     .note-thumb-x {
       position:absolute; top:3px; right:3px; width:16px; height:16px;
@@ -2264,9 +2272,8 @@
        and the duration instead. */
     .note-thumb.voice {
       display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:3px; color:#5a5148; font-size:10px; font-family:var(--font-name);
+      gap:3px; color:#d1d5db; font-size:10px; font-family:var(--font-name);
     }
-    body.dark .note-thumb.voice { color:var(--d-text-2); }
     .note-thumb.voice svg { width:19px; height:19px; }
 
     /* Recording replaces the text, centred, with the bar field under it */
@@ -2280,19 +2287,17 @@
     }
     @keyframes noteRecPulse { 0%,100%{opacity:1} 50%{opacity:.25} }
     .note-rec-time {
-      font-family:var(--font-name); font-size:13px; color:#5a5148;
+      font-family:var(--font-name); font-size:13px; color:rgba(255,255,255,.8);
       font-variant-numeric:tabular-nums;
     }
-    body.dark .note-rec-time { color:var(--d-text-2); }
     .note-rec-bars {
       display:flex; align-items:center; justify-content:center; gap:2px;
       width:100%; height:40px; padding:0 16px;
     }
     .note-rec-bars i {
-      width:2px; border-radius:2px; background:rgba(0,0,0,.35);
+      width:2px; border-radius:2px; background:rgba(255,255,255,.5);
       animation:noteRecBar .9s ease-in-out infinite alternate;
     }
-    body.dark .note-rec-bars i { background:rgba(255,255,255,.5); }
     @keyframes noteRecBar { from { height:15% } to { height:100% } }
     @media (prefers-reduced-motion:reduce) {
       .note-rec-dot, .note-rec-bars i { animation:none; }
@@ -2347,7 +2352,9 @@
     body.dark .nav-btn:hover, body.dark .tools-bulk-clear:hover { color:var(--d-text); }
 
     /* Surfaces */
-    body.dark .note-card, body.dark .game-stage, body.dark #media-picker-sheet,
+    /* .note-card is deliberately absent: the composer keeps the reference
+       component's dark palette in both themes and sets its own colours. */
+    body.dark .game-stage, body.dark #media-picker-sheet,
     body.dark .tool-card, body.dark .block-uploading .media-inner,
     body.dark .mp-item { background:var(--d-surface); }
     body.dark .tool-card { border-color:var(--d-line); }
@@ -2384,12 +2391,7 @@
 
     /* Hairlines */
     body.dark .exp-item, body.dark .proj-list-item { border-bottom-color:var(--d-line); }
-    body.dark .note-sep { background:var(--d-line); }
 
-    /* Fields keep their own surface so they read as inputs, not as page */
-    body.dark .note-field input, body.dark .note-msg { color:var(--d-text); }
-    body.dark .note-msg::placeholder, body.dark .note-field input::placeholder,
-    body.dark .note-field-ico { color:var(--d-text-3); }
     body.dark .tool-size-input {
       background:var(--d-raised); border-color:var(--d-line-2); color:var(--d-text);
     }
