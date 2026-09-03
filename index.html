@@ -2289,16 +2289,39 @@
     .pib-icon:hover { color:#fff; background:rgba(255,255,255,.16); }
 
     /* Send / mic / stop */
+    .pib-right { display:flex; align-items:center; }
     .pib-go {
       width:32px; height:32px; flex-shrink:0; border:none; cursor:pointer;
       border-radius:50%; display:flex; align-items:center; justify-content:center;
-      background:#fff; color:#1F2023; transition:background .2s, color .2s;
+      background:#fff; color:#1F2023; overflow:hidden;
+      transition:background .2s, color .2s, box-shadow .2s;
     }
-    .pib-go svg { width:18px; height:18px; }
+    .pib-go svg { width:18px; height:18px; flex-shrink:0; }
     .pib-go:hover { background:rgba(255,255,255,.8); }
     .pib-go.rec { background:transparent; color:#ef4444; }
     .pib-go.rec:hover { background:rgba(75,85,99,.3); color:#f87171; }
     .pib-go:disabled { opacity:.5; cursor:default; }
+
+    /* The mic is permanent. Once there is something to send it steps down to
+       the quiet outline treatment and the send disc takes the primary slot. */
+    .pib-mic.ghost { background:transparent; color:rgba(255,255,255,.82);
+                     box-shadow:inset 0 0 0 1px rgba(255,255,255,.24); }
+    .pib-mic.ghost:hover { background:rgba(255,255,255,.14); color:#fff; }
+
+    /* Collapsed to nothing until there is content, so the mic slides across
+       on its own rather than being swapped out. */
+    .pib-send {
+      width:0; margin-left:0; opacity:0; transform:scale(.55);
+      pointer-events:none; padding:0;
+      transition:width .34s cubic-bezier(.4,0,.2,1),
+                 margin-left .34s cubic-bezier(.4,0,.2,1),
+                 opacity .2s ease,
+                 transform .34s cubic-bezier(.34,1.45,.64,1),
+                 background .2s, color .2s;
+    }
+    .pib-send.show { width:32px; margin-left:8px; opacity:1; transform:scale(1);
+                     pointer-events:auto; }
+    @media (prefers-reduced-motion:reduce) { .pib-send { transition:opacity .15s } }
 
     /* ImageViewDialog */
     .pib-dialog { display:none; position:fixed; inset:0; z-index:6100;
@@ -3042,7 +3065,10 @@ one keyframe at a time</div>
           </button>
         </div>
 
-        <button type="button" class="pib-go" id="note-send-btn" aria-label="Voice message"></button>
+        <div class="pib-right">
+          <button type="button" class="pib-go pib-mic" id="note-mic-btn" aria-label="Voice message"></button>
+          <button type="button" class="pib-go pib-send" id="note-send-btn" aria-label="Send message" tabindex="-1"></button>
+        </div>
       </div>
     </div>
 
@@ -7361,17 +7387,34 @@ function pibHasContent() {
   return !!((ta && ta.value.trim()) || noteImage || noteVoice);
 }
 
-/* The button is the whole control surface, so it is repainted from state
-   rather than toggled between two fixed looks. */
+/* Two permanent controls: the mic never leaves, and the send disc grows in
+   beside it as soon as there is something to send. */
 function paintNoteGo() {
-  const btn = document.getElementById('note-send-btn');
-  if (!btn) return;
+  const mic  = document.getElementById('note-mic-btn');
+  const send = document.getElementById('note-send-btn');
+  if (!mic || !send) return;
+
   const recording = !!(noteRec && noteRec.state === 'recording');
-  btn.classList.toggle('rec', recording);
-  btn.innerHTML = recording ? SVG_PIB_STOP : (pibHasContent() ? SVG_PIB_SEND : SVG_PIB_MIC);
-  const label = recording ? 'Stop recording' : (pibHasContent() ? 'Send message' : 'Voice message');
-  btn.setAttribute('aria-label', label);
-  btn.title = label;
+  const ready     = pibHasContent();
+
+  mic.classList.toggle('rec', recording);
+  // Primary white disc only while it is the lone control; once send appears
+  // it steps back so the two do not compete.
+  mic.classList.toggle('ghost', !recording && ready);
+  if (mic.dataset.icon !== (recording ? 'stop' : 'mic')) {
+    mic.innerHTML = recording ? SVG_PIB_STOP : SVG_PIB_MIC;
+    mic.dataset.icon = recording ? 'stop' : 'mic';
+  }
+  const micLabel = recording ? 'Stop recording' : 'Voice message';
+  mic.setAttribute('aria-label', micLabel);
+  mic.title = micLabel;
+
+  if (!send.dataset.icon) { send.innerHTML = SVG_PIB_SEND; send.dataset.icon = 'send'; }
+  const showSend = ready && !recording;
+  send.classList.toggle('show', showSend);
+  send.tabIndex = showSend ? 0 : -1;
+  send.setAttribute('aria-hidden', showSend ? 'false' : 'true');
+  send.title = 'Send message';
 }
 
 function pibOpenDialog(url) {
@@ -7500,8 +7543,9 @@ async function noteToggleRecord() {
   const pick = document.getElementById('note-pick-btn');
   const file = document.getElementById('note-file');
   const go   = document.getElementById('note-send-btn');
+  const mic  = document.getElementById('note-mic-btn');
   const ta   = document.getElementById('note-msg');
-  if (!card || !pick || !file || !go || !ta) return;
+  if (!card || !pick || !file || !go || !mic || !ta) return;
 
   const autosize = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 240) + 'px'; };
   ta.addEventListener('input', () => { autosize(); paintNoteGo(); });
@@ -7531,10 +7575,9 @@ async function noteToggleRecord() {
     }
   });
 
-  go.addEventListener('click', () => {
-    if (noteRec && noteRec.state === 'recording') { noteToggleRecord(); return; }
-    if (pibHasContent()) submitNote(); else noteToggleRecord();
-  });
+  // The mic is now only ever the mic — it records whether or not there is text.
+  mic.addEventListener('click', () => noteToggleRecord());
+  go.addEventListener('click', () => { if (pibHasContent()) submitNote(); });
 
   document.getElementById('pib-dialog-x').addEventListener('click', pibCloseDialog);
   document.getElementById('pib-dialog').addEventListener('click', (e) => {
