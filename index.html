@@ -239,8 +239,23 @@
     #view-home.home-edit .pbc-avatar { cursor:grab; touch-action:none; }
     #view-home.home-edit .pbc-avatar:active { cursor:grabbing; }
     .pbc-avatar img { width:100%; height:100%; object-fit:cover; display:block; color:transparent; font-size:0; opacity:.9; }
+    /* Dark-mode copy of the avatar with its white field keyed out — see
+       avatarWhiteKey() in the JS. It is a separate layer rather than a new
+       src on the <img>, because saveSettings() reads that src back and
+       stores it as profile.photo_url; swapping it would write a data URL
+       into the site's settings. */
+    /* Scoped to the parent so it outranks `.pbc-avatar img` above, which the
+       layer also matches — a bare `.pbc-avatar-key` loses on specificity and
+       the keyed copy would sit over the original in light mode too. */
+    .pbc-avatar > .pbc-avatar-key {
+      position:absolute; inset:0; width:100%; height:100%;
+      object-fit:cover; display:none; opacity:.9; pointer-events:none;
+    }
+    body.dark .pbc-avatar.keyed > img { visibility:hidden; }
+    body.dark .pbc-avatar.keyed > .pbc-avatar-key { display:block; }
     .avatar-edit-btn {
-      position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+      position:absolute; inset:0; z-index:2; align-items:center; justify-content:center;
+      display:none;
       background:rgba(0,0,0,.42); border:none; cursor:pointer; color:#fff;
       border-radius:calc(10px * var(--avatar-scale, 1));
       transition:background .15s;
@@ -1767,6 +1782,10 @@
       color:#fff; font-size:10.5px; font-weight:700; letter-spacing:-.02em;
       overflow:hidden;
     }
+    /* The plate behind an uploaded logo. It used to be an inline #fff set in
+       JS, which outranks every body.dark rule, so it stayed a bright white
+       chip on the dark page. */
+    .tool-icon.has-img { background:#fff; }
     /* contain, not cover: a non-square uploaded logo (e.g. Figma's mark)
        got its edges sliced off under cover; contain letterboxes instead
        of cropping, and the icon's own background fills the padding. */
@@ -2403,6 +2422,14 @@
     body.dark .tool-card, body.dark .block-uploading .media-inner,
     body.dark .mp-item { background:var(--d-surface); }
     body.dark .tool-card { border-color:var(--d-line); }
+    /* These logos are app marks that carry their own dark rounded square with
+       a bright glyph on it, so a dark plate lets the mark's own edge blend in
+       instead of ringing it in white. The hairline keeps the pale marks from
+       floating shapelessly. */
+    body.dark .tool-icon.has-img {
+      background:var(--d-raised);
+      box-shadow:inset 0 0 0 .5px rgba(255,255,255,.10);
+    }
     body.dark .back-btn, body.dark #scroll-top-btn {
       background:rgba(36,33,32,.92); border-color:var(--d-line-2); color:var(--d-text);
     }
@@ -3843,6 +3870,89 @@ function toggleDarkMode() {
   document.body.classList.toggle('dark', on);
   try { localStorage.setItem('pf_theme', on ? 'dark' : 'light'); } catch (e) {}
 }
+
+/* ─── Avatar white-key ───────────────────────────────────
+   The avatar is a logo sitting on a solid white field, stored as a JPEG,
+   which cannot carry transparency. The plate behind it is already dark
+   glass in dark mode, but the image covers the plate completely, so the
+   white field read as a lit tile stuck to the type.
+
+   So a keyed copy is built once and shown only in dark mode. Two things
+   this deliberately does not do: it never touches the <img>'s src, because
+   saveSettings() reads that back into profile.photo_url; and it only fires
+   when the picture really is a mark on a flat white field, judged from its
+   border ring, so a photograph is left exactly as it is. */
+(function avatarWhiteKey() {
+  const wrap = document.querySelector('.pbc-avatar');
+  const img  = wrap && wrap.querySelector('img');
+  if (!wrap || !img) return;
+
+  let layer = null, builtFor = null;
+
+  function build() {
+    const w = img.naturalWidth, h = img.naturalHeight;
+    if (!w || !h) return null;
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    if (!g) return null;
+    let d;
+    try {
+      g.drawImage(img, 0, 0);
+      d = g.getImageData(0, 0, w, h);          // throws on a cross-origin source
+    } catch (e) { return null; }
+    const p = d.data, at = (x, y) => ((y * w) + x) * 4;
+    const near = i => p[i] > 238 && p[i + 1] > 238 && p[i + 2] > 238;
+
+    /* Two tests, both of which a photograph fails by a mile. Most of the
+       picture has to be the white field, and most of its edges have to be
+       nothing but that field. Three edges rather than four, because a mark
+       is often set low or bleeds off one side — the current avatar's bottom
+       edge is only 22% white while the other three are 100%. Measured on
+       these two images: the logo is 66% white with 3 clean edges, the stock
+       photo 1% with 0. */
+    const edge = (f, n) => { let k = 0; for (let i = 0; i < n; i++) if (near(f(i))) k++; return k / n; };
+    const clean = [edge(i => at(i, 0), w), edge(i => at(i, h - 1), w),
+                   edge(i => at(0, i), h), edge(i => at(w - 1, i), h)]
+                  .filter(v => v >= 0.9).length;
+    let white = 0;
+    for (let i = 0; i < p.length; i += 4) if (near(i)) white++;
+    if (white / (w * h) < 0.55 || clean < 3) return null;
+
+    // A ramp rather than a hard cut: JPEG ringing around the glyph would
+    // otherwise leave a bright fringe exactly where the key should be clean.
+    const HI = 250, LO = 228;
+    for (let i = 0; i < p.length; i += 4) {
+      const m = Math.min(p[i], p[i + 1], p[i + 2]);
+      if (m >= HI) p[i + 3] = 0;
+      else if (m > LO) p[i + 3] = Math.round(p[i + 3] * (HI - m) / (HI - LO));
+    }
+    g.putImageData(d, 0, 0);
+    try { return c.toDataURL('image/png'); } catch (e) { return null; }
+  }
+
+  function sync() {
+    if (!img.complete || !img.naturalWidth) return;
+    if (builtFor === img.src) return;
+    builtFor = img.src;
+    const url = build();
+    if (!url) { wrap.classList.remove('keyed'); if (layer) layer.remove(); layer = null; return; }
+    if (!layer) {
+      layer = document.createElement('img');
+      layer.className = 'pbc-avatar-key';
+      layer.alt = '';
+      layer.setAttribute('aria-hidden', 'true');
+      img.insertAdjacentElement('afterend', layer);
+    }
+    layer.src = url;
+    wrap.classList.add('keyed');
+  }
+
+  img.addEventListener('load', sync);
+  // The photo can be replaced from settings or by an admin upload.
+  new MutationObserver(sync).observe(img, { attributes: true, attributeFilter: ['src'] });
+  sync();
+})();
 
 /* ─── Spider web catch SVG — dense, realistic cobweb drawn on click ───── */
 
@@ -5306,13 +5416,17 @@ function toolsBuildCard(t, i, tools, stack) {
   const renderIconContent = () => {
     icon.innerHTML = '';
     if (t.iconSrc) {
-      icon.style.background = '#fff';
+      // The plate has to be themed, and an inline style would win over every
+      // body.dark rule — so this only marks the card and CSS picks the tone.
+      icon.classList.add('has-img');
+      icon.style.background = '';
       const img = document.createElement('img');
       img.src = t.iconSrc;
       img.alt = '';
       icon.appendChild(img);
     } else {
-      icon.style.background = t.bg || '#555';
+      icon.classList.remove('has-img');
+      icon.style.background = t.bg || '#555'; // a per-tool brand colour, not a plate
       icon.textContent = t.badge || (t.name || '?').trim().slice(0, 2).toUpperCase();
     }
   };
