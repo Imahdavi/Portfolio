@@ -1075,7 +1075,16 @@
       border-radius:50%; border:.5px solid rgba(0,0,0,.14);
       will-change:transform, opacity; user-select:none;
     }
-    .brand-logo { height:56%; width:auto; max-width:72%; object-fit:contain; filter:grayscale(1) opacity(.4); transition:filter .28s ease; -webkit-user-drag:none; user-select:none; }
+    .brand-logo { height:56%; width:auto; max-width:72%; object-fit:contain; filter:grayscale(1) opacity(.4); transition:filter .28s ease, opacity .28s ease; -webkit-user-drag:none; user-select:none; }
+    /* The dark-mode hover copy — same artwork, never inverted. Light mode has
+       no use for it. Sizing is duplicated rather than inherited from
+       .brand-logo so that rule's hover filters cannot reach this one. */
+    .brand-logo-true {
+      display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      height:56%; width:auto; max-width:72%; object-fit:contain;
+      opacity:0; pointer-events:none; transition:opacity .28s ease;
+      -webkit-user-drag:none; user-select:none;
+    }
     /* Hover on the whole circle chip, not just the logo's own pixels —
        since each chip is now a uniform 58px circle with the logo
        floating smaller/centered inside it (proportional, not filled),
@@ -2486,7 +2495,17 @@
     /* :has, so the chip only lights up under a logo — some cells are a plain
        wordmark, and those keep their light text on the dark ground. */
     body.dark .brand-cell:has(.brand-logo):hover { background:rgba(255,255,255,.92); }
-    body.dark .brand-cell:hover .brand-logo { filter:grayscale(0) opacity(1); }
+    /* Hover cross-fades to a second, un-inverted copy instead of animating
+       the filter. `grayscale(1) invert(1) opacity(.42)` and `grayscale(0)
+       opacity(1)` are not interpolable — invert and opacity sit in different
+       slots — so the browser swapped them discretely at the halfway mark
+       while the chip was still fading, which showed as a dark block on a
+       half-lit chip. Matching the lists is no better: invert(.5) maps every
+       pixel to flat grey. Opacity always interpolates, so both copies move on
+       that alone and the base keeps its filter throughout. */
+    body.dark .brand-logo-true { display:block; }
+    body.dark .brand-cell:hover .brand-logo { filter:grayscale(1) invert(1) opacity(.42); opacity:0; }
+    body.dark .brand-cell:hover .brand-logo-true { opacity:1; }
     body.dark .brand-grid-label { color:rgba(255,255,255,.5); }
 
     /* The display name is its own element from the editable one, and it
@@ -5110,9 +5129,23 @@ function renderWorkExp(items) {
         img.src = su(b.svg);
       } else {
         img.src = b.img;
-        img.onerror = function(){ this.outerHTML='<span class="brand-text">'+b.name+'</span>'; };
+        img.onerror = function(){
+          // Take the hover copy down with it, or the cell keeps an orphan.
+          const twin = this.parentElement && this.parentElement.querySelector('.brand-logo-true');
+          if (twin) twin.remove();
+          this.outerHTML='<span class="brand-text">'+b.name+'</span>';
+        };
       }
       cell.appendChild(img);
+      /* A second, un-inverted copy, used only for the dark-mode hover. The
+         rest state is inverted and the hover state is true colour, and those
+         two filter lists cannot interpolate — see the note in the CSS — so
+         the two states are two images and only their opacity moves. */
+      const trueColour = img.cloneNode();
+      trueColour.className = 'brand-logo-true';
+      trueColour.alt = '';
+      trueColour.setAttribute('aria-hidden', 'true');
+      cell.appendChild(trueColour);
     }
     grid.appendChild(cell);
   });
