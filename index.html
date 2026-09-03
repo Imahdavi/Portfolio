@@ -2191,7 +2191,7 @@
          behind an opaque panel like the last time it was on this rule. The
          inset highlight along the top edge is what makes it read as a pane
          of glass rather than a grey box. */
-      background:rgba(255,255,255,.07);
+      background:rgba(16,20,18,.34);
       border:1px solid rgba(255,255,255,.18);
       -webkit-backdrop-filter:blur(22px) saturate(180%);
       backdrop-filter:blur(22px) saturate(180%);
@@ -2214,11 +2214,11 @@
     .pib-ta {
       display:block; width:100%; min-height:44px; max-height:240px;
       padding:10px 12px; border:none; outline:none; resize:none;
-      background:transparent; color:#f3f4f6;
+      background:transparent; color:#ffffff;
       font-family:inherit; font-size:16px; line-height:1.5;
       overflow-y:auto;
     }
-    .pib-ta::placeholder { color:#9ca3af; }
+    .pib-ta::placeholder { color:rgba(255,255,255,.7); }
     .pib-ta::-webkit-scrollbar { width:6px; }
     .pib-ta::-webkit-scrollbar-track { background:transparent; }
     .pib-ta::-webkit-scrollbar-thumb { background-color:#444; border-radius:3px; }
@@ -2232,12 +2232,12 @@
     .pib-mail { display:flex; align-items:center; gap:10px; padding:0 12px 6px; }
     .pib-mail input {
       min-width:0; background:none; border:none; outline:none;
-      font-family:inherit; font-size:13.5px; color:#e5e7eb;
+      font-family:inherit; font-size:13.5px; color:#ffffff;
     }
     .pib-mail #note-email    { flex:1 1 58%; }
     .pib-mail #note-telegram { flex:1 1 42%; }
-    .pib-mail-sep { width:1px; align-self:stretch; background:rgba(255,255,255,.14); flex:none; }
-    .pib-mail input::placeholder { color:#6b7280; }
+    .pib-mail-sep { width:1px; align-self:stretch; background:rgba(255,255,255,.28); flex:none; }
+    .pib-mail input::placeholder { color:rgba(255,255,255,.6); }
     .pib-mail input.error::placeholder { color:rgba(248,113,113,.8); }
 
     /* w-16 h-16 rounded-xl previews */
@@ -2281,10 +2281,10 @@
     .pib-icon {
       width:32px; height:32px; flex-shrink:0; display:flex; align-items:center;
       justify-content:center; border:none; background:none; cursor:pointer;
-      border-radius:50%; color:#9CA3AF; transition:color .2s, background .2s;
+      border-radius:50%; color:rgba(255,255,255,.82); transition:color .2s, background .2s;
     }
     .pib-icon svg { width:20px; height:20px; }
-    .pib-icon:hover { color:#D1D5DB; background:rgba(75,85,99,.3); }
+    .pib-icon:hover { color:#fff; background:rgba(255,255,255,.16); }
 
     /* Send / mic / stop */
     .pib-go {
