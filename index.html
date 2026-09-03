@@ -2167,6 +2167,14 @@
        border and shadow-[0_8px_30px_rgba(0,0,0,0.24)], p-2, and a textarea
        that starts at 44px and grows to 240px. It stays this dark in both of
        the site's themes because the component is dark by design. */
+    /* Animated shader background, note page only. Absolutely placed so the
+       centred column above it is untouched. */
+    #view-soon .note-bg {
+      position:absolute; inset:0; z-index:0; pointer-events:none; display:block;
+      width:100%; height:100%;
+    }
+    #view-soon > *:not(.note-bg) { position:relative; z-index:1; }
+
     /* The note page holds one short composer, so it sat pinned under the
        top padding with the rest of the screen empty below it. Centring the
        column puts it in the middle of the space it actually has — the view
@@ -2178,9 +2186,17 @@
     .pib {
       position:relative; isolation:isolate;
       width:100%; max-width:470px; margin:0 auto;
-      background:#1F2023; border:1px solid rgba(255,255,255,.14);
+      /* Liquid glass, now that there is a moving gradient to refract. The
+         backdrop blur earns its cost here — it is the effect, not decoration
+         behind an opaque panel like the last time it was on this rule. The
+         inset highlight along the top edge is what makes it read as a pane
+         of glass rather than a grey box. */
+      background:rgba(255,255,255,.07);
+      border:1px solid rgba(255,255,255,.18);
+      -webkit-backdrop-filter:blur(22px) saturate(180%);
+      backdrop-filter:blur(22px) saturate(180%);
       border-radius:24px; padding:8px; overflow:hidden;
-      box-shadow:0 8px 30px rgba(0,0,0,.24);
+      box-shadow:0 10px 36px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.22);
       transition:border-color .3s;
     }
     .pib.recording { border-color:rgba(239,68,68,.7); }
@@ -11729,6 +11745,206 @@ document.addEventListener('DOMContentLoaded', () => {
 <script>
 
 
+
+/* ── Note page background ────────────────────────────────────
+   Port of the Velaris component: an animated simplex-noise gradient with
+   colour blending, a vignette glow and film grain, drawn in WebGL. The
+   shaders are the source's, unchanged.
+
+   Scoped to the note page on purpose. A full-screen shader running a frame
+   loop forever is exactly the kind of cost this site has been trimmed of
+   before, so it only runs while that view is on screen and stops the moment
+   you leave it or the tab goes to the background.
+
+   Any refusal from the driver just means no background — never a broken
+   page. */
+(function () {
+  const view = document.getElementById('view-soon');
+  if (!view) return;
+  const canvas = document.createElement('canvas');
+  canvas.className = 'note-bg';
+  canvas.setAttribute('aria-hidden', 'true');
+  view.insertBefore(canvas, view.firstChild);
+
+  const BG = '#000000';
+  const COLORS = ['#86efac', '#4ade80', '#059669', '#000000'];
+  const SPEED = 2.0, GRAIN = 0.3;
+
+  const VERT = `
+attribute vec2 position;
+varying vec2 vUv;
+void main() {
+  vUv = position * 0.5 + 0.5;
+  gl_Position = vec4(position, 0.0, 1.0);
+}`;
+
+  const FRAG = `
+precision highp float;
+varying vec2 vUv;
+
+uniform vec2  u_resolution;
+uniform float u_time;
+uniform float u_grain;
+uniform vec3  u_colors[4];
+uniform vec3  u_bg;
+
+vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
+
+float snoise(vec2 v){
+  const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+           -0.577350269189626, 0.024390243902439);
+  vec2 i  = floor(v + dot(v, C.yy) );
+  vec2 x0 = v -   i + dot(i, C.xx);
+  vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+  vec4 x12 = x0.xyxy + C.xxzz;
+  x12.xy -= i1;
+  i = mod(i, 289.0);
+  vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))
+  + i.x + vec3(0.0, i1.x, 1.0 ));
+  vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy),
+    dot(x12.zw,x12.zw)), 0.0);
+  m = m*m ;
+  m = m*m ;
+  vec3 x = 2.0 * fract(p * C.www) - 1.0;
+  vec3 h = abs(x) - 0.5;
+  vec3 ox = floor(x + 0.5);
+  vec3 a0 = x - ox;
+  m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+  vec3 g;
+  g.x  = a0.x  * x0.x  + h.x  * x0.y;
+  g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+  return 130.0 * dot(m, g);
+}
+
+void main() {
+  vec2 uv = vUv;
+  float ratio = u_resolution.x / u_resolution.y;
+  vec2 p = uv - 0.5;
+  p.x *= ratio;
+
+  float t = u_time * 0.1;
+
+  float n1 = snoise(p * 0.4 + vec2(t * 0.2, -t * 0.3));
+  float n2 = snoise(p * 0.55 + vec2(-t * 0.15, t * 0.25) + n1 * 0.25);
+  float n3 = snoise(p * 0.75 + vec2(t * 0.1, -t * 0.2) + n2 * 0.2);
+
+  vec3 col = u_bg;
+
+  float dist = length(p) * 1.5;
+  float vignette = 1.0 - smoothstep(0.3, 1.2, dist);
+
+  col = mix(col, u_colors[0], smoothstep(-0.2, 0.5, n1) * 0.85);
+  col = mix(col, u_colors[1], smoothstep(-0.1, 0.6, n2) * 0.7);
+  col = mix(col, u_colors[2], smoothstep(-0.3, 0.4, n3) * 0.6);
+  col = mix(col, u_colors[3], smoothstep(0.0, 0.7, n1 * n2) * 0.5);
+
+  float glow = smoothstep(0.8, 0.0, dist) * 0.3;
+  col += u_colors[1] * glow;
+
+  col = mix(col * 0.2, col, vignette);
+
+  float grain = fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453 + u_time);
+  col += (grain - 0.5) * u_grain * 0.1;
+
+  gl_FragColor = vec4(col, 1.0);
+}`;
+
+  const hexToRgb = (hex) => {
+    const h = hex.replace('#', '');
+    return [parseInt(h.slice(0, 2), 16) / 255,
+            parseInt(h.slice(2, 4), 16) / 255,
+            parseInt(h.slice(4, 6), 16) / 255];
+  };
+
+  let gl = null, locs = null, raf = 0, started = 0;
+
+  function init() {
+    if (gl) return true;
+    try {
+      gl = canvas.getContext('webgl', { antialias: false, alpha: false });
+      if (!gl) return false;
+      const sh = (type, src) => {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, src); gl.compileShader(s);
+        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+          throw new Error(gl.getShaderInfoLog(s) || 'shader failed');
+        }
+        return s;
+      };
+      const program = gl.createProgram();
+      gl.attachShader(program, sh(gl.VERTEX_SHADER, VERT));
+      gl.attachShader(program, sh(gl.FRAGMENT_SHADER, FRAG));
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error('link failed');
+      gl.useProgram(program);
+
+      const buffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.bufferData(gl.ARRAY_BUFFER,
+        new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      const pos = gl.getAttribLocation(program, 'position');
+      gl.enableVertexAttribArray(pos);
+      gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+
+      locs = {
+        res: gl.getUniformLocation(program, 'u_resolution'),
+        time: gl.getUniformLocation(program, 'u_time'),
+        grain: gl.getUniformLocation(program, 'u_grain'),
+        colors: gl.getUniformLocation(program, 'u_colors'),
+        bg: gl.getUniformLocation(program, 'u_bg')
+      };
+      gl.uniform3f(locs.bg, ...hexToRgb(BG));
+      gl.uniform3fv(locs.colors,
+        new Float32Array(COLORS.slice(0, 4).flatMap(hexToRgb)));
+      gl.uniform1f(locs.grain, GRAIN);
+      return true;
+    } catch (e) {
+      console.warn('[note background] unavailable:', e.message);
+      canvas.remove();
+      gl = null;
+      return false;
+    }
+  }
+
+  function resize() {
+    if (!gl) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.round(view.clientWidth * dpr), h = Math.round(view.clientHeight * dpr);
+    if (!w || !h) return;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w; canvas.height = h;
+      gl.viewport(0, 0, w, h);
+    }
+  }
+
+  function frame(t) {
+    raf = 0;
+    if (!visible()) return;
+    resize();
+    if (!started) started = t;
+    gl.uniform2f(locs.res, canvas.width, canvas.height);
+    gl.uniform1f(locs.time, (t - started) * 0.001 * SPEED);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    raf = requestAnimationFrame(frame);
+  }
+
+  function visible() {
+    return view.classList.contains('active') && !document.hidden;
+  }
+  function sync() {
+    if (visible()) {
+      if (!init()) return;
+      if (!raf) raf = requestAnimationFrame(frame);
+    } else if (raf) {
+      cancelAnimationFrame(raf); raf = 0;
+    }
+  }
+
+  new MutationObserver(sync).observe(view, { attributes: true, attributeFilter: ['class'] });
+  document.addEventListener('visibilitychange', sync);
+  window.addEventListener('resize', () => { if (raf) resize(); }, { passive: true });
+  sync();
+})();
 
 /* ── Pixel canvas ────────────────────────────────────────────
    Port of the 21st.dev "pixel-canvas" component: a grid of squares that
