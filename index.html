@@ -347,6 +347,21 @@
     .game-score-cpu { color:#d0413a; }
     .game-score-you { color:#2f77a6; }
 
+    /* The game has its own switch — the site's sound toggle is for the
+       web-shot easter egg and starts muted. */
+    .game-mute {
+      position:absolute; top:22px; right:22px; z-index:4;
+      width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+      border:0; border-radius:50%; cursor:pointer; padding:0;
+      background:rgba(0,0,0,.06); color:rgba(0,0,0,.45);
+      transition:background .2s, color .2s, opacity .2s;
+    }
+    .game-mute svg { width:15px; height:15px; }
+    .game-mute:hover { background:rgba(0,0,0,.12); color:rgba(0,0,0,.7); }
+    .game-mute.muted { opacity:.55; }
+    body.dark .game-mute { background:rgba(255,255,255,.08); color:rgba(255,255,255,.5); }
+    body.dark .game-mute:hover { background:rgba(255,255,255,.16); color:#fff; }
+
     .game-overlay {
       position:absolute; inset:14px; border-radius:10px;
       display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
@@ -3107,6 +3122,7 @@ one keyframe at a time</div>
         <span class="game-score-sep">:</span>
         <span class="game-score-you" id="gameScoreYou">0</span>
       </div>
+      <button type="button" class="game-mute" id="gameMute" aria-label="Mute game sound"></button>
       <canvas id="gameCanvas"></canvas>
       <div class="game-overlay" id="gameOverlay">
         <div class="game-overlay-title" id="gameOverlayTitle">Ready?</div>
@@ -11440,27 +11456,75 @@ document.addEventListener('DOMContentLoaded', () => {
   const you    = { x: 0, y: 0, tx: 0, vx: 0 };
   const cpu    = { x: 0, y: 0, vx: 0 };
 
-  /* ── Audio: tiny synthesised blips, no assets. Honours the same mute
-     flag as the web-shot sound so one toggle covers the whole site. ── */
-  let actx = null;
-  function blip(freq, dur, type, gain) {
-    if (window._webShotMuted) return;
+  /* ── Audio: synthesised, no assets and no network.
+
+     The game keeps its own switch rather than reading _webShotMuted. That
+     flag belongs to the web-shot easter egg and starts muted, so a game you
+     deliberately opened was silent until you found an unrelated toggle. ── */
+  let actx = null, gameMuted = false;
+  try { gameMuted = localStorage.getItem('pong_muted') === '1'; } catch (e) {}
+
+  function ac() {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+    return actx;
+  }
+
+  /* One pitched voice. The pitch slides as it decays, which is what a small
+     hollow thing being struck actually does; a steady tone reads as a beep. */
+  function tone(freq, dur, type, gain, drop, delay) {
+    if (gameMuted) return;
     try {
-      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
-      if (actx.state === 'suspended') actx.resume();
-      const o = actx.createOscillator(), g = actx.createGain();
+      const c = ac(), t0 = c.currentTime + (delay || 0);
+      const o = c.createOscillator(), g = c.createGain();
       o.type = type || 'triangle';
-      o.frequency.setValueAtTime(freq, actx.currentTime);
-      o.frequency.exponentialRampToValueAtTime(freq * 0.62, actx.currentTime + dur);
-      g.gain.setValueAtTime(gain == null ? 0.06 : gain, actx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + dur);
-      o.connect(g); g.connect(actx.destination);
-      o.start(); o.stop(actx.currentTime + dur);
+      o.frequency.setValueAtTime(freq, t0);
+      o.frequency.exponentialRampToValueAtTime(
+        Math.max(40, freq * (drop == null ? 0.62 : drop)), t0 + dur);
+      // 4ms attack: an audible click on the front, not a swell.
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(gain == null ? 0.06 : gain, t0 + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(c.destination);
+      o.start(t0); o.stop(t0 + dur + 0.02);
     } catch (e) { /* audio is a nicety — never let it break the game */ }
   }
-  const sndRacket = () => blip(520, 0.07, 'triangle', 0.07);
-  const sndTable  = () => blip(300, 0.05, 'sine', 0.045);
-  const sndPoint  = () => blip(180, 0.22, 'sawtooth', 0.05);
+
+  /* The attack of a bat/ball contact is broadband, not pitched. A few ms of
+     band-passed noise in front of the tone is the whole difference between
+     "click" and "beep". */
+  function tick(dur, freq, gain) {
+    if (gameMuted) return;
+    try {
+      const c = ac(), n = Math.max(1, Math.floor(c.sampleRate * dur));
+      const buf = c.createBuffer(1, n, c.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3);
+      const s = c.createBufferSource(); s.buffer = buf;
+      const bp = c.createBiquadFilter(); bp.type = 'bandpass';
+      bp.frequency.value = freq; bp.Q.value = 1.1;
+      const g = c.createGain(); g.gain.value = gain;
+      s.connect(bp); bp.connect(g); g.connect(c.destination);
+      s.start();
+    } catch (e) {}
+  }
+
+  // Rubber on celluloid: bright and short. The rally speed lifts the pitch,
+  // so a long point audibly tightens up.
+  const sndRacket = () => {
+    const k = 1 + Math.min(ball.speed, 16) * 0.022;
+    tick(0.035, 2400 * k, 0.20);
+    tone(760 * k, 0.085, 'triangle', 0.09, 0.5);
+  };
+  // Ball off the side rail: duller and lower, it is wood not rubber.
+  const sndTable = () => { tick(0.03, 1400, 0.12); tone(400, 0.07, 'sine', 0.055, 0.6); };
+  const sndServe = () => tone(520, 0.09, 'sine', 0.04, 1.5);
+  const sndPoint = () => { tone(300, 0.11, 'square', 0.045, 0.8);
+                           tone(200, 0.24, 'sawtooth', 0.045, 0.7, 0.09); };
+  const sndWin   = () => [523, 659, 784, 1047].forEach((f, i) =>
+                           tone(f, 0.17, 'triangle', 0.065, 1, i * 0.09));
+  const sndLose  = () => [392, 330, 262].forEach((f, i) =>
+                           tone(f, 0.24, 'triangle', 0.055, 0.92, i * 0.12));
 
   const table = () => ({ l: EDGE, r: W - EDGE, t: EDGE, b: H - EDGE });
 
@@ -11502,6 +11566,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ball.vx = Math.sin(ang) * ball.speed;
     ball.vy = Math.cos(ang) * ball.speed * dirSign(dir);
     serveTimer = 0;
+    sndServe();
   }
   const dirSign = d => d >= 0 ? 1 : -1;
 
@@ -11512,7 +11577,9 @@ document.addEventListener('DOMContentLoaded', () => {
     sndPoint();
     if (scoreYou >= WIN_SCORE || scoreCpu >= WIN_SCORE) {
       started = false;
-      showOverlay(scoreYou > scoreCpu ? 'You win 🏓' : 'CPU wins', 'Play again');
+      const won = scoreYou > scoreCpu;
+      showOverlay(won ? 'You win 🏓' : 'CPU wins', 'Play again');
+      setTimeout(won ? sndWin : sndLose, 260); // let the point blip clear first
       return;
     }
     // Serve towards whoever just conceded.
@@ -11608,13 +11675,23 @@ document.addEventListener('DOMContentLoaded', () => {
   /* Built up in layers so the racket reads as a solid object rather than a
      flat ellipse: cast shadow, wooden handle, the rubber's edge seen from
      slightly above, the top face shaded from the upper-left, then a rim and
-     a specular highlight. */
-  function racket(c, x, y, col, rot) {
+     a specular highlight.
+
+     Only the handle is drawn rotated. The whole camera — the ball's shadow,
+     the net's shadow, the highlight on the ball — agrees on one light, high
+     and to the upper left, and one view direction. Rotating the shading with
+     the racket sent the far one's shadow up-left and its highlight to the
+     bottom-right, so it was lit by a second sun that nothing else on the
+     table could see. Shadow, blade thickness and highlight are therefore
+     fixed in table space and never rotate.
+
+     `far` is the racket at the top of the board. Its handle points away from
+     the camera, so it foreshortens and most of it hides behind the blade. */
+  function racket(c, x, y, col, far) {
     c.save();
     c.translate(x, y);
-    c.rotate(rot);
 
-    // 1. cast shadow on the table
+    // 1. cast shadow — down and right, same as every other object.
     c.save();
     c.shadowColor = 'rgba(0,0,0,.38)';
     c.shadowBlur = 10; c.shadowOffsetX = 2; c.shadowOffsetY = 5;
@@ -11622,17 +11699,26 @@ document.addEventListener('DOMContentLoaded', () => {
     c.fillStyle = 'rgba(0,0,0,.9)'; c.fill();
     c.restore();
 
-    // 2. handle, behind the blade
+    // 2. handle, behind the blade, pointing back towards whoever holds it.
+    //    Both handles lie flat on the table at the same angle to the camera,
+    //    and the table is drawn without perspective — no trapezoid, the far
+    //    half is not smaller — so they foreshorten by the same amount and
+    //    are the same length on screen. Shrinking the far one would be a
+    //    depth cue the rest of the board does not make.
+    const hLen = 32;
+    const hTop = far ? -(PAD_RY - 6) - hLen : PAD_RY - 6;
     const hg = c.createLinearGradient(-7, 0, 7, 0);
+    // Left-lit, so the gradient runs the same way for both rackets.
     hg.addColorStop(0,   '#8a5a33');
     hg.addColorStop(0.35,'#cf9a63');
     hg.addColorStop(0.7, '#b07b4d');
     hg.addColorStop(1,   '#7d4f2c');
     c.fillStyle = hg;
-    roundRect(c, -7, PAD_RY - 6, 14, 32, 6); c.fill();
+    roundRect(c, -7, hTop, 14, hLen + 6, 6); c.fill();
     c.strokeStyle = 'rgba(60,34,15,.5)'; c.lineWidth = 1; c.stroke();
 
-    // 3. the blade's edge — a darker copy nudged down gives it thickness
+    // 3. the blade's edge — a darker copy nudged down gives it thickness.
+    //    Down in table space, not in the racket's own frame.
     c.beginPath(); c.ellipse(0, 3.5, PAD_RX, PAD_RY, 0, 0, Math.PI * 2);
     c.fillStyle = col.dark; c.fill();
 
@@ -11700,8 +11786,8 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.fill();
     }
 
-    racket(ctx, cpu.x, cpu.y, RED_RACKET,  Math.PI);
-    racket(ctx, you.x, you.y, BLUE_RACKET, 0);
+    racket(ctx, cpu.x, cpu.y, RED_RACKET,  true);
+    racket(ctx, you.x, you.y, BLUE_RACKET, false);
 
     // Ball — shaded the same way as the rackets so it sits on the table
     // rather than floating, and rimmed so it still reads off the green.
@@ -11735,7 +11821,9 @@ document.addEventListener('DOMContentLoaded', () => {
     serveTimer = 450;
     started = true;
     hideOverlay();
-    blip(660, 0.09, 'triangle', 0.05); // also unlocks the AudioContext
+    // Browsers only allow audio to start from a gesture, and this is one.
+    try { ac(); } catch (e) {}
+    tone(660, 0.1, 'triangle', 0.05, 1.4);
   }
 
   function pointerMove(e) {
@@ -11765,6 +11853,25 @@ document.addEventListener('DOMContentLoaded', () => {
     scoreYouEl   = document.getElementById('gameScoreYou');
     scoreCpuEl   = document.getElementById('gameScoreCpu');
     if (!canvas || !stage) return;
+
+    const muteBtn = document.getElementById('gameMute');
+    if (muteBtn) {
+      const SPK_ON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
+      const SPK_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/></svg>';
+      const paintMute = () => {
+        muteBtn.innerHTML = gameMuted ? SPK_OFF : SPK_ON;
+        muteBtn.classList.toggle('muted', gameMuted);
+        const l = gameMuted ? 'Unmute game sound' : 'Mute game sound';
+        muteBtn.setAttribute('aria-label', l); muteBtn.title = l;
+      };
+      muteBtn.addEventListener('click', () => {
+        gameMuted = !gameMuted;
+        try { localStorage.setItem('pong_muted', gameMuted ? '1' : '0'); } catch (e) {}
+        paintMute();
+        if (!gameMuted) tone(660, 0.08, 'triangle', 0.05, 1.4); // confirm it works
+      });
+      paintMute();
+    }
 
     overlayBtn.addEventListener('click', playPressed);
     stage.addEventListener('pointermove', pointerMove);
