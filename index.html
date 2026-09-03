@@ -2472,6 +2472,21 @@
        they need inverting, not re-tinting. */
     body.dark .brand-text { color:rgba(255,255,255,.34); }
     body.dark .brand-cell:hover .brand-text { color:rgba(255,255,255,.9); }
+    /* Every mark in the sphere is dark ink — measured ink luminance runs 0 to
+       139 across all fourteen — so the light-mode filter left them nearly
+       invisible on the dark page, and the one logo that ships with an opaque
+       white field (Netbina) showed as a white block instead. Inverting at
+       rest solves both: dark ink reads light, and that white field turns to
+       near-black and sinks into the page.
+       Hover still wants true brand colour, which dark ink cannot give on a
+       dark ground, so the chip lights up and the logo sits on it — the same
+       white card the light-mode sphere already reads as. */
+    body.dark .brand-cell { border-color:rgba(255,255,255,.14); transition:background .28s ease; }
+    body.dark .brand-logo { filter:grayscale(1) invert(1) opacity(.42); }
+    /* :has, so the chip only lights up under a logo — some cells are a plain
+       wordmark, and those keep their light text on the dark ground. */
+    body.dark .brand-cell:has(.brand-logo):hover { background:rgba(255,255,255,.92); }
+    body.dark .brand-cell:hover .brand-logo { filter:grayscale(0) opacity(1); }
     body.dark .brand-grid-label { color:rgba(255,255,255,.5); }
 
     /* The display name is its own element from the editable one, and it
