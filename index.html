@@ -403,6 +403,86 @@
       border-radius:16px; overflow:hidden; margin-bottom:40px;
     }
 
+    /* Admin-only tuning panel for the gallery above — same dashed-box
+       language as .site-width-ctrl / .nav-color-ctrl, edit-mode only. */
+    .samari-settings {
+      display:none; flex-direction:column; gap:10px;
+      margin-top:-14px; margin-bottom:40px; padding:14px 16px;
+      border:1.5px dashed rgba(0,0,0,.13); border-radius:8px;
+    }
+    #view-home.home-edit .samari-settings { display:flex; }
+    .samari-row { display:flex; align-items:center; gap:10px; }
+    .samari-row-lbl { font-size:13px; color:#999; white-space:nowrap; flex-shrink:0; width:96px; }
+    .samari-slider { flex:1; height:3px; accent-color:#1a1a1a; cursor:pointer; touch-action:none; }
+    .samari-val { font-size:12px; color:#555; width:40px; text-align:right; flex-shrink:0; font-variant-numeric:tabular-nums; }
+    .samari-btn {
+      padding:7px 14px; border:1.5px solid rgba(0,0,0,.13); border-radius:6px;
+      background:#fff; font-size:12.5px; color:#555; cursor:pointer; transition:border-color .15s;
+    }
+    .samari-btn:hover { border-color:rgba(0,0,0,.3); }
+    .samari-color {
+      width:34px; height:34px; padding:0; border:1.5px solid rgba(0,0,0,.13);
+      border-radius:8px; cursor:pointer; background:none; flex-shrink:0;
+    }
+    .samari-color:disabled { opacity:.4; cursor:not-allowed; }
+    .samari-color::-webkit-color-swatch-wrapper { padding:3px; }
+    .samari-color::-webkit-color-swatch { border:none; border-radius:5px; }
+    .samari-check { display:flex; align-items:center; gap:6px; font-size:12.5px; color:#666; cursor:pointer; white-space:nowrap; }
+    .samari-select {
+      flex:1; font-size:12.5px; color:#555; padding:7px 10px;
+      border:1.5px solid rgba(0,0,0,.13); border-radius:6px; background:#fff; cursor:pointer;
+    }
+    .samari-hex {
+      flex:1; font-size:12px; color:#555; font-variant-numeric:tabular-nums;
+      font-family:var(--font-name), monospace;
+      border:1.5px solid rgba(0,0,0,.13); border-radius:6px;
+      padding:7px 10px; background:#fff; outline:none; transition:border-color .15s;
+    }
+    .samari-hex:focus { border-color:rgba(0,0,0,.35); }
+    .samari-hex.invalid { border-color:#d64545; color:#d64545; }
+
+    /* Image multi-picker sheet — reuses the font-picker sheet's slide-up
+       treatment (#font-picker-overlay/#font-picker-sheet). */
+    #samari-image-picker-overlay {
+      display:none; position:fixed; inset:0; z-index:5200;
+      background:rgba(0,0,0,.4); backdrop-filter:blur(6px);
+      align-items:flex-end; justify-content:center;
+    }
+    #samari-image-picker-overlay.show { display:flex; }
+    #samari-image-picker-sheet {
+      background:#fafaf9; border-radius:24px 24px 0 0;
+      padding:0 0 24px; width:100%; max-width:560px;
+      animation:slideInSheet .28s cubic-bezier(.25,.46,.45,.94) both;
+      max-height:80vh; overflow-y:auto;
+    }
+    #samari-ip-drag { width:36px; height:4px; background:rgba(0,0,0,.13); border-radius:2px; margin:12px auto 0; }
+    #samari-ip-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 18px 10px; position:sticky; top:0; background:#fafaf9;
+    }
+    #samari-ip-header h3 { font-size:16px; font-weight:700; color:#1a1a1a; letter-spacing:-.02em; }
+    #samari-ip-done {
+      padding:6px 14px; border:none; background:#1a1a1a; border-radius:20px;
+      font-size:13px; font-weight:600; color:#fff; cursor:pointer; transition:background .15s;
+    }
+    #samari-ip-done:hover { background:#000; }
+    .samari-ip-grid {
+      display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr));
+      gap:8px; padding:0 18px;
+    }
+    .samari-ip-item {
+      position:relative; aspect-ratio:1; border-radius:8px; overflow:hidden;
+      border:2px solid transparent; padding:0; cursor:pointer; background:var(--thumb-a,#eee);
+    }
+    .samari-ip-item.selected { border-color:#1a1a1a; }
+    .samari-ip-item img { width:100%; height:100%; object-fit:cover; display:block; }
+    .samari-ip-item .samari-ip-check {
+      position:absolute; top:4px; right:4px; width:18px; height:18px; border-radius:50%;
+      background:#1a1a1a; color:#fff; font-size:11px; display:none; align-items:center; justify-content:center;
+    }
+    .samari-ip-item.selected .samari-ip-check { display:flex; }
+    .samari-ip-empty { padding:20px 18px; font-size:13px; color:#999; }
+
     /* ─────────────────── CARD GRID ─────────────────── */
     /* Fixed-size columns (auto-fill), not 3 stretchy fr columns — cards
        stay pixel-identical at any site width, and a wider #app just
@@ -3077,6 +3157,67 @@ one keyframe at a time</div>
     <div id="samariSection" style="display:none">
       <div class="sec-label">سامری</div>
       <div id="samariGallery" class="samari-gallery-wrap"></div>
+      <div class="samari-settings" id="samariSettings">
+        <div class="samari-row">
+          <span class="samari-row-lbl">Images</span>
+          <button type="button" class="samari-btn" id="samariImagesBtn" onclick="openSamariImagePicker()">Select images</button>
+        </div>
+        <div class="samari-row">
+          <span class="samari-row-lbl">Branches</span>
+          <input type="range" class="samari-slider" id="samariBranches" min="1" max="60" step="1">
+          <span class="samari-val" id="samariBranchesVal"></span>
+        </div>
+        <div class="samari-row">
+          <span class="samari-row-lbl">Background</span>
+          <input type="color" class="samari-color" id="samariBgColor" value="#000000">
+          <label class="samari-check"><input type="checkbox" id="samariBgTransparent"> Transparent</label>
+        </div>
+        <div class="samari-row">
+          <span class="samari-row-lbl">Scale (%)</span>
+          <input type="range" class="samari-slider" id="samariScale" min="20" max="200" step="1">
+          <span class="samari-val" id="samariScaleVal"></span>
+        </div>
+        <div class="samari-row">
+          <span class="samari-row-lbl">Size (%)</span>
+          <input type="range" class="samari-slider" id="samariSize" min="1" max="150" step="1">
+          <span class="samari-val" id="samariSizeVal"></span>
+        </div>
+        <div class="samari-row">
+          <span class="samari-row-lbl">Scatter (%)</span>
+          <input type="range" class="samari-slider" id="samariScatter" min="0" max="100" step="1">
+          <span class="samari-val" id="samariScatterVal"></span>
+        </div>
+        <div class="samari-row">
+          <span class="samari-row-lbl">Rounded (%)</span>
+          <input type="range" class="samari-slider" id="samariRounded" min="0" max="100" step="1">
+          <span class="samari-val" id="samariRoundedVal"></span>
+        </div>
+        <div class="samari-row">
+          <span class="samari-row-lbl">Spin Speed</span>
+          <input type="range" class="samari-slider" id="samariSpeed" min="0" max="100" step="1">
+          <span class="samari-val" id="samariSpeedVal"></span>
+        </div>
+        <div class="samari-row">
+          <span class="samari-row-lbl">Direction</span>
+          <select class="samari-select" id="samariDirection">
+            <option value="counterclockwise">Counterclockwise</option>
+            <option value="clockwise">Clockwise</option>
+          </select>
+        </div>
+        <div class="samari-row">
+          <span class="samari-row-lbl">Hover Pull (%)</span>
+          <input type="range" class="samari-slider" id="samariHover" min="0" max="300" step="1">
+          <span class="samari-val" id="samariHoverVal"></span>
+        </div>
+        <div class="samari-row samari-row-core">
+          <span class="samari-row-lbl">Core Color</span>
+          <input type="text" class="samari-hex" id="samariCoreColor" placeholder="#RRGGBBAA" spellcheck="false" autocapitalize="off" autocomplete="off">
+        </div>
+        <div class="samari-row samari-row-core">
+          <span class="samari-row-lbl">Line Color</span>
+          <input type="text" class="samari-hex" id="samariLineColor" placeholder="#RRGGBBAA" spellcheck="false" autocapitalize="off" autocomplete="off">
+        </div>
+      </div>
     </div>
     <button id="home-fonts-btn" onclick="openFontPanel()">Aa &nbsp;Change fonts</button>
     <div class="site-width-ctrl" id="siteWidthCtrl">
@@ -3468,6 +3609,17 @@ one keyframe at a time</div>
       </button>
     </div>
     <button id="lottie-picker-cancel" onclick="closeLottiePicker()">Cancel</button>
+  </div>
+</div>
+
+<div id="samari-image-picker-overlay" onclick="if(event.target===this)closeSamariImagePicker()">
+  <div id="samari-image-picker-sheet">
+    <div id="samari-ip-drag"></div>
+    <div id="samari-ip-header">
+      <h3>سامری images</h3>
+      <button id="samari-ip-done" onclick="closeSamariImagePicker()">Done</button>
+    </div>
+    <div class="samari-ip-grid" id="samariIpGrid"></div>
   </div>
 </div>
 
@@ -5818,16 +5970,209 @@ function applySamariVisibility() {
   // and an admin who never opens the tab never pays for a WebGL context.
   if (homeShowSamari && document.body.classList.contains('is-admin')) {
     initSamariGalleryOnce();
+    populateSamariControls();
   }
 }
 
+/* ─── سامری (Sphere Gallery 3D) settings ──────────────────
+   Mirrors the Originkit property panel's own field set (Images, Branches,
+   Background, Scale, Size, Scatter, Rounded, Spin Speed, Direction,
+   Hover Pull, Core). Persisted under settings.samari — same
+   fetch(/api/settings) round trip every other admin control here uses
+   (see saveSettings()). `images` is stored as plain URL strings (what the
+   picker below hands back); the component wants GalleryItem objects
+   ({image, link}), so that shape conversion happens at the boundary
+   (samariItemsFromUrls) rather than leaking into storage. */
+const SAMARI_DEFAULTS = {
+  images: null,   // null = component's own dependency-free gradient set
+  branches: 12,
+  background: 'transparent',
+  scale: 60,
+  size: 28,
+  scatter: 0,
+  speed: 18,
+  direction: 'counterclockwise',
+  rounded: 18,
+  hover: 200,
+  core: { coreSize: 24, coreColor: '#FFFFFF59', lineColor: '#FFFFFF59' },
+};
+
+function getSamariSettings() {
+  const s = (_cachedSettings && _cachedSettings.samari) || {};
+  return Object.assign({}, SAMARI_DEFAULTS, s, {
+    core: Object.assign({}, SAMARI_DEFAULTS.core, s.core || {}),
+  });
+}
+
+function samariItemsFromUrls(urls) {
+  return (urls && urls.length) ? urls.map(u => ({ image: u, link: '' })) : null;
+}
+
 let _samariGalleryStarted = false;
+let _samariController = null;
 function initSamariGalleryOnce() {
   if (_samariGalleryStarted) return;
   const host = document.getElementById('samariGallery');
   if (!host || typeof initSphereGallery3D !== 'function') return;
   _samariGalleryStarted = true;
-  initSphereGallery3D(host, { background: 'transparent' });
+  const s = getSamariSettings();
+  const initProps = Object.assign({}, s);
+  const items = samariItemsFromUrls(s.images);
+  if (items) initProps.images = items; else delete initProps.images;
+  _samariController = initSphereGallery3D(host, initProps);
+}
+
+// patch: a partial SAMARI_DEFAULTS-shaped object. Merges into settings,
+// pushes the live change into the running gallery (no rebuild), and saves.
+function updateSamariSetting(patch) {
+  if (!_cachedSettings) _cachedSettings = {};
+  const cur = _cachedSettings.samari || {};
+  const merged = Object.assign({}, cur, patch);
+  if (patch.core) merged.core = Object.assign({}, cur.core || {}, patch.core);
+  _cachedSettings.samari = merged;
+
+  // setProps() falls back to the component's own placeholder set whenever
+  // `images` comes through empty, so "no images picked" just needs [].
+  const live = Object.assign({}, patch);
+  if ('images' in patch) live.images = samariItemsFromUrls(patch.images) || [];
+  if (_samariController) _samariController.setProps(live);
+  saveSettings();
+}
+
+function populateSamariControls() {
+  const s = getSamariSettings();
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+
+  set('samariBranches', s.branches); setTxt('samariBranchesVal', s.branches);
+  set('samariScale', s.scale); setTxt('samariScaleVal', s.scale + '%');
+  set('samariSize', s.size); setTxt('samariSizeVal', s.size + '%');
+  set('samariScatter', s.scatter); setTxt('samariScatterVal', s.scatter + '%');
+  set('samariRounded', s.rounded); setTxt('samariRoundedVal', s.rounded + '%');
+  set('samariSpeed', s.speed); setTxt('samariSpeedVal', s.speed);
+  set('samariHover', s.hover); setTxt('samariHoverVal', s.hover + '%');
+  set('samariDirection', s.direction);
+  set('samariCoreColor', s.core.coreColor);
+  set('samariLineColor', s.core.lineColor);
+
+  const isTransparent = s.background === 'transparent';
+  const bgColorEl = document.getElementById('samariBgColor');
+  const bgCheckEl = document.getElementById('samariBgTransparent');
+  if (bgCheckEl) bgCheckEl.checked = isTransparent;
+  if (bgColorEl) {
+    bgColorEl.disabled = isTransparent;
+    bgColorEl.value = isTransparent ? '#000000' : s.background;
+  }
+  const imgBtn = document.getElementById('samariImagesBtn');
+  if (imgBtn) imgBtn.textContent = (s.images && s.images.length) ? `${s.images.length} Items` : 'Select images';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const bind = (id, evt, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(evt, fn); };
+  const stop = (id) => { const el = document.getElementById(id); if (el) el.addEventListener('pointerdown', e => e.stopPropagation()); };
+
+  ['samariBranches','samariScale','samariSize','samariScatter','samariRounded','samariSpeed','samariHover','samariBgColor'].forEach(stop);
+
+  bind('samariBranches', 'input', (e) => { document.getElementById('samariBranchesVal').textContent = e.target.value; });
+  bind('samariBranches', 'change', (e) => updateSamariSetting({ branches: +e.target.value }));
+
+  bind('samariScale', 'input', (e) => { document.getElementById('samariScaleVal').textContent = e.target.value + '%'; });
+  bind('samariScale', 'change', (e) => updateSamariSetting({ scale: +e.target.value }));
+
+  bind('samariSize', 'input', (e) => { document.getElementById('samariSizeVal').textContent = e.target.value + '%'; });
+  bind('samariSize', 'change', (e) => updateSamariSetting({ size: +e.target.value }));
+
+  bind('samariScatter', 'input', (e) => { document.getElementById('samariScatterVal').textContent = e.target.value + '%'; });
+  bind('samariScatter', 'change', (e) => updateSamariSetting({ scatter: +e.target.value }));
+
+  bind('samariRounded', 'input', (e) => { document.getElementById('samariRoundedVal').textContent = e.target.value + '%'; });
+  bind('samariRounded', 'change', (e) => updateSamariSetting({ rounded: +e.target.value }));
+
+  bind('samariSpeed', 'input', (e) => { document.getElementById('samariSpeedVal').textContent = e.target.value; });
+  bind('samariSpeed', 'change', (e) => updateSamariSetting({ speed: +e.target.value }));
+
+  bind('samariHover', 'input', (e) => { document.getElementById('samariHoverVal').textContent = e.target.value + '%'; });
+  bind('samariHover', 'change', (e) => updateSamariSetting({ hover: +e.target.value }));
+
+  bind('samariDirection', 'change', (e) => updateSamariSetting({ direction: e.target.value }));
+
+  bind('samariBgTransparent', 'change', (e) => {
+    const bgColorEl = document.getElementById('samariBgColor');
+    if (e.target.checked) {
+      if (bgColorEl) bgColorEl.disabled = true;
+      updateSamariSetting({ background: 'transparent' });
+    } else {
+      if (bgColorEl) bgColorEl.disabled = false;
+      updateSamariSetting({ background: bgColorEl ? bgColorEl.value : '#000000' });
+    }
+  });
+  bind('samariBgColor', 'change', (e) => {
+    if (document.getElementById('samariBgTransparent').checked) return;
+    updateSamariSetting({ background: e.target.value });
+  });
+
+  const commitCoreColor = () => {
+    const el = document.getElementById('samariCoreColor');
+    const v = el.value.trim();
+    if (!v) return;
+    updateSamariSetting({ core: { coreColor: v } });
+  };
+  const commitLineColor = () => {
+    const el = document.getElementById('samariLineColor');
+    const v = el.value.trim();
+    if (!v) return;
+    updateSamariSetting({ core: { lineColor: v } });
+  };
+  bind('samariCoreColor', 'pointerdown', e => e.stopPropagation());
+  bind('samariLineColor', 'pointerdown', e => e.stopPropagation());
+  bind('samariCoreColor', 'change', commitCoreColor);
+  bind('samariLineColor', 'change', commitLineColor);
+});
+
+/* ─── سامری image picker — multi-select from every board's uploads ─── */
+let _samariIpSelected = [];
+async function openSamariImagePicker() {
+  const s = getSamariSettings();
+  _samariIpSelected = (s.images || []).slice();
+  const overlay = document.getElementById('samari-image-picker-overlay');
+  overlay.classList.add('show');
+  const grid = document.getElementById('samariIpGrid');
+  grid.innerHTML = '<div class="samari-ip-empty">Loading…</div>';
+  const all = await loadSiteMedia();
+  if (!overlay.classList.contains('show')) return; // closed while loading
+  const images = all.filter(m => m.type !== 'video');
+  grid.innerHTML = '';
+  if (!images.length) {
+    grid.innerHTML = '<div class="samari-ip-empty">No images uploaded yet.</div>';
+    return;
+  }
+  images.forEach(m => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'samari-ip-item' + (_samariIpSelected.includes(m.src) ? ' selected' : '');
+    const img = document.createElement('img');
+    img.src = m.src;
+    img.alt = '';
+    btn.appendChild(img);
+    const check = document.createElement('span');
+    check.className = 'samari-ip-check';
+    check.textContent = '✓';
+    btn.appendChild(check);
+    btn.addEventListener('click', () => {
+      const i = _samariIpSelected.indexOf(m.src);
+      if (i >= 0) _samariIpSelected.splice(i, 1);
+      else _samariIpSelected.push(m.src);
+      btn.classList.toggle('selected', _samariIpSelected.includes(m.src));
+    });
+    grid.appendChild(btn);
+  });
+}
+
+function closeSamariImagePicker() {
+  document.getElementById('samari-image-picker-overlay').classList.remove('show');
+  updateSamariSetting({ images: _samariIpSelected.slice() });
+  const imgBtn = document.getElementById('samariImagesBtn');
+  if (imgBtn) imgBtn.textContent = _samariIpSelected.length ? `${_samariIpSelected.length} Items` : 'Select images';
 }
 
 // Which projects the Projects list shows, in order. Deliberately a fixed
@@ -13546,8 +13891,10 @@ function initSphereGallery3D(host, props) {
     } = props;
 
     const itemsProp = images;
-    const items = itemsProp && itemsProp.length ? itemsProp : DEFAULT_ITEMS;
-    const branches = clamp(Math.round(branchesProp), 1, MAX_BRANCHES);
+    let items = itemsProp && itemsProp.length ? itemsProp : DEFAULT_ITEMS;
+    let branches = clamp(Math.round(branchesProp), 1, MAX_BRANCHES);
+    let currentSpeed = speed;
+    let currentDirection = direction;
 
     host.style.position = "relative";
     host.style.width = "100%";
@@ -13595,26 +13942,37 @@ function initSphereGallery3D(host, props) {
         orbitLimit: ORBIT_LIMIT,
     };
 
-    const links = Array.from({ length: branches }, (_, i) => (items[i % items.length] && items[i % items.length].link) || "");
+    let links = Array.from({ length: branches }, (_, i) => (items[i % items.length] && items[i % items.length].link) || "");
+    function recomputeLinks() {
+        links = Array.from({ length: branches }, (_, i) => (items[i % items.length] && items[i % items.length].link) || "");
+    }
 
-    /* -------------------------------------------------------------- media */
-    let media = items.map(() => ({ image: null, aspect: 1, texture: null, applied: false }));
+    /* -------------------------------------------------------------- media
+     * `loadImages` is also called from setProps() below on an images change
+     * — each call captures its own array (`myMedia`) so a late onload from a
+     * superseded generation can tell it's stale (`media !== myMedia`) and
+     * drop itself instead of writing into the array a newer call replaced.
+     */
+    let media = [];
     let graveyard = [];
-    let mediaAlive = true;
-
-    items.forEach((item, i) => {
-        const url = item && item.image;
-        if (!url) return;
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-            if (!mediaAlive) return;
-            media[i].image = img;
-            media[i].aspect = (img.naturalWidth || 1) / Math.max(1, img.naturalHeight || 1);
-        };
-        img.onerror = () => {};
-        img.src = url;
-    });
+    function loadImages(newItems) {
+        const myMedia = newItems.map(() => ({ image: null, aspect: 1, texture: null, applied: false }));
+        media = myMedia;
+        newItems.forEach((item, i) => {
+            const url = item && item.image;
+            if (!url) return;
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => {
+                if (media !== myMedia) return;
+                myMedia[i].image = img;
+                myMedia[i].aspect = (img.naturalWidth || 1) / Math.max(1, img.naturalHeight || 1);
+            };
+            img.onerror = () => {};
+            img.src = url;
+        });
+    }
+    loadImages(items);
 
     /* ------------------------------------------------------------ GL setup */
     const attrs = { antialias: true, alpha: true, premultipliedAlpha: true, depth: true, powerPreference: "high-performance" };
@@ -13622,7 +13980,7 @@ function initSphereGallery3D(host, props) {
 
     if (!gl) {
         console.error("[SphereGallery3D] WebGL unavailable");
-        return function destroy() {};
+        return { destroy() {}, setProps() {} };
     }
 
     const isGL2 = typeof WebGL2RenderingContext !== "undefined" && gl instanceof WebGL2RenderingContext;
@@ -13630,7 +13988,7 @@ function initSphereGallery3D(host, props) {
 
     const quadProg = link(gl, QUAD_VERT, QUAD_FRAG);
     const solidProg = link(gl, SOLID_VERT, SOLID_FRAG);
-    if (!quadProg || !solidProg) return function destroy() {};
+    if (!quadProg || !solidProg) return { destroy() {}, setProps() {} };
 
     const qLoc = {
         aCorner: gl.getAttribLocation(quadProg, "aCorner"),
@@ -14163,9 +14521,67 @@ function initSphereGallery3D(host, props) {
     };
     raf = requestAnimationFrame(frame);
 
-    return function destroy() {
+    /* ---------------------------------------------------------- live edits
+     * Mutates `live` (read fresh every frame, see `const L = live` above) and
+     * the a few pieces of state that aren't per-frame — images, branch count,
+     * background — in place, so a settings panel can drive this without
+     * tearing down and rebuilding the GL context.
+     */
+    function setProps(newProps) {
+        newProps = newProps || {};
+        const has = (k) => Object.prototype.hasOwnProperty.call(newProps, k);
+
+        if (has("background")) host.style.background = newProps.background;
+
+        if (has("images")) {
+            items = (newProps.images && newProps.images.length) ? newProps.images : DEFAULT_ITEMS;
+            const oldMedia = media;
+            oldMedia.forEach((m) => { if (m.texture) graveyard.push(m.texture); });
+            loadImages(items);
+            recomputeLinks();
+        }
+
+        if (has("branches")) {
+            branches = clamp(Math.round(newProps.branches), 1, MAX_BRANCHES);
+            live.count = branches;
+            recomputeLinks();
+        }
+
+        if (has("scale")) live.scale = clamp(newProps.scale / 100, 0.2, 4);
+        if (has("size")) live.itemSize = live.radius * clamp(newProps.size / 100, 0.01, 2);
+        if (has("scatter")) live.depthRand = clamp(newProps.scatter / 100, 0, 1);
+        if (has("rounded")) live.rounded = clamp(newProps.rounded / 100, 0, 1);
+
+        if (has("speed") || has("direction")) {
+            if (has("speed")) currentSpeed = newProps.speed;
+            if (has("direction")) currentDirection = newProps.direction;
+            const spinSign = currentDirection === "clockwise" ? -1 : 1;
+            live.spin = (BASE_SPIN * currentSpeed * spinSign) / 50;
+        }
+
+        if (has("hover")) {
+            live.force = clamp(newProps.hover / 100, 0, 3);
+            live.hoverDist = live.radius * clamp((newProps.hover / 100) * 0.35, 0, 3);
+        }
+
+        if (has("core")) {
+            const c = newProps.core || {};
+            if (c.coreColor !== undefined) {
+                live.coreColor = c.coreColor;
+                live.coreGlow = parseColor(c.coreColor, [0.48, 0.72, 1, 1])[3];
+            }
+            if (c.lineColor !== undefined) {
+                live.lineColor = c.lineColor;
+                live.lineOpacity = parseColor(c.lineColor, [0.29, 0.42, 0.6, 0.35])[3];
+            }
+            if (c.coreSize !== undefined) {
+                live.coreSize = live.radius * clamp(c.coreSize / 100, 0, 1);
+            }
+        }
+    }
+
+    function destroy() {
         destroyed = true;
-        mediaAlive = false;
         cancelAnimationFrame(raf);
         ro.disconnect();
         canvas.removeEventListener("pointerdown", onPointerDown);
@@ -14186,7 +14602,9 @@ function initSphereGallery3D(host, props) {
         gl.deleteProgram(quadProg);
         gl.deleteProgram(solidProg);
         if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
-    };
+    }
+
+    return { destroy, setProps };
 }
 
 window.initSphereGallery3D = initSphereGallery3D;
