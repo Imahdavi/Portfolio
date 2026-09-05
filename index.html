@@ -139,19 +139,13 @@
     }
     .site-spider .rope-path { fill:none; stroke:rgba(0,0,0,.3); stroke-width:1px; }
     body.dark .site-spider .rope-path { stroke:rgba(255,255,255,.32); }
-    /* The spider is a near-black silhouette — on a dark page it vanishes
-       along with its web, so it prints as a negative. The eyes stay the
-       page colour and the pupils the body colour, which keeps the
-       cursor-tracking readable instead of a blank light blob. */
-    body.dark .site-spider .spider-body g { stroke:var(--d-text); }
-    body.dark .site-spider .spider-body ellipse[rx="8.3"] { fill:var(--d-text); }
-    body.dark .site-spider .spider-body ellipse[rx="3.0"] { fill:var(--d-bg); }
-    body.dark .site-spider .spider-body .pupil { fill:var(--d-text); }
+    /* The spider is a near-black line icon — on a dark page it vanishes,
+       so it prints as a negative. */
+    body.dark .site-spider .spider-body path { stroke:var(--d-text); }
     .site-spider .spider-body {
-      position:absolute; bottom:0; left:50%; margin-left:-11.5px;
+      position:absolute; bottom:0; left:50%; margin-left:-11px;
       transform-origin:50% 0%; display:block;
     }
-    .site-spider .pupil { transition:transform .1s linear; }
     /* Positioning root for the avatar overlap — its box height comes
        from .profile-name-display (two lines), so the avatar (centered
        via .avatar-overlay-slot) lands on the seam between them. */
@@ -2794,6 +2788,16 @@
     .nav-btn:hover  { color:#444; transform:translateY(-2px); }
     .nav-btn:active { transform:scale(.86); }
 
+    /* Experience tab's icon is a Lottie animation (a hand-off "star medal"
+       burst), not an inline currentColor svg, so it can't pick up the
+       .nav-btn active/hover/dark-mode color the way the others do — its
+       stroke is baked into the file. Only the dark-mode flip is worth
+       fighting for (pure black would vanish on the dark page); active/hover
+       just don't tint it, which the animation itself is lively enough to
+       carry. */
+    .nav-lottie-icon { width:25px; height:25px; pointer-events:none; }
+    body.dark .nav-lottie-icon svg path { stroke:var(--d-text) !important; }
+
     /* ── Nav tooltip ── */
     .nav-tip {
       position:absolute; bottom:calc(100% + 10px); left:50%;
@@ -2886,6 +2890,7 @@
       .bottom-nav-group { padding:12px 18px; gap:18px; }
       .nav-btn, #emojiburst-mount { width:20px; height:20px; }
       .nav-btn svg { width:20px; height:20px; }
+      .nav-lottie-icon { width:20px; height:20px; }
       #sound-toggle-btn { width:21px; height:21px; }
       #sound-toggle-btn svg { width:18px; height:18px; }
       /* Smaller pill, smaller icons — the limelight bar scales down
@@ -3088,22 +3093,16 @@
         <svg class="spider-rope" overflow="visible">
           <path class="rope-path" d="M10,0 L10,30"/>
         </svg>
-        <svg class="spider-body" viewBox="0 0 32 26" width="27" height="22">
-          <g stroke="#1a1a1a" stroke-width="1.4" stroke-linecap="round" fill="none">
-            <path d="M11 10 C6 8, 3 6, 1 4"/>
-            <path d="M11 12 C5 11, 2 11, 0 11"/>
-            <path d="M11 14 C5 15, 2 17, 0 19"/>
-            <path d="M11 16 C6 18, 4 21, 2 24"/>
-            <path d="M21 10 C26 8, 29 6, 31 4"/>
-            <path d="M21 12 C27 11, 30 11, 32 11"/>
-            <path d="M21 14 C27 15, 30 17, 32 19"/>
-            <path d="M21 16 C26 18, 28 21, 30 24"/>
-          </g>
-          <ellipse cx="16" cy="13" rx="8.3" ry="7.8" fill="#1a1a1a"/>
-          <ellipse cx="12.4" cy="10.7" rx="3.0" ry="3.7" fill="#fff"/>
-          <ellipse cx="19.6" cy="10.7" rx="3.0" ry="3.7" fill="#fff"/>
-          <circle class="pupil" cx="12.4" cy="10.7" r="1.45" fill="#1a1a1a"/>
-          <circle class="pupil" cx="19.6" cy="10.7" r="1.45" fill="#1a1a1a"/>
+        <svg class="spider-body" viewBox="0 0 24 24" width="22" height="22" fill="none">
+          <path d="M12 11.5263C13.005 11.5263 13.9689 11.9256 14.6796 12.6363C15.3902 13.3469 15.7895 14.3108 15.7895 15.3158C15.7895 16.3209 15.3902 17.2847 14.6796 17.9954C13.9689 18.706 13.005 18.6531 12 18.6531C10.995 18.6531 10.0311 18.706 9.32045 17.9954C8.60979 17.2847 8.21054 16.3209 8.21054 15.3158C8.21054 14.3108 8.60979 13.3469 9.32045 12.6363C10.0311 11.9256 10.995 11.5263 12 11.5263ZM12 11.5263C11.4975 11.5263 11.0156 11.3267 10.6602 10.9714C10.3049 10.6161 10.1053 10.1341 10.1053 9.63161C10.1053 9.1291 10.3049 8.64716 10.6602 8.29183C11.0156 7.9365 11.4975 7.99039 12 7.99039C12.5025 7.99039 12.9845 7.9365 13.3398 8.29183C13.6951 8.64716 13.8948 9.1291 13.8948 9.63161C13.8948 10.1341 13.6951 10.6161 13.3398 10.9714C12.9845 11.3267 12.5025 11.5263 12 11.5263Z" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M5.36841 4.89478V6.00469C5.36841 6.5072 5.56803 6.98914 5.92336 7.34447L10.1053 11.5264" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M10.1053 11.5264H5.20588C4.70336 11.5264 4.22143 11.3268 3.8661 10.9714L3 10.1053" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M10.1053 11.5264L4.97601 16.6556C4.62067 17.011 4.42105 17.4929 4.42105 17.9954V19.1053" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M13.8947 11.5264L19.024 16.6556C19.3793 17.011 19.579 17.4929 19.579 17.9954V19.1053" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M13.8947 11.5264H18.7941C19.2966 11.5264 19.7786 11.3268 20.1339 10.9714L21 10.1053" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M18.6316 4.89478V6.00469C18.6316 6.5072 18.432 6.98914 18.0766 7.34447L13.8947 11.5264" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M13.0728 7.98737C13.2134 7.7371 13.4101 7.0521 13.0728 6.31421" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M10.9272 7.98737C10.7866 7.7371 10.5899 7.0521 10.9272 6.31421" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
       <div class="profile-name-block">
@@ -3501,9 +3500,7 @@ one keyframe at a time</div>
   </button>
   <button class="nav-btn" id="nb-exp" onclick="goView('view-exp',this)">
     <span class="nav-tip">Experience</span>
-    <svg viewBox="0 0 24 24" fill="none">
-      <path fill-rule="evenodd" clip-rule="evenodd" d="M12 3C9.96385 3 9.77134 6.54652 8.55911 7.79957C7.34689 9.05263 3.5782 7.61992 3.05459 9.84403C2.53207 12.0693 5.92235 12.8243 6.34036 14.7334C6.76057 16.6426 4.68922 19.3249 6.45916 20.6598C8.22911 21.9936 10.1343 18.9747 12 18.9747C13.8656 18.9747 15.7709 21.9936 17.5408 20.6598C19.3108 19.3249 17.2405 16.6426 17.6596 14.7334C18.0787 12.8243 21.4679 12.0693 20.9454 9.84403C20.4229 7.61992 16.6531 9.05263 15.442 7.79957C14.2297 6.54652 14.0361 3 12 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
+    <div class="nav-lottie-icon" id="nb-exp-star" aria-hidden="true"></div>
   </button>
   <button class="nav-btn" id="nb-soon" onclick="goView('view-soon',this)">
     <span class="nav-tip">Note</span>
@@ -7978,8 +7975,8 @@ const PIB_MAX_SECONDS = 120;
 let noteImage = null, noteVoice = null;
 let noteRec = null, noteRecChunks = [], noteRecTimer = null, noteRecStart = 0;
 
-const SVG_PIB_MIC  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>';
-const SVG_PIB_SEND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>';
+const SVG_PIB_MIC  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.60376 13.8324C6.60376 16.8068 9.01486 19.2179 11.9903 19.2179C14.9647 19.2179 17.3758 16.8068 17.3758 13.8324"/><path d="M17.3757 10.7397V8.59844C17.3757 5.62399 14.9646 3.21289 11.9901 3.21289C9.01474 3.21289 6.60364 5.62399 6.60364 8.59844V10.7397"/><path d="M11.9903 21.2627V19.2183"/><path d="M5.21216 13.8324H18.7677"/><path d="M10.4974 10.4517H13.4823"/><path d="M12.4911 7.68203H11.4879"/></svg>';
+const SVG_PIB_SEND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"><path d="M12.25 4.00012L12.25 19.9999"/><path d="M6.58995 9.66028C9.4997 9.66028 12.25 7.0977 12.25 4.00023"/><path d="M17.91 9.66028C15.0003 9.66028 12.25 7.0977 12.25 4.00023"/></svg>';
 const SVG_PIB_STOP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor"/></svg>';
 const SVG_PIB_WAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="10" x2="4" y2="14"/><line x1="8" y1="7" x2="8" y2="17"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="16" y1="8" x2="16" y2="16"/><line x1="20" y1="11" x2="20" y2="13"/></svg>';
 const SVG_PIB_X    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
@@ -11598,6 +11595,25 @@ document.addEventListener('DOMContentLoaded', () => {
     mx = e.clientX; my = e.clientY;
     if (!rafPending) { rafPending = true; requestAnimationFrame(update); }
   });
+})();
+
+/* ── Experience tab's star Lottie ────────────────────────
+   Plays once on load (a little hello), then replays from frame 0 every
+   time the tab is tapped — same idea as a "like" burst button. */
+(function () {
+  const el = document.getElementById('nb-exp-star');
+  const btn = document.getElementById('nb-exp');
+  if (!el || !btn || typeof lottie === 'undefined') return;
+
+  const anim = lottie.loadAnimation({
+    container: el,
+    renderer: 'svg',
+    loop: false,
+    autoplay: true,
+    path: '/media/site/star-medal.json',
+  });
+
+  btn.addEventListener('click', () => anim.goToAndPlay(0, true));
 })();
 
 /* ── Avatar drag-to-reposition + size slider ─────────────
