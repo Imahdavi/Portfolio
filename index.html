@@ -3209,6 +3209,11 @@ one keyframe at a time</div>
           <input type="range" class="samari-slider" id="samariHover" min="0" max="300" step="1">
           <span class="samari-val" id="samariHoverVal"></span>
         </div>
+        <div class="samari-row">
+          <span class="samari-row-lbl">Core Size (%)</span>
+          <input type="range" class="samari-slider" id="samariCoreSize" min="0" max="100" step="1">
+          <span class="samari-val" id="samariCoreSizeVal"></span>
+        </div>
         <div class="samari-row samari-row-core">
           <span class="samari-row-lbl">Core Color</span>
           <input type="text" class="samari-hex" id="samariCoreColor" placeholder="#RRGGBBAA" spellcheck="false" autocapitalize="off" autocomplete="off">
@@ -6052,6 +6057,7 @@ function populateSamariControls() {
   set('samariSpeed', s.speed); setTxt('samariSpeedVal', s.speed);
   set('samariHover', s.hover); setTxt('samariHoverVal', s.hover + '%');
   set('samariDirection', s.direction);
+  set('samariCoreSize', s.core.coreSize); setTxt('samariCoreSizeVal', s.core.coreSize + '%');
   set('samariCoreColor', s.core.coreColor);
   set('samariLineColor', s.core.lineColor);
 
@@ -6071,7 +6077,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const bind = (id, evt, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(evt, fn); };
   const stop = (id) => { const el = document.getElementById(id); if (el) el.addEventListener('pointerdown', e => e.stopPropagation()); };
 
-  ['samariBranches','samariScale','samariSize','samariScatter','samariRounded','samariSpeed','samariHover','samariBgColor'].forEach(stop);
+  ['samariBranches','samariScale','samariSize','samariScatter','samariRounded','samariSpeed','samariHover','samariBgColor','samariCoreSize'].forEach(stop);
 
   bind('samariBranches', 'input', (e) => { document.getElementById('samariBranchesVal').textContent = e.target.value; });
   bind('samariBranches', 'change', (e) => updateSamariSetting({ branches: +e.target.value }));
@@ -6095,6 +6101,9 @@ document.addEventListener('DOMContentLoaded', () => {
   bind('samariHover', 'change', (e) => updateSamariSetting({ hover: +e.target.value }));
 
   bind('samariDirection', 'change', (e) => updateSamariSetting({ direction: e.target.value }));
+
+  bind('samariCoreSize', 'input', (e) => { document.getElementById('samariCoreSizeVal').textContent = e.target.value + '%'; });
+  bind('samariCoreSize', 'change', (e) => updateSamariSetting({ core: { coreSize: +e.target.value } }));
 
   bind('samariBgTransparent', 'change', (e) => {
     const bgColorEl = document.getElementById('samariBgColor');
