@@ -401,7 +401,7 @@
     .samari-gallery-wrap {
       width:100%; height:70vh; min-height:480px; max-height:800px;
       border-radius:16px; overflow:hidden; margin-bottom:40px;
-      background:#000;
+      background:#1c1d24;
     }
 
     /* ─────────────────── CARD GRID ─────────────────── */
@@ -3066,12 +3066,19 @@ one keyframe at a time</div>
       <div class="hvt-highlight"></div>
       <button class="hvt-opt active" data-view="grid" onclick="setHomeView('grid')">Grid</button>
       <button class="hvt-opt" data-view="list" onclick="setHomeView('list')">Projects</button>
+      <button class="hvt-opt" data-view="samari" onclick="setHomeView('samari')">سامری</button>
     </div>
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
     <div id="home-sections" style="opacity:0;transition:opacity .3s ease"></div>
-    <div class="sec-label">سامری</div>
-    <div id="samariGallery" class="samari-gallery-wrap"></div>
     <button id="home-add-sec-btn" onclick="addHomeSection()">+ Add section</button>
+    <!-- Admin-only preview of the Sphere Gallery 3D component (see setHomeView,
+         'samari' branch). Reachable only through the toggle above, which is
+         itself admin-only (body.is-admin .home-view-toggle) — public visitors
+         never see the button or trigger the WebGL init. -->
+    <div id="samariSection" style="display:none">
+      <div class="sec-label">سامری</div>
+      <div id="samariGallery" class="samari-gallery-wrap"></div>
+    </div>
     <button id="home-fonts-btn" onclick="openFontPanel()">Aa &nbsp;Change fonts</button>
     <div class="site-width-ctrl" id="siteWidthCtrl">
       <span class="site-width-lbl">Site width</span>
@@ -5767,6 +5774,11 @@ function _makeSecDelBtn(label, grid) {
    three-card view would drop everything not on screen. */
 let homeView = 'grid';
 let _lastHomeSections = null;
+// Whether the "سامری" tab is showing. Kept separate from `homeView`
+// (grid/list), which drives saving and stays whatever it was underneath —
+// switching to سامری and back to Grid must not have silently flipped it to
+// Projects.
+let homeShowSamari = false;
 
 function setHomeView(view) {
   const toggle = document.getElementById('homeViewToggle');
@@ -5779,9 +5791,44 @@ function setHomeView(view) {
       toggle.style.setProperty('--hvt-x', (activeBtn.offsetLeft - 3) + 'px');
     }
   }
+
+  if (view === 'samari') {
+    homeShowSamari = true;
+    applySamariVisibility();
+    return;
+  }
+  if (homeShowSamari) {
+    homeShowSamari = false;
+    applySamariVisibility();
+  }
+
   if (homeView === view) return;
   homeView = view;
   if (_lastHomeSections) renderHomeSections(_lastHomeSections);
+}
+
+function applySamariVisibility() {
+  const sections = document.getElementById('home-sections');
+  const addBtn = document.getElementById('home-add-sec-btn');
+  const samariSec = document.getElementById('samariSection');
+  if (sections) sections.style.display = homeShowSamari ? 'none' : '';
+  if (addBtn) addBtn.style.display = homeShowSamari ? 'none' : '';
+  if (samariSec) samariSec.style.display = homeShowSamari ? '' : 'none';
+  // Admin-only, and only built the first time the tab is actually opened —
+  // a public session never reaches this (the toggle itself is admin-only),
+  // and an admin who never opens the tab never pays for a WebGL context.
+  if (homeShowSamari && document.body.classList.contains('is-admin')) {
+    initSamariGalleryOnce();
+  }
+}
+
+let _samariGalleryStarted = false;
+function initSamariGalleryOnce() {
+  if (_samariGalleryStarted) return;
+  const host = document.getElementById('samariGallery');
+  if (!host || typeof initSphereGallery3D !== 'function') return;
+  _samariGalleryStarted = true;
+  initSphereGallery3D(host, { background: '#1c1d24' });
 }
 
 // Which projects the Projects list shows, in order. Deliberately a fixed
@@ -13486,7 +13533,7 @@ const SHIPPED_DEFAULT_IMAGES = [
 function initSphereGallery3D(host, props) {
     props = props || {};
     const {
-        images = SHIPPED_DEFAULT_IMAGES,
+        images = DEFAULT_ITEMS,
         branches: branchesProp = DEFAULT_BRANCHES,
         background = "#000000",
         scale = 60,
@@ -14145,24 +14192,10 @@ function initSphereGallery3D(host, props) {
 
 window.initSphereGallery3D = initSphereGallery3D;
 
-/* Wire it into the "سامری" section on Home. One instance for the whole
-   page — same reasoning as the ascii lens above: WebGL contexts are
-   capped in the tens per page, so this stays a singleton rather than
-   something rebuilt per view-switch. */
-// The Unsplash URLs the component ships as its own default aren't
-// reachable from every visitor's network (some block that CDN outright),
-// which silently leaves every plate on its placeholder fill. The
-// dependency-free gradient set the source itself falls back to has no
-// such failure mode, so it's used here instead.
-const initArgs = { images: DEFAULT_ITEMS };
-document.addEventListener('DOMContentLoaded', () => {
-  const host = document.getElementById('samariGallery');
-  if (host) initSphereGallery3D(host, initArgs);
-});
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  const host = document.getElementById('samariGallery');
-  if (host && !host.querySelector('canvas')) initSphereGallery3D(host, initArgs);
-}
+/* Actually started from setHomeView()'s 'samari' branch (initSamariGalleryOnce),
+   admin-only and only once the tab is opened — see the home-view-toggle
+   wiring. Not run on page load: a public visitor never reaches that branch,
+   so they never pay for a WebGL context they'll never see. */
 
 })();
 </script>
