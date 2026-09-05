@@ -401,7 +401,6 @@
     .samari-gallery-wrap {
       width:100%; height:70vh; min-height:480px; max-height:800px;
       border-radius:16px; overflow:hidden; margin-bottom:40px;
-      background:#1c1d24;
     }
 
     /* ─────────────────── CARD GRID ─────────────────── */
@@ -5828,7 +5827,7 @@ function initSamariGalleryOnce() {
   const host = document.getElementById('samariGallery');
   if (!host || typeof initSphereGallery3D !== 'function') return;
   _samariGalleryStarted = true;
-  initSphereGallery3D(host, { background: '#1c1d24' });
+  initSphereGallery3D(host, { background: 'transparent' });
 }
 
 // Which projects the Projects list shows, in order. Deliberately a fixed
