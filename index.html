@@ -14149,13 +14149,19 @@ window.initSphereGallery3D = initSphereGallery3D;
    page — same reasoning as the ascii lens above: WebGL contexts are
    capped in the tens per page, so this stays a singleton rather than
    something rebuilt per view-switch. */
+// The Unsplash URLs the component ships as its own default aren't
+// reachable from every visitor's network (some block that CDN outright),
+// which silently leaves every plate on its placeholder fill. The
+// dependency-free gradient set the source itself falls back to has no
+// such failure mode, so it's used here instead.
+const initArgs = { images: DEFAULT_ITEMS };
 document.addEventListener('DOMContentLoaded', () => {
   const host = document.getElementById('samariGallery');
-  if (host) initSphereGallery3D(host, {});
+  if (host) initSphereGallery3D(host, initArgs);
 });
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
   const host = document.getElementById('samariGallery');
-  if (host && !host.querySelector('canvas')) initSphereGallery3D(host, {});
+  if (host && !host.querySelector('canvas')) initSphereGallery3D(host, initArgs);
 }
 
 })();
