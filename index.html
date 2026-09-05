@@ -2439,19 +2439,31 @@
     .pib-mic.ghost:hover { background:rgba(255,255,255,.14); color:#fff; }
 
     /* Collapsed to nothing until there is content, so the mic slides across
-       on its own rather than being swapped out. */
+       on its own rather than being swapped out.
+
+       The collapse and the disc are split across two elements on purpose:
+       animating THIS element's width (a plain rectangle, no border-radius)
+       just clips a fixed 32x32 circle, so the circle is never squeezed
+       into an ellipse. Animating width directly on a border-radius:50%
+       element — as this used to do — draws literal egg shapes at every
+       width between 0 and 32, since 50% is 50% of whatever width and
+       height currently are, not of the final 32px. */
+    .pib-send-wrap {
+      width:0; margin-left:0; overflow:hidden; display:inline-flex; flex-shrink:0;
+      transition:width .34s cubic-bezier(.4,0,.2,1), margin-left .34s cubic-bezier(.4,0,.2,1);
+    }
+    .pib-send-wrap.show { width:32px; margin-left:8px; }
     .pib-send {
-      width:0; margin-left:0; opacity:0; transform:scale(.55);
+      width:32px; flex-shrink:0; opacity:0; transform:scale(.55);
       pointer-events:none; padding:0;
-      transition:width .34s cubic-bezier(.4,0,.2,1),
-                 margin-left .34s cubic-bezier(.4,0,.2,1),
-                 opacity .2s ease,
-                 transform .34s cubic-bezier(.34,1.45,.64,1),
+      transition:opacity .2s ease, transform .34s cubic-bezier(.34,1.45,.64,1),
                  background .2s, color .2s;
     }
-    .pib-send.show { width:32px; margin-left:8px; opacity:1; transform:scale(1);
-                     pointer-events:auto; }
-    @media (prefers-reduced-motion:reduce) { .pib-send { transition:opacity .15s } }
+    .pib-send.show { opacity:1; transform:scale(1); pointer-events:auto; }
+    @media (prefers-reduced-motion:reduce) {
+      .pib-send-wrap { transition:width .15s, margin-left .15s; }
+      .pib-send { transition:opacity .15s; }
+    }
 
     /* ImageViewDialog */
     .pib-dialog { display:none; position:fixed; inset:0; z-index:6100;
@@ -3305,7 +3317,9 @@ one keyframe at a time</div>
 
         <div class="pib-right">
           <button type="button" class="pib-go pib-mic" id="note-mic-btn" aria-label="Voice message"></button>
-          <button type="button" class="pib-go pib-send" id="note-send-btn" aria-label="Send message" tabindex="-1"></button>
+          <span class="pib-send-wrap" id="note-send-wrap">
+            <button type="button" class="pib-go pib-send" id="note-send-btn" aria-label="Send message" tabindex="-1"></button>
+          </span>
         </div>
       </div>
     </div>
@@ -8000,6 +8014,8 @@ function paintNoteGo() {
   if (!send.dataset.icon) { send.innerHTML = SVG_PIB_SEND; send.dataset.icon = 'send'; }
   const showSend = ready && !recording;
   send.classList.toggle('show', showSend);
+  const sendWrap = document.getElementById('note-send-wrap');
+  if (sendWrap) sendWrap.classList.toggle('show', showSend);
   send.tabIndex = showSend ? 0 : -1;
   send.setAttribute('aria-hidden', showSend ? 'false' : 'true');
   send.title = 'Send message';
