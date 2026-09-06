@@ -484,11 +484,14 @@
        stretched, flex-wrap's second line (yTo wrapping under yFrom) landed
        wherever align-content spread it across that height — hundreds of
        px below the first line — instead of sitting right underneath it. */
-    /* The date, now under the media rather than in a left column — no
-       fixed width to hold, so it just sits on its own line. */
+    /* Date + avatars, under the media and on one line together. */
+    .pli-meta-row {
+      display:flex; align-items:center; flex-wrap:wrap; gap:14px;
+      margin-top:12px;
+    }
     .pli-year {
       display:flex; flex-direction:row; flex-wrap:wrap; align-items:baseline; gap:4px;
-      margin-top:12px;
+      flex:0 0 auto;
       font-family:var(--font-body); font-size:12.5px; font-weight:600;
       color:#b4a99a; line-height:1.35;
     }
@@ -498,8 +501,15 @@
     .pli-rail { flex:0 0 auto; align-self:flex-start; padding-top:3px; }
     #view-home.home-edit .pli-rail { width:44px; }
     /* Avatar Group under the row's media — same block the boards use, see
-       buildProjectListItem for why it's stored on the card. */
-    .pli-avatars { margin-top:14px; }
+       buildProjectListItem for why it's stored on the card. Takes the rest
+       of the line next to the date; margin-bottom off since .block-avatars
+       carries one for the board's stacked layout, which reads as a gap
+       under the date here. */
+    /* Scoped to .pli-meta-row for the specificity: .block-avatars is
+       declared further down the sheet, so a bare .pli-avatars rule loses
+       to its width:100% — which claims the whole line and wraps the block
+       under the date instead of beside it. */
+    .pli-meta-row .pli-avatars { flex:1 1 auto; width:auto; min-width:0; margin-bottom:0; }
     .pli-body { flex:1 1 auto; min-width:0; }
     .pli-title-row { display:flex; align-items:baseline; gap:5px; }
     .pli-title { font-family:var(--font-title); font-size:17px; font-weight:600; line-height:1.3; }
@@ -6449,7 +6459,13 @@ function buildProjectListItem(card) {
 
     yearRow.append(yFrom, ySep, yTo);
     syncYearSep(yearRow);
-    body.appendChild(yearRow);
+
+    // Date and avatars share one line, the date sitting immediately beside
+    // the circles rather than stacked above them.
+    const metaRow = document.createElement('div');
+    metaRow.className = 'pli-meta-row';
+    metaRow.appendChild(yearRow);
+    body.appendChild(metaRow);
 
     // Avatar Group, the same block the boards have — logos in circles with
     // a name/role under each, plus the text segments between them. Kept on
@@ -6469,14 +6485,28 @@ function buildProjectListItem(card) {
       id: 'pli-avg-' + card.key,
       type: 'avatars',
       segments: card.avatars,
-      align: card.avatarsAlign,
+      // Left by default here, unlike a board block's centre: the circles
+      // sit next to the date on the same line, and centring them would
+      // push them off across the row away from it.
+      align: card.avatarsAlign || 'left',
     };
     avgBlock._save = () => {
-      card.avatars = avgBlock.segments;
-      card.avatarsAlign = avgBlock.align;
+      // avgMigrateBlock fills in an empty group + a default align on first
+      // render and asks the caller to save, which would otherwise stamp
+      // that scaffolding onto every card in the list whether or not anyone
+      // ever adds an avatar. Nothing real in it means nothing stored.
+      const hasContent = (avgBlock.segments || []).some(seg =>
+        seg.kind === 'text' ? (seg.content || '').trim() : (seg.avatars || []).length);
+      if (hasContent) {
+        card.avatars = avgBlock.segments;
+        card.avatarsAlign = avgBlock.align;
+      } else {
+        delete card.avatars;
+        delete card.avatarsAlign;
+      }
       saveSettings();
     };
-    body.appendChild(avgMount);
+    metaRow.appendChild(avgMount);
     renderAvatarsBlock(avgBlock, avgMount);
   }
 
