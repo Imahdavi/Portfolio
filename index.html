@@ -6654,7 +6654,7 @@ function wireStripCrop(tile, block, key) {
   resetOpt.type = 'button';
   resetOpt.className = 'pli-crop-opt pli-crop-opt-reset';
   resetOpt.dataset.key = '';
-  resetOpt.textContent = 'Original';
+  resetOpt.textContent = 'Default';
   resetOpt.addEventListener('click', (e) => { e.stopPropagation(); setRatio(null); menu.classList.remove('open'); });
   menu.appendChild(resetOpt);
   // Body, not the tile: .pli-tile clips overflow (that's what makes its own
