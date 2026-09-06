@@ -500,6 +500,25 @@
        date — keep them off the date's own line so "2025 – Present" isn't
        competing with "⠿ ×" for the same 130px. */
     .pli-year .pli-row-tools { flex-basis:100%; }
+    /* "at [company]" — own line under the date/tools, next to it rather
+       than in the title (see buildProjectListItem). Underline only shows
+       on hover (wireAtUnderline) — same squiggle set as the board
+       divider, this time used as the source component actually intends. */
+    .pli-year .pli-at-wrap { flex-basis:100%; position:relative; margin-top:6px; }
+    .pli-at {
+      display:inline-block; font-family:var(--font-body); font-size:12px;
+      font-weight:500; color:#8a8175; line-height:1.3; outline:none;
+    }
+    /* Empty and not editing: nothing to show a visitor, same as
+       .pli-category/.pli-desc — the placeholder-text rule further down
+       (edit mode only) is what shows "+ at company". */
+    .pli-at:empty { display:none; }
+    .pli-at-underline {
+      position:absolute; left:0; bottom:-5px; width:100%; height:9px;
+      overflow:visible; pointer-events:none; opacity:0;
+    }
+    .pli-at-underline path { fill:none; stroke:rgba(0,0,0,.55); stroke-width:2.2; stroke-linecap:round; }
+    body.dark .pli-at-underline path { stroke:rgba(255,255,255,.55); }
     .pli-body { flex:1 1 auto; min-width:0; }
     .pli-title-row { display:flex; align-items:baseline; gap:5px; }
     .pli-title { font-family:var(--font-title); font-size:17px; font-weight:600; line-height:1.3; }
@@ -931,17 +950,20 @@
     #view-home.home-edit .pli-year-from,
     #view-home.home-edit .pli-year-to,
     #view-home.home-edit .pli-category,
-    #view-home.home-edit .pli-desc {
+    #view-home.home-edit .pli-desc,
+    #view-home.home-edit .pli-at {
       min-height:1em; min-width:30px;
       outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px;
       padding:2px 6px; cursor:text;
     }
     #view-home.home-edit .pli-category,
-    #view-home.home-edit .pli-desc { display:block; }
+    #view-home.home-edit .pli-desc,
+    #view-home.home-edit .pli-at { display:block; }
     #view-home.home-edit .pli-year-from:empty:before,
     #view-home.home-edit .pli-year-to:empty:before,
     #view-home.home-edit .pli-category:empty:before,
     #view-home.home-edit .pli-desc:empty:before { content:attr(data-ph); color:#bbb; }
+    #view-home.home-edit .pli-at:empty:before { content:attr(data-ph); color:#ccc; }
     .pli-title-row { align-self:flex-start; }
 
     .proj-card { position:relative; cursor:pointer; transition:opacity .25s, filter .25s, transform .55s cubic-bezier(.34,1.56,.64,1); }
@@ -6241,6 +6263,27 @@ function buildProjectListItem(card) {
   tools.append(handle, rowDel);
   year.appendChild(tools);
 
+  // "at [company]" — an optional second line under the date/tools, for
+  // projects done through an agency/studio rather than directly for the
+  // brand (the existing "X at Netbina" naming did this by hand, in the
+  // title itself; this makes it its own field). The underline is the same
+  // Osmo "Draw Random Underline" component the board divider uses
+  // (21st.dev/@osmosupply) — its actual intended use, a hover-drawn
+  // underline on a text link, rather than the divider's one-time draw-in.
+  const atWrap = document.createElement('div');
+  atWrap.className = 'pli-at-wrap';
+  const at = document.createElement('span');
+  at.className = 'pli-at';
+  at.dataset.ph = '+ at company';
+  at.textContent = card.at || '';
+  const atUnderline = document.createElement('svg');
+  atUnderline.className = 'pli-at-underline';
+  atUnderline.setAttribute('viewBox', '0 0 310 40');
+  atUnderline.setAttribute('preserveAspectRatio', 'none');
+  atWrap.append(at, atUnderline);
+  wireAtUnderline(atWrap, atUnderline);
+  year.appendChild(atWrap);
+
   const body = document.createElement('div');
   body.className = 'pli-body';
 
@@ -6609,7 +6652,7 @@ function syncYearSep(yearEl) {
 
 function wireProjectsListEditing() {
   document.querySelectorAll('.proj-list-item').forEach(item => {
-    ['.pli-title', '.pli-year-from', '.pli-year-to', '.pli-category', '.pli-desc'].forEach(sel => {
+    ['.pli-title', '.pli-year-from', '.pli-year-to', '.pli-category', '.pli-desc', '.pli-at'].forEach(sel => {
       const el = item.querySelector(sel);
       if (!el) return;
       el.contentEditable = 'true';
@@ -7199,7 +7242,7 @@ function commitStripOrder(strip, key) {
 }
 
 function unwireProjectsListEditing() {
-  document.querySelectorAll('.pli-title, .pli-year-from, .pli-year-to, .pli-category, .pli-desc')
+  document.querySelectorAll('.pli-title, .pli-year-from, .pli-year-to, .pli-category, .pli-desc, .pli-at')
     .forEach(el => { el.contentEditable = 'false'; });
 }
 
@@ -7218,6 +7261,7 @@ function saveProjectsListEdits() {
       yearEnd:  item.querySelector('.pli-year-to')?.textContent.trim()   || '',
       category: item.querySelector('.pli-category')?.textContent.trim()  || '',
       desc:     item.querySelector('.pli-desc')?.innerText.trim()        || '',
+      at:       item.querySelector('.pli-at')?.textContent.trim()        || '',
     };
     Object.entries(next).forEach(([k, v]) => {
       if ((card[k] || '') === v) return;
@@ -8983,6 +9027,36 @@ const UNDERLINE_PATHS = [
 function generateUnderlineSVG() {
   const d = UNDERLINE_PATHS[Math.floor(Math.random() * UNDERLINE_PATHS.length)];
   return `<svg viewBox="0 0 310 40" preserveAspectRatio="none"><path class="underline-path" d="${d}"/></svg>`;
+}
+
+/* Same source as generateUnderlineSVG above, but this is the component's
+   actual original use — a random squiggle drawn under a text link on
+   hover — for the Projects-list "at [company]" field (see
+   buildProjectListItem). Draw-in is the same stroke-dashoffset technique;
+   the leave side is a plain opacity fade rather than a reverse-draw —
+   the source animates that with GSAP's DrawSVGPlugin (a paid plugin,
+   not available here), and a fade reads as the same "it goes away"
+   without reimplementing a tail-first erase by hand. */
+function wireAtUnderline(wrap, svgEl) {
+  wrap.addEventListener('mouseenter', () => {
+    const d = UNDERLINE_PATHS[Math.floor(Math.random() * UNDERLINE_PATHS.length)];
+    svgEl.innerHTML = `<path class="underline-path" d="${d}"/>`;
+    svgEl.style.transition = 'none';
+    svgEl.style.opacity = '1';
+    const path = svgEl.querySelector('path');
+    requestAnimationFrame(() => {
+      const len = path.getTotalLength();
+      path.style.strokeDasharray = len;
+      path.style.strokeDashoffset = len;
+      path.getBoundingClientRect();
+      path.style.transition = 'stroke-dashoffset .45s cubic-bezier(.65,0,.35,1)';
+      requestAnimationFrame(() => { path.style.strokeDashoffset = '0'; });
+    });
+  });
+  wrap.addEventListener('mouseleave', () => {
+    svgEl.style.transition = 'opacity .3s ease';
+    svgEl.style.opacity = '0';
+  });
 }
 
 /* ─── Dividers sway subtly with scroll momentum ──
