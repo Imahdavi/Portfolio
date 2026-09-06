@@ -1476,6 +1476,10 @@
     .block-divider-star .star-small { fill:rgba(0,0,0,.85); transition:transform .6s cubic-bezier(.34,1.56,.64,1); transform-box:fill-box; transform-origin:center; }
     .block-divider-star:hover .star-big   { transform:rotate(18deg); }
     .block-divider-star:hover .star-small { transform:rotate(-30deg); }
+    /* Black-on-black otherwise — the page behind it goes dark but this
+       fill never did. */
+    body.dark .block-divider-star .star-big,
+    body.dark .block-divider-star .star-small { fill:rgba(255,255,255,.85); }
 
     /* Magnetic Carousel block (Originkit trial) — caption reuses
        .block-text as-is, same as every other text block in a board.
@@ -6735,11 +6739,17 @@ function addMediaToProject(key, media, atIndex) {
   return block;
 }
 
-// The picker's library. Read from the Blob store via /api/blob-list, not
-// from the boards: a board-derived library loses a file the moment its
-// last project drops it, which made removing media from one project look
-// like deleting it from the site. Board contents are only the fallback,
-// for when that endpoint isn't reachable.
+// The picker's library, derived from board contents. Used to be read from
+// the Vercel Blob store via /api/blob-list instead — a board-derived
+// library loses a file the moment its last project drops it, which made
+// removing media from one project look like deleting it from the site.
+// But that store was suspended for exceeding its transfer quota some time
+// ago (uploads moved to committing straight into the repo — see
+// githubUpload in the worker), and every one of its ~120 listed files now
+// 403s: not "not loaded yet", genuinely gone. Board contents are what's
+// actually still there, so that's the library now; /api/blob-list and its
+// dead @vercel/blob dependency are removed rather than left calling a
+// store that can only ever fail.
 let _siteMediaCache = null;
 
 function collectSiteMediaFromBoards() {
@@ -6755,20 +6765,7 @@ function collectSiteMediaFromBoards() {
 
 async function loadSiteMedia({ force } = {}) {
   if (_siteMediaCache && !force) return _siteMediaCache;
-  try {
-    const res = await fetch('/api/blob-list', { cache: 'no-store' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const rows = await res.json();
-    if (!Array.isArray(rows)) throw new Error('bad payload');
-    // Anything a board references but the store doesn't (media still on the
-    // old host, say) still belongs in the library.
-    const bySrc = new Map(rows.map(r => [r.src, { type: r.type, src: r.src }]));
-    collectSiteMediaFromBoards().forEach(m => { if (!bySrc.has(m.src)) bySrc.set(m.src, m); });
-    _siteMediaCache = [...bySrc.values()];
-  } catch (e) {
-    console.warn('Blob listing unavailable, falling back to board media:', e.message);
-    _siteMediaCache = collectSiteMediaFromBoards();
-  }
+  _siteMediaCache = collectSiteMediaFromBoards();
   return _siteMediaCache;
 }
 
@@ -11703,7 +11700,22 @@ document.addEventListener('DOMContentLoaded', () => {
       : 'none'};
     touch-action:manipulation; -webkit-tap-highlight-color:transparent;
   `;
-  obj.textContent = CONFIG.label;
+  // The resting button shows the site's own spider mark (matches the
+  // header/Web Sound icon) rather than the native 🕷️ glyph, which renders
+  // inconsistently across platforms — the emoji is kept for the burst
+  // particles themselves, where that inconsistency reads as texture
+  // rather than a mismatched icon.
+  obj.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">' +
+    '<path d="M12 11.5263C13.005 11.5263 13.9689 11.9256 14.6796 12.6363C15.3902 13.3469 15.7895 14.3108 15.7895 15.3158C15.7895 16.3209 15.3902 17.2847 14.6796 17.9954C13.9689 18.706 13.005 18.6531 12 18.6531C10.995 18.6531 10.0311 18.706 9.32045 17.9954C8.60979 17.2847 8.21054 16.3209 8.21054 15.3158C8.21054 14.3108 8.60979 13.3469 9.32045 12.6363C10.0311 11.9256 10.995 11.5263 12 11.5263ZM12 11.5263C11.4975 11.5263 11.0156 11.3267 10.6602 10.9714C10.3049 10.6161 10.1053 10.1341 10.1053 9.63161C10.1053 9.1291 10.3049 8.64716 10.6602 8.29183C11.0156 7.9365 11.4975 7.99039 12 7.99039C12.5025 7.99039 12.9845 7.9365 13.3398 8.29183C13.6951 8.64716 13.8948 9.1291 13.8948 9.63161C13.8948 10.1341 13.6951 10.6161 13.3398 10.9714C12.9845 11.3267 12.5025 11.5263 12 11.5263Z"/>' +
+    '<path d="M5.36841 4.89478V6.00469C5.36841 6.5072 5.56803 6.98914 5.92336 7.34447L10.1053 11.5264"/>' +
+    '<path d="M10.1053 11.5264H5.20588C4.70336 11.5264 4.22143 11.3268 3.8661 10.9714L3 10.1053"/>' +
+    '<path d="M10.1053 11.5264L4.97601 16.6556C4.62067 17.011 4.42105 17.4929 4.42105 17.9954V19.1053"/>' +
+    '<path d="M13.8947 11.5264L19.024 16.6556C19.3793 17.011 19.579 17.4929 19.579 17.9954V19.1053"/>' +
+    '<path d="M13.8947 11.5264H18.7941C19.2966 11.5264 19.7786 11.3268 20.1339 10.9714L21 10.1053"/>' +
+    '<path d="M18.6316 4.89478V6.00469C18.6316 6.5072 18.432 6.98914 18.0766 7.34447L13.8947 11.5264"/>' +
+    '<path d="M13.0728 7.98737C13.2134 7.7371 13.4101 7.0521 13.0728 6.31421"/>' +
+    '<path d="M10.9272 7.98737C10.7866 7.7371 10.5899 7.0521 10.9272 6.31421"/>' +
+  '</svg>';
   const navTip = document.createElement('span');
   navTip.className = 'nav-tip';
   navTip.textContent = 'Spider Burst';
