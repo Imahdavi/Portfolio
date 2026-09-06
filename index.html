@@ -484,41 +484,22 @@
        stretched, flex-wrap's second line (yTo wrapping under yFrom) landed
        wherever align-content spread it across that height — hundreds of
        px below the first line — instead of sitting right underneath it. */
+    /* The date, now under the media rather than in a left column — no
+       fixed width to hold, so it just sits on its own line. */
     .pli-year {
-      flex:0 0 auto; width:130px; padding-top:3px; align-self:flex-start;
       display:flex; flex-direction:row; flex-wrap:wrap; align-items:baseline; gap:4px;
-      align-content:flex-start;
+      margin-top:12px;
       font-family:var(--font-body); font-size:12.5px; font-weight:600;
       color:#b4a99a; line-height:1.35;
     }
     .pli-year-sep { font-weight:400; opacity:.65; }
-    /* TEST placement — see buildProjectListItem. Same look as .pli-year,
-       just not pinned to the 130px side column since it sits under the
-       full-width media strip instead of beside the title. */
-    .pli-year-test { width:auto; padding-top:0; margin-top:12px; }
-    /* Row tools (drag handle, delete) are admin chrome, not part of the
-       date — keep them off the date's own line so "2025 – Present" isn't
-       competing with "⠿ ×" for the same 130px. */
-    .pli-year .pli-row-tools { flex-basis:100%; }
-    /* "at [company]" — own line under the date/tools, next to it rather
-       than in the title (see buildProjectListItem). Underline only shows
-       on hover (wireAtUnderline) — same squiggle set as the board
-       divider, this time used as the source component actually intends. */
-    .pli-year .pli-at-wrap { flex-basis:100%; position:relative; margin-top:6px; }
-    .pli-at {
-      display:inline-block; font-family:var(--font-body); font-size:12px;
-      font-weight:500; color:#8a8175; line-height:1.3; outline:none;
-    }
-    /* Empty and not editing: nothing to show a visitor, same as
-       .pli-category/.pli-desc — the placeholder-text rule further down
-       (edit mode only) is what shows "+ at company". */
-    .pli-at:empty { display:none; }
-    .pli-at-underline {
-      position:absolute; left:0; bottom:-5px; width:100%; height:9px;
-      overflow:visible; pointer-events:none; opacity:0;
-    }
-    .pli-at-underline path { fill:none; stroke:rgba(0,0,0,.55); stroke-width:2.2; stroke-linecap:round; }
-    body.dark .pli-at-underline path { stroke:rgba(255,255,255,.55); }
+    /* What's left of the old date column: edit-mode row controls only, so
+       it takes no width at all for a visitor. */
+    .pli-rail { flex:0 0 auto; align-self:flex-start; padding-top:3px; }
+    #view-home.home-edit .pli-rail { width:44px; }
+    /* Avatar Group under the row's media — same block the boards use, see
+       buildProjectListItem for why it's stored on the card. */
+    .pli-avatars { margin-top:14px; }
     .pli-body { flex:1 1 auto; min-width:0; }
     .pli-title-row { display:flex; align-items:baseline; gap:5px; }
     .pli-title { font-family:var(--font-title); font-size:17px; font-weight:600; line-height:1.3; }
@@ -950,20 +931,17 @@
     #view-home.home-edit .pli-year-from,
     #view-home.home-edit .pli-year-to,
     #view-home.home-edit .pli-category,
-    #view-home.home-edit .pli-desc,
-    #view-home.home-edit .pli-at {
+    #view-home.home-edit .pli-desc {
       min-height:1em; min-width:30px;
       outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px;
       padding:2px 6px; cursor:text;
     }
     #view-home.home-edit .pli-category,
-    #view-home.home-edit .pli-desc,
-    #view-home.home-edit .pli-at { display:block; }
+    #view-home.home-edit .pli-desc { display:block; }
     #view-home.home-edit .pli-year-from:empty:before,
     #view-home.home-edit .pli-year-to:empty:before,
     #view-home.home-edit .pli-category:empty:before,
     #view-home.home-edit .pli-desc:empty:before { content:attr(data-ph); color:#bbb; }
-    #view-home.home-edit .pli-at:empty:before { content:attr(data-ph); color:#ccc; }
     .pli-title-row { align-self:flex-start; }
 
     .proj-card { position:relative; cursor:pointer; transition:opacity .25s, filter .25s, transform .55s cubic-bezier(.34,1.56,.64,1); }
@@ -6219,25 +6197,11 @@ function buildProjectListItem(card) {
   // so existing saved values still read), `yearEnd` the end — free text so
   // it can hold "Present", "Ongoing", a month, whatever suits the entry.
   // The separator only shows when there's actually an end to separate.
+  // The date sits under the media now (see further down), so this rail
+  // carries nothing but the edit-mode row controls — it collapses to
+  // nothing for a visitor rather than holding an empty 130px column.
   const year = document.createElement('div');
-  year.className = 'pli-year';
-
-  const yFrom = document.createElement('span');
-  yFrom.className = 'pli-year-from';
-  yFrom.dataset.ph = 'From';
-  yFrom.textContent = card.year || '';
-
-  const ySep = document.createElement('span');
-  ySep.className = 'pli-year-sep';
-  ySep.textContent = '–';
-
-  const yTo = document.createElement('span');
-  yTo.className = 'pli-year-to';
-  yTo.dataset.ph = 'To / Present';
-  yTo.textContent = card.yearEnd || '';
-
-  year.append(yFrom, ySep, yTo);
-  syncYearSep(year);
+  year.className = 'pli-rail';
 
   // Row controls, edit-mode only. The handle is a separate grip rather
   // than the row itself so dragging a row can't be confused with dragging
@@ -6263,31 +6227,6 @@ function buildProjectListItem(card) {
 
   tools.append(handle, rowDel);
   year.appendChild(tools);
-
-  // "at [company]" — an optional second line under the date/tools, for
-  // projects done through an agency/studio rather than directly for the
-  // brand (the existing "X at Netbina" naming did this by hand, in the
-  // title itself; this makes it its own field). The underline is the same
-  // Osmo "Draw Random Underline" component the board divider uses
-  // (21st.dev/@osmosupply) — its actual intended use, a hover-drawn
-  // underline on a text link, rather than the divider's one-time draw-in.
-  const atWrap = document.createElement('div');
-  atWrap.className = 'pli-at-wrap';
-  const at = document.createElement('span');
-  at.className = 'pli-at';
-  at.dataset.ph = '+ at company';
-  at.textContent = card.at || '';
-  // createElementNS, not createElement: an <svg> made the plain way is an
-  // HTML-namespaced element that merely happens to be tagged "svg" — its
-  // innerHTML-parsed <path> children come out without real SVGPathElement
-  // methods, and wireAtUnderline's getTotalLength() throws on exactly that.
-  const atUnderline = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  atUnderline.setAttribute('class', 'pli-at-underline');
-  atUnderline.setAttribute('viewBox', '0 0 310 40');
-  atUnderline.setAttribute('preserveAspectRatio', 'none');
-  atWrap.append(at, atUnderline);
-  wireAtUnderline(atWrap, atUnderline);
-  year.appendChild(atWrap);
 
   const body = document.createElement('div');
   body.className = 'pli-body';
@@ -6487,20 +6426,58 @@ function buildProjectListItem(card) {
     _wireStripDragScroll(strip);
     body.appendChild(strip);
 
-    // TEST — placement only: the same date, under the media instead of
-    // above it, so it can be compared against .pli-year up top before
-    // deciding whether to actually move it. Plain text, not wired for
-    // editing (that stays on the original), and its own class rather than
-    // reusing .pli-year-from/-to so it doesn't pick up their edit-mode
-    // dashed-box styling or get caught by saveProjectsListEdits' scan.
-    if (card.year || card.yearEnd) {
-      const yearBottom = document.createElement('div');
-      yearBottom.className = 'pli-year pli-year-test';
-      yearBottom.innerHTML = (card.year ? `<span>${card.year}</span>` : '') +
-        (card.year && card.yearEnd ? '<span class="pli-year-sep">–</span>' : '') +
-        (card.yearEnd ? `<span>${card.yearEnd}</span>` : '');
-      body.appendChild(yearBottom);
-    }
+    // The date, under the media rather than out in a left rail. Still the
+    // real editable fields (.pli-year-from/-to are what
+    // wireProjectsListEditing and saveProjectsListEdits both look for) —
+    // only the placement moved.
+    const yearRow = document.createElement('div');
+    yearRow.className = 'pli-year';
+
+    const yFrom = document.createElement('span');
+    yFrom.className = 'pli-year-from';
+    yFrom.dataset.ph = 'From';
+    yFrom.textContent = card.year || '';
+
+    const ySep = document.createElement('span');
+    ySep.className = 'pli-year-sep';
+    ySep.textContent = '–';
+
+    const yTo = document.createElement('span');
+    yTo.className = 'pli-year-to';
+    yTo.dataset.ph = 'To / Present';
+    yTo.textContent = card.yearEnd || '';
+
+    yearRow.append(yFrom, ySep, yTo);
+    syncYearSep(yearRow);
+    body.appendChild(yearRow);
+
+    // Avatar Group, the same block the boards have — logos in circles with
+    // a name/role under each, plus the text segments between them. Kept on
+    // the card (card.avatars/card.avatarsAlign) rather than in the board's
+    // blocks, so a row can credit a team the board itself doesn't list;
+    // the renderer is shared, and _save is what points its writes here
+    // instead of at saveProject (see avgSave).
+    const avgMount = document.createElement('div');
+    // .edit-on is what gates every piece of the block's editing chrome
+    // (toolbar, per-avatar fields, the empty "+ Add avatar" prompt). On a
+    // board that class sits on #block-list; this view has its own edit
+    // flag, so the mount carries it instead — kept in step by
+    // updateHomeEditUI.
+    avgMount.className = 'block-avatars pli-avatars' +
+      ((typeof editMode !== 'undefined' && editMode) ? ' edit-on' : '');
+    const avgBlock = {
+      id: 'pli-avg-' + card.key,
+      type: 'avatars',
+      segments: card.avatars,
+      align: card.avatarsAlign,
+    };
+    avgBlock._save = () => {
+      card.avatars = avgBlock.segments;
+      card.avatarsAlign = avgBlock.align;
+      saveSettings();
+    };
+    body.appendChild(avgMount);
+    renderAvatarsBlock(avgBlock, avgMount);
   }
 
   item.appendChild(year);
@@ -6657,7 +6634,7 @@ function syncYearSep(yearEl) {
 
 function wireProjectsListEditing() {
   document.querySelectorAll('.proj-list-item').forEach(item => {
-    ['.pli-title', '.pli-year-from', '.pli-year-to', '.pli-category', '.pli-desc', '.pli-at'].forEach(sel => {
+    ['.pli-title', '.pli-year-from', '.pli-year-to', '.pli-category', '.pli-desc'].forEach(sel => {
       const el = item.querySelector(sel);
       if (!el) return;
       el.contentEditable = 'true';
@@ -7247,7 +7224,7 @@ function commitStripOrder(strip, key) {
 }
 
 function unwireProjectsListEditing() {
-  document.querySelectorAll('.pli-title, .pli-year-from, .pli-year-to, .pli-category, .pli-desc, .pli-at')
+  document.querySelectorAll('.pli-title, .pli-year-from, .pli-year-to, .pli-category, .pli-desc')
     .forEach(el => { el.contentEditable = 'false'; });
 }
 
@@ -7266,7 +7243,6 @@ function saveProjectsListEdits() {
       yearEnd:  item.querySelector('.pli-year-to')?.textContent.trim()   || '',
       category: item.querySelector('.pli-category')?.textContent.trim()  || '',
       desc:     item.querySelector('.pli-desc')?.innerText.trim()        || '',
-      at:       item.querySelector('.pli-at')?.textContent.trim()        || '',
     };
     Object.entries(next).forEach(([k, v]) => {
       if ((card[k] || '') === v) return;
@@ -8345,6 +8321,10 @@ function updateHomeEditUI() {
   // saveProjectsListEdits — and none of the card drag/rename/delete wiring
   // below applies to it, so it takes this branch and stops here.
   if (homeView === 'list') {
+    // The rows' Avatar Group mounts carry .edit-on themselves — see
+    // buildProjectListItem for why that class rather than this view's own.
+    document.querySelectorAll('.pli-avatars')
+      .forEach(m => m.classList.toggle('edit-on', editMode));
     if (editMode) wireProjectsListEditing();
     else { saveProjectsListEdits(); unwireProjectsListEditing(); }
     return;
@@ -9032,36 +9012,6 @@ const UNDERLINE_PATHS = [
 function generateUnderlineSVG() {
   const d = UNDERLINE_PATHS[Math.floor(Math.random() * UNDERLINE_PATHS.length)];
   return `<svg viewBox="0 0 310 40" preserveAspectRatio="none"><path class="underline-path" d="${d}"/></svg>`;
-}
-
-/* Same source as generateUnderlineSVG above, but this is the component's
-   actual original use — a random squiggle drawn under a text link on
-   hover — for the Projects-list "at [company]" field (see
-   buildProjectListItem). Draw-in is the same stroke-dashoffset technique;
-   the leave side is a plain opacity fade rather than a reverse-draw —
-   the source animates that with GSAP's DrawSVGPlugin (a paid plugin,
-   not available here), and a fade reads as the same "it goes away"
-   without reimplementing a tail-first erase by hand. */
-function wireAtUnderline(wrap, svgEl) {
-  wrap.addEventListener('mouseenter', () => {
-    const d = UNDERLINE_PATHS[Math.floor(Math.random() * UNDERLINE_PATHS.length)];
-    svgEl.innerHTML = `<path class="underline-path" d="${d}"/>`;
-    svgEl.style.transition = 'none';
-    svgEl.style.opacity = '1';
-    const path = svgEl.querySelector('path');
-    requestAnimationFrame(() => {
-      const len = path.getTotalLength();
-      path.style.strokeDasharray = len;
-      path.style.strokeDashoffset = len;
-      path.getBoundingClientRect();
-      path.style.transition = 'stroke-dashoffset .45s cubic-bezier(.65,0,.35,1)';
-      requestAnimationFrame(() => { path.style.strokeDashoffset = '0'; });
-    });
-  });
-  wrap.addEventListener('mouseleave', () => {
-    svgEl.style.transition = 'opacity .3s ease';
-    svgEl.style.opacity = '0';
-  });
 }
 
 /* ─── Dividers sway subtly with scroll momentum ──
@@ -10103,6 +10053,16 @@ function avgCloseImagePicker() {
   _avgPickResolve = null;
 }
 
+/* Avatar Group blocks live on project boards, but a Projects-list row
+   mounts one too — same renderer, different store. Everything inside the
+   block saves through here so the renderer never has to know which it is
+   in: a board block falls through to saveProject, a list row hands its
+   own writer in as block._save (see buildProjectListItem). */
+function avgSave(block) {
+  if (block && typeof block._save === 'function') return block._save();
+  if (activeKey) saveProject(activeKey);
+}
+
 // One-time migration: older saves used a flat block.avatars array with a
 // single "name" field that got abused as "<b>Name</b><br>Role" (the site's
 // own bold toolbar + line breaks) to fake a two-line tooltip — which then
@@ -10190,7 +10150,7 @@ function avgRenderAvatarItem(a, idx, avatars, block, mount) {
     avgOpenImagePicker((src, isLogo) => {
       a.src = src;
       a.isLogo = !!isLogo;
-      saveProject(activeKey);
+      avgSave(block);
       renderAvatarsBlock(block, mount);
     });
   };
@@ -10208,7 +10168,7 @@ function avgRenderAvatarItem(a, idx, avatars, block, mount) {
     e.stopPropagation();
     const i = avatars.indexOf(a);
     avatars.splice(i + 1, 0, { ...a, id: uid() });
-    saveProject(activeKey);
+    avgSave(block);
     renderAvatarsBlock(block, mount);
   };
   ctrls.appendChild(dup);
@@ -10222,7 +10182,7 @@ function avgRenderAvatarItem(a, idx, avatars, block, mount) {
     e.stopPropagation();
     const i = avatars.indexOf(a);
     if (i > -1) avatars.splice(i, 1);
-    saveProject(activeKey);
+    avgSave(block);
     renderAvatarsBlock(block, mount);
   };
   ctrls.appendChild(del);
@@ -10245,7 +10205,7 @@ function avgRenderAvatarItem(a, idx, avatars, block, mount) {
   roleFld.textContent = a.role || '';
 
   let _st;
-  const scheduleSave = () => { clearTimeout(_st); _st = setTimeout(() => saveProject(activeKey), 1500); };
+  const scheduleSave = () => { clearTimeout(_st); _st = setTimeout(() => avgSave(block), 1500); };
   nameFld.addEventListener('input', () => {
     a.name = nameFld.textContent;
     avgSetTip(tip, a.name, a.role);
@@ -10278,7 +10238,7 @@ function avgRenderAvatarItem(a, idx, avatars, block, mount) {
       a.logoSize = sz;
       if (logoImgEl) { logoImgEl.style.maxWidth = sz + '%'; logoImgEl.style.maxHeight = sz + '%'; }
     });
-    sizeSlider.addEventListener('change', () => saveProject(activeKey));
+    sizeSlider.addEventListener('change', () => avgSave(block));
     fields.appendChild(sizeSlider);
   }
 
@@ -10330,7 +10290,7 @@ function avgSegDragHandle(block, seg, wrap, mount) {
       wrap.classList.remove('avg-seg-dragging');
       if (dragging) {
         block.segments = [...row.children].map(el => el._avgSeg).filter(Boolean);
-        saveProject(activeKey);
+        avgSave(block);
       }
     };
     document.addEventListener('pointermove', onMove);
@@ -10360,7 +10320,7 @@ function avgSegCtrls(block, seg, mount, canDuplicate) {
         avatars: seg.avatars.map(a => ({ ...a, id: uid() })),
       };
       block.segments.splice(i + 1, 0, clone);
-      saveProject(activeKey);
+      avgSave(block);
       renderAvatarsBlock(block, mount);
     };
     ctrls.appendChild(dup);
@@ -10375,7 +10335,7 @@ function avgSegCtrls(block, seg, mount, canDuplicate) {
     e.stopPropagation();
     const i = block.segments.indexOf(seg);
     if (i > -1) block.segments.splice(i, 1);
-    saveProject(activeKey);
+    avgSave(block);
     renderAvatarsBlock(block, mount);
   };
   ctrls.appendChild(del);
@@ -10402,7 +10362,7 @@ function avgRenderGroupSegment(seg, block, mount) {
     e.stopPropagation();
     avgOpenImagePicker((src, isLogo) => {
       seg.avatars.push({ id: uid(), src, isLogo: !!isLogo, name: '', role: '' });
-      saveProject(activeKey);
+      avgSave(block);
       renderAvatarsBlock(block, mount);
     });
   };
@@ -10428,7 +10388,7 @@ function avgRenderTextSegment(seg, block, mount) {
   t.addEventListener('input', () => {
     seg.content = t.innerHTML;
     clearTimeout(_st);
-    _st = setTimeout(() => saveProject(activeKey), 1500);
+    _st = setTimeout(() => avgSave(block), 1500);
   });
   wrap.appendChild(t);
   return { wrap, textEl: t };
@@ -10452,12 +10412,12 @@ function renderAvatarsBlock(block, mount) {
       e.stopPropagation();
       avgOpenImagePicker((src, isLogo) => {
         block.segments[0].avatars.push({ id: uid(), src, isLogo: !!isLogo, name: '', role: '' });
-        saveProject(activeKey);
+        avgSave(block);
         renderAvatarsBlock(block, mount);
       });
     };
     mount.appendChild(prompt);
-    if (migrated && activeKey) saveProject(activeKey);
+    if (migrated && activeKey) avgSave(block);
     return;
   }
 
@@ -10475,7 +10435,7 @@ function renderAvatarsBlock(block, mount) {
     btn.className = 'avg-align-btn' + (block.align === a.key ? ' active' : '');
     btn.title = a.label;
     btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="${a.d}"/></svg>`;
-    btn.onclick = () => { block.align = a.key; saveProject(activeKey); renderAvatarsBlock(block, mount); };
+    btn.onclick = () => { block.align = a.key; avgSave(block); renderAvatarsBlock(block, mount); };
     toolbar.appendChild(btn);
   });
   const sep = document.createElement('div');
@@ -10488,7 +10448,7 @@ function renderAvatarsBlock(block, mount) {
   addTextBtn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg> Text';
   addTextBtn.onclick = () => {
     block.segments.push({ id: uid(), kind: 'text', content: '' });
-    saveProject(activeKey);
+    avgSave(block);
     renderAvatarsBlock(block, mount);
     const segs = mount.querySelectorAll('.avg-text-seg');
     const last = segs[segs.length - 1];
@@ -10502,7 +10462,7 @@ function renderAvatarsBlock(block, mount) {
   addGroupBtn.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7"/><circle cx="17" cy="8" r="3.2"/></svg> Avatars';
   addGroupBtn.onclick = () => {
     block.segments.push({ id: uid(), kind: 'group', avatars: [] });
-    saveProject(activeKey);
+    avgSave(block);
     renderAvatarsBlock(block, mount);
   };
   toolbar.appendChild(addGroupBtn);
@@ -10520,7 +10480,7 @@ function renderAvatarsBlock(block, mount) {
   });
   mount.appendChild(row);
 
-  if (migrated && activeKey) saveProject(activeKey);
+  if (migrated && activeKey) avgSave(block);
 }
 
 /* ─── Add blocks ───────────────────────────────────────── */
@@ -10550,7 +10510,7 @@ function addDivider() {
   el.classList.add('block-enter');
   list.appendChild(el);
   requestAnimationFrame(() => setBlockRowSpan(el));
-  saveProject(activeKey);
+  avgSave(block);
 }
 
 function addStarDivider() {
@@ -10562,7 +10522,7 @@ function addStarDivider() {
   el.classList.add('block-enter');
   list.appendChild(el);
   requestAnimationFrame(() => setBlockRowSpan(el));
-  saveProject(activeKey);
+  avgSave(block);
 }
 
 function addAvatars() {
