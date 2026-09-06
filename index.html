@@ -492,6 +492,10 @@
       color:#b4a99a; line-height:1.35;
     }
     .pli-year-sep { font-weight:400; opacity:.65; }
+    /* TEST placement — see buildProjectListItem. Same look as .pli-year,
+       just not pinned to the 130px side column since it sits under the
+       full-width media strip instead of beside the title. */
+    .pli-year-test { width:auto; padding-top:0; margin-top:12px; }
     /* Row tools (drag handle, delete) are admin chrome, not part of the
        date — keep them off the date's own line so "2025 – Present" isn't
        competing with "⠿ ×" for the same 130px. */
@@ -6434,6 +6438,21 @@ function buildProjectListItem(card) {
     // measure rather than running against an empty strip.
     _wireStripDragScroll(strip);
     body.appendChild(strip);
+
+    // TEST — placement only: the same date, under the media instead of
+    // above it, so it can be compared against .pli-year up top before
+    // deciding whether to actually move it. Plain text, not wired for
+    // editing (that stays on the original), and its own class rather than
+    // reusing .pli-year-from/-to so it doesn't pick up their edit-mode
+    // dashed-box styling or get caught by saveProjectsListEdits' scan.
+    if (card.year || card.yearEnd) {
+      const yearBottom = document.createElement('div');
+      yearBottom.className = 'pli-year pli-year-test';
+      yearBottom.innerHTML = (card.year ? `<span>${card.year}</span>` : '') +
+        (card.year && card.yearEnd ? '<span class="pli-year-sep">–</span>' : '') +
+        (card.yearEnd ? `<span>${card.yearEnd}</span>` : '');
+      body.appendChild(yearBottom);
+    }
   }
 
   item.appendChild(year);
