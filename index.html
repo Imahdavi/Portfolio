@@ -6407,7 +6407,7 @@ function buildProjectListItem(card) {
 
       applyLink(m.link || '');
 
-      if (cropBlock) wireStripCrop(tile, cropBlock, card.key);
+      if (cropBlock) wireStripCrop(tile, el, cropBlock, card.key);
 
       strip.appendChild(tile);
     });
@@ -6612,7 +6612,7 @@ function wireProjectsListEditing() {
    playing on the browsers this runs on. Saved on the block as
    _listCropRatio, separate from the board page's own layout ratio, since
    the strip usually wants a tighter crop than the block's board frame. */
-function wireStripCrop(tile, block, key) {
+function wireStripCrop(tile, el, block, key) {
   const btn = tile.querySelector('.pli-tile-crop') || (() => {
     const b = document.createElement('button');
     b.className = 'pli-tile-crop';
@@ -6634,8 +6634,25 @@ function wireStripCrop(tile, block, key) {
   menu.addEventListener('pointerdown', e => e.stopPropagation());
 
   const setRatio = (key2) => {
-    if (key2) { block._listCropRatio = key2; tile.style.aspectRatio = CROP_RATIOS[key2]; }
-    else { delete block._listCropRatio; tile.style.aspectRatio = ''; /* falls back to the file's own shape once it (re)loads */ }
+    if (key2) {
+      block._listCropRatio = key2;
+      tile.style.aspectRatio = CROP_RATIOS[key2];
+    } else {
+      delete block._listCropRatio;
+      // Not just clearing the inline style: applyAspect only runs once, on
+      // the media's own load/loadedmetadata, which already fired long
+      // before this menu ever opens. Clearing the style with nothing left
+      // to reapply it dropped the tile back to .pli-tile's placeholder
+      // aspect-ratio (4/3) instead of the file's real one — a portrait
+      // video "defaulting" to a landscape box. Reading the dimensions
+      // straight off the (already-loaded) element is exact regardless of
+      // shape: wide-but-more-so, tall, square, whatever that file actually
+      // is. Only truly falls through to the placeholder if the element
+      // hasn't loaded yet, in which case applyAspect still has its chance.
+      const w = el.videoWidth || el.naturalWidth;
+      const h = el.videoHeight || el.naturalHeight;
+      tile.style.aspectRatio = (w && h) ? (w + ' / ' + h) : '';
+    }
     btn.classList.toggle('has-crop', !!key2);
     menu.querySelectorAll('.pli-crop-opt').forEach(o => o.classList.toggle('active', o.dataset.key === (key2 || '')));
     saveProject(key);
