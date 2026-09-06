@@ -2796,6 +2796,17 @@
        just don't tint it, which the animation itself is lively enough to
        carry. */
     .nav-lottie-icon { width:25px; height:25px; pointer-events:none; }
+    /* The animation's own artwork sits in the middle third-ish of its
+       512x512 composition (room for the burst to travel outward), so at
+       this box size it renders visibly smaller than the neighboring
+       hand-drawn icons, which are cropped tight to their own 24x24 viewBox.
+       Scaling the rendered SVG up (not the box, so nav spacing is
+       untouched) brings it to roughly the same visual weight — measured
+       against the star's own ink bounding box, not guessed. */
+    /* !important: lottie-web sets its own inline transform (a no-op
+       translate3d(0,0,0)) on this svg every frame, which otherwise wins
+       over a plain stylesheet rule regardless of selector weight. */
+    .nav-lottie-icon svg { transform:scale(1.3) !important; transform-origin:50% 50%; }
     body.dark .nav-lottie-icon svg path { stroke:var(--d-text) !important; }
 
     /* ── Nav tooltip ── */
