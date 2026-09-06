@@ -2235,7 +2235,10 @@
     #sound-toggle-btn:active { transform:scale(.86); }
     #sound-toggle-btn svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; display:block; }
     #sound-toggle-btn .icon-on  { display:block; }
-    #sound-toggle-btn .icon-off { display:none; }
+    /* Muted is the same spider mark, faded — a slash across an already
+       fine-lined 22px icon just read as an X, the spider underneath lost
+       entirely. */
+    #sound-toggle-btn .icon-off { display:none; opacity:.35; }
     #sound-toggle-btn.muted .icon-on  { display:none; }
     #sound-toggle-btn.muted .icon-off { display:block; }
     #sound-toggle-btn .nav-tip { bottom:calc(100% + 10px); }
@@ -3458,7 +3461,6 @@ one keyframe at a time</div>
     <path d="M18.6316 4.89478V6.00469C18.6316 6.5072 18.432 6.98914 18.0766 7.34447L13.8947 11.5264"/>
     <path d="M13.0728 7.98737C13.2134 7.7371 13.4101 7.0521 13.0728 6.31421"/>
     <path d="M10.9272 7.98737C10.7866 7.7371 10.5899 7.0521 10.9272 6.31421"/>
-    <line x1="2.5" y1="2.5" x2="21.5" y2="21.5" stroke-width="2.6"/>
   </svg>
   </button>
   <div id="emojiburst-mount" aria-hidden="false"></div>
