@@ -657,8 +657,11 @@
     #view-home.home-edit .pli-tile:hover .pli-tile-crop { display:flex; }
     .pli-tile-crop.active, .pli-tile-crop.has-crop { display:flex; background:#2563EB; }
 
+    /* Fixed and body-appended, not absolute inside the tile — .pli-tile
+       clips overflow (for the crop itself), which was clipping this too
+       and leaving it all but invisible. Same pattern as .move-menu. */
     .pli-crop-menu {
-      position:absolute; bottom:28px; left:5px; z-index:6;
+      position:fixed; z-index:1000;
       background:rgba(26,23,20,.93); border-radius:10px;
       padding:5px; display:none; flex-direction:column; gap:1px;
       min-width:100px; box-shadow:0 8px 24px rgba(0,0,0,.3);
@@ -6624,6 +6627,10 @@ function wireStripCrop(tile, block, key) {
 
   const menu = document.createElement('div');
   menu.className = 'pli-crop-menu';
+  // Tags the menu back to its tile's block — dropTileFromStrip reads this
+  // to clean up the body-appended menu when its tile is removed in place,
+  // outside a full renderHomeSections rebuild.
+  menu.dataset.blockId = block.id;
   menu.addEventListener('pointerdown', e => e.stopPropagation());
 
   const setRatio = (key2) => {
@@ -6650,12 +6657,31 @@ function wireStripCrop(tile, block, key) {
   resetOpt.textContent = 'Original';
   resetOpt.addEventListener('click', (e) => { e.stopPropagation(); setRatio(null); menu.classList.remove('open'); });
   menu.appendChild(resetOpt);
-  tile.appendChild(menu);
+  // Body, not the tile: .pli-tile clips overflow (that's what makes its own
+  // crop work), which was clipping this menu down to a barely-visible
+  // sliver. Positioned like .move-menu — measured hidden, then placed
+  // against the button's real rect, flipped above it if there's no room
+  // below.
+  document.body.appendChild(menu);
 
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     document.querySelectorAll('.pli-crop-menu.open').forEach(m => { if (m !== menu) m.classList.remove('open'); });
-    menu.classList.toggle('open');
+    const willOpen = !menu.classList.contains('open');
+    menu.classList.remove('open');
+    if (!willOpen) return;
+    menu.style.visibility = 'hidden';
+    menu.classList.add('open');
+    const r = btn.getBoundingClientRect();
+    const mh = menu.offsetHeight, mw = menu.offsetWidth;
+    let top = r.top - mh - 6;
+    if (top < 8) top = r.bottom + 6;
+    let left = r.left;
+    if (left + mw > window.innerWidth - 8) left = window.innerWidth - 8 - mw;
+    if (left < 8) left = 8;
+    menu.style.top = top + 'px';
+    menu.style.left = left + 'px';
+    menu.style.visibility = '';
   });
 }
 
@@ -6793,7 +6819,14 @@ function dropTileFromStrip(key, src) {
   if (!row) return false;
   const tiles = [...row.querySelectorAll('.pli-tile')].filter(t => t.dataset.src === src);
   if (!tiles.length) return false;
-  tiles.forEach(t => t.remove());
+  // Each tile's crop popover lives on <body> (see wireStripCrop), so
+  // removing the tile alone would leave it behind.
+  tiles.forEach(t => {
+    if (t.dataset.blockId) {
+      document.querySelectorAll(`.pli-crop-menu[data-block-id="${t.dataset.blockId}"]`).forEach(m => m.remove());
+    }
+    t.remove();
+  });
   return true;
 }
 
@@ -7254,6 +7287,10 @@ function renderHomeSections(sections) {
   // before the DOM goes, or switching views leaves them running forever.
   _teardownStripDrivers();
   container.innerHTML = '';
+  // wireStripCrop's ratio popover lives on <body> (see there for why), so
+  // clearing the container above doesn't reach it — without this, every
+  // rebuild left the previous render's menus behind.
+  document.querySelectorAll('.pli-crop-menu').forEach(m => m.remove());
 
   // PROJECTS metadata has to stay in sync regardless of which view renders,
   // so this runs over every card even when the list view only shows three.
