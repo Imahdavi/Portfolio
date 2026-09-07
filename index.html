@@ -798,9 +798,13 @@
       width:20px; height:20px; border-radius:50%;
       background:rgba(0,0,0,.55); color:#fff; font-size:11px; line-height:1;
       align-items:center; justify-content:center;
-      opacity:.85; transition:opacity .2s, background .2s; pointer-events:none;
+      opacity:.85; transition:opacity .2s, background .2s;
+      /* It is an anchor now, so it has to be clickable in its own right —
+         that is the whole point of it being one. */
+      pointer-events:auto; text-decoration:none;
     }
     .pli-tile[data-link] .pli-tile-go { display:flex; }
+    .pli-tile-go:focus-visible { outline:2px solid #3b82f6; outline-offset:2px; }
     .pli-tile[data-link]:hover .pli-tile-go { opacity:1; background:rgba(0,0,0,.78); }
     .pli-tile[data-link]:focus-visible { outline:2px solid #3b82f6; outline-offset:2px; }
     /* The arrow is an editing target's neighbour in edit mode, where the
@@ -7697,10 +7701,22 @@ function buildProjectListItem(card) {
       // A tile with a link behaves like a grid card: the image is the
       // control. The corner arrow is what makes that discoverable — without
       // it a linked tile looks identical to a plain one.
-      const arrow = document.createElement('span');
+      /* A real anchor, as the grid's own media link button is, rather than
+         a decoration over a scripted window.open. That call is only
+         allowed while the browser still counts the click as a gesture,
+         and it loses that through the travel check and the popover — so
+         the arrow looked live and did nothing. An href also brings back
+         what a link is supposed to do: middle-click, open in new tab,
+         copy address, and a status bar that shows where it goes. */
+      const arrow = document.createElement('a');
       arrow.className = 'pli-tile-go';
-      arrow.setAttribute('aria-hidden', 'true');
+      arrow.target = '_blank';
+      arrow.rel = 'noopener noreferrer';
       arrow.textContent = '↗';
+      // The tile behind it opens the same link; without this the arrow
+      // would fire both.
+      arrow.addEventListener('click', e => e.stopPropagation());
+      arrow.addEventListener('pointerdown', e => e.stopPropagation()); // not a reorder drag
       tile.appendChild(arrow);
 
       // Edit-mode link control. Declared before applyLink because that
@@ -7711,8 +7727,14 @@ function buildProjectListItem(card) {
       linkBtn.textContent = '🔗';
 
       const applyLink = (url) => {
+        const safe = normalizeListLink(url);
         if (url) { tile.dataset.link = url; tile.setAttribute('role', 'link'); tile.tabIndex = 0; }
         else { delete tile.dataset.link; tile.removeAttribute('role'); tile.removeAttribute('tabindex'); }
+        // The arrow carries the resolved href — normalizeListLink is what
+        // turns a bare domain into a URL and refuses anything that is not
+        // http(s) or site-relative.
+        if (safe) arrow.href = safe; else arrow.removeAttribute('href');
+        arrow.title = safe || '';
         linkBtn.classList.toggle('has-link', !!url);
         linkBtn.title = url ? 'Linked to ' + url + ' — click to change' : 'Add a link';
         tile.title = (typeof editMode !== 'undefined' && editMode) ? '' : (url || '');
