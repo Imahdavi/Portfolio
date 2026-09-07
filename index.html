@@ -669,9 +669,15 @@
        only so the site-width slider cannot stretch a line past what is
        comfortable to read — at 700px the row is ~75ch and the cap never
        applies; at 900px it does. */
-    .pli-desc { font-family:var(--font-body); font-size:13.5px; line-height:1.55; color:#5a5148; margin:18px 0 16px; max-width:min(100%, 78ch); }
+    .pli-desc { font-family:var(--font-body); font-size:13.5px; line-height:1.55; color:#5a5148; margin:18px 0 0; max-width:min(100%, 78ch); }
     .pli-media-strip {
       display:flex; gap:10px; height:170px; overflow-x:auto; scrollbar-width:none;
+      /* The gap above the strip belongs to the strip, not to whatever
+         happens to sit above it. It used to come from .pli-desc's bottom
+         margin, so a row with no description — .pli-category and
+         .pli-desc both collapse when empty — had its media butting
+         straight up against the title. */
+      margin-top:16px;
       margin-inline:-4px; padding-inline:4px;
       cursor:grab; scroll-behavior:auto;
     }
