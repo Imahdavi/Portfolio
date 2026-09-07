@@ -12708,9 +12708,26 @@ function positionSiteSpider(animate, anchorOnly) {
   spider.style.top = (mAnchorY - wrapRect.top) + 'px';
   if (anchorOnly) return;
 
+  /* Where the thread stops, short of .contact-row's top edge.
+
+     There is no gap that actually fits the spider: the tagline ends
+     18px above the social dock and the spider is 22px tall, so it has
+     to sit on one or the other. Clearing the words wins, and this gap
+     puts its head just below the tagline with its feet over the dock's
+     top padding — reading as standing on the row rather than lying on
+     the text.
+
+     Measured in layout coordinates, not rects. .contact-row sits
+     outside .profile-header-wrap, and profileIn translates the wrap
+     10px on entry — so a rect-to-rect distance moves the M without
+     moving the row, and the answer depended on which frame this ran
+     on. Layout offsets ignore transforms, and both elements share an
+     offsetParent, so this measures the same whenever it is asked. */
+  const SPIDER_ROW_GAP = 7;
   const contactRow = document.querySelector('.contact-row');
-  const targetLen = contactRow
-    ? Math.max(30, contactRow.getBoundingClientRect().top - mAnchorY - 6)
+  const anchorInWrap = mAnchorY - wrapRect.top;
+  const targetLen = (contactRow && contactRow.offsetParent === wrap.offsetParent)
+    ? Math.max(30, contactRow.offsetTop - wrap.offsetTop - anchorInWrap - SPIDER_ROW_GAP)
     : 30;
 
   if (animate && !_spiderEntranceDone) {
@@ -12718,6 +12735,10 @@ function positionSiteSpider(animate, anchorOnly) {
     animateSpiderThreadIn(targetLen);
   } else {
     _spiderThreadLen = targetLen;
+    // Every reposition recomputes targetLen from the proxies, so the
+    // correction has to be reapplied here too — otherwise re-entering
+    // the home view puts the spider straight back on the tagline.
+    clearSpiderOffTagline();
   }
 }
 
@@ -12727,6 +12748,46 @@ function positionSiteSpider(animate, anchorOnly) {
 // _spiderThreadLen every single frame regardless of why it changed, so
 // tweening this one value is all "the thread grows down and the body
 // rides at its end" needs — no separate animation system for it.
+/* The last word on how far down the spider hangs.
+
+   Everything that computes the thread length does it from proxies — the
+   M's baseline inside its glyph box, the contact row's offset — and each
+   of those moves under a font swap or the header's entrance transform.
+   Chasing them with constants kept landing the spider a few pixels onto
+   the tagline or a few pixels onto the dock, differing between loads.
+
+   So this measures the thing that actually matters, once, after it has
+   settled: the spider's own body against the tagline's bottom edge, and
+   lets out however much thread is missing. It only ever lengthens, so it
+   cannot pull the spider back up onto the words, and calling it again
+   after it has cleared does nothing. */
+const SPIDER_TEXT_CLEARANCE = 3;
+let _spiderClearRaf = 0;
+function clearSpiderOffTagline() {
+  /* Deferred, and coalesced to one pending correction.
+
+     The body's rect only catches up with _spiderThreadLen when the
+     pendulum tick next paints, so measuring straight after assigning it
+     reads the previous position — which made each call add the same
+     shortfall again and walked the spider off the bottom of the header.
+     Two frames puts this after the tick regardless of which rAF ran
+     first, and the guard means a burst of repositions still produces a
+     single measurement. */
+  if (_spiderClearRaf) return;
+  _spiderClearRaf = requestAnimationFrame(() => requestAnimationFrame(() => {
+    _spiderClearRaf = 0;
+    const body = document.querySelector('.site-spider .spider-body');
+    const role = document.querySelector('.profile-role');
+    if (!body || !role) return;
+    const b = body.getBoundingClientRect(), r = role.getBoundingClientRect();
+    if (!b.height || !r.height) return;         // hidden view
+    // Both sit inside .profile-header-wrap, so this distance is immune
+    // to the entrance transform that moves the wrap as a whole.
+    const short = (r.bottom + SPIDER_TEXT_CLEARANCE) - b.top;
+    if (short > 0) _spiderThreadLen += short;
+  }));
+}
+
 function animateSpiderThreadIn(targetLen) {
   const duration = 700;
   const start = performance.now();
@@ -12735,7 +12796,7 @@ function animateSpiderThreadIn(targetLen) {
     const eased = 1 - Math.pow(1 - p, 3);
     _spiderThreadLen = targetLen * eased;
     if (p < 1) requestAnimationFrame(step);
-    else _spiderThreadLen = targetLen;
+    else { _spiderThreadLen = targetLen; clearSpiderOffTagline(); }
   }
   requestAnimationFrame(step);
 }
@@ -12754,6 +12815,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // below, which fixes that plus every other way this measurement can go
   // stale (a resize mid-animation, a name edit, anything) instead of
   // chasing each one with its own one-off trigger here.
+
+  // With one exception that tick cannot cover. It re-syncs with
+  // anchorOnly, which reuses the cached baseline fraction and returns
+  // before the thread length — so both of the numbers that decide how
+  // far down the spider hangs stay frozen at whatever the fallback font
+  // measured, and the swap moves the M's baseline inside its box. That
+  // was leaving the spider ~11px high, across the tagline. Drop the
+  // cached fraction and re-measure in full once the fonts have landed.
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => {
+      _mBaselineFrac = null;
+      positionSiteSpider(false);
+      requestAnimationFrame(clearSpiderOffTagline);
+    });
+  }
 });
 
 /* ── Site spider pendulum physics ──────────────────────────
