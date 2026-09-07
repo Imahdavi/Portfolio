@@ -4968,6 +4968,8 @@ const UI_SOUND_MAP = [
   { sel: '#sound-toggle-btn', hover: 'tick', click: null      },
   { sel: '#bg-toggle-btn',    hover: 'tick', click: 'toggle'  },
   { sel: '.nav-btn',          hover: 'tick', click: 'scan'    },
+  // The Grid/Projects switch. A tab, so it clacks like one.
+  { sel: '.hvt-opt',          hover: 'tick', click: 'toggle'  },
   { sel: '.social-btn',       hover: 'tick', click: 'pulse'   },
   // Both are "take me out of here" controls rather than destinations, so
   // they get the nav's own tick instead of a sound of their own.
@@ -4979,6 +4981,14 @@ const UI_SOUND_MAP = [
   { sel: '.proj-card',        hover: null,      click: 'chime'   },
   { sel: '.proj-list-item',   hover: null,      click: 'chime'   },
 ];
+
+/* Places where a press is the start of a drag rather than a choice, so
+   nothing here should speak. The filmstrip inside a Projects-list row is
+   scrolled by dragging it, and it sits inside .proj-list-item — which
+   means without this it borrowed the row's chime and rang on every
+   sideways scroll. Checked before the map, so it wins over any row or
+   card rule that happens to contain it. */
+const UI_SOUND_MUTE = '.pli-media-strip';
 // Matches Cuelume's own bind(): one hover sound per 150ms across the
 // whole page, so sweeping the cursor along the nav row is a few ticks
 // rather than a machine-gun.
@@ -4995,6 +5005,7 @@ const UI_SOUND_HOVER_GAP = 150;
 
   function entryFor(target) {
     if (!(target instanceof Element)) return null;
+    if (target.closest(UI_SOUND_MUTE)) return null;
     for (const entry of UI_SOUND_MAP) {
       if (target.closest(entry.sel)) return entry;
     }
