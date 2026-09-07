@@ -106,6 +106,13 @@
       display:flex; flex-direction:column; align-items:center;
       margin:0 0 18px; padding-top:36px;
       animation:profileIn .5s ease both;
+      /* profileIn animates opacity and transform with fill-mode both, so
+         this element is a permanent stacking context — which trapped the
+         spider inside it and let the social dock, later in the DOM, paint
+         over the spider no matter how high its own z-index went. Lifting
+         the whole context is the fix; the spider is the only thing in here
+         that overhangs anything below. */
+      z-index:2;
     }
     /* Little spider that hangs permanently from a thread above the
        name — no drop/retract cycle, it just stays down. Anchored to
@@ -326,39 +333,39 @@
        a tooltip above. That is what lets the tray stay this compact. */
     .social-dock {
       position:relative; display:inline-flex; align-items:center; gap:2px;
-      padding:6px; border-radius:16px;
+      padding:4px; border-radius:13px;
       background:#f0eee9; border:0.5px solid rgba(0,0,0,.07);
     }
     /* A top-down sheen, so the tray reads as a raised surface and not a
        flat swatch. Non-interactive so it never eats a click. */
     .social-dock::before {
-      content:''; position:absolute; inset:0; border-radius:16px;
+      content:''; position:absolute; inset:0; border-radius:13px;
       background:linear-gradient(to bottom, rgba(255,255,255,.5), transparent);
       pointer-events:none;
     }
 
     .social-btn {
       position:relative; display:flex; align-items:center; justify-content:center;
-      width:40px; height:40px; border-radius:12px;
+      width:34px; height:34px; border-radius:10px;
       color:#9a938c; text-decoration:none;
       transition:color .3s ease-out;
     }
     /* The hover plate. Inset by 4px so it reads as a key on a keyboard
        rather than the whole cell filling in. */
     .social-btn::before {
-      content:''; position:absolute; inset:4px; border-radius:8px;
+      content:''; position:absolute; inset:3px; border-radius:7px;
       background:rgba(0,0,0,.07);
       opacity:0; transform:scale(.9);
       transition:opacity .3s ease-out, transform .3s ease-out;
     }
     .social-btn::after {
-      content:''; position:absolute; bottom:6px; left:50%;
+      content:''; position:absolute; bottom:5px; left:50%;
       width:0; height:2px; border-radius:2px; background:#3a3430;
       transform:translateX(-50%); opacity:0;
       transition:width .3s ease-out, opacity .3s ease-out;
     }
     .social-btn:hover::before { opacity:1; transform:scale(1); }
-    .social-btn:hover::after  { width:12px; opacity:1; }
+    .social-btn:hover::after  { width:10px; opacity:1; }
     .social-btn:hover { color:#2b2724; }
     .social-btn:active { transform:scale(.94); }
 
@@ -367,7 +374,7 @@
        squash them. Auto width keeps every one at its own proportion. */
     .social-btn svg {
       position:relative; z-index:1;
-      height:15px; width:auto; display:block;
+      height:14px; width:auto; display:block;
       fill:currentColor; stroke:none;
       transition:transform .3s ease-out;
     }
@@ -11605,6 +11612,26 @@ let _spiderEntranceDone = false;
 // pendulum tick's periodic re-sync so it can keep the spider glued to
 // the M (cheap, no visible effect either way) without also stomping
 // _spiderThreadLen mid-tween and cutting the entrance animation short.
+
+// Where the text baseline sits inside a span's bounding box, as a
+// fraction of its height. Measured by parking a zero-height
+// inline-block inside the span: vertical-align:baseline puts its
+// bottom margin edge on the baseline, and with no height its top
+// reports the same y. Cached, since re-measuring means a DOM write
+// plus a forced layout and the answer only moves when the font does.
+let _mBaselineFrac = null;
+function mBaselineFrac(span, rect, useCache) {
+  if (useCache && _mBaselineFrac != null) return _mBaselineFrac;
+  if (!rect.height) return _mBaselineFrac != null ? _mBaselineFrac : 0.6;
+  const probe = document.createElement('span');
+  probe.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline';
+  span.appendChild(probe);
+  const y = probe.getBoundingClientRect().top;
+  probe.remove();
+  _mBaselineFrac = (y - rect.top) / rect.height;
+  return _mBaselineFrac;
+}
+
 function positionSiteSpider(animate, anchorOnly) {
   const spider = document.querySelector('.site-spider');
   const wrap = document.querySelector('.profile-header-wrap');
@@ -11618,12 +11645,25 @@ function positionSiteSpider(animate, anchorOnly) {
   const wrapRect = wrap.getBoundingClientRect();
   spider.style.left = (mRect.left + mRect.width / 2 - wrapRect.left) + 'px';
   spider.style.marginLeft = '-10px';
-  spider.style.top = (mRect.top - wrapRect.top) + 'px';
+  /* The thread leaves the M at its baseline. mRect is the span's line
+     box, whose top sits well above the cap and whose bottom sits below
+     it in the descender space, so anchoring at either end left the
+     thread starting in the air near the letter rather than on it.
+
+     The baseline's position inside that box is measured rather than
+     guessed at some fraction: it fell at 0.60 of the box here, but that
+     ratio is a property of the font and of whatever the name reveal is
+     doing to the letters, neither of which is fixed. A zero-height
+     inline-block aligned to the baseline reports its top exactly there.
+     The ratio is cached so the pendulum tick's periodic anchorOnly
+     re-sync doesn't touch the DOM. */
+  const mAnchorY = mRect.top + mRect.height * mBaselineFrac(mSpan, mRect, anchorOnly);
+  spider.style.top = (mAnchorY - wrapRect.top) + 'px';
   if (anchorOnly) return;
 
   const contactRow = document.querySelector('.contact-row');
   const targetLen = contactRow
-    ? Math.max(30, contactRow.getBoundingClientRect().top - mRect.top - 6)
+    ? Math.max(30, contactRow.getBoundingClientRect().top - mAnchorY - 6)
     : 30;
 
   if (animate && !_spiderEntranceDone) {
