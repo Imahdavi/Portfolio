@@ -650,6 +650,16 @@
       position:relative; height:100%; aspect-ratio:4 / 3; flex-shrink:0;
       border-radius:12px; overflow:hidden; background:#e8e0d8;
     }
+    /* Same hairline as the grid thumbs. It matters more here: the strip
+       runs edge to edge with no gap ruling between tiles, so a clip that
+       ends in white ran straight into both the page and its neighbour.
+       On its own layer above the media, and out of the pointer's way so
+       it never interferes with dragging the strip. */
+    .pli-tile::after {
+      content:''; position:absolute; inset:0; z-index:2; pointer-events:none;
+      border-radius:inherit;
+      box-shadow:inset 0 0 0 1px var(--media-hairline, rgba(0,0,0,.07));
+    }
     /* No will-change here on purpose. Promoting the media to its own
        compositing layer means it's rasterised once and then resampled by
        the GPU for every fractional offset, which reads as a soft blur
@@ -1081,9 +1091,16 @@
        light mode that read as a faint smudge and went unnoticed; against
        the dark theme it was an obvious black band.
        ::after on the thumb is already the cobweb, hence ::before. */
+    /* Doubles as the media hairline. A lot of this work is white on
+       white — a logo on a white sleeve, against a near-white page — and
+       with nothing between them the artwork has no edge at all. An inset
+       ring rather than a border, so it sits over the media instead of
+       adding a pixel to the box and shifting the grid. */
     .proj-thumb::before {
       content:''; position:absolute; inset:0; z-index:2;
       background:rgba(255,255,255,0); pointer-events:none;
+      border-radius:inherit;
+      box-shadow:inset 0 0 0 1px var(--media-hairline, rgba(0,0,0,.07));
       transition:background .25s;
     }
     .card-grid:has(.proj-card:hover) .proj-card:not(:hover) .proj-thumb::before {
@@ -2428,6 +2445,15 @@
       -webkit-mask-image:-webkit-radial-gradient(circle, #fff, #000);
       -webkit-backface-visibility:hidden; backface-visibility:hidden;
     }
+    /* The same media hairline the grid thumbs and the list tiles carry.
+       Board media runs full width against the page, so a clip that ends
+       in white — a logo animation on a white sleeve — had no edge at all
+       and its rounded corners were the only thing suggesting one. */
+    .media-wrap .media-inner::after {
+      content:''; position:absolute; inset:0; z-index:2; pointer-events:none;
+      border-radius:inherit;
+      box-shadow:inset 0 0 0 1px var(--media-hairline, rgba(0,0,0,.07));
+    }
     .media-wrap img, .media-wrap video {
       width:100%; height:100%; object-fit:cover; display:block; pointer-events:none;
     }
@@ -2939,6 +2965,10 @@
       --d-line:rgba(255,255,255,.10);
       --d-line-2:rgba(255,255,255,.18);
       --thumb-a:#2b2d2f; --thumb-b:#202224;
+      /* The media hairline flips with the page: a dark ring is invisible
+         here, and what needs separating is the dark artwork rather than
+         the white. */
+      --media-hairline:rgba(255,255,255,.10);
       background:var(--d-bg); color:var(--d-text);
     }
     body.dark .view { background:var(--d-bg); }
