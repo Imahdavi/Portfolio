@@ -586,6 +586,15 @@
       color:#1a1a1a;
     }
     .hvt-opt:focus-visible { outline:2px solid #1a1a1a; outline-offset:2px; }
+    /* The view is live but still settling, so the pill says so. Baseline
+       rather than true superscript — <sup> would lift it off the pill's
+       optical centre and unbalance a control this small. */
+    .hvt-beta {
+      vertical-align:baseline; margin-left:5px;
+      font-size:8.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+      opacity:.55;
+    }
+    .hvt-opt.active .hvt-beta { opacity:.6; }
 
     @media (prefers-reduced-motion:reduce) {
       .home-view-toggle, .hvt-opt { transition-duration:.01ms; }
@@ -1065,6 +1074,70 @@
     }
     #view-home.home-edit .pli-add-row { display:block; }
     .pli-add-row:hover { border-color:rgba(0,0,0,.38); color:#5a5148; background:rgba(0,0,0,.02); }
+
+    /* Edit-mode toolbar under the list. Hidden with the rest of the edit
+       chrome; laid out as a row so Reorder and Add sit side by side
+       rather than stacking two full-width dashed blocks. */
+    .pli-edit-bar { display:none; gap:8px; margin-top:6px; }
+    #view-home.home-edit .pli-edit-bar { display:flex; }
+    #view-home.home-edit .pli-add-row { flex:1 1 auto; margin-top:0; }
+    .pli-reorder-btn {
+      flex:0 0 auto; padding:11px 16px;
+      border:1.5px dashed rgba(0,0,0,.2); border-radius:12px;
+      background:none; cursor:pointer; color:#8a8178;
+      font-family:var(--font-body); font-size:13px; font-weight:600;
+      white-space:nowrap;
+    }
+    .pli-reorder-btn:hover { border-color:rgba(0,0,0,.38); color:#5a5148; background:rgba(0,0,0,.02); }
+    .pli-reorder-btn.active {
+      border-style:solid; border-color:#1a1a1a; background:#1a1a1a; color:#fff;
+    }
+
+    /* ── Reorder mode ──────────────────────────────────────
+       Everything that makes a row tall is taken out, leaving the title
+       and its grip. Collapsed by display:none rather than by rendering a
+       different list, so the rows keep their identity, their dataset.key
+       and their drag handles — the reorder logic and its save path never
+       learn this mode exists.
+
+       display:none on the strip also stops its videos: the loader adds
+       them on intersection, and a hidden element never intersects. */
+    .projects-list.pli-compact .pli-category,
+    .projects-list.pli-compact .pli-desc,
+    .projects-list.pli-compact .pli-media-strip,
+    .projects-list.pli-compact .pli-meta-row,
+    .projects-list.pli-compact .pli-strip-tools,
+    .projects-list.pli-compact .pli-add-tile { display:none !important; }
+
+    .projects-list.pli-compact .proj-list-item {
+      display:flex; align-items:center; gap:10px;
+      margin:0 0 6px; padding:9px 12px;
+      border:1px solid rgba(0,0,0,.10); border-radius:10px;
+      background:#faf8f5;
+      /* The whole bar is the grip in this mode, so say so — and stop the
+         drag from turning into a text selection. */
+      cursor:grab; user-select:none;
+    }
+    .projects-list.pli-compact .proj-list-item:active { cursor:grabbing; }
+    .projects-list.pli-compact .proj-list-item:hover { border-color:rgba(0,0,0,.22); background:#fff; }
+    .projects-list.pli-compact .pli-body { display:flex; align-items:center; }
+    .projects-list.pli-compact .pli-title { font-size:14px; }
+    .projects-list.pli-compact .pli-rail { padding-top:0; }
+    .projects-list.pli-compact .pli-row-tools { margin-top:0; }
+    /* Titles are contenteditable in edit mode; here the row is a handle,
+       so typing into it would fight the drag. */
+    .projects-list.pli-compact [contenteditable] { pointer-events:none; }
+    .projects-list.pli-compact .pli-row-dragging { opacity:.5; }
+
+    body.dark .pli-reorder-btn { border-color:var(--d-line-2); color:var(--d-text-3); }
+    body.dark .pli-reorder-btn:hover { border-color:rgba(255,255,255,.35); color:var(--d-text); background:rgba(255,255,255,.04); }
+    body.dark .pli-reorder-btn.active { background:var(--d-text); border-color:var(--d-text); color:var(--d-bg); }
+    body.dark .projects-list.pli-compact .proj-list-item {
+      border-color:var(--d-line); background:var(--d-surface);
+    }
+    body.dark .projects-list.pli-compact .proj-list-item:hover {
+      border-color:var(--d-line-2); background:var(--d-raised);
+    }
 
     /* This view edits in place rather than through the grid's cards, so
        its three fields get the dashed affordance directly (see
@@ -3712,7 +3785,7 @@ one keyframe at a time</div>
 
     <div class="home-view-toggle" id="homeViewToggle">
       <button class="hvt-opt active" data-view="grid" onclick="setHomeView('grid')">Grid</button>
-      <button class="hvt-opt" data-view="list" onclick="setHomeView('list')">Projects</button>
+      <button class="hvt-opt" data-view="list" onclick="setHomeView('list')">Projects<sup class="hvt-beta">beta</sup></button>
     </div>
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
     <div id="home-sections" style="opacity:0;transition:opacity .3s ease"></div>
@@ -7754,7 +7827,11 @@ function wireRowReorder(listEl) {
 
   listEl.addEventListener('pointerdown', (e) => {
     if (!(typeof editMode !== 'undefined' && editMode)) return;
-    if (!e.target.closest('.pli-row-handle')) return;   // grip only
+    // Normally the small grip only, so a press anywhere else can still
+    // reach the inline text and the strip. Reorder mode has neither, and
+    // the whole bar is the grip — aiming at a 14px handle is exactly the
+    // fiddliness that mode exists to remove.
+    if (!listEl.classList.contains('pli-compact') && !e.target.closest('.pli-row-handle')) return;
     dragRow = e.target.closest('.proj-list-item');
     if (!dragRow) return;
     dragRow.classList.add('pli-row-dragging');
@@ -8720,14 +8797,35 @@ function renderHomeSections(sections) {
     });
     container.appendChild(row);
 
-    // Edit-mode only (hidden by CSS otherwise) — adds a board that isn't
-    // in the list yet.
+    /* Edit-mode only (hidden by CSS otherwise). Reorder collapses every
+       row to its title, which makes putting twenty-odd boards in order a
+       matter of dragging short bars instead of scrolling past a
+       full-height write-up and a filmstrip between each move. It is a
+       class on the list, not a separate render: the rows and their drag
+       handles are the same elements, so the existing reorder and its
+       save path work untouched. */
+    const bar = document.createElement('div');
+    bar.className = 'pli-edit-bar';
+
+    const reorder = document.createElement('button');
+    reorder.className = 'pli-reorder-btn';
+    reorder.type = 'button';
+    reorder.textContent = '⇅ Reorder';
+    reorder.addEventListener('click', () => {
+      const on = row.classList.toggle('pli-compact');
+      reorder.classList.toggle('active', on);
+      reorder.textContent = on ? '✓ Done' : '⇅ Reorder';
+    });
+    bar.appendChild(reorder);
+
     const addRow = document.createElement('button');
     addRow.className = 'pli-add-row';
     addRow.type = 'button';
     addRow.textContent = '+ Add project';
     addRow.addEventListener('click', openProjectRowPicker);
-    container.appendChild(addRow);
+    bar.appendChild(addRow);
+
+    container.appendChild(bar);
 
     requestAnimationFrame(() => {
       container.style.opacity = '1';
