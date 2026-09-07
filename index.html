@@ -504,25 +504,74 @@
        renderHomeSections() also refuses to render it unless
        body.is-admin, in case homeView ever ends up 'list' for a
        non-admin session). ── */
+    /* ── Stacking navbar, ported from 21st.dev's "Stacking Navbar"
+       (@ln-dev7). The source animates each item with Framer Motion —
+       x: expanded ? 0 : -100 * index, a spring, and 0.1s of delay per
+       index. There is no Framer here, so the same shape is CSS: each
+       item carries its own --hvt-dx and --hvt-delay, and the hover
+       state resets every dx to zero. The overshoot curve is the one
+       already used elsewhere in this file, which is close to what the
+       source's spring lands on.
+
+       Two deliberate departures from the source.
+
+       The source shifts every item by a flat -100px. That works for its
+       three same-length labels; "Grid" and "Projects" are different
+       widths, so the offsets are measured instead (see
+       layoutHomeViewToggle) and each item collapses exactly onto the
+       first, offset by HVT_PEEK so the stack reads as a stack rather
+       than as one pill.
+
+       And the source stacks by DOM order (z-index: 100 - index). This
+       control reports which view you are in, so the active item is the
+       one on top — collapsed, the label you see is the view you are
+       looking at. Stacking by DOM order would hide that. */
     .home-view-toggle { display:none; }
     body.is-admin .home-view-toggle {
-      position:relative; display:inline-flex; margin:4px auto 28px;
-      padding:3px; border-radius:999px; background:rgba(0,0,0,.05);
-      gap:2px;
+      position:relative;
+      display:flex; flex-wrap:nowrap; gap:8px;
+      margin:4px auto 28px;
+      /* Collapsed, the box is only as wide as the stack, so the whole
+         control stays centred; the items overflow it and are pulled
+         back by their own transforms. flex:0 0 auto on the items keeps
+         that narrow box from squeezing them. */
+      width:var(--hvt-stack-w, auto);
+      transition:width .55s cubic-bezier(.34,1.4,.64,1);
     }
-    .hvt-highlight {
-      position:absolute; top:3px; left:3px; height:calc(100% - 6px);
-      width:var(--hvt-w, 50%); transform:translateX(var(--hvt-x, 0px));
-      background:#fff; border-radius:999px;
-      box-shadow:0 1px 4px rgba(0,0,0,.15);
-      transition:transform .32s cubic-bezier(.34,1.56,.64,1), width .32s cubic-bezier(.34,1.56,.64,1);
+    /* :has(:focus-visible) rather than :focus-within, so a keyboard tab
+       into the control opens it but a mouse click does not leave it
+       stuck open — clicking a button focuses it, and :focus-within would
+       then hold the fan out until something else was clicked. */
+    body.is-admin .home-view-toggle:hover,
+    body.is-admin .home-view-toggle:has(:focus-visible) {
+      width:var(--hvt-full-w, auto);
     }
     .hvt-opt {
-      position:relative; z-index:1; border:none; background:none; cursor:pointer;
-      padding:7px 16px; font-size:12.5px; font-weight:600; color:#999;
-      border-radius:999px; transition:color .2s; white-space:nowrap;
+      flex:0 0 auto;
+      position:relative;
+      z-index:calc(10 - var(--hvt-i, 0));
+      border:none; cursor:pointer;
+      padding:7px 16px; font-size:12.5px; font-weight:600;
+      border-radius:999px; white-space:nowrap;
+      color:#5a5450;
+      background:rgba(176,170,170,.16);
+      -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+      transform:translateX(var(--hvt-dx, 0px));
+      transition:transform .55s cubic-bezier(.34,1.4,.64,1) var(--hvt-delay, 0s),
+                 background-color .3s ease, color .3s ease;
     }
-    .hvt-opt.active { color:#1a1a1a; }
+    .home-view-toggle:hover .hvt-opt,
+    .home-view-toggle:has(:focus-visible) .hvt-opt { transform:translateX(0); }
+    /* Top of the stack, and the only filled pill — so the collapsed
+       control still answers "which view is this?". */
+    .hvt-opt.active { z-index:20; background:#1a1a1a; color:#fff; }
+    .hvt-opt:not(.active):hover { background:rgba(0,0,0,.14); color:#1a1a1a; }
+    .hvt-opt:focus-visible { outline:2px solid #1a1a1a; outline-offset:2px; }
+
+    @media (prefers-reduced-motion:reduce) {
+      body.is-admin .home-view-toggle, .hvt-opt { transition-duration:.01ms; }
+      .hvt-opt { --hvt-delay:0s; }
+    }
 
     /* ── Projects list — an alternate write-up-style view of the same
        cards: year, title, category line, a short description, and a
@@ -2756,8 +2805,15 @@
 
     /* Type tiers */
     body.dark .proj-title, body.dark .tool-name, body.dark .exp-title,
-    body.dark .block-text, body.dark .pli-title, body.dark .hvt-opt.active,
+    body.dark .block-text, body.dark .pli-title,
     body.dark .nav-btn.active { color:var(--d-text); }
+
+    /* View toggle — the active pill is a filled chip rather than tinted
+       text, so it inverts here instead of joining the type tiers above. */
+    body.dark .hvt-opt { background:rgba(255,255,255,.08); color:var(--d-text-2); }
+    body.dark .hvt-opt.active { background:var(--d-text); color:var(--d-bg); }
+    body.dark .hvt-opt:not(.active):hover { background:rgba(255,255,255,.16); color:var(--d-text); }
+    body.dark .hvt-opt:focus-visible { outline-color:var(--d-text); }
     body.dark .profile-role, body.dark .exp-role, body.dark .pli-desc,
     body.dark .tools-bulk-count, body.dark .nav-color-hex,
     body.dark .mp-project-name-only { color:var(--d-text-2); }
@@ -3439,7 +3495,6 @@ one keyframe at a time</div>
     </div>
 
     <div class="home-view-toggle" id="homeViewToggle">
-      <div class="hvt-highlight"></div>
       <button class="hvt-opt active" data-view="grid" onclick="setHomeView('grid')">Grid</button>
       <button class="hvt-opt" data-view="list" onclick="setHomeView('list')">Projects</button>
     </div>
@@ -6723,16 +6778,50 @@ function _makeSecDelBtn(label, grid) {
 let homeView = 'grid';
 let _lastHomeSections = null;
 
+/* How much of each buried pill peeks out to the right of the one above
+   it. Enough to read as a stack of cards rather than a single pill; much
+   more and the collapsed control stops looking deliberate. */
+const HVT_PEEK = 10;
+
+/* Measures the fanned-out row once and writes the collapsed geometry
+   into custom properties, so the CSS can do the animating.
+
+   The offsets have to be measured because the labels are different
+   widths — the source component's flat -100px per index only works when
+   every label is the same length. Reading offsetLeft is safe in either
+   state: transforms do not move layout boxes, so this returns the
+   fanned-out positions even while the stack is collapsed. */
+function layoutHomeViewToggle() {
+  const toggle = document.getElementById('homeViewToggle');
+  if (!toggle) return;
+  const opts = Array.from(toggle.querySelectorAll('.hvt-opt'));
+  if (!opts.length || !opts[0].offsetWidth) return; // hidden, or not laid out yet
+
+  const base = opts[0].offsetLeft;
+  let stackW = 0;
+  opts.forEach((btn, i) => {
+    btn.style.setProperty('--hvt-i', i);
+    btn.style.setProperty('--hvt-dx', (base + i * HVT_PEEK - btn.offsetLeft) + 'px');
+    btn.style.setProperty('--hvt-delay', (i * 0.1).toFixed(2) + 's');
+    stackW = Math.max(stackW, i * HVT_PEEK + btn.offsetWidth);
+  });
+
+  const last = opts[opts.length - 1];
+  toggle.style.setProperty('--hvt-stack-w', stackW + 'px');
+  toggle.style.setProperty('--hvt-full-w', (last.offsetLeft - base + last.offsetWidth) + 'px');
+}
+window.addEventListener('resize', layoutHomeViewToggle);
+// Web fonts land after first layout and change every label's width.
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(layoutHomeViewToggle);
+
 function setHomeView(view) {
   const toggle = document.getElementById('homeViewToggle');
   if (toggle) {
     const opts = Array.from(toggle.querySelectorAll('.hvt-opt'));
     opts.forEach(b => b.classList.toggle('active', b.dataset.view === view));
-    const activeBtn = opts.find(b => b.dataset.view === view);
-    if (activeBtn) {
-      toggle.style.setProperty('--hvt-w', activeBtn.offsetWidth + 'px');
-      toggle.style.setProperty('--hvt-x', (activeBtn.offsetLeft - 3) + 'px');
-    }
+    // Active goes to the top of the stack (a z-index swap in CSS), so
+    // the collapsed control shows the view you are actually in.
+    layoutHomeViewToggle();
   }
   if (homeView === view) return;
   homeView = view;
