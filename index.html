@@ -1319,6 +1319,136 @@
       padding:96px 0 120px;
     }
     body.dark .taste-soon { color:var(--d-text-3); }
+
+    /* ── Music artwork, ported from 21st.dev's "Music Artwork"
+       (@diriktv). The source is a React component driven by an
+       isHovered state; the whole effect is reachable from :hover on the
+       group, so this is CSS with no state to keep.
+
+       Kept from the source: the record tucked behind the sleeve at
+       opacity 0, sliding out over 500ms ease-out while it spins; the
+       sleeve lifting to scale 1.05 with its own art going to 1.10
+       inside a clipped box; the play badge and the artist/title caption
+       fading in at the bottom; and the dark gradient washing up from the
+       bottom edge over 300ms.
+
+       Two departures.
+
+       The record slides out to the RIGHT here, where the source sends it
+       left. These sit in a list with the sleeve on the left of each row,
+       so leftward the record would swing into the page margin — and on
+       the narrow layout, off the page. Rightward it comes out into the
+       row's own text column, which is padded to receive it.
+
+       And the record is drawn rather than fetched. The source points an
+       <img> at a PNG on 21st's CDN; this file loads no third-party
+       assets, and a vinyl is concentric circles, so it is an inline SVG
+       that also takes the sleeve's own accent for its label. */
+    .taste-list { display:flex; flex-direction:column; gap:26px; margin-top:8px; }
+
+    .ta-row { display:flex; align-items:center; }
+    .ta-art {
+      --ta-cover:132px;
+      /* How far the record clears the sleeve's right edge. The source
+         protrudes 96px past a 256px sleeve; as a ratio that survives the
+         cover being resized. */
+      --ta-out:38%;
+      position:relative;
+      width:var(--ta-cover); height:var(--ta-cover);
+      flex:0 0 auto;
+    }
+
+    .ta-vinyl {
+      position:absolute; top:50%; left:0;
+      width:calc(var(--ta-cover) * 1.08); height:calc(var(--ta-cover) * 1.08);
+      /* Behind the sleeve, and out of the pointer's way so crossing the
+         emerging record never re-triggers or blocks the hover. */
+      z-index:0; pointer-events:none;
+      opacity:0;
+      transform:translate(0, -50%);
+      transition:opacity .5s ease-out, transform .5s ease-out;
+    }
+    .ta-art:hover .ta-vinyl {
+      opacity:1;
+      transform:translate(calc(var(--ta-cover) * 0.38), -50%);
+    }
+    /* The spin runs only while the record is out. Rotation lives on an
+       inner element so it composes with the slide instead of fighting it
+       for the same transform. */
+    .ta-vinyl-spin { width:100%; height:100%; }
+    .ta-art:hover .ta-vinyl-spin { animation:ta-spin 4s linear infinite; }
+    @keyframes ta-spin { to { transform:rotate(360deg); } }
+
+    .ta-cover {
+      position:relative; z-index:1;
+      width:100%; height:100%;
+      border-radius:8px; overflow:hidden;
+      background:var(--ta-accent, #d9d4cc);
+      box-shadow:0 18px 35px -12px rgba(0,0,0,.45);
+      cursor:pointer;
+      transition:transform .3s ease-out, box-shadow .3s ease-out;
+    }
+    .ta-art:hover .ta-cover {
+      transform:scale(1.05);
+      box-shadow:0 26px 50px -12px rgba(0,0,0,.55);
+    }
+    .ta-cover img {
+      width:100%; height:100%; object-fit:cover; display:block;
+      transition:transform .3s ease-out;
+    }
+    .ta-art:hover .ta-cover img { transform:scale(1.1); }
+    /* Stand-in sleeve until real art is dropped in — the accent colour
+       with the album's initial, rather than a grey box that reads as a
+       failed image. */
+    .ta-ph {
+      width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+      font-family:var(--font-heading); font-size:34px; font-weight:600;
+      color:rgba(255,255,255,.9);
+      background:linear-gradient(145deg, var(--ta-accent, #cfc9c1), rgba(0,0,0,.35));
+    }
+
+    /* Washes up from the bottom edge, under the badge. */
+    .ta-shade {
+      position:absolute; inset:0; pointer-events:none;
+      background:linear-gradient(to top, rgba(0,0,0,.35), transparent 55%);
+      opacity:0; transition:opacity .3s ease-out;
+    }
+    .ta-art:hover .ta-shade { opacity:1; }
+
+    .ta-badge {
+      position:absolute; left:8px; bottom:8px;
+      display:flex; align-items:center; justify-content:center;
+      width:26px; height:26px; border-radius:999px;
+      background:rgba(0,0,0,.45); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+      opacity:0; transition:opacity .3s ease-out;
+    }
+    .ta-art:hover .ta-badge { opacity:1; }
+    /* A triangle from borders, as in the source, so there is no second
+       svg for a shape this small. */
+    .ta-badge i {
+      display:block; width:0; height:0; margin-left:2px;
+      border-left:7px solid #fff;
+      border-top:5px solid transparent;
+      border-bottom:5px solid transparent;
+    }
+
+    /* Padded by the record's travel, so the record emerges into empty
+       space instead of across the type. */
+    .ta-meta { padding-left:calc(var(--ta-cover, 132px) * 0.38 + 20px); min-width:0; }
+    .ta-artist { font-size:15px; font-weight:600; color:#1a1a1a; }
+    .ta-title  { font-size:13px; color:#8a8480; margin-top:3px; }
+
+    body.dark .ta-artist { color:var(--d-text); }
+    body.dark .ta-title  { color:var(--d-text-3); }
+
+    @media (max-width:520px) {
+      .ta-art { --ta-cover:104px; }
+      .ta-meta { padding-left:calc(104px * 0.38 + 14px); }
+    }
+    @media (prefers-reduced-motion:reduce) {
+      .ta-vinyl, .ta-cover, .ta-cover img, .ta-shade, .ta-badge { transition-duration:.01ms; }
+      .ta-art:hover .ta-vinyl-spin { animation:none; }
+    }
     .an-title  { font-family:var(--font-heading); font-size:27px; font-weight:600; text-align:center; margin-bottom:20px; }
     .an-range  { display:flex; gap:6px; justify-content:center; margin-bottom:22px; }
     .an-range-btn { padding:6px 16px; border-radius:20px; border:1px solid rgba(0,0,0,.12); background:#fff; font-size:12.5px; font-weight:500; color:#666; cursor:pointer; transition:all .15s; }
@@ -3638,6 +3768,7 @@ one keyframe at a time</div>
   <!-- ══════════════════════════════ TASTE ══════════════════════════════ -->
   <div class="view" id="view-taste">
     <div class="taste-soon">soon</div>
+    <div class="taste-list" id="tasteList"></div>
   </div><!-- /view-taste -->
 
 
@@ -8717,7 +8848,7 @@ function goView(viewId, btn) {
   showView(viewId, anim);
   if (viewId === 'view-exp')       { trackView('work-experience'); playToolsLabelAnim(); }
   else if (viewId === 'view-soon') trackView('note');
-  else if (viewId === 'view-taste') trackView('taste');
+  else if (viewId === 'view-taste') { trackView('taste'); renderTasteList(); }
   else if (viewId === 'view-game') trackView('game');
 }
 
@@ -12770,6 +12901,93 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btn.addEventListener('click', () => anim.goToAndPlay(0, true));
 })();
+
+
+/* ── Taste — music artwork ───────────────────────────────
+   The list this renders. One entry per album: `cover` is a URL (drop an
+   uploaded file's path in), or null to fall back to the accent-coloured
+   stand-in sleeve. `accent` also colours the record's centre label, so
+   each row reads as its own even before real art is in.
+
+   Seeded with placeholders so the interaction is there to look at —
+   replace artist/title/cover and the rest follows. */
+const TASTE_ALBUMS = [
+  { artist: 'Artist', title: 'Album one',   cover: null, accent: '#8a6a4f' },
+  { artist: 'Artist', title: 'Album two',   cover: null, accent: '#4f6a8a' },
+  { artist: 'Artist', title: 'Album three', cover: null, accent: '#6a4f6f' },
+];
+
+/* The record, drawn rather than fetched — the source component points an
+   <img> at a PNG on a CDN, and nothing else on this page loads a
+   third-party asset. A vinyl is concentric circles: a dark disc, a few
+   groove rings, the label in the row's own accent, and the spindle hole.
+   Groove rings are stroked at low opacity so the spin is legible without
+   the disc turning into a moiré at this size. */
+function tasteVinylSVG(accent) {
+  const grooves = [40, 36, 32, 28].map(r =>
+    `<circle cx="50" cy="50" r="${r}" fill="none" stroke="rgba(255,255,255,.09)" stroke-width="1"/>`
+  ).join('');
+  return '<svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden="true">' +
+    '<circle cx="50" cy="50" r="49" fill="#141414"/>' +
+    '<circle cx="50" cy="50" r="49" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="1"/>' +
+    grooves +
+    `<circle cx="50" cy="50" r="17" fill="${accent || '#b9b2a8'}"/>` +
+    '<circle cx="50" cy="50" r="17" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="1"/>' +
+    // Off-centre highlight, so a spinning disc reads as spinning.
+    '<path d="M50 1a49 49 0 0 1 34.6 83.6" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="2"/>' +
+    '<circle cx="50" cy="50" r="3" fill="#faf8f5"/>' +
+  '</svg>';
+}
+
+function renderTasteList() {
+  const host = document.getElementById('tasteList');
+  if (!host) return;
+  host.innerHTML = '';
+  TASTE_ALBUMS.forEach(album => {
+    const row = document.createElement('div');
+    row.className = 'ta-row';
+
+    const art = document.createElement('div');
+    art.className = 'ta-art';
+    art.style.setProperty('--ta-accent', album.accent || '#cfc9c1');
+
+    const vinyl = document.createElement('div');
+    vinyl.className = 'ta-vinyl';
+    vinyl.innerHTML = '<div class="ta-vinyl-spin">' + tasteVinylSVG(album.accent) + '</div>';
+
+    const cover = document.createElement('div');
+    cover.className = 'ta-cover';
+    if (album.cover) {
+      const img = document.createElement('img');
+      img.loading = 'lazy';
+      img.alt = (album.artist || '') + ' — ' + (album.title || '');
+      img.src = album.cover;
+      cover.appendChild(img);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'ta-ph';
+      ph.textContent = (album.title || album.artist || '?').trim().charAt(0).toUpperCase();
+      cover.appendChild(ph);
+    }
+    cover.insertAdjacentHTML('beforeend',
+      '<div class="ta-shade"></div><div class="ta-badge"><i></i></div>');
+
+    art.append(vinyl, cover);
+
+    const meta = document.createElement('div');
+    meta.className = 'ta-meta';
+    const artist = document.createElement('div');
+    artist.className = 'ta-artist';
+    artist.textContent = album.artist || '';
+    const title = document.createElement('div');
+    title.className = 'ta-title';
+    title.textContent = album.title || '';
+    meta.append(artist, title);
+
+    row.append(art, meta);
+    host.appendChild(row);
+  });
+}
 
 /* ── Taste tab icon ──────────────────────────────────────
    Same treatment as the Experience star above: a Lottie in a
