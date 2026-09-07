@@ -1434,16 +1434,28 @@
     .an-nav-btn { display:none !important; }
     body.is-admin .an-nav-btn { display:flex !important; }
 
+    /* Taste — the placeholder while the section is being filled. Set big
+       rather than as a caption: this is the whole view for now, and a
+       small grey word floating in an empty page reads as something that
+       failed to load. Two lines, stacked, so it holds the column at any
+       site width instead of stretching into a thin ribbon.
 
-    /* Taste — a placeholder tab. Nothing but the word, in the heading
-       face at the same size the other views title themselves with, so an
-       empty section still looks composed rather than unfinished. */
+       clamp() rather than a fixed size — the site width is a slider, and
+       a 27px word that suited a 540px column is lost in a 900px one. */
     .taste-soon {
-      font-family:var(--font-heading); font-size:27px; font-weight:600;
-      text-align:center; color:#b6b0aa;
-      padding:96px 0 120px;
+      display:none;
+      flex-direction:column; align-items:center; justify-content:center;
+      gap:2px; padding:120px 0 140px;
+      font-family:var(--font-heading); font-weight:600;
+      font-size:clamp(38px, 9vw, 64px); line-height:1.02;
+      letter-spacing:-.02em; text-align:center;
+      color:#c9c3bc;
     }
-    body.dark .taste-soon { color:var(--d-text-3); }
+    /* Only while there is nothing to list — renderTasteList sets this. */
+    #view-taste.taste-empty .taste-soon { display:flex; }
+    .taste-soon-big:last-child { color:#a7a099; }
+    body.dark .taste-soon { color:#3a3d40; }
+    body.dark .taste-soon-big:last-child { color:#4d5155; }
 
     /* ── Music artwork, ported from 21st.dev's "Music Artwork"
        (@diriktv). The source is a React component driven by an
@@ -3927,7 +3939,7 @@ one keyframe at a time</div>
   <!-- ══════════════════════════════ GAME ══════════════════════════════ -->
   <!-- ══════════════════════════════ TASTE ══════════════════════════════ -->
   <div class="view" id="view-taste">
-    <div class="taste-soon">soon</div>
+    <div class="taste-soon"><span class="taste-soon-big">Coming</span><span class="taste-soon-big">soon</span></div>
     <div class="taste-list" id="tasteList"></div>
   </div><!-- /view-taste -->
 
@@ -13185,15 +13197,14 @@ document.addEventListener('DOMContentLoaded', () => {
    The list this renders. One entry per album: `cover` is a URL (drop an
    uploaded file's path in), or null to fall back to the accent-coloured
    stand-in sleeve. `accent` also colours the record's centre label, so
-   each row reads as its own even before real art is in.
+   each row reads as its own even before real art is in:
 
-   Seeded with placeholders so the interaction is there to look at —
-   replace artist/title/cover and the rest follows. */
-const TASTE_ALBUMS = [
-  { artist: 'Artist', title: 'Album one',   cover: null, accent: '#8a6a4f' },
-  { artist: 'Artist', title: 'Album two',   cover: null, accent: '#4f6a8a' },
-  { artist: 'Artist', title: 'Album three', cover: null, accent: '#6a4f6f' },
-];
+     { artist: 'Name', title: 'Album', cover: '/media/…', accent: '#8a6a4f' }
+
+   Empty for now, which is what puts the tab on its Coming soon card —
+   see renderTasteList. Add a row here and the card steps aside on its
+   own; the component underneath is finished and waiting. */
+const TASTE_ALBUMS = [];
 
 /* The record, drawn rather than fetched — the source component points an
    <img> at a PNG on a CDN, and nothing else on this page loads a
@@ -13221,6 +13232,12 @@ function renderTasteList() {
   const host = document.getElementById('tasteList');
   if (!host) return;
   host.innerHTML = '';
+  /* With nothing to show, the tab is the Coming soon card alone. Driven
+     off the data rather than a flag, so filling TASTE_ALBUMS is the only
+     thing needed to bring the section up — nothing to remember to
+     switch. */
+  const view = document.getElementById('view-taste');
+  if (view) view.classList.toggle('taste-empty', !TASTE_ALBUMS.length);
   TASTE_ALBUMS.forEach(album => {
     const row = document.createElement('div');
     row.className = 'ta-row';
