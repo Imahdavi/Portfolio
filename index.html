@@ -7265,6 +7265,43 @@ function setListHidden(key, srcs) {
   saveSettings();
 }
 
+/* ── Per-row media order ───────────────────────────────────
+   The strip's order is this list's own, stored here rather than in the
+   board. Dragging a tile used to rewrite PROJECTS[key].blocks and save
+   the board, so arranging a row in this view silently rearranged the
+   board behind it — the two are meant not to touch each other.
+
+   Keyed by src, for the same reason hiding and links are: re-saving a
+   board can hand the same file a new block id, and an order pinned to
+   ids would come apart under it. */
+function getListOrder(key) {
+  const all = _cachedSettings && _cachedSettings.projectsListOrder;
+  const saved = all && all[key];
+  return Array.isArray(saved) ? saved.slice() : [];
+}
+
+function setListOrder(key, srcs) {
+  if (!_cachedSettings) _cachedSettings = {};
+  if (!_cachedSettings.projectsListOrder) _cachedSettings.projectsListOrder = {};
+  if (srcs.length) _cachedSettings.projectsListOrder[key] = srcs.slice();
+  else delete _cachedSettings.projectsListOrder[key];
+  saveSettings();
+}
+
+/* Applies a saved order to the row's media. Anything the order does not
+   mention keeps its board position and follows on the end, so media
+   added to the board after a row was arranged still appears instead of
+   silently dropping out. */
+function applyListOrder(key, media) {
+  const order = getListOrder(key);
+  if (!order.length) return media;
+  const rank = new Map(order.map((src, i) => [src, i]));
+  const known = [], rest = [];
+  media.forEach(m => (rank.has(m.src) ? known : rest).push(m));
+  known.sort((a, b) => rank.get(a.src) - rank.get(b.src));
+  return known.concat(rest);
+}
+
 function hideMediaFromList(key, src) {
   if (!src) return;
   const hidden = getListHidden(key);
@@ -7340,7 +7377,7 @@ function listMediaFor(key, fallbackThumb) {
   // the whole board is visible and reorderable at once, and commitStrip-
   // Order can only write back an order it can see all of. Cost is low —
   // videos are preload:none behind an observer, images are loading:lazy.
-  if (media.length) return media;
+  if (media.length) return applyListOrder(key, media);
   return fallbackThumb ? [{ type: 'image', src: fallbackThumb, link: links[fallbackThumb] || '' }] : [];
 }
 
@@ -8548,30 +8585,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+/* Records the strip's order for THIS row only.
+
+   It used to rewrite PROJECTS[key].blocks and saveProject(key), which
+   meant dragging a tile here reordered the board itself — the thing this
+   view is supposed to leave alone. The order is now a list-side
+   preference keyed by src (see setListOrder); the board is not touched
+   and not saved. */
 function commitStripOrder(strip, key) {
-  const proj = PROJECTS[key];
-  if (!proj || !proj.blocks) return;
-
-  // Where the media blocks sit in the full block list, and the blocks
-  // themselves keyed by the src the tiles carry.
-  const slots = [];
-  proj.blocks.forEach((b, i) => {
-    if ((b.type === 'image' || b.type === 'video') && b.content) slots.push(i);
-  });
-
-  const byId = new Map();
-  slots.forEach(i => byId.set(proj.blocks[i].id, proj.blocks[i]));
-
-  const ordered = [...strip.querySelectorAll('.pli-tile')]
-    .map(t => byId.get(t.dataset.blockId))
+  const srcs = [...strip.querySelectorAll('.pli-tile')]
+    .map(t => t.dataset.src)
     .filter(Boolean);
-
-  // Only the tiles actually backed by a block get rewritten; if the strip
-  // was capped (listMediaFor takes the first N) or a tile fell back to the
-  // card thumbnail, the rest of the slots are left exactly as they were.
-  if (ordered.length !== slots.length) return;
-  slots.forEach((slot, n) => { proj.blocks[slot] = ordered[n]; });
-  saveProject(key);
+  if (!srcs.length) return;
+  setListOrder(key, srcs);
 }
 
 function unwireProjectsListEditing() {
