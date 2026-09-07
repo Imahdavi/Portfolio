@@ -13923,7 +13923,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function resetBall(dir) {
     ball.x = W / 2;
     ball.y = H / 2;
-    ball.speed = 7.2;
+    ball.speed = 8.6;
     ball.trail.length = 0;
     // Serve at a shallow-ish angle so the first touch is always reachable.
     const ang = (Math.random() * 0.5 - 0.25);
@@ -13973,16 +13973,22 @@ document.addEventListener('DOMContentLoaded', () => {
     you.x = clamp(you.x, t.l + PAD_RX * 0.4, t.r - PAD_RX * 0.4);
     you.vx = (you.x - prevX) / Math.max(f, 0.001);
 
-    // ── CPU: chases the ball, but only reacts once it's coming at it, and
-    //    aims at a spot that's deliberately off by a bit. Its top speed is
-    //    tied to the current rally speed, otherwise a fast rally would
-    //    simply outrun it and every long point would be a free one. ──
-    if (ball.vy < 0 && cpuLastVy >= 0) cpuErr = (Math.random() * 2 - 1) * PAD_RX * 0.5;
+    /* ── CPU: chases the ball, but only reacts once it's coming at it, and
+       aims at a spot that's deliberately off by a bit. Its top speed is
+       tied to the current rally speed, otherwise a fast rally would simply
+       outrun it and every long point would be a free one.
+
+       Tightened along with the faster ball: it aims closer to true (the
+       miss was a third of a blade wide, now a fifth), closes on that aim
+       harder, and its ceiling rises more steeply with the rally — without
+       that last part the extra ball speed would have made it *easier*,
+       since the same racket has further to travel per exchange. ── */
+    if (ball.vy < 0 && cpuLastVy >= 0) cpuErr = (Math.random() * 2 - 1) * PAD_RX * 0.34;
     cpuLastVy = ball.vy;
     const lead = ball.vy < 0 ? ball.x + cpuErr : W / 2;
     const diff = lead - cpu.x;
-    const skill = 0.62 + Math.min(scoreCpu, 5) * 0.05;
-    const cpuMax = (ball.speed * 0.58 + 1.2 + Math.min(scoreYou, 6) * 0.3) * f;
+    const skill = 0.72 + Math.min(scoreCpu, 5) * 0.055;
+    const cpuMax = (ball.speed * 0.64 + 1.6 + Math.min(scoreYou, 6) * 0.3) * f;
     cpu.vx = clamp(diff * skill * 0.17 * f, -cpuMax, cpuMax);
     cpu.x = clamp(cpu.x + cpu.vx, t.l + PAD_RX * 0.4, t.r - PAD_RX * 0.4);
 
@@ -14019,7 +14025,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (side > 0) ang += clamp(p.vx * 0.035, -0.28, 0.28); // your swing adds spin
     ang = clamp(ang, -MAX_BOUNCE_ANGLE, MAX_BOUNCE_ANGLE);
 
-    ball.speed = Math.min(ball.speed + 0.42, 16.5);
+    /* Rallies build faster and top out higher than they used to. The cap
+       is bounded by the collision test, which is a point-in-ellipse check
+       at the ball's current position rather than a swept one: the blade's
+       capture window is PAD_RY + BALL_R either side, 56px tall, so the
+       ball has to travel less than that in a frame or it passes straight
+       through. 19.5 leaves room even on a 30fps frame. */
+    ball.speed = Math.min(ball.speed + 0.56, 19.5);
     ball.vx = Math.sin(ang) * ball.speed;
     ball.vy = -side * Math.abs(Math.cos(ang) * ball.speed);
     // Push clear of the blade so it can't register twice on one pass.
