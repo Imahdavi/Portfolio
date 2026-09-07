@@ -8766,38 +8766,97 @@ function _stripDist(v) {
   return Math.abs((r.top + r.bottom) / 2 - window.innerHeight / 2);
 }
 
+/* How many times a clip that fails to load is worth trying again. A bad
+   file should not be retried for ever, but one request lost to a cold
+   connection should not retire it for the session either. */
+const STRIP_MAX_RETRIES = 2;
+
+// HAVE_CURRENT_DATA — there is a frame to show. Having a src only means
+// a request was started, which is not the same thing at all.
+function _stripPlayable(v) { return v.readyState >= 2; }
+
 function _stripPump() {
   while (_stripLoading.size < STRIP_MAX_LOADING) {
     let next = null, best = Infinity;
     _stripWanted.forEach(v => {
       if (v.getAttribute('src') || _stripLoading.has(v)) return;
+      if ((v._stripFails | 0) > STRIP_MAX_RETRIES) return;   // given up on
       const d = _stripDist(v);
       if (d < best) { best = d; next = v; }
     });
     if (!next) break;
-    _stripLoading.add(next);
-    let released = false;
-    // A clip that never reports back — a stalled request, a file the
-    // browser won't decode — would otherwise hold its slot for good and
-    // starve everything queued behind it, which is the "stuck and never
-    // plays" case this is all here to avoid. The timer only frees the
-    // slot; the load itself is left running in case it does arrive.
-    const release = () => {
-      if (released) return;
-      released = true;
+
+    const v = next;
+    /* A standing re-rank for whenever this clip becomes playable, wired
+       once and never removed. The slot bookkeeping below tears its own
+       listeners down when the 8s timer gives the slot away, which left a
+       slow clip stranded: it had a src so the loader skipped it, no data
+       so the play pass skipped it, and nothing was left watching to
+       notice when it finally arrived. It would sit there until the next
+       scroll happened to pump — or for ever, if you were not scrolling.
+       That is the "sometimes they just never play" case. */
+    if (!v._stripWired) {
+      v._stripWired = true;
+      v.addEventListener('loadeddata', _stripPumpSoon);
+      v.addEventListener('canplay', _stripPumpSoon);
+    }
+    _stripLoading.add(v);
+    let done = false;
+
+    const cleanup = () => {
       clearTimeout(timer);
-      _stripLoading.delete(next);
-      next.removeEventListener('loadeddata', release);
-      next.removeEventListener('error', release);
+      v.removeEventListener('loadeddata', onLoad);
+      v.removeEventListener('error', onError);
+    };
+    // Frees the slot only. The load is left running in case it does
+    // arrive — the play pass goes on readiness, so a late one simply
+    // starts when it is ready rather than holding a slot open.
+    const release = () => {
+      if (done) return;
+      done = true;
+      cleanup();
+      _stripLoading.delete(v);
       _stripPump();
     };
+    const onLoad = () => release();
+    /* A failed clip has to go back in the pool. Leaving the src on it
+       made it look loaded for ever: the loader skipped it because it had
+       one, and the play pass counted it among the clips it was allowed
+       to play — so a single broken file quietly held one of the play
+       slots and starved a working clip below it. Clearing the src and
+       calling load() puts it back to where it started. */
+    const onError = () => {
+      v._stripFails = (v._stripFails | 0) + 1;
+      v.removeAttribute('src');
+      try { v.load(); } catch (e) {}
+      release();
+    };
+    // A clip that never reports back at all — a stalled request, a file
+    // the browser will not decode — would otherwise hold its slot for
+    // good and starve everything queued behind it.
     const timer = setTimeout(release, 8000);
-    next.addEventListener('loadeddata', release);
-    next.addEventListener('error', release);
-    next.src = next.dataset.lazySrc;
+    v.addEventListener('loadeddata', onLoad);
+    v.addEventListener('error', onError);
+    /* The tiles are built preload="none", so assigning src fetches
+       nothing on its own — the browser waits to be asked. It used to be
+       asked by accident, because the play pass ran on "has a src" and
+       called play() on a clip that had only just been given one.
+
+       Now that playing waits for real data, that accident is gone and
+       the two would deadlock: no data until it plays, no play until it
+       has data. So ask outright. load() also cancels any previous
+       request on this element, which is what makes the retry path work. */
+    v.preload = 'auto';
+    v.src = v.dataset.lazySrc;
+    v.load();
   }
 
-  const ready = [..._stripWanted].filter(v => v.getAttribute('src'));
+  /* Play the nearest clips that can actually show a frame. This used to
+     rank by "has a src", which let the two clips still downloading, and
+     any that had failed outright, occupy play slots they could do
+     nothing with — up to half the budget spent on black boxes while
+     clips that were ready sat paused underneath. */
+  const ready = [..._stripWanted].filter(_stripPlayable);
   ready.sort((a, b) => _stripDist(a) - _stripDist(b));
   ready.forEach((v, i) => {
     if (i < STRIP_MAX_PLAYING) {
