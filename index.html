@@ -4760,9 +4760,12 @@ const UI_SOUND_MAP = [
   { sel: '#bg-toggle-btn',    hover: 'tick', click: 'toggle'  },
   { sel: '.nav-btn',          hover: 'tick', click: 'scan'    },
   { sel: '.social-btn',       hover: 'tick', click: 'pulse'   },
-  { sel: '.back-btn',         hover: null,   click: 'droplet' },
-  { sel: '.proj-card',        hover: null,   click: 'page'    },
-  { sel: '.pli-row',          hover: null,   click: 'page'    },
+  { sel: '.back-btn',         hover: null,      click: 'droplet' },
+  // Boards, in both views. whisper rather than the nav's tick: a card is
+  // a big soft target you drift across while scanning, and a crisp tick
+  // there would compete with the nav row instead of sitting under it.
+  { sel: '.proj-card',        hover: 'whisper', click: 'page'    },
+  { sel: '.proj-list-item',   hover: 'whisper', click: 'page'    },
 ];
 // Matches Cuelume's own bind(): one hover sound per 150ms across the
 // whole page, so sweeping the cursor along the nav row is a few ticks
