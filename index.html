@@ -519,7 +519,7 @@
        three same-length labels; "Grid" and "Projects" are different
        widths, so the offsets are measured instead (see
        layoutHomeViewToggle) and each item collapses exactly onto the
-       first, offset by HVT_PEEK so the stack reads as a stack rather
+       first, offset by hvtPeek() so the stack reads as a stack rather
        than as one pill.
 
        And the source stacks by DOM order (z-index: 100 - index). This
@@ -4815,7 +4815,10 @@ const UI_SOUND_MAP = [
   { sel: '#bg-toggle-btn',    hover: 'tick', click: 'toggle'  },
   { sel: '.nav-btn',          hover: 'tick', click: 'scan'    },
   { sel: '.social-btn',       hover: 'tick', click: 'pulse'   },
-  { sel: '.back-btn',         hover: null,      click: 'droplet' },
+  // Both are "take me out of here" controls rather than destinations, so
+  // they get the nav's own tick instead of a sound of their own.
+  { sel: '.back-btn',         hover: null,      click: 'tick'    },
+  { sel: '#scroll-top-btn',   hover: null,      click: 'tick'    },
   // Boards, in both views. Click only: a grid is something you sweep
   // your eyes and cursor across, and a sound on every card crossed is
   // noise rather than feedback. The bell is for the one you commit to.
@@ -6807,10 +6810,19 @@ function _makeSecDelBtn(label, grid) {
 let homeView = 'grid';
 let _lastHomeSections = null;
 
-/* How much of each buried pill peeks out to the right of the one above
-   it. Enough to read as a stack of cards rather than a single pill; much
-   more and the collapsed control stops looking deliberate. */
-const HVT_PEEK = 10;
+/* How far past the card above it each buried pill has to end.
+
+   These are fully rounded pills, so the cap on the end is half the
+   pill's height wide. A peek narrower than that leaves only a flat
+   sliver showing — the curve stays hidden behind the top card and the
+   stack stops reading as cards at all, which is exactly what a flat
+   10px looked like. So the peek clears the cap first and adds a little
+   daylight past it, and it scales with the pill rather than being a
+   magic number that breaks if the type size changes. */
+const HVT_PEEK_PAST_CAP = 7;
+function hvtPeek(pillHeight) {
+  return Math.round(pillHeight / 2) + HVT_PEEK_PAST_CAP;
+}
 
 /* Measures the fanned-out row once and writes the collapsed geometry
    into custom properties, so the CSS can do the animating.
@@ -6838,13 +6850,14 @@ function layoutHomeViewToggle() {
 
   /* Each buried card has to end further right than the one covering it,
      or it is invisible no matter what its left edge does. So positions
-     are derived from right edges — each card's right edge is HVT_PEEK
+     are derived from right edges — each card's right edge is one peek
      past the previous card's — which is what keeps a narrow label
      showing from under a wide one. */
+  const peek = hvtPeek(opts[0].offsetHeight);
   let rightEdge = 0;
   order.forEach((btn, k) => {
     const w = btn.offsetWidth;
-    const x = k === 0 ? 0 : Math.max(0, rightEdge + HVT_PEEK - w);
+    const x = k === 0 ? 0 : Math.max(0, rightEdge + peek - w);
     rightEdge = x + w;
     btn.style.setProperty('--hvt-i', k);
     btn.style.setProperty('--hvt-dx', (base + x - btn.offsetLeft) + 'px');
