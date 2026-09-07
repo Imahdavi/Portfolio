@@ -3785,7 +3785,7 @@ one keyframe at a time</div>
 
     <div class="home-view-toggle" id="homeViewToggle">
       <button class="hvt-opt active" data-view="grid" onclick="setHomeView('grid')">Grid</button>
-      <button class="hvt-opt" data-view="list" onclick="setHomeView('list')">Projects<sup class="hvt-beta">beta</sup></button>
+      <button class="hvt-opt" data-view="list" onclick="setHomeView('list')">Brand<sup class="hvt-beta">beta</sup></button>
     </div>
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
     <div id="home-sections" style="opacity:0;transition:opacity .3s ease"></div>
@@ -8769,14 +8769,14 @@ function renderHomeSections(sections) {
   }));
 
   if (useList) {
-    // One flat "Projects" heading over the listed boards, rather than
-    // mirroring the Works/Projects section split the grid uses — this view
-    // is a single run-down, and getProjectsListKeys() sets both which
-    // boards appear and their order.
+    // One flat "Brand" heading over the listed boards, matching the tab
+    // rather than mirroring the Works/Projects section split the grid
+    // uses — this view is a single run-down, and getProjectsListKeys()
+    // sets both which boards appear and their order.
     const allCards = sections.flatMap(sec => sec.cards || []);
     const label = document.createElement('div');
     label.className = 'sec-label';
-    label.textContent = 'Projects';
+    label.textContent = 'Brand';
     container.appendChild(label);
 
     const row = document.createElement('div');
