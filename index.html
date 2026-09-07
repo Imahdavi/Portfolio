@@ -4527,7 +4527,11 @@ const USE_CUSTOM_CURSOR = true;
   });
   document.addEventListener('mousedown', e => {
     cur.classList.add('pressing');
-    spiderSense(e.clientX, e.clientY);
+    // Same surfaces the web shot sits out for — the little burst is a web
+    // too, and it was going off on the Brand rows and on every control.
+    if (!e.target.closest('button,a,input,.nav-btn,.social-dock,.pli-media-strip,.projects-list')) {
+      spiderSense(e.clientX, e.clientY);
+    }
     // Grabbing the Projects media strip doesn't fire a web (see NO_SHOOT),
     // so it shouldn't play the shot sound either — otherwise every drag
     // thwips with nothing to show for it.
@@ -12908,9 +12912,15 @@ function webInk(a) {
     shots.push(new WebShot(src.x,src.y,cx,cy));
   }
 
-  // Controls, and the Projects media strip — dragging that strip ends in a
-  // click, so without it every pull to see more work also fired a web.
-  const NO_SHOOT = 'button,a,input,.nav-btn,.social-dock,.pli-media-strip';
+  /* Controls, and the Projects media strip — dragging that strip ends in a
+     click, so without it every pull to see more work also fired a web.
+
+     And the Brand list as a whole. Its rows are a heading, a paragraph
+     and a strip in a tall block with a lot of dead space between them,
+     so reading down the page meant slinging a web from the avatar over
+     the work every time you clicked anywhere. The grid is a wall of
+     cards with gaps you clearly click past; this is a page you read. */
+  const NO_SHOOT = 'button,a,input,.nav-btn,.social-dock,.pli-media-strip,.projects-list';
 
   let _tx=0,_ty=0,_lastTouch=0;
   document.addEventListener('touchstart',e=>{
