@@ -495,15 +495,13 @@
       .card-grid { grid-template-columns:repeat(auto-fill, 154.67px); justify-content:start; }
     }
 
-    /* ── Home view toggle — segmented pill, switches Works/Projects
-       between the plain card grid and a vertical list of project write-ups
-       (year, title, category, a short description, and a strip of that
-       project's own images sized by their own aspect ratio). Admin-only
-       while the list view is still being checked over — public visitors
-       never see the toggle or the list rendering (belt-and-braces:
-       renderHomeSections() also refuses to render it unless
-       body.is-admin, in case homeView ever ends up 'list' for a
-       non-admin session). ── */
+    /* ── Home view toggle — switches Works/Projects between the plain
+       card grid and a vertical list of project write-ups (year, title,
+       category, a short description, and a strip of that project's own
+       images sized by their own aspect ratio). Public now; it was
+       admin-only while the list view was being checked over. Boards with
+       no media are skipped in that list unless you are editing — see
+       renderHomeSections. ── */
     /* ── Stacking navbar, ported from 21st.dev's "Stacking Navbar"
        (@ln-dev7). The source animates each item with Framer Motion —
        x: expanded ? 0 : -100 * index, a spring, and 0.1s of delay per
@@ -526,8 +524,7 @@
        control reports which view you are in, so the active item is the
        one on top — collapsed, the label you see is the view you are
        looking at. Stacking by DOM order would hide that. */
-    .home-view-toggle { display:none; }
-    body.is-admin .home-view-toggle {
+    .home-view-toggle {
       position:relative;
       display:flex; flex-wrap:nowrap; gap:8px;
       margin:4px auto 28px;
@@ -542,10 +539,18 @@
        into the control opens it but a mouse click does not leave it
        stuck open — clicking a button focuses it, and :focus-within would
        then hold the fan out until something else was clicked. */
-    body.is-admin .home-view-toggle:hover,
-    body.is-admin .home-view-toggle:has(:focus-visible) {
+    .home-view-toggle:hover,
+    .home-view-toggle:has(:focus-visible) {
       width:var(--hvt-full-w, auto);
     }
+
+    /* Liquid glass. Three things make it read as glass rather than as a
+       flat tint: the backdrop is blurred AND saturated, so colour from
+       whatever is behind bleeds through instead of going grey; a hairline
+       inset ring picks out the rim; and a second inset highlight along
+       the top edge only acts as the specular, which is what tells the eye
+       the surface is curved. The drop shadow is kept very soft so the
+       pill still reads as sitting in the page rather than on it. */
     .hvt-opt {
       flex:0 0 auto;
       position:relative;
@@ -553,26 +558,39 @@
       border:none; cursor:pointer;
       padding:7px 16px; font-size:12.5px; font-weight:600;
       border-radius:999px; white-space:nowrap;
-      color:#5a5450;
-      background:rgba(176,170,170,.16);
-      -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+      color:#4a4540;
+      background:linear-gradient(to bottom, rgba(255,255,255,.55), rgba(255,255,255,.28));
+      -webkit-backdrop-filter:blur(14px) saturate(180%);
+      backdrop-filter:blur(14px) saturate(180%);
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.55),
+                 inset 0 1px 1px rgba(255,255,255,.85),
+                 0 1px 3px rgba(0,0,0,.10);
       transform:translateX(var(--hvt-dx, 0px));
       transition:transform .55s cubic-bezier(.34,1.4,.64,1) var(--hvt-delay, 0s),
-                 background-color .3s ease, color .3s ease;
+                 background .3s ease, color .3s ease, box-shadow .3s ease;
     }
     .home-view-toggle:hover .hvt-opt,
     .home-view-toggle:has(:focus-visible) .hvt-opt { transform:translateX(0); }
-    /* Top of the stack, and the only filled pill — so the collapsed
-       control still answers "which view is this?". */
-    .hvt-opt.active { background:#1a1a1a; color:#fff; }
-    .hvt-opt:not(.active):hover { background:rgba(0,0,0,.14); color:#1a1a1a; }
+    /* Top of the stack, and the only solid pill — so the collapsed
+       control still answers "which view is this?". Glass needs something
+       behind it to refract, and the active pill is the one thing here
+       that has to read at a glance, so it stays opaque and keeps only
+       the rim highlight. */
+    .hvt-opt.active {
+      background:#1a1a1a; color:#fff;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.18),
+                 0 2px 6px rgba(0,0,0,.22);
+    }
+    .hvt-opt:not(.active):hover {
+      background:linear-gradient(to bottom, rgba(255,255,255,.75), rgba(255,255,255,.45));
+      color:#1a1a1a;
+    }
     .hvt-opt:focus-visible { outline:2px solid #1a1a1a; outline-offset:2px; }
 
     @media (prefers-reduced-motion:reduce) {
-      body.is-admin .home-view-toggle, .hvt-opt { transition-duration:.01ms; }
+      .home-view-toggle, .hvt-opt { transition-duration:.01ms; }
       .hvt-opt { --hvt-delay:0s; }
     }
-
     /* ── Projects list — an alternate write-up-style view of the same
        cards: year, title, category line, a short description, and a
        filmstrip of that project's own images. The strip's sizing is just
@@ -2978,11 +2996,30 @@
     body.dark .block-text, body.dark .pli-title,
     body.dark .nav-btn.active { color:var(--d-text); }
 
-    /* View toggle — the active pill is a filled chip rather than tinted
-       text, so it inverts here instead of joining the type tiers above. */
-    body.dark .hvt-opt { background:rgba(255,255,255,.08); color:var(--d-text-2); }
-    body.dark .hvt-opt.active { background:var(--d-text); color:var(--d-bg); }
-    body.dark .hvt-opt:not(.active):hover { background:rgba(255,255,255,.16); color:var(--d-text); }
+    /* View toggle — the whole glass recipe has to be restated, not just
+       the colours. The light version builds its rim and specular out of
+       white at high alpha, which on a dark page is a blown-out grey lump
+       rather than glass: the sheet goes to a low-alpha white over the
+       dark ground, the rim drops to a tenth, and the specular becomes a
+       hint rather than a highlight. The saturate() stays, since bleeding
+       colour through is what separates glass from a flat tint. */
+    body.dark .hvt-opt {
+      color:var(--d-text-2);
+      background:linear-gradient(to bottom, rgba(255,255,255,.13), rgba(255,255,255,.05));
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.10),
+                 inset 0 1px 1px rgba(255,255,255,.14),
+                 0 1px 3px rgba(0,0,0,.45);
+    }
+    /* The active pill is opaque in both themes, and inverts here. */
+    body.dark .hvt-opt.active {
+      background:var(--d-text); color:var(--d-bg);
+      box-shadow:inset 0 -1px 0 rgba(0,0,0,.14),
+                 0 2px 8px rgba(0,0,0,.5);
+    }
+    body.dark .hvt-opt:not(.active):hover {
+      background:linear-gradient(to bottom, rgba(255,255,255,.22), rgba(255,255,255,.11));
+      color:var(--d-text);
+    }
     body.dark .hvt-opt:focus-visible { outline-color:var(--d-text); }
     body.dark .profile-role, body.dark .exp-role, body.dark .pli-desc,
     body.dark .tools-bulk-count, body.dark .nav-color-hex,
@@ -8628,14 +8665,10 @@ function renderHomeSections(sections) {
   _lastHomeSections = sections;
   const container = document.getElementById('home-sections');
   if (!container) return;
-  // Projects (list) view is admin-only for now (still being checked over)
-  // — never rendered for a public visitor even if homeView somehow ends
-  // up 'list' for that session.
-  const isAdmin = document.body.classList.contains('is-admin');
   // Unlike the old folder view, this one stays up in edit mode — it has its
   // own editing (year/category/description inline, saved by
   // saveProjectsListEdits) rather than borrowing the grid's.
-  const useList = isAdmin && homeView === 'list';
+  const useList = homeView === 'list';
   // Strips are about to be discarded — stop their rAF loops and observers
   // before the DOM goes, or switching views leaves them running forever.
   _teardownStripDrivers();
@@ -8665,9 +8698,19 @@ function renderHomeSections(sections) {
 
     const row = document.createElement('div');
     row.className = 'projects-list';
+    /* Empty boards are skipped now that this view is public. Several of
+       the listed keys are sections that exist but have nothing in them
+       yet, and a row with a heading and a blank strip reads as broken
+       rather than as forthcoming.
+
+       Edit mode is the exception: that is where an empty board gets its
+       first media, and a row you cannot see is a row you cannot fill. */
+    const editing = typeof editMode !== 'undefined' && editMode;
     getProjectsListKeys().forEach(key => {
       const card = allCards.find(c => c.key === key);
-      if (card) row.appendChild(buildProjectListItem(card));
+      if (!card) return;
+      if (!editing && !listMediaFor(card.key, card.thumb).length) return;
+      row.appendChild(buildProjectListItem(card));
     });
     container.appendChild(row);
 
