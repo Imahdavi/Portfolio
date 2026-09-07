@@ -649,7 +649,13 @@
     .pli-title-row { display:flex; align-items:baseline; gap:5px; }
     .pli-title { font-family:var(--font-title); font-size:17px; font-weight:600; line-height:1.3; }
     .pli-category { font-family:var(--font-body); font-size:12.5px; color:#a89e91; margin-top:7px; }
-    .pli-desc { font-family:var(--font-body); font-size:13.5px; line-height:1.55; color:#5a5148; margin:18px 0 16px; max-width:52ch; }
+    /* The measure was 52ch, which at the current site width left the
+       paragraph ~200px short of the strip below it and read as a column
+       that had lost its edge. It now runs the full row, capped at 78ch
+       only so the site-width slider cannot stretch a line past what is
+       comfortable to read — at 700px the row is ~75ch and the cap never
+       applies; at 900px it does. */
+    .pli-desc { font-family:var(--font-body); font-size:13.5px; line-height:1.55; color:#5a5148; margin:18px 0 16px; max-width:min(100%, 78ch); }
     .pli-media-strip {
       display:flex; gap:10px; height:170px; overflow-x:auto; scrollbar-width:none;
       margin-inline:-4px; padding-inline:4px;
