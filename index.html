@@ -2497,23 +2497,23 @@
        everything dark lives in this one block where it can be read and
        tuned together.
 
-       The greys are warm rather than neutral, because the light theme is
-       warm too (#fdfbf8 nav, #f5f4f2 cards) — a cold grey dark mode next
-       to those reads as a different site.
+       The greys are near-neutral charcoal — flat and low-chroma, so the
+       dark theme reads as a dimmed sheet of paper rather than a tinted
+       one. Only the faintest cool cast keeps it from looking muddy.
 
        Note what is deliberately NOT here: the resize menu, the format
        toolbar and the enlarged-media chrome are already dark surfaces
        with light text, so they are correct in dark mode untouched. */
     body.dark {
-      --d-bg:#131110;          /* page */
-      --d-surface:#1c1a18;     /* cards, sheets, inputs */
-      --d-raised:#242120;      /* hover / raised */
-      --d-text:#ece7e1;
-      --d-text-2:#b3aca4;
-      --d-text-3:#857e76;
+      --d-bg:#141516;          /* page */
+      --d-surface:#1d1e20;     /* cards, sheets, inputs */
+      --d-raised:#26282a;      /* hover / raised */
+      --d-text:#eaebec;
+      --d-text-2:#a9abad;
+      --d-text-3:#7c7e81;
       --d-line:rgba(255,255,255,.10);
       --d-line-2:rgba(255,255,255,.18);
-      --thumb-a:#2b2724; --thumb-b:#211e1c;
+      --thumb-a:#2b2d2f; --thumb-b:#202224;
       background:var(--d-bg); color:var(--d-text);
     }
     body.dark .view { background:var(--d-bg); }
@@ -2562,7 +2562,7 @@
        still-dark circle covered it. */
     body.dark .icon-radial-btn .radial-fill { background:var(--d-text); }
     body.dark .icon-radial-btn.radial-active svg { color:var(--d-bg); }
-    body.dark .bottom-nav-group { background:rgba(28,26,24,.72); }
+    body.dark .bottom-nav-group { background:rgba(29,30,32,.72); }
     /* Hovering one card lifts it and pushes the rest back with a white veil
        over their artwork (.proj-card::after) — on a dark page that veil
        reads as milky haze instead of distance, so it inverts. It has to be
@@ -2622,7 +2622,7 @@
        carries the only hardcoded near-black left on the home page. */
     body.dark .profile-name-display { color:var(--d-text); }
     body.dark .tools-label { color:rgba(255,255,255,.55); }
-    body.dark .game-overlay { background:rgba(19,17,16,.86); }
+    body.dark .game-overlay { background:rgba(20,21,22,.86); }
     body.dark .game-overlay-title { color:var(--d-text); }
     body.dark .game-score-sep { color:rgba(255,255,255,.34); }
 
@@ -7352,25 +7352,101 @@ function setupProjectsListReveal() {
   below.forEach(t => _pliRevealObs.observe(t));
 }
 
-// Same idea as setupLazyVideos() on project pages: don't fetch a strip
-// video until its row is near the viewport, and pause it once it leaves.
+/* Strip videos: a few at a time, nearest first.
+
+   Every clip within 300px of the viewport used to get its src AND a
+   play() the moment it intersected. Across a list this long that is a
+   dozen-plus downloads and decodes started at once, all competing — which
+   is what made them stall and stutter rather than play. The observer now
+   only records what's wanted; _stripPump feeds the queue a couple at a
+   time, always taking whatever is closest to the middle of the screen, and
+   caps how many play together so a scroll never has more than a handful
+   decoding. Leaving the viewport drops a clip from the queue, so scrolling
+   past a row stops paying for it. */
+const STRIP_MAX_LOADING = 2;
+const STRIP_MAX_PLAYING = 6;
 let _stripObs = null;
+let _stripWanted = new Set();
+let _stripLoading = new Set();
+let _stripPumpRaf = 0;
+
+// How far a clip's middle is from the middle of the screen — the ordering
+// everything below is "nearest first" by.
+function _stripDist(v) {
+  const r = v.getBoundingClientRect();
+  return Math.abs((r.top + r.bottom) / 2 - window.innerHeight / 2);
+}
+
+function _stripPump() {
+  while (_stripLoading.size < STRIP_MAX_LOADING) {
+    let next = null, best = Infinity;
+    _stripWanted.forEach(v => {
+      if (v.getAttribute('src') || _stripLoading.has(v)) return;
+      const d = _stripDist(v);
+      if (d < best) { best = d; next = v; }
+    });
+    if (!next) break;
+    _stripLoading.add(next);
+    let released = false;
+    // A clip that never reports back — a stalled request, a file the
+    // browser won't decode — would otherwise hold its slot for good and
+    // starve everything queued behind it, which is the "stuck and never
+    // plays" case this is all here to avoid. The timer only frees the
+    // slot; the load itself is left running in case it does arrive.
+    const release = () => {
+      if (released) return;
+      released = true;
+      clearTimeout(timer);
+      _stripLoading.delete(next);
+      next.removeEventListener('loadeddata', release);
+      next.removeEventListener('error', release);
+      _stripPump();
+    };
+    const timer = setTimeout(release, 8000);
+    next.addEventListener('loadeddata', release);
+    next.addEventListener('error', release);
+    next.src = next.dataset.lazySrc;
+  }
+
+  const ready = [..._stripWanted].filter(v => v.getAttribute('src'));
+  ready.sort((a, b) => _stripDist(a) - _stripDist(b));
+  ready.forEach((v, i) => {
+    if (i < STRIP_MAX_PLAYING) {
+      if (v.paused) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
+    } else if (!v.paused) {
+      v.pause();
+    }
+  });
+}
+
+// Distances change as the page moves, so the ranking has to be redone on
+// scroll as well as on the observer's enter/leave — coalesced to a frame.
+function _stripPumpSoon() {
+  if (_stripPumpRaf) return;
+  _stripPumpRaf = requestAnimationFrame(() => { _stripPumpRaf = 0; _stripPump(); });
+}
+
 function setupStripVideos() {
   if (_stripObs) { _stripObs.disconnect(); _stripObs = null; }
+  window.removeEventListener('scroll', _stripPumpSoon);
+  _stripWanted = new Set();
+  _stripLoading = new Set();
   const vids = document.querySelectorAll('.pli-media-strip video[data-lazy-src]');
   if (!vids.length) return;
   _stripObs = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       const v = entry.target;
       if (entry.isIntersecting) {
-        if (!v.getAttribute('src') && v.dataset.lazySrc) v.src = v.dataset.lazySrc;
-        const p = v.play(); if (p && p.catch) p.catch(() => {});
+        _stripWanted.add(v);
       } else {
-        v.pause();
+        _stripWanted.delete(v);
+        if (!v.paused) v.pause();
       }
     });
-  }, { rootMargin: '300px 0px 300px 0px', threshold: 0.01 });
+    _stripPump();
+  }, { rootMargin: '200px 0px 200px 0px', threshold: 0.01 });
   vids.forEach(v => _stripObs.observe(v));
+  window.addEventListener('scroll', _stripPumpSoon, { passive: true });
 }
 
 function renderHomeSections(sections) {
