@@ -7613,7 +7613,12 @@ function buildProjectListItem(card) {
   const desc = document.createElement('div');
   desc.className = 'pli-desc';
   desc.dataset.ph = 'Short description';
-  desc.textContent = card.desc || '';
+  /* innerHTML, to match what saveProjectsListEdits now stores. The pair
+     used to be textContent out and innerText back in, so the format
+     toolbar's bold and italic were dropped on the next save and gone by
+     the next load — exactly the same round trip the board's own text
+     blocks have always done with innerHTML. */
+  desc.innerHTML = card.desc || '';
   body.appendChild(desc);
 
   // The strip is built even when empty: it still carries the "Add media"
@@ -8619,7 +8624,11 @@ function saveProjectsListEdits() {
       year:     item.querySelector('.pli-year-from')?.textContent.trim() || '',
       yearEnd:  item.querySelector('.pli-year-to')?.textContent.trim()   || '',
       category: item.querySelector('.pli-category')?.textContent.trim()  || '',
-      desc:     item.querySelector('.pli-desc')?.innerText.trim()        || '',
+      // innerHTML, so bold and italic survive. The short fields stay
+      // plain: the title is written back as a card's listTitle and shown
+      // as text elsewhere, and markup in it would leak into places that
+      // are not contenteditable.
+      desc:     item.querySelector('.pli-desc')?.innerHTML.trim()        || '',
     };
     Object.entries(next).forEach(([k, v]) => {
       if ((card[k] || '') === v) return;
@@ -9791,7 +9800,30 @@ function updateEditUI() {
 }
 
 /* ─── Home edit mode ────────────────────────────────────── */
+/* Entering and leaving edit mode changes the layout ABOVE whatever you
+   are looking at — .home-edit hides the view toggle and shows the hint
+   bar, both of which sit near the top of the page — so the content under
+   the viewport slid up on the way in and back down on the way out.
+
+   Rather than chase each contributor, this pins the element currently at
+   the top of the viewport and puts it back where it was once the DOM has
+   settled. getBoundingClientRect forces the pending layout, so the
+   after-measurement is real and no frame is needed in between. */
 function updateHomeEditUI() {
+  const view = document.getElementById('view-home');
+  const anchor = view && [...view.querySelectorAll('.sec-label, .proj-card, .proj-list-item')]
+    .find(el => el.getBoundingClientRect().bottom > 0);
+  const before = anchor ? anchor.getBoundingClientRect().top : null;
+
+  _updateHomeEditUI();
+
+  if (anchor && before != null && anchor.isConnected) {
+    const drift = anchor.getBoundingClientRect().top - before;
+    if (drift) view.scrollTop += drift;
+  }
+}
+
+function _updateHomeEditUI() {
   const btn = document.getElementById('editBtn');
   btn.classList.toggle('on', editMode);
   document.getElementById('editLabel').textContent = editMode ? 'Done' : 'Edit';
