@@ -1934,10 +1934,11 @@
        Order out is that list read backwards, so the last thing drawn is
        the first thing taken away.
 
-       Activation is proximity, not hover: .is-near is set from a pointer
-       listener once the cursor is within DOT_BORDER_NEAR of the box. The
-       :has(:hover) arm stays as the fallback for anything with no pointer
-       to track, such as a tap. */
+       Activation is the wrapper's own :hover. Its box is exactly the
+       rectangle the border draws on — the padding that spaces the dashes
+       off the text is inside it — so the cursor crossing the drawn
+       outline is what starts and reverses the sequence, with no script
+       and nothing to keep in sync. */
     .dot-border {
       --dot-size:6px;
       --line-weight:1px;
@@ -1964,8 +1965,7 @@
       background-image:repeating-linear-gradient(45deg, var(--grid-color) 0 1px, transparent 2px 5px);
       transition:opacity var(--reverse-speed) ease-in-out 0s;
     }
-    .dot-border.is-near::after,
-    .dot-border:has(.tools-label:hover)::after {
+    .dot-border:hover::after {
       opacity:1;
       transition-duration:var(--animation-speed);
       transition-delay:calc(var(--animation-speed) * 2.8);
@@ -1991,25 +1991,20 @@
     .dot-border .db-dot.bottom.left  { bottom:50%; left:20%;  }
 
     /* Back to the slower draw clock while the border is up. */
-    .dot-border.is-near .db-dot,
-    .dot-border:has(.tools-label:hover) .db-dot { opacity:1; transition-duration:var(--animation-speed); }
-    .dot-border.is-near .db-dot.top.left,
-    .dot-border:has(.tools-label:hover) .db-dot.top.left {
+    .dot-border:hover .db-dot { opacity:1; transition-duration:var(--animation-speed); }
+    .dot-border:hover .db-dot.top.left {
       top:calc(var(--dot-size) * -0.5); left:calc(var(--dot-size) * -0.5);
       transition-delay:0s;
     }
-    .dot-border.is-near .db-dot.top.right,
-    .dot-border:has(.tools-label:hover) .db-dot.top.right {
+    .dot-border:hover .db-dot.top.right {
       top:calc(var(--dot-size) * -0.5); right:calc(var(--dot-size) * -0.5);
       transition-delay:calc(var(--animation-speed) * .6);
     }
-    .dot-border.is-near .db-dot.bottom.right,
-    .dot-border:has(.tools-label:hover) .db-dot.bottom.right {
+    .dot-border:hover .db-dot.bottom.right {
       bottom:calc(var(--dot-size) * -0.5); right:calc(var(--dot-size) * -0.5);
       transition-delay:calc(var(--animation-speed) * 1.2);
     }
-    .dot-border.is-near .db-dot.bottom.left,
-    .dot-border:has(.tools-label:hover) .db-dot.bottom.left {
+    .dot-border:hover .db-dot.bottom.left {
       bottom:calc(var(--dot-size) * -0.5); left:calc(var(--dot-size) * -0.5);
       transition-delay:calc(var(--animation-speed) * 1.8);
     }
@@ -2038,7 +2033,7 @@
 
     /* Retract order — each in-delay subtracted from the longest one, so
        the sequence plays backwards on the way out. Declared before the
-       .is-near block below, which overrides them while the border is up. */
+       :hover block below, which overrides them while the border is up. */
     .dot-border .db-line.left        { transition-delay:calc(var(--reverse-speed) * .4); }
     .dot-border .db-line.bottom      { transition-delay:calc(var(--reverse-speed) * .8); }
     .dot-border .db-dot.bottom.left  { transition-delay:calc(var(--reverse-speed) * 1); }
@@ -2048,20 +2043,13 @@
     .dot-border .db-dot.top.right    { transition-delay:calc(var(--reverse-speed) * 2.2); }
     .dot-border .db-dot.top.left     { transition-delay:calc(var(--reverse-speed) * 2.8); }
 
-    .dot-border.is-near .db-line.horizontal,
-    .dot-border:has(.tools-label:hover) .db-line.horizontal { transform:rotate(0deg) scaleX(1); }
-    .dot-border.is-near .db-line.vertical,
-    .dot-border:has(.tools-label:hover) .db-line.vertical { transform:rotate(0deg) scaleY(1); }
-    .dot-border.is-near .db-line,
-    .dot-border:has(.tools-label:hover) .db-line { transition-duration:var(--animation-speed); }
-    .dot-border.is-near .db-line.top,
-    .dot-border:has(.tools-label:hover) .db-line.top    { transition-delay:calc(var(--animation-speed) * .8); }
-    .dot-border.is-near .db-line.right,
-    .dot-border:has(.tools-label:hover) .db-line.right  { transition-delay:calc(var(--animation-speed) * 1.4); }
-    .dot-border.is-near .db-line.bottom,
-    .dot-border:has(.tools-label:hover) .db-line.bottom { transition-delay:calc(var(--animation-speed) * 2); }
-    .dot-border.is-near .db-line.left,
-    .dot-border:has(.tools-label:hover) .db-line.left   { transition-delay:calc(var(--animation-speed) * 2.4); }
+    .dot-border:hover .db-line.horizontal { transform:rotate(0deg) scaleX(1); }
+    .dot-border:hover .db-line.vertical { transform:rotate(0deg) scaleY(1); }
+    .dot-border:hover .db-line { transition-duration:var(--animation-speed); }
+    .dot-border:hover .db-line.top    { transition-delay:calc(var(--animation-speed) * .8); }
+    .dot-border:hover .db-line.right  { transition-delay:calc(var(--animation-speed) * 1.4); }
+    .dot-border:hover .db-line.bottom { transition-delay:calc(var(--animation-speed) * 2); }
+    .dot-border:hover .db-line.left   { transition-delay:calc(var(--animation-speed) * 2.4); }
 
     /* The scramble animation fills the label with a run of spaces on its
        first frame. In a block box that collapses to zero width, which was
@@ -2071,8 +2059,8 @@
 
     @media (prefers-reduced-motion:reduce) {
       .dot-border .db-dot, .dot-border .db-line, .dot-border::after,
-      .dot-border.is-near .db-dot, .dot-border.is-near .db-line,
-      .dot-border.is-near::after { transition-duration:.01ms; transition-delay:0s; }
+      .dot-border:hover .db-dot, .dot-border:hover .db-line,
+      .dot-border:hover::after { transition-duration:.01ms; transition-delay:0s; }
     }
     .tools-stack {
       display:grid; grid-template-areas:"stack"; place-items:center;
@@ -5716,56 +5704,6 @@ function _toolsLabelRandomChar(prevChar) {
   return c;
 }
 
-
-/* ─── Dot border proximity ─────────────────────────────────────────
-   The border starts drawing before the cursor arrives. Distance is
-   measured to the nearest edge of the box, not to its centre, so the
-   trigger ring follows the label's shape instead of ballooning with
-   its width — the clamp-to-zero on each axis is what makes a point
-   already inside that axis's span contribute nothing.
-
-   Reads are rAF-coalesced: a fast sweep across the page fires
-   pointermove far more often than it paints, and each check costs a
-   getBoundingClientRect, which is a forced layout. */
-const DOT_BORDER_NEAR = 90;
-(function () {
-  let el = null, queued = 0, px = 0, py = 0;
-
-  function target() {
-    if (!el || !el.isConnected) el = document.querySelector('.dot-border');
-    return el;
-  }
-
-  function update() {
-    queued = 0;
-    const w = target();
-    if (!w) return;
-    // offsetParent is null while the Experience view is display:none —
-    // the rect would read all zeros and every pointer would look close.
-    if (!w.offsetParent) { w.classList.remove('is-near'); return; }
-    const r = w.getBoundingClientRect();
-    const dx = Math.max(r.left - px, 0, px - r.right);
-    const dy = Math.max(r.top - py, 0, py - r.bottom);
-    w.classList.toggle('is-near', Math.hypot(dx, dy) <= DOT_BORDER_NEAR);
-  }
-
-  window.addEventListener('pointermove', e => {
-    px = e.clientX; py = e.clientY;
-    if (!queued) queued = requestAnimationFrame(update);
-  }, { passive: true });
-
-  // Leaving the window entirely fires no further pointermove, so the
-  // border would stay drawn with the cursor long gone.
-  document.addEventListener('pointerleave', () => {
-    const w = target();
-    if (w) w.classList.remove('is-near');
-  });
-
-  // Scrolling moves the box under a stationary cursor.
-  window.addEventListener('scroll', () => {
-    if (!queued) queued = requestAnimationFrame(update);
-  }, { passive: true });
-})();
 
 function playToolsLabelAnim(speed = 25, delay = 150) {
   const el = document.querySelector('.tools-label');
