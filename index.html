@@ -1917,6 +1917,27 @@
        button chrome and would read as a call to action here. The border
        draw, the corner dots and the 45deg hatch that fades in last are
        all as authored. */
+    /* ─── Dot border (21st.dev @mengto / ThreeUI "Dot Border Button", MIT)
+       ────────────────────────────────────────────────────────────────
+       The original's geometry and stagger, rebuilt on transitions rather
+       than the keyframes it ships with. Keyframes could only play the
+       sequence forwards: pulling the cursor away snapped every piece back
+       at once, because a finished `forwards` animation has nowhere to
+       retract to. Two states plus per-element delays give the same draw-in
+       on the way in, un-draw it in reverse on the way out, and let a
+       cursor that leaves mid-sequence turn around from wherever each
+       piece had got to instead of jumping.
+
+       Order in (× --animation-speed), as authored:
+         dot TL 0 · dot TR .6 · line T .8 · dot BR 1.2 · line R 1.4
+         dot BL 1.8 · line B 2.0 · line L 2.4 · hatch 2.8
+       Order out is that list read backwards, so the last thing drawn is
+       the first thing taken away.
+
+       Activation is proximity, not hover: .is-near is set from a pointer
+       listener once the cursor is within DOT_BORDER_NEAR of the box. The
+       :has(:hover) arm stays as the fallback for anything with no pointer
+       to track, such as a tap. */
     .dot-border {
       --dot-size:6px;
       --line-weight:1px;
@@ -1929,56 +1950,69 @@
       padding:var(--line-distance); margin-bottom:44px;
       border-radius:6px; user-select:none;
     }
-    /* The hatch fill. Held at opacity 0 until 80% of a 4x-length run, so
-       it lands after the last edge has drawn rather than washing in
-       underneath the sequence. */
+
+    /* The hatch fill — last in, first out. */
     .dot-border::after {
       content:''; position:absolute; inset:0; border-radius:inherit;
       pointer-events:none; z-index:-1; opacity:0;
       background-image:repeating-linear-gradient(45deg, var(--grid-color) 0 1px, transparent 2px 5px);
+      transition:opacity var(--animation-speed) ease-in-out 0s;
     }
+    .dot-border.is-near::after,
     .dot-border:has(.tools-label:hover)::after {
-      animation:db-fade calc(var(--animation-speed) * 4) ease-in-out forwards;
+      opacity:1;
+      transition-delay:calc(var(--animation-speed) * 2.8);
     }
-    @keyframes db-fade { 80% { opacity:0 } 100% { opacity:1 } }
 
     .dot-border .db-dot {
       position:absolute; width:var(--dot-size); aspect-ratio:1;
-      border-radius:2px; background:var(--dot-color);
-      opacity:0; transition:all .3s ease-in-out;
-      /* Purely decorative, and with no top/left at rest they sit stacked
-         over the label — without this they swallow the hover that is
-         supposed to trigger them. */
+      border-radius:2px; background:var(--dot-color); opacity:0;
+      /* Purely decorative, and at rest they sit stacked over the label —
+         without this they swallow the pointer they exist to react to. */
       pointer-events:none;
+      transition:top var(--animation-speed) ease-in-out,
+                 bottom var(--animation-speed) ease-in-out,
+                 left var(--animation-speed) ease-in-out,
+                 right var(--animation-speed) ease-in-out,
+                 opacity var(--animation-speed) ease-in-out;
     }
+    /* At rest each dot waits inside the box, on the axis it will later
+       fly out along. */
+    .dot-border .db-dot.top.left     { top:50%;    left:20%;  }
+    .dot-border .db-dot.top.right    { top:50%;    right:20%; }
+    .dot-border .db-dot.bottom.right { bottom:50%; right:20%; }
+    .dot-border .db-dot.bottom.left  { bottom:50%; left:20%;  }
+
+    .dot-border.is-near .db-dot,
+    .dot-border:has(.tools-label:hover) .db-dot { opacity:1; }
+    .dot-border.is-near .db-dot.top.left,
     .dot-border:has(.tools-label:hover) .db-dot.top.left {
-      top:50%; left:20%;
-      animation:db-tl var(--animation-speed) ease-in-out forwards;
+      top:calc(var(--dot-size) * -0.5); left:calc(var(--dot-size) * -0.5);
+      transition-delay:0s;
     }
+    .dot-border.is-near .db-dot.top.right,
     .dot-border:has(.tools-label:hover) .db-dot.top.right {
-      top:50%; right:20%;
-      animation:db-tr var(--animation-speed) ease-in-out forwards;
-      animation-delay:calc(var(--animation-speed) * .6);
+      top:calc(var(--dot-size) * -0.5); right:calc(var(--dot-size) * -0.5);
+      transition-delay:calc(var(--animation-speed) * .6);
     }
+    .dot-border.is-near .db-dot.bottom.right,
     .dot-border:has(.tools-label:hover) .db-dot.bottom.right {
-      bottom:50%; right:20%;
-      animation:db-br var(--animation-speed) ease-in-out forwards;
-      animation-delay:calc(var(--animation-speed) * 1.2);
+      bottom:calc(var(--dot-size) * -0.5); right:calc(var(--dot-size) * -0.5);
+      transition-delay:calc(var(--animation-speed) * 1.2);
     }
+    .dot-border.is-near .db-dot.bottom.left,
     .dot-border:has(.tools-label:hover) .db-dot.bottom.left {
-      bottom:50%; left:20%;
-      animation:db-bl var(--animation-speed) ease-in-out forwards;
-      animation-delay:calc(var(--animation-speed) * 1.8);
+      bottom:calc(var(--dot-size) * -0.5); left:calc(var(--dot-size) * -0.5);
+      transition-delay:calc(var(--animation-speed) * 1.8);
     }
-    @keyframes db-tl { 90% { opacity:.6 } 100% { top:calc(var(--dot-size) * -0.5); left:calc(var(--dot-size) * -0.5); opacity:1 } }
-    @keyframes db-tr { 80% { opacity:.6 } 100% { top:calc(var(--dot-size) * -0.5); right:calc(var(--dot-size) * -0.5); opacity:1 } }
-    @keyframes db-br { 80% { opacity:.6 } 100% { bottom:calc(var(--dot-size) * -0.5); right:calc(var(--dot-size) * -0.5); opacity:1 } }
-    @keyframes db-bl { 80% { opacity:.6 } 100% { bottom:calc(var(--dot-size) * -0.5); left:calc(var(--dot-size) * -0.5); opacity:1 } }
 
     /* The dashes are a repeating gradient rather than a dashed border, so
        the dash rhythm stays put while the edge scales in — a real dashed
        border would stretch its dashes along with the transform. */
-    .dot-border .db-line { position:absolute; transition:all .3s ease-in-out; pointer-events:none; }
+    .dot-border .db-line {
+      position:absolute; pointer-events:none;
+      transition:transform var(--animation-speed) ease-in-out;
+    }
     .dot-border .db-line.horizontal {
       height:var(--line-weight); width:100%;
       background-image:repeating-linear-gradient(90deg, #0000 0 calc(var(--line-weight)*2), var(--line-color) calc(var(--line-weight)*2) calc(var(--line-weight)*4));
@@ -1987,28 +2021,37 @@
       width:var(--line-weight); height:100%;
       background-image:repeating-linear-gradient(0deg, #0000 0 calc(var(--line-weight)*2), var(--line-color) calc(var(--line-weight)*2) calc(var(--line-weight)*4));
     }
+    /* Each edge rests rotated 5deg at zero length, so it swings into
+       place rather than merely growing. */
     .dot-border .db-line.top    { top:calc(var(--line-weight) * -0.5); transform-origin:top left; transform:rotate(5deg) scaleX(0); }
     .dot-border .db-line.bottom { bottom:calc(var(--line-weight) * -0.5); transform-origin:bottom right; transform:rotate(5deg) scaleX(0); }
     .dot-border .db-line.left   { left:calc(var(--line-weight) * -0.5); transform-origin:bottom left; transform:rotate(0deg) scaleY(0); }
     .dot-border .db-line.right  { right:calc(var(--line-weight) * -0.5); transform-origin:top right; transform:rotate(5deg) scaleY(0); }
-    .dot-border:has(.tools-label:hover) .db-line.top {
-      animation:db-draw-x var(--animation-speed) ease-in-out forwards;
-      animation-delay:calc(var(--animation-speed) * .8);
-    }
-    .dot-border:has(.tools-label:hover) .db-line.right {
-      animation:db-draw-y var(--animation-speed) ease-in-out forwards;
-      animation-delay:calc(var(--animation-speed) * 1.4);
-    }
-    .dot-border:has(.tools-label:hover) .db-line.bottom {
-      animation:db-draw-x var(--animation-speed) ease-in-out forwards;
-      animation-delay:calc(var(--animation-speed) * 2);
-    }
-    .dot-border:has(.tools-label:hover) .db-line.left {
-      animation:db-draw-y var(--animation-speed) ease-in-out forwards;
-      animation-delay:calc(var(--animation-speed) * 2.4);
-    }
-    @keyframes db-draw-x { 100% { transform:rotate(0deg) scaleX(1) } }
-    @keyframes db-draw-y { 100% { transform:rotate(0deg) scaleY(1) } }
+
+    /* Retract order — each in-delay subtracted from the longest one, so
+       the sequence plays backwards on the way out. Declared before the
+       .is-near block below, which overrides them while the border is up. */
+    .dot-border .db-line.left        { transition-delay:calc(var(--animation-speed) * .4); }
+    .dot-border .db-line.bottom      { transition-delay:calc(var(--animation-speed) * .8); }
+    .dot-border .db-dot.bottom.left  { transition-delay:calc(var(--animation-speed) * 1); }
+    .dot-border .db-line.right       { transition-delay:calc(var(--animation-speed) * 1.4); }
+    .dot-border .db-dot.bottom.right { transition-delay:calc(var(--animation-speed) * 1.6); }
+    .dot-border .db-line.top         { transition-delay:calc(var(--animation-speed) * 2); }
+    .dot-border .db-dot.top.right    { transition-delay:calc(var(--animation-speed) * 2.2); }
+    .dot-border .db-dot.top.left     { transition-delay:calc(var(--animation-speed) * 2.8); }
+
+    .dot-border.is-near .db-line.horizontal,
+    .dot-border:has(.tools-label:hover) .db-line.horizontal { transform:rotate(0deg) scaleX(1); }
+    .dot-border.is-near .db-line.vertical,
+    .dot-border:has(.tools-label:hover) .db-line.vertical { transform:rotate(0deg) scaleY(1); }
+    .dot-border.is-near .db-line.top,
+    .dot-border:has(.tools-label:hover) .db-line.top    { transition-delay:calc(var(--animation-speed) * .8); }
+    .dot-border.is-near .db-line.right,
+    .dot-border:has(.tools-label:hover) .db-line.right  { transition-delay:calc(var(--animation-speed) * 1.4); }
+    .dot-border.is-near .db-line.bottom,
+    .dot-border:has(.tools-label:hover) .db-line.bottom { transition-delay:calc(var(--animation-speed) * 2); }
+    .dot-border.is-near .db-line.left,
+    .dot-border:has(.tools-label:hover) .db-line.left   { transition-delay:calc(var(--animation-speed) * 2.4); }
 
     /* The scramble animation fills the label with a run of spaces on its
        first frame. In a block box that collapses to zero width, which was
@@ -2017,9 +2060,9 @@
     .dot-border .tools-label { margin-bottom:0; white-space:pre; position:relative; z-index:1; }
 
     @media (prefers-reduced-motion:reduce) {
-      .dot-border:has(.tools-label:hover) .db-dot,
-      .dot-border:has(.tools-label:hover) .db-line,
-      .dot-border:has(.tools-label:hover)::after { animation-duration:.01ms; animation-delay:0s; }
+      .dot-border .db-dot, .dot-border .db-line, .dot-border::after,
+      .dot-border.is-near .db-dot, .dot-border.is-near .db-line,
+      .dot-border.is-near::after { transition-duration:.01ms; transition-delay:0s; }
     }
     .tools-stack {
       display:grid; grid-template-areas:"stack"; place-items:center;
@@ -5662,6 +5705,57 @@ function _toolsLabelRandomChar(prevChar) {
   while (c === prevChar);
   return c;
 }
+
+
+/* ─── Dot border proximity ─────────────────────────────────────────
+   The border starts drawing before the cursor arrives. Distance is
+   measured to the nearest edge of the box, not to its centre, so the
+   trigger ring follows the label's shape instead of ballooning with
+   its width — the clamp-to-zero on each axis is what makes a point
+   already inside that axis's span contribute nothing.
+
+   Reads are rAF-coalesced: a fast sweep across the page fires
+   pointermove far more often than it paints, and each check costs a
+   getBoundingClientRect, which is a forced layout. */
+const DOT_BORDER_NEAR = 90;
+(function () {
+  let el = null, queued = 0, px = 0, py = 0;
+
+  function target() {
+    if (!el || !el.isConnected) el = document.querySelector('.dot-border');
+    return el;
+  }
+
+  function update() {
+    queued = 0;
+    const w = target();
+    if (!w) return;
+    // offsetParent is null while the Experience view is display:none —
+    // the rect would read all zeros and every pointer would look close.
+    if (!w.offsetParent) { w.classList.remove('is-near'); return; }
+    const r = w.getBoundingClientRect();
+    const dx = Math.max(r.left - px, 0, px - r.right);
+    const dy = Math.max(r.top - py, 0, py - r.bottom);
+    w.classList.toggle('is-near', Math.hypot(dx, dy) <= DOT_BORDER_NEAR);
+  }
+
+  window.addEventListener('pointermove', e => {
+    px = e.clientX; py = e.clientY;
+    if (!queued) queued = requestAnimationFrame(update);
+  }, { passive: true });
+
+  // Leaving the window entirely fires no further pointermove, so the
+  // border would stay drawn with the cursor long gone.
+  document.addEventListener('pointerleave', () => {
+    const w = target();
+    if (w) w.classList.remove('is-near');
+  });
+
+  // Scrolling moves the box under a stationary cursor.
+  window.addEventListener('scroll', () => {
+    if (!queued) queued = requestAnimationFrame(update);
+  }, { passive: true });
+})();
 
 function playToolsLabelAnim(speed = 25, delay = 150) {
   const el = document.querySelector('.tools-label');
