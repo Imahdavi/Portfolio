@@ -1309,6 +1309,16 @@
     .an-nav-btn { display:none !important; }
     body.is-admin .an-nav-btn { display:flex !important; }
 
+
+    /* Taste — a placeholder tab. Nothing but the word, in the heading
+       face at the same size the other views title themselves with, so an
+       empty section still looks composed rather than unfinished. */
+    .taste-soon {
+      font-family:var(--font-heading); font-size:27px; font-weight:600;
+      text-align:center; color:#b6b0aa;
+      padding:96px 0 120px;
+    }
+    body.dark .taste-soon { color:var(--d-text-3); }
     .an-title  { font-family:var(--font-heading); font-size:27px; font-weight:600; text-align:center; margin-bottom:20px; }
     .an-range  { display:flex; gap:6px; justify-content:center; margin-bottom:22px; }
     .an-range-btn { padding:6px 16px; border-radius:20px; border:1px solid rgba(0,0,0,.12); background:#fff; font-size:12.5px; font-weight:500; color:#666; cursor:pointer; transition:all .15s; }
@@ -3119,18 +3129,21 @@
        fighting for (pure black would vanish on the dark page); active/hover
        just don't tint it, which the animation itself is lively enough to
        carry. */
-    .nav-lottie-icon { width:25px; height:25px; pointer-events:none; }
-    /* The animation's own artwork sits in the middle third-ish of its
-       512x512 composition (room for the burst to travel outward), so at
-       this box size it renders visibly smaller than the neighboring
-       hand-drawn icons, which are cropped tight to their own 24x24 viewBox.
-       Scaling the rendered SVG up (not the box, so nav spacing is
-       untouched) brings it to roughly the same visual weight — measured
-       against the star's own ink bounding box, not guessed. */
+    .nav-lottie-icon { width:25px; height:25px; pointer-events:none; --nav-lottie-scale:1; }
+    /* How much of its own 512x512 composition an animation's artwork
+       actually fills varies per file, so the correction is per icon and
+       each one is measured against its rendered ink box rather than
+       guessed. The star leaves room around itself for the burst to
+       travel outward and comes out small next to the hand-drawn icons,
+       which are cropped tight to their own 24x24 viewBox; the taste icon
+       fills its frame and needs no help at all — at 1.3 it overflowed
+       the box at 30.6px against the star's 24.8. Scaling the rendered
+       SVG rather than the box leaves nav spacing untouched. */
+    #nb-exp-star { --nav-lottie-scale:1.3; }
     /* !important: lottie-web sets its own inline transform (a no-op
        translate3d(0,0,0)) on this svg every frame, which otherwise wins
        over a plain stylesheet rule regardless of selector weight. */
-    .nav-lottie-icon svg { transform:scale(1.3) !important; transform-origin:50% 50%; }
+    .nav-lottie-icon svg { transform:scale(var(--nav-lottie-scale)) !important; transform-origin:50% 50%; }
     body.dark .nav-lottie-icon svg path { stroke:var(--d-text) !important; }
 
     /* ── Nav tooltip ── */
@@ -3622,6 +3635,12 @@ one keyframe at a time</div>
 
 
   <!-- ══════════════════════════════ GAME ══════════════════════════════ -->
+  <!-- ══════════════════════════════ TASTE ══════════════════════════════ -->
+  <div class="view" id="view-taste">
+    <div class="taste-soon">soon</div>
+  </div><!-- /view-taste -->
+
+
   <div class="view" id="view-game">
     <div class="game-head">
       <div class="game-title">Table tennis</div>
@@ -3786,6 +3805,10 @@ one keyframe at a time</div>
       <path fill-rule="evenodd" clip-rule="evenodd" d="M20.1598 8.29988L14.4898 2.89988C13.7598 2.79988 12.9398 2.74988 12.0398 2.74988C5.74978 2.74988 3.64978 5.06988 3.64978 11.9999C3.64978 18.9399 5.74978 21.2499 12.0398 21.2499C18.3398 21.2499 20.4398 18.9399 20.4398 11.9999C20.4398 10.5799 20.3498 9.34988 20.1598 8.29988Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M13.9342 2.83252V5.49352C13.9342 7.35152 15.4402 8.85652 17.2982 8.85652H20.2492" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
+  </button>
+  <button class="nav-btn" id="nb-taste" onclick="goView('view-taste',this)">
+    <span class="nav-tip">taste</span>
+    <div class="nav-lottie-icon" id="nb-taste-icon" aria-hidden="true"></div>
   </button>
   <button class="nav-btn" id="nb-game" onclick="goView('view-game',this)">
     <span class="nav-tip">Game</span>
@@ -8603,8 +8626,8 @@ const PROJECTS = {
 function uid() { return Math.random().toString(36).slice(2,9); }
 
 /* ─── View navigation ──────────────────────────────────── */
-const MAIN_VIEWS = ['view-home','view-exp','view-soon','view-game','view-analytics'];
-const NAV_MAP    = { 'view-home':'nb-home', 'view-exp':'nb-exp', 'view-soon':'nb-soon', 'view-game':'nb-game', 'view-analytics':'nb-analytics' };
+const MAIN_VIEWS = ['view-home','view-exp','view-soon','view-taste','view-game','view-analytics'];
+const NAV_MAP    = { 'view-home':'nb-home', 'view-exp':'nb-exp', 'view-soon':'nb-soon', 'view-taste':'nb-taste', 'view-game':'nb-game', 'view-analytics':'nb-analytics' };
 let current     = 'view-home';
 let prevMain    = 'view-home';
 let editMode    = false;
@@ -8694,6 +8717,7 @@ function goView(viewId, btn) {
   showView(viewId, anim);
   if (viewId === 'view-exp')       { trackView('work-experience'); playToolsLabelAnim(); }
   else if (viewId === 'view-soon') trackView('note');
+  else if (viewId === 'view-taste') trackView('taste');
   else if (viewId === 'view-game') trackView('game');
 }
 
@@ -12742,6 +12766,25 @@ document.addEventListener('DOMContentLoaded', () => {
     loop: false,
     autoplay: true,
     path: '/media/site/star-medal.json',
+  });
+
+  btn.addEventListener('click', () => anim.goToAndPlay(0, true));
+})();
+
+/* ── Taste tab icon ──────────────────────────────────────
+   Same treatment as the Experience star above: a Lottie in a
+   .nav-lottie-icon box, replayed on click. */
+(function () {
+  const el = document.getElementById('nb-taste-icon');
+  const btn = document.getElementById('nb-taste');
+  if (!el || !btn || typeof lottie === 'undefined') return;
+
+  const anim = lottie.loadAnimation({
+    container: el,
+    renderer: 'svg',
+    loop: false,
+    autoplay: true,
+    path: '/media/site/taste.json',
   });
 
   btn.addEventListener('click', () => anim.goToAndPlay(0, true));
