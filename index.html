@@ -1943,6 +1943,12 @@
       --line-weight:1px;
       --line-distance:11px 16px;
       --animation-speed:.35s;
+      /* The retract runs on its own, faster clock. Mirroring the draw
+         exactly meant the first piece did not move for a beat and the
+         last was still leaving a second and a third later, which read as
+         a lag before the reverse rather than as the reverse. Same order,
+         same shape, roughly half the time. */
+      --reverse-speed:.16s;
       --dot-color:rgba(82,82,82,.75);
       --line-color:rgba(82,82,82,.75);
       --grid-color:rgba(82,82,82,.16);
@@ -1956,11 +1962,12 @@
       content:''; position:absolute; inset:0; border-radius:inherit;
       pointer-events:none; z-index:-1; opacity:0;
       background-image:repeating-linear-gradient(45deg, var(--grid-color) 0 1px, transparent 2px 5px);
-      transition:opacity var(--animation-speed) ease-in-out 0s;
+      transition:opacity var(--reverse-speed) ease-in-out 0s;
     }
     .dot-border.is-near::after,
     .dot-border:has(.tools-label:hover)::after {
       opacity:1;
+      transition-duration:var(--animation-speed);
       transition-delay:calc(var(--animation-speed) * 2.8);
     }
 
@@ -1970,11 +1977,11 @@
       /* Purely decorative, and at rest they sit stacked over the label —
          without this they swallow the pointer they exist to react to. */
       pointer-events:none;
-      transition:top var(--animation-speed) ease-in-out,
-                 bottom var(--animation-speed) ease-in-out,
-                 left var(--animation-speed) ease-in-out,
-                 right var(--animation-speed) ease-in-out,
-                 opacity var(--animation-speed) ease-in-out;
+      transition:top var(--reverse-speed) ease-in-out,
+                 bottom var(--reverse-speed) ease-in-out,
+                 left var(--reverse-speed) ease-in-out,
+                 right var(--reverse-speed) ease-in-out,
+                 opacity var(--reverse-speed) ease-in-out;
     }
     /* At rest each dot waits inside the box, on the axis it will later
        fly out along. */
@@ -1983,8 +1990,9 @@
     .dot-border .db-dot.bottom.right { bottom:50%; right:20%; }
     .dot-border .db-dot.bottom.left  { bottom:50%; left:20%;  }
 
+    /* Back to the slower draw clock while the border is up. */
     .dot-border.is-near .db-dot,
-    .dot-border:has(.tools-label:hover) .db-dot { opacity:1; }
+    .dot-border:has(.tools-label:hover) .db-dot { opacity:1; transition-duration:var(--animation-speed); }
     .dot-border.is-near .db-dot.top.left,
     .dot-border:has(.tools-label:hover) .db-dot.top.left {
       top:calc(var(--dot-size) * -0.5); left:calc(var(--dot-size) * -0.5);
@@ -2011,7 +2019,7 @@
        border would stretch its dashes along with the transform. */
     .dot-border .db-line {
       position:absolute; pointer-events:none;
-      transition:transform var(--animation-speed) ease-in-out;
+      transition:transform var(--reverse-speed) ease-in-out;
     }
     .dot-border .db-line.horizontal {
       height:var(--line-weight); width:100%;
@@ -2031,19 +2039,21 @@
     /* Retract order — each in-delay subtracted from the longest one, so
        the sequence plays backwards on the way out. Declared before the
        .is-near block below, which overrides them while the border is up. */
-    .dot-border .db-line.left        { transition-delay:calc(var(--animation-speed) * .4); }
-    .dot-border .db-line.bottom      { transition-delay:calc(var(--animation-speed) * .8); }
-    .dot-border .db-dot.bottom.left  { transition-delay:calc(var(--animation-speed) * 1); }
-    .dot-border .db-line.right       { transition-delay:calc(var(--animation-speed) * 1.4); }
-    .dot-border .db-dot.bottom.right { transition-delay:calc(var(--animation-speed) * 1.6); }
-    .dot-border .db-line.top         { transition-delay:calc(var(--animation-speed) * 2); }
-    .dot-border .db-dot.top.right    { transition-delay:calc(var(--animation-speed) * 2.2); }
-    .dot-border .db-dot.top.left     { transition-delay:calc(var(--animation-speed) * 2.8); }
+    .dot-border .db-line.left        { transition-delay:calc(var(--reverse-speed) * .4); }
+    .dot-border .db-line.bottom      { transition-delay:calc(var(--reverse-speed) * .8); }
+    .dot-border .db-dot.bottom.left  { transition-delay:calc(var(--reverse-speed) * 1); }
+    .dot-border .db-line.right       { transition-delay:calc(var(--reverse-speed) * 1.4); }
+    .dot-border .db-dot.bottom.right { transition-delay:calc(var(--reverse-speed) * 1.6); }
+    .dot-border .db-line.top         { transition-delay:calc(var(--reverse-speed) * 2); }
+    .dot-border .db-dot.top.right    { transition-delay:calc(var(--reverse-speed) * 2.2); }
+    .dot-border .db-dot.top.left     { transition-delay:calc(var(--reverse-speed) * 2.8); }
 
     .dot-border.is-near .db-line.horizontal,
     .dot-border:has(.tools-label:hover) .db-line.horizontal { transform:rotate(0deg) scaleX(1); }
     .dot-border.is-near .db-line.vertical,
     .dot-border:has(.tools-label:hover) .db-line.vertical { transform:rotate(0deg) scaleY(1); }
+    .dot-border.is-near .db-line,
+    .dot-border:has(.tools-label:hover) .db-line { transition-duration:var(--animation-speed); }
     .dot-border.is-near .db-line.top,
     .dot-border:has(.tools-label:hover) .db-line.top    { transition-delay:calc(var(--animation-speed) * .8); }
     .dot-border.is-near .db-line.right,
