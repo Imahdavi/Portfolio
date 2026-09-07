@@ -11,6 +11,15 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
   <style>
     :root {
+      /* The bottom nav pill's height, written as its parts rather than as a
+         flat 61px, so a change to the nav's padding, icon size or border
+         carries to anything matching it instead of quietly drifting apart.
+         Mirrors .bottom-nav-group's padding and .nav-btn's box. */
+      --nav-pill-pad-y: 17px;
+      --nav-pill-pad-x: 28px;
+      --nav-pill-icon: 25px;
+      --nav-pill-border: 1px;
+      --nav-pill-h: calc(var(--nav-pill-pad-y) * 2 + var(--nav-pill-icon) + var(--nav-pill-border) * 2);
       --font-body: 'Inter', sans-serif;
       --font-heading: 'Caveat', cursive;
       --font-name: 'Fira Code', monospace;
@@ -556,7 +565,13 @@
       position:relative;
       z-index:calc(10 - var(--hvt-i, 0));
       border:none; cursor:pointer;
-      padding:7px 16px; font-size:12.5px; font-weight:600;
+      /* Same height as the bottom nav's pill, so the two glass controls read
+         as one family. Height plus a matching line-height rather than
+         vertical padding: the text stays inline, which is what keeps the
+         beta mark on the baseline (see .hvt-beta) — centring it as a flex
+         item would lift it off. */
+      height:var(--nav-pill-h); line-height:var(--nav-pill-h);
+      padding:0 var(--nav-pill-pad-x); font-size:12.5px; font-weight:600;
       border-radius:999px; white-space:nowrap;
       color:#4a4540;
       background:linear-gradient(to bottom, rgba(255,255,255,.55), rgba(255,255,255,.28));
@@ -3394,8 +3409,8 @@
       -webkit-backdrop-filter:blur(28px) saturate(120%);
       backdrop-filter:blur(28px) saturate(120%);
       border-radius:999px;
-      border:1px solid rgba(255,255,255,.65);
-      padding:17px 28px;
+      border:var(--nav-pill-border) solid rgba(255,255,255,.65);
+      padding:var(--nav-pill-pad-y) var(--nav-pill-pad-x);
       display:flex; align-items:center; gap:28px;
       box-shadow:
         0 10px 34px rgba(0,0,0,.14),
@@ -3540,8 +3555,12 @@
        the scroll-to-top wiring) since it needs the nav's real measured
        width, which this shrink also feeds into automatically. */
     @media (max-width:539px) {
+      /* The nav pill shrinks here, so --nav-pill-h has to shrink with it —
+         anything sized to match the nav would otherwise stay at its desktop
+         height and tower over the bar it is supposed to equal. */
+      :root { --nav-pill-pad-y:12px; --nav-pill-pad-x:18px; --nav-pill-icon:20px; }
       #bottom-nav { gap:10px; }
-      .bottom-nav-group { padding:12px 18px; gap:18px; }
+      .bottom-nav-group { padding:var(--nav-pill-pad-y) var(--nav-pill-pad-x); gap:18px; }
       .nav-btn, #emojiburst-mount { width:20px; height:20px; }
       .nav-btn svg { width:20px; height:20px; }
       .nav-lottie-icon { width:20px; height:20px; }
