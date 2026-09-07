@@ -5155,7 +5155,14 @@ const UI_SOUND_MAP = [
   // your eyes and cursor across, and a sound on every card crossed is
   // noise rather than feedback. The bell is for the one you commit to.
   { sel: '.proj-card',        hover: null,      click: 'chime'   },
-  { sel: '.proj-list-item',   hover: null,      click: 'chime'   },
+  /* No entry for .proj-list-item on purpose. A grid card is a single
+     control and every press on it opens the board, so a sound there
+     always means something happened. A Brand row is not: it is a
+     heading, a paragraph and a strip laid out in a tall block with
+     plenty of dead space, and clicking that space does nothing at all —
+     it was chiming at people for clicking the page. The only thing in a
+     row that acts is a tile, so the tile plays its own sound at the
+     point it opens something (see buildProjectListItem). */
 ];
 
 /* Places where a press is the start of a drag rather than a choice, so
@@ -7749,6 +7756,10 @@ function buildProjectListItem(card) {
         if (typeof editMode !== 'undefined' && editMode) return; // editing, not browsing
         if (!tile.dataset.link) return;
         if (downPt && Math.hypot(e.clientX - downPt.x, e.clientY - downPt.y) > 6) return;
+        // Sounded here rather than from the selector map, so it fires on a
+        // tap that actually opens something and not on a drag of the strip
+        // or a click on the row's empty space.
+        if (window.Cuelume) window.Cuelume.play('chime');
         openListLink(tile.dataset.link);
       });
       tile.addEventListener('keydown', (e) => {
