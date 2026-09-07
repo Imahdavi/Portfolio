@@ -1361,6 +1361,11 @@
       outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px;
       padding:2px 8px; cursor:text; min-width:16px;
     }
+    /* Cleared to empty, the label leaves the row entirely — otherwise it
+       keeps the row gap and pushes the dock off centre. In edit mode it
+       stays as an empty dashed box so the text can be typed back in. */
+    .contact-lbl.is-empty { display:none; }
+    #view-home.home-edit .contact-lbl.is-empty { display:inline; min-width:56px; }
     /* The Projects (list) view has no edit wiring of its own — editing
        always forces Grid (see updateHomeEditUI), so hide the toggle
        rather than leave a "Projects" option that silently does nothing
@@ -5141,6 +5146,17 @@ function closeFontPanel() {
   document.getElementById('font-picker-overlay').classList.remove('show');
 }
 
+
+/* The contact label can legitimately be empty. Keep the element in the DOM
+   either way — hiding it via a class rather than removing it is what lets
+   edit mode still offer an empty box to type the text back into. */
+function applyContactLabel(txt) {
+  const el = document.getElementById('contactLblBefore');
+  if (!el) return;
+  el.textContent = txt;
+  el.classList.toggle('is-empty', !txt.trim());
+}
+
 async function loadSettings() {
   try {
     const res = await fetch(`${API_URL}/api/settings`, { cache: 'no-store' });
@@ -5189,7 +5205,11 @@ async function loadSettings() {
         document.querySelector('.pbc-avatar img').src = s.profile.photo_url;
         localStorage.setItem('pf_avatar', s.profile.photo_url);
       }
-      if (s.profile.contactLabel) document.getElementById('contactLblBefore').textContent = s.profile.contactLabel;
+      /* Note the != null rather than a truthiness test: an empty string is
+         a real saved value here — it is how the label is deleted — and a
+         truthy check silently fell through to the markup's "Contact me:",
+         so clearing it never survived a refresh. */
+      if (s.profile.contactLabel != null) applyContactLabel(s.profile.contactLabel);
       const avatarSlot = document.querySelector('.avatar-overlay-slot');
       if (avatarSlot) {
         if (s.profile.avatarDX != null) avatarSlot.style.setProperty('--avatar-dx', s.profile.avatarDX + 'px');
@@ -8716,7 +8736,11 @@ function saveHomeEdits() {
   if (ageEl)  _cachedSettings.profile.age   = ageEl.textContent.trim();
 
   const contactLblBeforeEl = document.getElementById('contactLblBefore');
-  if (contactLblBeforeEl) _cachedSettings.profile.contactLabel = contactLblBeforeEl.textContent.trim();
+  if (contactLblBeforeEl) {
+    const txt = contactLblBeforeEl.textContent.trim();
+    _cachedSettings.profile.contactLabel = txt;
+    contactLblBeforeEl.classList.toggle('is-empty', !txt);
+  }
 
   // build a lookup of previously-saved thumbs so a render glitch can never wipe them
   const _prevThumbs = {};
