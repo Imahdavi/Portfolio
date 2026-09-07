@@ -4816,12 +4816,11 @@ const UI_SOUND_MAP = [
   { sel: '.nav-btn',          hover: 'tick', click: 'scan'    },
   { sel: '.social-btn',       hover: 'tick', click: 'pulse'   },
   { sel: '.back-btn',         hover: null,      click: 'droplet' },
-  // Boards, in both views. A warm swell on the way in and a bell on the
-  // way through, rather than the nav's tick and scan: a card is a big
-  // soft target you drift across while scanning, and crisp marks there
-  // would compete with the nav row instead of sitting under it.
-  { sel: '.proj-card',        hover: 'bloom',   click: 'chime'   },
-  { sel: '.proj-list-item',   hover: 'bloom',   click: 'chime'   },
+  // Boards, in both views. Click only: a grid is something you sweep
+  // your eyes and cursor across, and a sound on every card crossed is
+  // noise rather than feedback. The bell is for the one you commit to.
+  { sel: '.proj-card',        hover: null,      click: 'chime'   },
+  { sel: '.proj-list-item',   hover: null,      click: 'chime'   },
 ];
 // Matches Cuelume's own bind(): one hover sound per 150ms across the
 // whole page, so sweeping the cursor along the nav row is a few ticks
