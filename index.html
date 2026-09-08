@@ -519,17 +519,41 @@
        the numbers individually pulls that apart, where scaling the
        finished object keeps every relationship intact. --key-scale is
        the only size dial. */
+    /* Each key is a column: the key itself, scaled, with its name in
+       ordinary page type underneath. The label used to sit on the key's
+       face, which set the floor on how small the key could go — a word
+       has to stay legible, so the face had to stay big enough to hold
+       one. Outside, the key only has to carry its mark, and can shrink
+       to a keycap. */
     .view-keys {
-      --key-scale:.6;
+      --key-scale:.4;
       display:flex; justify-content:center; align-items:flex-start;
-      gap:calc(30px * var(--key-scale));
-      /* The keys are scaled from their top edge, so the row only needs
-         to reserve the scaled height — plus room for the LED, which sits
-         below the key body. */
-      height:calc(190px * var(--key-scale));
-      margin:6px auto 30px;
+      gap:26px;
+      margin:10px auto 30px;
     }
-    @media (max-width:539px) { .view-keys { --key-scale:.46; } }
+    @media (max-width:539px) { .view-keys { --key-scale:.34; gap:20px; } }
+
+    .key-slot { display:flex; flex-direction:column; align-items:center; }
+    /* The key is scaled from its top edge and transforms do not shrink
+       the space an element reserves, so the column holds the scaled
+       height itself. 178px is the key plus the lamp below it. */
+    .key-slot .key-wrap { margin-bottom:calc(178px * var(--key-scale) - 150px); }
+
+    .key-cap {
+      margin-top:9px;
+      font-size:12.5px; font-weight:600; letter-spacing:.01em;
+      color:#8a8480; white-space:nowrap; cursor:pointer;
+      text-align:center; line-height:1.25;
+      transition:color .25s;
+    }
+    .key-slot:has(input:checked) .key-cap { color:#1a1a1a; }
+    body.dark .key-cap { color:var(--d-text-3); }
+    body.dark .key-slot:has(input:checked) .key-cap { color:var(--d-text); }
+    .key-beta {
+      display:block;
+      font-size:8.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+      opacity:.6;
+    }
 
     .key-wrap {
       --radius:30px;
@@ -600,12 +624,11 @@
     .key .corner:after  { right:8px; transform:rotate(40deg); }
     .key-wrap input:hover + .key .corner { opacity:.15; }
 
-    /* The moulded face the mark and label sit on. */
+    /* The moulded face the mark sits on. */
     .key .inner {
       position:absolute; top:22px; right:20px; bottom:22px; left:20px;
       z-index:9;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:7px;
+      display:flex; align-items:center; justify-content:center;
       border-radius:calc(var(--radius) * .85);
       background:linear-gradient(#232324 5%, #46484b);
       transition:all .3s;
@@ -614,23 +637,12 @@
                  inset 0 -10px 20px -8px #fff6,
                  inset 0 1px 0 1px #fff3;
     }
-    /* The site's own marks replace the source's bluetooth glyph, and a
-       label goes under each — at this size a key with no word on it says
-       nothing about which view it opens. */
-    .key-mark { width:34px; height:34px; display:block; }
+    /* The site's own mark replaces the source's bluetooth glyph. With
+       the label gone from the face it can take most of it. */
+    .key-mark { width:58px; height:58px; display:block; }
     .key-mark svg { display:block; width:100%; height:100%; }
     .key-mark svg [fill]:not([fill="none"])     { fill:#8f9296 !important; }
     .key-mark svg [stroke]:not([stroke="none"]) { stroke:#8f9296 !important; }
-    .key-label {
-      font-size:15px; font-weight:600; letter-spacing:.01em;
-      color:#8f9296; white-space:nowrap;
-      transition:color .3s;
-    }
-    .key-beta {
-      display:block; margin-top:-2px;
-      font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
-      color:#6c6f73;
-    }
 
     /* The recess the key sits in. */
     .key-bg {
@@ -688,7 +700,6 @@
     .key-wrap input:active + .key .corner { opacity:0; }
 
     /* ── Chosen: the lamp comes up and the rim lights ── */
-    .key-wrap input:checked + .key .inner .key-label { color:#e8eaec; }
     .key-wrap input:checked + .key .inner .key-mark svg [fill]:not([fill="none"])     { fill:#e8eaec !important; }
     .key-wrap input:checked + .key .inner .key-mark svg [stroke]:not([stroke="none"]) { stroke:#e8eaec !important; }
     .key-wrap input:checked ~ .key-led {
@@ -3904,40 +3915,43 @@ one keyframe at a time</div>
     </div>
 
     <div class="view-keys" id="homeViewToggle">
-      <label class="key-wrap">
-        <input type="radio" name="home-view" value="grid" checked
-               aria-label="Category" onchange="setHomeView('grid')">
-        <div class="key" aria-hidden="true">
-          <div class="corner"></div>
-          <div class="inner">
-            <span class="key-mark" id="hvtGridIcon"></span>
-            <span class="key-label">Category</span>
+      <div class="key-slot">
+        <div class="key-wrap">
+          <input type="radio" name="home-view" id="viewKeyGrid" value="grid" checked
+                 aria-label="Category" onchange="setHomeView('grid')">
+          <div class="key" aria-hidden="true">
+            <div class="corner"></div>
+            <div class="inner"><span class="key-mark" id="hvtGridIcon"></span></div>
           </div>
-        </div>
-        <div class="key-led" aria-hidden="true"></div>
-        <div class="key-bg" aria-hidden="true">
-          <div class="shine-1"></div>
-          <div class="shine-2"></div>
-        </div>
-        <div class="key-glow" aria-hidden="true"></div>
-      </label>
-      <label class="key-wrap">
-        <input type="radio" name="home-view" value="list"
-               aria-label="Brand, beta" onchange="setHomeView('list')">
-        <div class="key" aria-hidden="true">
-          <div class="corner"></div>
-          <div class="inner">
-            <span class="key-mark" id="hvtBrandIcon"></span>
-            <span class="key-label">Brand<span class="key-beta">beta</span></span>
+          <div class="key-led" aria-hidden="true"></div>
+          <div class="key-bg" aria-hidden="true">
+            <div class="shine-1"></div>
+            <div class="shine-2"></div>
           </div>
+          <div class="key-glow" aria-hidden="true"></div>
         </div>
-        <div class="key-led" aria-hidden="true"></div>
-        <div class="key-bg" aria-hidden="true">
-          <div class="shine-1"></div>
-          <div class="shine-2"></div>
+        <!-- for= rather than wrapping, so the caption sits outside the
+             scaled key and stays at page type size while still being a
+             click target for it. -->
+        <label class="key-cap" for="viewKeyGrid">Category</label>
+      </div>
+      <div class="key-slot">
+        <div class="key-wrap">
+          <input type="radio" name="home-view" id="viewKeyBrand" value="list"
+                 aria-label="Brand, beta" onchange="setHomeView('list')">
+          <div class="key" aria-hidden="true">
+            <div class="corner"></div>
+            <div class="inner"><span class="key-mark" id="hvtBrandIcon"></span></div>
+          </div>
+          <div class="key-led" aria-hidden="true"></div>
+          <div class="key-bg" aria-hidden="true">
+            <div class="shine-1"></div>
+            <div class="shine-2"></div>
+          </div>
+          <div class="key-glow" aria-hidden="true"></div>
         </div>
-        <div class="key-glow" aria-hidden="true"></div>
-      </label>
+        <label class="key-cap" for="viewKeyBrand">Brand<span class="key-beta">beta</span></label>
+      </div>
     </div>
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
     <div id="home-sections" style="opacity:0;transition:opacity .3s ease"></div>
