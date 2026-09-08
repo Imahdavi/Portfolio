@@ -459,6 +459,20 @@
 
     /* ─────────────────── SECTION TITLE ─────────────────── */
     .sec-label { font-family:var(--font-heading); font-size:27px; font-weight:600; margin-bottom:18px; }
+    /* Projects section heading, with its mark. Box-centred, which for
+       this face happens to land the mark on the cap's optical centre —
+       measured at 565 against 564 — so it needs no nudge. The label's
+       own bottom margin moves to the row, or the two would be spaced
+       apart from each other rather than from the cards below. */
+    .sec-head { display:flex; align-items:center; gap:9px; margin-bottom:18px; }
+    .sec-head .sec-label { margin-bottom:0; }
+    .sec-lottie { width:26px; height:26px; flex:0 0 auto; pointer-events:none; }
+    .sec-lottie svg { display:block; width:100%; height:100%; }
+    /* This file paints with fills, not strokes like the nav's icons, so
+       the dark-mode flip has to target fill — the existing
+       .nav-lottie-icon rule would do nothing here. !important because
+       lottie-web writes the colour inline on every frame. */
+    body.dark .sec-lottie svg path { fill:var(--d-text) !important; }
 
     /* ─────────────────── CARD GRID ─────────────────── */
     /* Fixed-size columns (auto-fill), not 3 stretchy fr columns — cards
@@ -7147,7 +7161,10 @@ function _makeSecDelBtn(label, grid) {
   btn.textContent = '×';
   btn.addEventListener('click', () => {
     if (!editMode) return;
-    label.remove(); btn.remove(); grid.remove();
+    // The heading row where there is one, so deleting the section does
+    // not leave its icon behind with nothing to label.
+    (label.closest('.sec-head') || label).remove();
+    btn.remove(); grid.remove();
     saveHomeEdits();
   });
   return btn;
@@ -8909,6 +8926,25 @@ function setupStripVideos() {
   window.addEventListener('scroll', _stripPumpSoon, { passive: true });
 }
 
+
+/* Mounts the Projects section's mark. Plays once when it arrives and
+   again whenever the heading is hovered, which is what the file is cut
+   for — its marker is named "hover-pinch". Guarded because the whole
+   grid re-renders on every edit, and each render would otherwise stack
+   another animation on the same node. */
+function mountSectionLottie(mount, hoverHost) {
+  if (!mount || typeof lottie === 'undefined' || mount._lottie) return;
+  const anim = lottie.loadAnimation({
+    container: mount,
+    renderer: 'svg',
+    loop: false,
+    autoplay: true,
+    path: '/media/site/grid-sections.json',
+  });
+  mount._lottie = anim;
+  if (hoverHost) hoverHost.addEventListener('mouseenter', () => anim.goToAndPlay(0, true));
+}
+
 function renderHomeSections(sections) {
   _lastHomeSections = sections;
   const container = document.getElementById('home-sections');
@@ -8939,10 +8975,22 @@ function renderHomeSections(sections) {
     // uses — this view is a single run-down, and getProjectsListKeys()
     // sets both which boards appear and their order.
     const allCards = sections.flatMap(sec => sec.cards || []);
+    /* The heading carries the view's mark. The icon is a sibling of the
+       label rather than a child, because .sec-label is made
+       contenteditable elsewhere and read back with textContent — an SVG
+       living inside it would put the caret somewhere it has no business
+       being. */
+    const head = document.createElement('div');
+    head.className = 'sec-head';
     const label = document.createElement('div');
     label.className = 'sec-label';
     label.textContent = 'Brand';
-    container.appendChild(label);
+    const mark = document.createElement('div');
+    mark.className = 'sec-lottie';
+    mark.setAttribute('aria-hidden', 'true');
+    head.append(mark, label);
+    container.appendChild(head);
+    mountSectionLottie(mark, head);
 
     const row = document.createElement('div');
     row.className = 'projects-list';
@@ -10185,7 +10233,11 @@ function saveHomeEdits() {
 
   const sections = [];
   document.querySelectorAll('#home-sections .sec-label').forEach(labelEl => {
-    let gridEl = labelEl.nextElementSibling;
+    /* Start from the heading row where there is one. The Projects label
+       sits inside a .sec-head beside its icon, so its own
+       nextElementSibling is null — walking from the label would have
+       found no grid and saved that section with zero cards. */
+    let gridEl = (labelEl.closest('.sec-head') || labelEl).nextElementSibling;
     if (gridEl && gridEl.classList.contains('sec-del-btn')) gridEl = gridEl.nextElementSibling;
     const cards  = [];
     gridEl?.querySelectorAll('.proj-card').forEach(cardEl => {
