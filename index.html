@@ -9151,15 +9151,15 @@ function renderHomeSections(sections) {
   }));
 
   if (useList) {
-    // One flat "Brand" heading over the listed boards, matching the tab
-    // rather than mirroring the Works/Projects section split the grid
-    // uses — this view is a single run-down, and getProjectsListKeys()
-    // sets both which boards appear and their order.
+    /* No heading. This view used to open with a "Brand" title, from when
+       the switch above it was a pair of small pills and the page needed
+       saying what it was. The lit key says it now, in the same word, a
+       few pixels higher — so the title was the label twice.
+
+       Unlike the grid, there is no section split to announce either:
+       this is a single run-down, and getProjectsListKeys() sets both
+       which boards appear and their order. */
     const allCards = sections.flatMap(sec => sec.cards || []);
-    const label = document.createElement('div');
-    label.className = 'sec-label';
-    label.textContent = 'Brand';
-    container.appendChild(label);
 
     const row = document.createElement('div');
     row.className = 'projects-list';
