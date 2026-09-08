@@ -514,11 +514,11 @@
        Two deliberate departures from the source.
 
        The source shifts every item by a flat -100px. That works for its
-       three same-length labels; "Grid" and "Projects" are different
-       widths, so the offsets are measured instead (see
-       layoutHomeViewToggle) and each item collapses exactly onto the
-       first, offset by hvtPeek() so the stack reads as a stack rather
-       than as one pill.
+       three same-length labels; "Category" and "Brand" are different
+       widths, and each also carries an icon, so the offsets are measured
+       instead (see layoutHomeViewToggle) and each item collapses exactly
+       onto the first, offset by hvtPeek() so the stack reads as a stack
+       rather than as one pill.
 
        And the source stacks by DOM order (z-index: 100 - index). This
        control reports which view you are in, so the active item is the
@@ -600,12 +600,17 @@
       margin-right:6px; pointer-events:none;
     }
     .hvt-icon svg { display:block; width:100%; height:100%; }
-    /* currentColor rather than a dark-mode override, because this pill
-       has four states — inactive glass, active dark, and both again on a
-       dark page — and the mark has to read against all of them. The file
-       bakes a navy fill in and lottie-web rewrites it inline every frame,
-       hence !important. */
-    .hvt-icon svg path { fill:currentColor !important; }
+    /* currentColor rather than a dark-mode override, because these pills
+       have four states — inactive glass, active dark, and both again on
+       a dark page — and the marks have to read against all of them. The
+       files bake a navy in and lottie-web rewrites it inline every
+       frame, hence !important.
+
+       Matched on the attribute rather than blanket-setting both: one of
+       these icons is drawn in fills and the other mostly in strokes, and
+       forcing a stroke onto a fill-only shape would outline it. */
+    .hvt-icon svg [fill]:not([fill="none"])     { fill:currentColor !important; }
+    .hvt-icon svg [stroke]:not([stroke="none"]) { stroke:currentColor !important; }
 
     /* The view is live but still settling, so the pill says so. Baseline
        rather than true superscript — <sup> would lift it off the pill's
@@ -3838,7 +3843,7 @@ one keyframe at a time</div>
     </div>
 
     <div class="home-view-toggle" id="homeViewToggle">
-      <button class="hvt-opt active" data-view="grid" onclick="setHomeView('grid')">Grid</button>
+      <button class="hvt-opt active" data-view="grid" onclick="setHomeView('grid')"><span class="hvt-icon" id="hvtGridIcon" aria-hidden="true"></span>Category</button>
       <button class="hvt-opt" data-view="list" onclick="setHomeView('list')"><span class="hvt-icon" id="hvtBrandIcon" aria-hidden="true"></span>Brand<sup class="hvt-beta">beta</sup></button>
     </div>
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
@@ -8930,14 +8935,14 @@ function setupStripVideos() {
    whenever its pill is hovered, which is what the file is cut for — its
    marker is named "hover-pinch". Guarded on the node, so calling this
    twice cannot stack a second animation on the same element. */
-function mountSectionLottie(mount, hoverHost) {
+function mountSectionLottie(mount, path, hoverHost) {
   if (!mount || typeof lottie === 'undefined' || mount._lottie) return;
   const anim = lottie.loadAnimation({
     container: mount,
     renderer: 'svg',
     loop: false,
     autoplay: true,
-    path: '/media/site/grid-sections.json',
+    path: path,
   });
   mount._lottie = anim;
   if (hoverHost) hoverHost.addEventListener('mouseenter', () => anim.goToAndPlay(0, true));
@@ -8949,8 +8954,11 @@ function mountSectionLottie(mount, hoverHost) {
    icon's box is sized in CSS and holds its space before the SVG lands,
    so the measurement does not need to wait for the file. */
 document.addEventListener('DOMContentLoaded', () => {
-  const mount = document.getElementById('hvtBrandIcon');
-  if (mount) mountSectionLottie(mount, mount.closest('.hvt-opt'));
+  [['hvtGridIcon', '/media/site/category.json'],
+   ['hvtBrandIcon', '/media/site/grid-sections.json']].forEach(([id, path]) => {
+    const mount = document.getElementById(id);
+    if (mount) mountSectionLottie(mount, path, mount.closest('.hvt-opt'));
+  });
 });
 
 function renderHomeSections(sections) {
