@@ -526,12 +526,12 @@
        one. Outside, the key only has to carry its mark, and can shrink
        to a keycap. */
     .view-keys {
-      --key-scale:.32;
+      --key-scale:.25;
       display:flex; justify-content:center; align-items:flex-start;
       gap:12px;
       margin:10px auto 30px;
     }
-    @media (max-width:539px) { .view-keys { --key-scale:.28; gap:10px; } }
+    @media (max-width:539px) { .view-keys { --key-scale:.22; gap:8px; } }
 
     .key-slot { display:flex; flex-direction:column; align-items:center; }
     /* A transform paints smaller but reserves the same box, so the key
