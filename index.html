@@ -526,18 +526,25 @@
        one. Outside, the key only has to carry its mark, and can shrink
        to a keycap. */
     .view-keys {
-      --key-scale:.4;
+      --key-scale:.32;
       display:flex; justify-content:center; align-items:flex-start;
-      gap:26px;
+      gap:12px;
       margin:10px auto 30px;
     }
-    @media (max-width:539px) { .view-keys { --key-scale:.34; gap:20px; } }
+    @media (max-width:539px) { .view-keys { --key-scale:.28; gap:10px; } }
 
     .key-slot { display:flex; flex-direction:column; align-items:center; }
-    /* The key is scaled from its top edge and transforms do not shrink
-       the space an element reserves, so the column holds the scaled
-       height itself. 178px is the key plus the lamp below it. */
-    .key-slot .key-wrap { margin-bottom:calc(178px * var(--key-scale) - 150px); }
+    /* A transform paints smaller but reserves the same box, so the key
+       still claimed its full 154 x 150 of layout while drawing at a
+       third of it. Vertically that just left a hole; horizontally it
+       pushed the two keys 110px apart no matter what gap was set, which
+       is what made them look stranded. Negative margins pull the
+       reserved box back to the painted size on both axes — 178px is the
+       key plus the lamp that hangs below it. */
+    .key-slot .key-wrap {
+      margin-bottom:calc(178px * var(--key-scale) - 150px);
+      margin-inline:calc((154px * var(--key-scale) - 154px) / 2);
+    }
 
     .key-cap {
       margin-top:9px;
@@ -669,9 +676,12 @@
     .key-bg .shine-2:before { animation:key-bg 2.4s linear infinite; }
 
     /* The lamp under the key. Dark until this key is the chosen one. */
+    /* Bigger than the source's 6px, because the key it belongs to is
+       scaled to a third and the lamp went with it — at 6px there was
+       barely a pixel of it left to light up. */
     .key-led {
       position:absolute; top:100%; z-index:10;
-      width:6px; height:6px; margin-top:22px; border-radius:50%;
+      width:15px; height:15px; margin-top:26px; border-radius:50%;
       background-color:#000;
       box-shadow:0 0 0 3px #0000001a;
       transition:all .3s;
@@ -702,7 +712,27 @@
     /* ── Chosen: the lamp comes up and the rim lights ── */
     .key-wrap input:checked + .key .inner .key-mark svg [fill]:not([fill="none"])     { fill:#e8eaec !important; }
     .key-wrap input:checked + .key .inner .key-mark svg [stroke]:not([stroke="none"]) { stroke:#e8eaec !important; }
+    /* The lit lamp, for a light page.
+
+       The source throws its halo upward and wide — 0 -10px 35px 17px —
+       so it washes the dark surface the key stands on. On paper that
+       does two unhelpful things at once: most of the halo hides behind
+       the key, and what escapes is a pale blue smear that reads as a
+       printing error rather than a light. So it is centred, tightened
+       and made denser, and the lamp keeps a dark bezel to sit in, which
+       is what gives a small bright dot its edge against white.
+
+       Dark mode below restores the source's version, where a wide soft
+       halo is exactly right. */
     .key-wrap input:checked ~ .key-led {
+      background-color:#4df2ff;
+      box-shadow:0 0 0 2.5px rgba(0,0,0,.6),
+                 0 0 5px 1px rgba(0,110,255,.95),
+                 0 0 12px 5px rgba(0,80,255,.55),
+                 0 0 24px 10px rgba(0,70,255,.28),
+                 inset 0 1px 2px #fff9;
+    }
+    body.dark .key-wrap input:checked ~ .key-led {
       background-color:#3aeaf3;
       box-shadow:0 -10px 35px 17px #003cff,
                  inset 0 1px 2px #fff9,
