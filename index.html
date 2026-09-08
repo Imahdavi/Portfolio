@@ -2861,7 +2861,9 @@
       position:relative;
       background:none; border:none; cursor:pointer;
       color:#bbb; display:flex; align-items:center; justify-content:center;
-      width:26px; height:26px;
+      /* 25px like every other control in the two pills — see
+         #bg-toggle-btn. Its 22px icon is unaffected. */
+      width:25px; height:25px;
       transition:color .2s, transform .15s;
     }
     #sound-toggle-btn::before { content:''; position:absolute; inset:-12px -10px; }
@@ -3298,7 +3300,10 @@
       position:relative;
       background:none; border:none; cursor:pointer;
       color:#bbb; display:flex; align-items:center; justify-content:center;
-      width:26px; height:26px;
+      /* 25px to match .nav-btn. The groups size to their tallest child,
+         so this button being 26 made its pill a pixel taller than the
+         other one — the two sit side by side, where a pixel shows. */
+      width:25px; height:25px;
       transition:color .2s, transform .15s;
     }
     #bg-toggle-btn::before { content:''; position:absolute; inset:-12px -10px; }
@@ -3545,7 +3550,10 @@
       .nav-btn, #emojiburst-mount { width:20px; height:20px; }
       .nav-btn svg { width:20px; height:20px; }
       .nav-lottie-icon { width:20px; height:20px; }
-      #sound-toggle-btn { width:21px; height:21px; }
+      /* Every control in both pills drops to 20px together, or the
+         groups go back to disagreeing at this width too. */
+      #bg-toggle-btn { width:20px; height:20px; }
+      #sound-toggle-btn { width:20px; height:20px; }
       #sound-toggle-btn svg { width:18px; height:18px; }
       /* Smaller pill, smaller icons — the limelight bar scales down
          with them and sits closer to the pill's own (also shrunk)
