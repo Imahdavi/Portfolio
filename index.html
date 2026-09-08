@@ -564,6 +564,16 @@
       --key-face-a:#232324;
       --key-face-b:#46484b;
       --key-face-press-b:#3b3d40;
+      --key-face-inset:
+        inset 0 -5px 15px -1px #0000004d,
+        inset 0 -4px 3px -3px #000,
+        inset 0 -10px 20px -8px #fff6,
+        inset 0 1px 0 1px #fff3;
+      --key-face-inset-press:
+        inset 0 -5px 15px -1px #0000004d,
+        inset 0 -4px 3px -3px #000,
+        inset 0 -10px 20px -8px #fff3,
+        inset 0 1px 0 1px #ffffff1a;
       --key-recess:#000;
       --key-recess-line:#000;
       --key-rim:#ffffff66;
@@ -589,9 +599,28 @@
       --key-bevel:#cfd2d7;
       --key-bevel-top:#f2f3f5;
       --key-bevel-bottom:#a8acb3;
-      --key-face-a:#fbfbfc;
-      --key-face-b:#d9dbe0;
-      --key-face-press-b:#e6e7ea;
+      /* The face is DARKER than the body at its top edge and lighter at
+         the bottom — the same relationship the dark key has, and what
+         makes it read as a well rather than a raised pad. Getting this
+         the wrong way round (bright at the top) was why the light key
+         looked like a blob sitting on the keycap. */
+      --key-face-a:#c9ccd3;
+      --key-face-b:#f2f3f6;
+      --key-face-press-b:#e4e6ea;
+      /* Light falls from above, so the top inner edge of the well is in
+         shadow and the bottom lip catches it. The dark key builds the
+         same shape out of black shadow and white glow; on paper those
+         values do nothing, so it gets its own recipe. */
+      --key-face-inset:
+        inset 0 3px 5px -1px rgba(0,0,0,.20),
+        inset 0 1px 0 0 rgba(0,0,0,.13),
+        inset 0 -7px 11px -7px rgba(255,255,255,.95),
+        inset 0 -1px 0 0 rgba(255,255,255,.85);
+      --key-face-inset-press:
+        inset 0 4px 7px -1px rgba(0,0,0,.26),
+        inset 0 1px 0 0 rgba(0,0,0,.16),
+        inset 0 -6px 9px -7px rgba(255,255,255,.7),
+        inset 0 -1px 0 0 rgba(255,255,255,.6);
       --key-recess:#b9bcc2;
       --key-recess-line:#00000024;
       --key-rim:#ffffffcc;
@@ -671,10 +700,7 @@
       border-radius:calc(var(--radius) * .85);
       background:linear-gradient(var(--key-face-a) 5%, var(--key-face-b));
       transition:all .3s;
-      box-shadow:inset 0 -5px 15px -1px #0000004d,
-                 inset 0 -4px 3px -3px #000,
-                 inset 0 -10px 20px -8px #fff6,
-                 inset 0 1px 0 1px #fff3;
+      box-shadow:var(--key-face-inset);
     }
     /* The site's own mark replaces the source's bluetooth glyph. With
        the label gone from the face it can take most of it. */
@@ -734,10 +760,7 @@
     .key-wrap input:active + .key .inner {
       background:linear-gradient(var(--key-face-a) 5%, var(--key-face-press-b));
       transform:scale(.95);
-      box-shadow:inset 0 -5px 15px -1px #0000004d,
-                 inset 0 -4px 3px -3px #000,
-                 inset 0 -10px 20px -8px #fff3,
-                 inset 0 1px 0 1px #ffffff1a;
+      box-shadow:var(--key-face-inset-press);
     }
     .key-wrap input:active + .key .corner { opacity:0; }
 
