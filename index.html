@@ -502,129 +502,218 @@
        admin-only while the list view was being checked over. Boards with
        no media are skipped in that list unless you are editing — see
        renderHomeSections. ── */
-    /* ── Stacking navbar, ported from 21st.dev's "Stacking Navbar"
-       (@ln-dev7). The source animates each item with Framer Motion —
-       x: expanded ? 0 : -100 * index, a spring, and 0.1s of delay per
-       index. There is no Framer here, so the same shape is CSS: each
-       item carries its own --hvt-dx and --hvt-delay, and the hover
-       state resets every dx to zero. The overshoot curve is the one
-       already used elsewhere in this file, which is close to what the
-       source's spring lands on.
+    /* ── View switch — ported from 21st.dev's "Bluetooth key"
+       (@theutkarshmail). The source is one checkbox key; this is two of
+       them side by side on a radio group, so pressing either lights it
+       and darkens its neighbour.
 
-       Two deliberate departures from the source.
+       Its checked semantics are inverted here. In the source, unchecked
+       is the lit state and :checked runs a set of "turn off" animations
+       — fine for a toggle that starts on, wrong for a pair where the
+       checked one is the one you chose. So the lit rules hang off
+       :checked and the resting state is dark.
 
-       The source shifts every item by a flat -100px. That works for its
-       three same-length labels; "Category" and "Brand" are different
-       widths, and each also carries an icon, so the offsets are measured
-       instead (see layoutHomeViewToggle) and each item collapses exactly
-       onto the first, offset by hvtPeek() so the stack reads as a stack
-       rather than as one pill.
+       Everything is sized in the source's own pixels and then scaled as
+       a whole, rather than being redrawn smaller. A key is a stack of
+       blurs, insets and rim lights tuned to each other at 154px; nudging
+       the numbers individually pulls that apart, where scaling the
+       finished object keeps every relationship intact. --key-scale is
+       the only size dial. */
+    .view-keys {
+      --key-scale:.6;
+      display:flex; justify-content:center; align-items:flex-start;
+      gap:calc(30px * var(--key-scale));
+      /* The keys are scaled from their top edge, so the row only needs
+         to reserve the scaled height — plus room for the LED, which sits
+         below the key body. */
+      height:calc(190px * var(--key-scale));
+      margin:6px auto 30px;
+    }
+    @media (max-width:539px) { .view-keys { --key-scale:.46; } }
 
-       And the source stacks by DOM order (z-index: 100 - index). This
-       control reports which view you are in, so the active item is the
-       one on top — collapsed, the label you see is the view you are
-       looking at. Stacking by DOM order would hide that. */
-    .home-view-toggle {
+    .key-wrap {
+      --radius:30px;
+      --bg:#2c3238;
       position:relative;
-      display:flex; flex-wrap:nowrap; gap:8px;
-      margin:4px auto 28px;
-      /* Collapsed, the box is only as wide as the stack, so the whole
-         control stays centred; the items overflow it and are pulled
-         back by their own transforms. flex:0 0 auto on the items keeps
-         that narrow box from squeezing them. */
-      width:var(--hvt-stack-w, auto);
-      transition:width .55s cubic-bezier(.34,1.4,.64,1);
-    }
-    /* :has(:focus-visible) rather than :focus-within, so a keyboard tab
-       into the control opens it but a mouse click does not leave it
-       stuck open — clicking a button focuses it, and :focus-within would
-       then hold the fan out until something else was clicked. */
-    .home-view-toggle:hover,
-    .home-view-toggle:has(:focus-visible) {
-      width:var(--hvt-full-w, auto);
-    }
-
-    /* Liquid glass. Three things make it read as glass rather than as a
-       flat tint: the backdrop is blurred AND saturated, so colour from
-       whatever is behind bleeds through instead of going grey; a hairline
-       inset ring picks out the rim; and a second inset highlight along
-       the top edge only acts as the specular, which is what tells the eye
-       the surface is curved. The drop shadow is kept very soft so the
-       pill still reads as sitting in the page rather than on it. */
-    .hvt-opt {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      width:154px; height:150px;
       flex:0 0 auto;
-      position:relative;
-      z-index:calc(10 - var(--hvt-i, 0));
-      border:none; cursor:pointer;
-      padding:7px 16px; font-size:12.5px; font-weight:600;
-      border-radius:999px; white-space:nowrap;
-      color:#4a4540;
-      background:linear-gradient(to bottom, rgba(255,255,255,.55), rgba(255,255,255,.28));
-      -webkit-backdrop-filter:blur(14px) saturate(180%);
-      backdrop-filter:blur(14px) saturate(180%);
-      box-shadow:inset 0 0 0 1px rgba(255,255,255,.55),
-                 inset 0 1px 1px rgba(255,255,255,.85),
-                 0 1px 3px rgba(0,0,0,.10);
-      transform:translateX(var(--hvt-dx, 0px));
-      transition:transform .55s cubic-bezier(.34,1.4,.64,1) var(--hvt-delay, 0s),
-                 background .3s ease, color .3s ease, box-shadow .3s ease;
+      pointer-events:none;
+      transform:scale(var(--key-scale));
+      transform-origin:top center;
     }
-    .home-view-toggle:hover .hvt-opt,
-    .home-view-toggle:has(:focus-visible) .hvt-opt { transform:translateX(0); }
-    /* Top of the stack, and the pill that answers "which view is this?".
-       It was solid black, which meant that collapsed — when it covers the
-       other one almost entirely — the control showed no glass at all.
-       Now it is glass too, just tinted dark instead of light: same blur
-       and saturation, same rim and specular, so the two pills read as one
-       material at different values rather than as a chip next to a sheet.
-       At .82 over the page it lands around #434343, which still carries
-       white type at roughly 8:1. */
-    .hvt-opt.active {
-      background:linear-gradient(to bottom, rgba(26,26,26,.84), rgba(26,26,26,.70));
-      color:#fff;
-      box-shadow:inset 0 0 0 1px rgba(255,255,255,.16),
-                 inset 0 1px 1px rgba(255,255,255,.22),
-                 0 2px 8px rgba(0,0,0,.26);
+    /* Soft light behind the pair, and the shadow they sit in. */
+    .key-wrap:before {
+      content:''; position:absolute;
+      width:350px; height:300px; border-radius:50px;
+      background-color:#ffffff0d; filter:blur(60px);
+      transform:skewY(-20deg);
     }
-    .hvt-opt:not(.active):hover {
-      background:linear-gradient(to bottom, rgba(255,255,255,.75), rgba(255,255,255,.45));
-      color:#1a1a1a;
+    .key-wrap:after {
+      content:''; position:absolute; inset:0;
+      width:100%; height:100%; border-radius:50px;
+      background-color:#00000080; filter:blur(30px);
     }
-    .hvt-opt:focus-visible { outline:2px solid #1a1a1a; outline-offset:2px; }
-    /* The Brand pill's mark. The pill lays its children out in a row now,
-       so the label and the beta badge keep their positions and only the
-       icon is new. */
-    .hvt-opt { display:inline-flex; align-items:center; }
-    .hvt-icon {
-      width:14px; height:14px; flex:0 0 auto;
-      margin-right:6px; pointer-events:none;
+    /* The input is the whole hit area, laid over the key at full size —
+       the key itself is inert, which is why .key-wrap turns pointer
+       events off and only this turns them back on. */
+    .key-wrap input {
+      position:absolute; inset:0; width:100%; height:100%;
+      opacity:0; z-index:999; cursor:pointer; pointer-events:all;
+      -webkit-user-select:none; user-select:none;
+      margin:0;
     }
-    .hvt-icon svg { display:block; width:100%; height:100%; }
-    /* currentColor rather than a dark-mode override, because these pills
-       have four states — inactive glass, active dark, and both again on
-       a dark page — and the marks have to read against all of them. The
-       files bake a navy in and lottie-web rewrites it inline every
-       frame, hence !important.
 
-       Matched on the attribute rather than blanket-setting both: one of
-       these icons is drawn in fills and the other mostly in strokes, and
-       forcing a stroke onto a fill-only shape would outline it. */
-    .hvt-icon svg [fill]:not([fill="none"])     { fill:currentColor !important; }
-    .hvt-icon svg [stroke]:not([stroke="none"]) { stroke:currentColor !important; }
-
-    /* The view is live but still settling, so the pill says so. Baseline
-       rather than true superscript — <sup> would lift it off the pill's
-       optical centre and unbalance a control this small. */
-    .hvt-beta {
-      vertical-align:baseline; margin-left:5px;
-      font-size:8.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
-      opacity:.55;
+    .key {
+      position:relative; z-index:2; overflow:hidden;
+      width:154px; height:150px;
+      border:0; border-radius:var(--radius);
+      background-color:var(--bg);
+      transition:all .3s;
+      box-shadow:inset 0 1px 1px #fff6,
+                 inset 0 -6px 1px -4px #0084ff,
+                 inset 0 -15px 6px -8px #003cff;
     }
-    .hvt-opt.active .hvt-beta { opacity:.6; }
+    .key:before {
+      content:''; position:absolute; inset:0;
+      border-radius:calc(var(--radius) * .8);
+      border:40px solid #2b2b2c;
+      border-top:50px solid #414244;
+      border-bottom:50px solid #15161a;
+      filter:blur(6px); transition:all .5s;
+    }
+    /* The glow that leaks from under the key's bottom edge. */
+    .key:after {
+      content:''; position:absolute; top:101%; left:0; right:0; margin:auto;
+      width:120px; height:50px; border-radius:50px 50px 0 0;
+      background:#009cff; filter:contrast(10) blur(7px);
+      opacity:1; transition:all .3s;
+    }
+    .key .corner { opacity:.1; transition:all .4s; }
+    .key .corner:before, .key .corner:after {
+      content:''; position:absolute; top:0;
+      border-top:55px solid #fff;
+      border-left:15px solid #0000; border-right:15px solid #0000;
+      filter:blur(6px);
+    }
+    .key .corner:before { left:8px;  transform:rotate(-40deg); }
+    .key .corner:after  { right:8px; transform:rotate(40deg); }
+    .key-wrap input:hover + .key .corner { opacity:.15; }
 
+    /* The moulded face the mark and label sit on. */
+    .key .inner {
+      position:absolute; top:22px; right:20px; bottom:22px; left:20px;
+      z-index:9;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:7px;
+      border-radius:calc(var(--radius) * .85);
+      background:linear-gradient(#232324 5%, #46484b);
+      transition:all .3s;
+      box-shadow:inset 0 -5px 15px -1px #0000004d,
+                 inset 0 -4px 3px -3px #000,
+                 inset 0 -10px 20px -8px #fff6,
+                 inset 0 1px 0 1px #fff3;
+    }
+    /* The site's own marks replace the source's bluetooth glyph, and a
+       label goes under each — at this size a key with no word on it says
+       nothing about which view it opens. */
+    .key-mark { width:34px; height:34px; display:block; }
+    .key-mark svg { display:block; width:100%; height:100%; }
+    .key-mark svg [fill]:not([fill="none"])     { fill:#8f9296 !important; }
+    .key-mark svg [stroke]:not([stroke="none"]) { stroke:#8f9296 !important; }
+    .key-label {
+      font-size:15px; font-weight:600; letter-spacing:.01em;
+      color:#8f9296; white-space:nowrap;
+      transition:color .3s;
+    }
+    .key-beta {
+      display:block; margin-top:-2px;
+      font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+      color:#6c6f73;
+    }
+
+    /* The recess the key sits in. */
+    .key-bg {
+      position:absolute; inset:-7px; z-index:1; overflow:hidden;
+      border-radius:calc(var(--radius) * 1.25);
+      background-color:#000;
+      transition:all .3s;
+      box-shadow:0 20px 10px -10px #0000004d;
+    }
+    .key-bg:before {
+      content:''; position:absolute; inset:0; z-index:1; border-radius:inherit;
+      box-shadow:inset 0 -2px 0 -1px #78b0ff52,
+                 inset 0 0 5px 1px #000,
+                 inset 0 0 0 1px #000;
+    }
+    .key-bg .shine-1, .key-bg .shine-2:before {
+      content:''; position:absolute; bottom:0; left:0; right:0; margin:auto;
+      width:100px; height:10px; border-radius:50%;
+      background:#003cff; filter:blur(2px);
+      z-index:0; transition:all .3s;
+      transform:translateY(0) scale(0);
+    }
+    .key-bg .shine-2 { opacity:0; transition:all .5s linear; }
+    .key-bg .shine-2:before { animation:key-bg 2.4s linear infinite; }
+
+    /* The lamp under the key. Dark until this key is the chosen one. */
+    .key-led {
+      position:absolute; top:100%; z-index:10;
+      width:6px; height:6px; margin-top:22px; border-radius:50%;
+      background-color:#000;
+      box-shadow:0 0 0 3px #0000001a;
+      transition:all .3s;
+    }
+    .key-glow { transition:all .5s linear; }
+    .key-glow:before {
+      content:''; position:absolute; inset:0;
+      border-radius:30px; filter:blur(12px); opacity:0;
+      background:linear-gradient(#984fff, #000);
+    }
+
+    /* ── Pressed ── */
+    .key-wrap input:hover + .key { transform:scale(1.02); }
+    .key-wrap input:active + .key {
+      background-color:#0000; filter:contrast(1.07); transform:scale(.97);
+    }
+    .key-wrap input:active + .key:before { box-shadow:0 -10px 10px 10px #000; }
+    .key-wrap input:active + .key .inner {
+      background:linear-gradient(#232324 5%, #3b3d40);
+      transform:scale(.95);
+      box-shadow:inset 0 -5px 15px -1px #0000004d,
+                 inset 0 -4px 3px -3px #000,
+                 inset 0 -10px 20px -8px #fff3,
+                 inset 0 1px 0 1px #ffffff1a;
+    }
+    .key-wrap input:active + .key .corner { opacity:0; }
+
+    /* ── Chosen: the lamp comes up and the rim lights ── */
+    .key-wrap input:checked + .key .inner .key-label { color:#e8eaec; }
+    .key-wrap input:checked + .key .inner .key-mark svg [fill]:not([fill="none"])     { fill:#e8eaec !important; }
+    .key-wrap input:checked + .key .inner .key-mark svg [stroke]:not([stroke="none"]) { stroke:#e8eaec !important; }
+    .key-wrap input:checked ~ .key-led {
+      background-color:#3aeaf3;
+      box-shadow:0 -10px 35px 17px #003cff,
+                 inset 0 1px 2px #fff9,
+                 0 0 0 3px #0009,
+                 0 0 2px 4px #004f98cc;
+    }
+    .key-wrap input:checked ~ .key-bg .shine-1 { animation:key-bg 2.4s linear .3s; }
+    .key-wrap input:checked ~ .key-glow:before { animation:key-glow 3s linear backwards; }
+    .key-wrap input:not(:checked) + .key:after { opacity:0; }
+    .key-wrap input:not(:checked):hover ~ .key-bg .shine-2 { opacity:1; }
+    .key-wrap input:not(:checked):active ~ .key-bg .shine-2 { opacity:0; }
+
+    @keyframes key-bg {
+      0%   { transform:translateY(0) scale(0); }
+      12%  { transform:translateY(0) scale(25); }
+      60%, 100% { transform:translateY(-280px) scale(20, 18); }
+    }
+    @keyframes key-glow {
+      0% { opacity:0; } 40% { opacity:1; } 80%, 100% { opacity:0; }
+    }
     @media (prefers-reduced-motion:reduce) {
-      .home-view-toggle, .hvt-opt { transition-duration:.01ms; }
-      .hvt-opt { --hvt-delay:0s; }
+      .key-bg .shine-1, .key-bg .shine-2:before, .key-glow:before { animation:none !important; }
     }
     /* ── Projects list — an alternate write-up-style view of the same
        cards: year, title, category line, a short description, and a
@@ -1728,7 +1817,7 @@
        always forces Grid (see updateHomeEditUI), so hide the toggle
        rather than leave a "Projects" option that silently does nothing
        while editing. */
-    #view-home.home-edit .home-view-toggle { display:none; }
+    #view-home.home-edit .view-keys { display:none; }
     #view-home.home-edit .sec-label {
       display:inline-block;
       outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px;
@@ -3125,34 +3214,6 @@
     body.dark .block-text, body.dark .pli-title,
     body.dark .nav-btn.active { color:var(--d-text); }
 
-    /* View toggle — the whole glass recipe has to be restated, not just
-       the colours. The light version builds its rim and specular out of
-       white at high alpha, which on a dark page is a blown-out grey lump
-       rather than glass: the sheet goes to a low-alpha white over the
-       dark ground, the rim drops to a tenth, and the specular becomes a
-       hint rather than a highlight. The saturate() stays, since bleeding
-       colour through is what separates glass from a flat tint. */
-    body.dark .hvt-opt {
-      color:var(--d-text-2);
-      background:linear-gradient(to bottom, rgba(255,255,255,.13), rgba(255,255,255,.05));
-      box-shadow:inset 0 0 0 1px rgba(255,255,255,.10),
-                 inset 0 1px 1px rgba(255,255,255,.14),
-                 0 1px 3px rgba(0,0,0,.45);
-    }
-    /* Inverted here — light glass over the dark page. At .86 it settles
-       near #cacaca, which holds the dark type comfortably. */
-    body.dark .hvt-opt.active {
-      background:linear-gradient(to bottom, rgba(234,235,236,.90), rgba(234,235,236,.78));
-      color:var(--d-bg);
-      box-shadow:inset 0 0 0 1px rgba(255,255,255,.35),
-                 inset 0 1px 1px rgba(255,255,255,.55),
-                 0 2px 8px rgba(0,0,0,.5);
-    }
-    body.dark .hvt-opt:not(.active):hover {
-      background:linear-gradient(to bottom, rgba(255,255,255,.22), rgba(255,255,255,.11));
-      color:var(--d-text);
-    }
-    body.dark .hvt-opt:focus-visible { outline-color:var(--d-text); }
     body.dark .profile-role, body.dark .exp-role, body.dark .pli-desc,
     body.dark .tools-bulk-count, body.dark .nav-color-hex,
     body.dark .mp-project-name-only { color:var(--d-text-2); }
@@ -3842,9 +3903,41 @@ one keyframe at a time</div>
       </div>
     </div>
 
-    <div class="home-view-toggle" id="homeViewToggle">
-      <button class="hvt-opt active" data-view="grid" onclick="setHomeView('grid')"><span class="hvt-icon" id="hvtGridIcon" aria-hidden="true"></span>Category</button>
-      <button class="hvt-opt" data-view="list" onclick="setHomeView('list')"><span class="hvt-icon" id="hvtBrandIcon" aria-hidden="true"></span>Brand<sup class="hvt-beta">beta</sup></button>
+    <div class="view-keys" id="homeViewToggle">
+      <label class="key-wrap">
+        <input type="radio" name="home-view" value="grid" checked
+               aria-label="Category" onchange="setHomeView('grid')">
+        <div class="key" aria-hidden="true">
+          <div class="corner"></div>
+          <div class="inner">
+            <span class="key-mark" id="hvtGridIcon"></span>
+            <span class="key-label">Category</span>
+          </div>
+        </div>
+        <div class="key-led" aria-hidden="true"></div>
+        <div class="key-bg" aria-hidden="true">
+          <div class="shine-1"></div>
+          <div class="shine-2"></div>
+        </div>
+        <div class="key-glow" aria-hidden="true"></div>
+      </label>
+      <label class="key-wrap">
+        <input type="radio" name="home-view" value="list"
+               aria-label="Brand, beta" onchange="setHomeView('list')">
+        <div class="key" aria-hidden="true">
+          <div class="corner"></div>
+          <div class="inner">
+            <span class="key-mark" id="hvtBrandIcon"></span>
+            <span class="key-label">Brand<span class="key-beta">beta</span></span>
+          </div>
+        </div>
+        <div class="key-led" aria-hidden="true"></div>
+        <div class="key-bg" aria-hidden="true">
+          <div class="shine-1"></div>
+          <div class="shine-2"></div>
+        </div>
+        <div class="key-glow" aria-hidden="true"></div>
+      </label>
     </div>
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
     <div id="home-sections" style="opacity:0;transition:opacity .3s ease"></div>
@@ -5178,7 +5271,7 @@ const UI_SOUND_MAP = [
   { sel: '#bg-toggle-btn',    hover: 'tick', click: 'toggle'  },
   { sel: '.nav-btn',          hover: 'tick', click: 'scan'    },
   // The Grid/Projects switch. A tab, so it clacks like one.
-  { sel: '.hvt-opt',          hover: 'tick', click: 'toggle'  },
+  { sel: '.key-wrap',         hover: 'tick', click: 'toggle'  },
   { sel: '.social-btn',       hover: 'tick', click: 'pulse'   },
   // Both are "take me out of here" controls rather than destinations, so
   // they get the nav's own tick instead of a sound of their own.
@@ -7191,76 +7284,16 @@ function _makeSecDelBtn(label, grid) {
 let homeView = 'grid';
 let _lastHomeSections = null;
 
-/* How far past the card above it each buried pill has to end.
-
-   These are fully rounded pills, so the cap on the end is half the
-   pill's height wide. A peek narrower than that leaves only a flat
-   sliver showing — the curve stays hidden behind the top card and the
-   stack stops reading as cards at all, which is exactly what a flat
-   10px looked like. So the peek clears the cap first and adds a little
-   daylight past it, and it scales with the pill rather than being a
-   magic number that breaks if the type size changes. */
-const HVT_PEEK_PAST_CAP = 7;
-function hvtPeek(pillHeight) {
-  return Math.round(pillHeight / 2) + HVT_PEEK_PAST_CAP;
-}
-
-/* Measures the fanned-out row once and writes the collapsed geometry
-   into custom properties, so the CSS can do the animating.
-
-   The offsets have to be measured because the labels are different
-   widths — the source component's flat -100px per index only works when
-   every label is the same length. Reading offsetLeft is safe in either
-   state: transforms do not move layout boxes, so this returns the
-   fanned-out positions even while the stack is collapsed. */
-function layoutHomeViewToggle() {
-  const toggle = document.getElementById('homeViewToggle');
-  if (!toggle) return;
-  const opts = Array.from(toggle.querySelectorAll('.hvt-opt'));
-  if (!opts.length || !opts[0].offsetWidth) return; // hidden, or not laid out yet
-
-  const base = opts[0].offsetLeft;
-
-  /* Stack order, not DOM order: the active item is the top card, the
-     rest keep their DOM order behind it. Ordering by DOM instead put
-     Projects — the wider label — on top of Grid while starting it 10px
-     further right, which covered Grid completely and left the stack
-     looking like a single pill. */
-  const active = opts.find(b => b.classList.contains('active')) || opts[0];
-  const order = [active, ...opts.filter(b => b !== active)];
-
-  /* Each buried card has to end further right than the one covering it,
-     or it is invisible no matter what its left edge does. So positions
-     are derived from right edges — each card's right edge is one peek
-     past the previous card's — which is what keeps a narrow label
-     showing from under a wide one. */
-  const peek = hvtPeek(opts[0].offsetHeight);
-  let rightEdge = 0;
-  order.forEach((btn, k) => {
-    const w = btn.offsetWidth;
-    const x = k === 0 ? 0 : Math.max(0, rightEdge + peek - w);
-    rightEdge = x + w;
-    btn.style.setProperty('--hvt-i', k);
-    btn.style.setProperty('--hvt-dx', (base + x - btn.offsetLeft) + 'px');
-    btn.style.setProperty('--hvt-delay', (k * 0.1).toFixed(2) + 's');
-  });
-
-  const last = opts[opts.length - 1];
-  toggle.style.setProperty('--hvt-stack-w', rightEdge + 'px');
-  toggle.style.setProperty('--hvt-full-w', (last.offsetLeft - base + last.offsetWidth) + 'px');
-}
-window.addEventListener('resize', layoutHomeViewToggle);
-// Web fonts land after first layout and change every label's width.
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(layoutHomeViewToggle);
-
 function setHomeView(view) {
+  /* Keep the keys in step with the view. They are radios, so the browser
+     unchecks the other one for us — but this also runs for view changes
+     that did not come from a press (a reload landing on a stored view,
+     edit mode forcing Grid), which is why it sets rather than assumes. */
   const toggle = document.getElementById('homeViewToggle');
   if (toggle) {
-    const opts = Array.from(toggle.querySelectorAll('.hvt-opt'));
-    opts.forEach(b => b.classList.toggle('active', b.dataset.view === view));
-    // Active goes to the top of the stack (a z-index swap in CSS), so
-    // the collapsed control shows the view you are actually in.
-    layoutHomeViewToggle();
+    toggle.querySelectorAll('input[name="home-view"]').forEach(r => {
+      r.checked = (r.value === view);
+    });
   }
   if (homeView === view) return;
   homeView = view;
@@ -8949,15 +8982,14 @@ function mountSectionLottie(mount, path, hoverHost) {
 }
 
 
-/* The pill is static markup, so this mounts once at startup rather than
-   from a render. layoutHomeViewToggle measures the pill's width, but the
-   icon's box is sized in CSS and holds its space before the SVG lands,
-   so the measurement does not need to wait for the file. */
+/* The keys are static markup, so this mounts once at startup rather
+   than from a render. Each mark's box is sized in CSS, so the key's
+   layout is settled before the file lands. */
 document.addEventListener('DOMContentLoaded', () => {
   [['hvtGridIcon', '/media/site/category.json'],
    ['hvtBrandIcon', '/media/site/grid-sections.json']].forEach(([id, path]) => {
     const mount = document.getElementById(id);
-    if (mount) mountSectionLottie(mount, path, mount.closest('.hvt-opt'));
+    if (mount) mountSectionLottie(mount, path, mount.closest('.key-wrap'));
   });
 });
 
@@ -9109,8 +9141,23 @@ async function loadProjects() {
     const res = await fetch(`${API_URL}/api/projects`, { cache: 'no-store' });
     if (!res.ok) { markBackendDown(); return; }
     const rows = await res.json();
+    /* Keep every board's blocks, not only those already in PROJECTS.
+
+       This runs alongside loadSettings() in a Promise.all, and it is
+       settings that seeds PROJECTS from the card list — so whichever of
+       the two lands first decided whether a board's blocks were kept or
+       dropped on the floor. Boards that lost that race were left with
+       the empty stub renderHomeSections gives them, which reads as
+       "no media": the Brand list, which now hides boards with none,
+       was showing a different subset from one load to the next.
+
+       Creating the entry here is safe in the other ordering too —
+       renderHomeSections only fills in name/sub when the entry already
+       exists, and leaves blocks alone. */
     if (Array.isArray(rows)) rows.forEach(row => {
-      if (PROJECTS[row.key]) PROJECTS[row.key].blocks = row.data.blocks;
+      const blocks = (row.data && row.data.blocks) || [];
+      if (PROJECTS[row.key]) PROJECTS[row.key].blocks = blocks;
+      else PROJECTS[row.key] = { name: row.key, sub: '', blocks };
     });
   } catch(e) { console.warn('Backend load failed, using defaults'); markBackendDown(); }
 }
