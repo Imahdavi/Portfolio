@@ -1936,20 +1936,22 @@
       display:block; outline:1px dashed rgba(0,0,0,.15); border-radius:3px; cursor:text;
     }
 
-    /* Hairline between the masthead — name, tagline, dock, keys — and the
-       work below it. Fading at both ends rather than running edge to
-       edge: a hard rule across a warm paper page reads as a border
-       someone forgot to remove, where a line that dissolves reads as a
-       breath between two parts of the same sheet. */
+    /* Hairline under the social dock, closing the identity block — name,
+       tagline, links — before the view keys and the work below them.
+       Fading at both ends rather than running edge to edge: a hard rule
+       across a warm paper page reads as a border someone forgot to
+       remove, where a line that dissolves reads as a breath between two
+       parts of the same sheet. */
     .home-divider {
-      height:1px; margin:2px auto 26px;
+      height:1px; margin:0 auto 22px;
       background:linear-gradient(to right,
         transparent, var(--divider-ink, rgba(0,0,0,.13)) 22%,
         var(--divider-ink, rgba(0,0,0,.13)) 78%, transparent);
     }
     body.dark .home-divider { --divider-ink:rgba(255,255,255,.16); }
-    /* Edit mode puts its hint directly under this, and two stacked rules
-       of chrome above the sections is one too many. */
+    /* Edit mode hides the keys, which would leave this sitting straight
+       on top of the edit hint — two strips of chrome where the page
+       wants one. */
     #view-home.home-edit .home-divider { display:none; }
     .home-edit-hint {
       font-size:11.5px; color:#888; background:rgba(0,0,0,.05);
@@ -4046,6 +4048,8 @@ one keyframe at a time</div>
       </div>
     </div>
 
+    <div class="home-divider" aria-hidden="true"></div>
+
     <div class="view-keys" id="homeViewToggle">
       <div class="key-slot">
         <div class="key-wrap">
@@ -4085,7 +4089,6 @@ one keyframe at a time</div>
         <label class="key-cap" for="viewKeyBrand">Brand<span class="key-beta">beta</span></label>
       </div>
     </div>
-    <div class="home-divider" aria-hidden="true"></div>
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
     <div id="home-sections" style="opacity:0;transition:opacity .3s ease"></div>
     <button id="home-add-sec-btn" onclick="addHomeSection()">+ Add section</button>
