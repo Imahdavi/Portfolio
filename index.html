@@ -554,6 +554,23 @@
       transition:color .25s;
     }
     .key-slot:has(input:checked) .key-cap { color:#1a1a1a; }
+    /* The source's own key, restored for the dark page — this is what it
+       was drawn as, and the light set above is the adaptation. */
+    body.dark .key-wrap {
+      --key-body:#2c3238;
+      --key-bevel:#2b2b2c;
+      --key-bevel-top:#414244;
+      --key-bevel-bottom:#15161a;
+      --key-face-a:#232324;
+      --key-face-b:#46484b;
+      --key-face-press-b:#3b3d40;
+      --key-recess:#000;
+      --key-recess-line:#000;
+      --key-rim:#ffffff66;
+      --key-mark:#8f9296;
+      --key-mark-on:#e8eaec;
+    }
+
     body.dark .key-cap { color:var(--d-text-3); }
     body.dark .key-slot:has(input:checked) .key-cap { color:var(--d-text); }
     .key-beta {
@@ -562,9 +579,24 @@
       opacity:.6;
     }
 
+    /* The key's surfaces are tokens so the light and dark versions swap
+       values rather than restating every rule. Light is the default: a
+       pale keycap on paper. body.dark restores the source's charcoal,
+       which is what it was drawn as. */
     .key-wrap {
       --radius:30px;
-      --bg:#2c3238;
+      --key-body:#dfe1e5;
+      --key-bevel:#cfd2d7;
+      --key-bevel-top:#f2f3f5;
+      --key-bevel-bottom:#a8acb3;
+      --key-face-a:#fbfbfc;
+      --key-face-b:#d9dbe0;
+      --key-face-press-b:#e6e7ea;
+      --key-recess:#b9bcc2;
+      --key-recess-line:#00000024;
+      --key-rim:#ffffffcc;
+      --key-mark:#7d8288;
+      --key-mark-on:#1b1d20;
       position:relative;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
       width:154px; height:150px;
@@ -599,18 +631,18 @@
       position:relative; z-index:2; overflow:hidden;
       width:154px; height:150px;
       border:0; border-radius:var(--radius);
-      background-color:var(--bg);
+      background-color:var(--key-body);
       transition:all .3s;
-      box-shadow:inset 0 1px 1px #fff6,
+      box-shadow:inset 0 1px 1px var(--key-rim),
                  inset 0 -6px 1px -4px #0084ff,
                  inset 0 -15px 6px -8px #003cff;
     }
     .key:before {
       content:''; position:absolute; inset:0;
       border-radius:calc(var(--radius) * .8);
-      border:40px solid #2b2b2c;
-      border-top:50px solid #414244;
-      border-bottom:50px solid #15161a;
+      border:40px solid var(--key-bevel);
+      border-top:50px solid var(--key-bevel-top);
+      border-bottom:50px solid var(--key-bevel-bottom);
       filter:blur(6px); transition:all .5s;
     }
     /* The glow that leaks from under the key's bottom edge. */
@@ -637,7 +669,7 @@
       z-index:9;
       display:flex; align-items:center; justify-content:center;
       border-radius:calc(var(--radius) * .85);
-      background:linear-gradient(#232324 5%, #46484b);
+      background:linear-gradient(var(--key-face-a) 5%, var(--key-face-b));
       transition:all .3s;
       box-shadow:inset 0 -5px 15px -1px #0000004d,
                  inset 0 -4px 3px -3px #000,
@@ -648,22 +680,22 @@
        the label gone from the face it can take most of it. */
     .key-mark { width:58px; height:58px; display:block; }
     .key-mark svg { display:block; width:100%; height:100%; }
-    .key-mark svg [fill]:not([fill="none"])     { fill:#8f9296 !important; }
-    .key-mark svg [stroke]:not([stroke="none"]) { stroke:#8f9296 !important; }
+    .key-mark svg [fill]:not([fill="none"])     { fill:var(--key-mark) !important; }
+    .key-mark svg [stroke]:not([stroke="none"]) { stroke:var(--key-mark) !important; }
 
     /* The recess the key sits in. */
     .key-bg {
       position:absolute; inset:-7px; z-index:1; overflow:hidden;
       border-radius:calc(var(--radius) * 1.25);
-      background-color:#000;
+      background-color:var(--key-recess);
       transition:all .3s;
       box-shadow:0 20px 10px -10px #0000004d;
     }
     .key-bg:before {
       content:''; position:absolute; inset:0; z-index:1; border-radius:inherit;
       box-shadow:inset 0 -2px 0 -1px #78b0ff52,
-                 inset 0 0 5px 1px #000,
-                 inset 0 0 0 1px #000;
+                 inset 0 0 5px 1px var(--key-recess-line),
+                 inset 0 0 0 1px var(--key-recess-line);
     }
     .key-bg .shine-1, .key-bg .shine-2:before {
       content:''; position:absolute; bottom:0; left:0; right:0; margin:auto;
@@ -700,7 +732,7 @@
     }
     .key-wrap input:active + .key:before { box-shadow:0 -10px 10px 10px #000; }
     .key-wrap input:active + .key .inner {
-      background:linear-gradient(#232324 5%, #3b3d40);
+      background:linear-gradient(var(--key-face-a) 5%, var(--key-face-press-b));
       transform:scale(.95);
       box-shadow:inset 0 -5px 15px -1px #0000004d,
                  inset 0 -4px 3px -3px #000,
@@ -710,8 +742,8 @@
     .key-wrap input:active + .key .corner { opacity:0; }
 
     /* ── Chosen: the lamp comes up and the rim lights ── */
-    .key-wrap input:checked + .key .inner .key-mark svg [fill]:not([fill="none"])     { fill:#e8eaec !important; }
-    .key-wrap input:checked + .key .inner .key-mark svg [stroke]:not([stroke="none"]) { stroke:#e8eaec !important; }
+    .key-wrap input:checked + .key .inner .key-mark svg [fill]:not([fill="none"])     { fill:var(--key-mark-on) !important; }
+    .key-wrap input:checked + .key .inner .key-mark svg [stroke]:not([stroke="none"]) { stroke:var(--key-mark-on) !important; }
     /* The lit lamp, for a light page.
 
        The source throws its halo upward and wide — 0 -10px 35px 17px —
@@ -3105,10 +3137,16 @@
        you are. Standing apart, it also lets the card keep its own
        shape — a rounded pane with nothing hanging off the bottom edge.
 
-       Email and the optional telegram handle share the line; the handle
-       takes the smaller share, being the optional half. */
+       Each field gets its own bar rather than sharing one with a rule
+       between them: they are separate answers, and a divider inside a
+       single pane still reads as one field split in two. */
+    .pib-contact {
+      display:flex; gap:10px;
+      width:100%; max-width:470px; margin:10px auto 0;
+    }
+    .pib-contact .pib-mail { flex:1 1 50%; margin:0; min-width:0; }
     .pib-mail {
-      display:flex; align-items:center; gap:12px;
+      display:flex; align-items:center;
       width:100%; max-width:470px; margin:10px auto 0;
       padding:11px 16px;
       background:#0b1220;
@@ -3117,14 +3155,17 @@
       box-shadow:0 6px 20px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.18);
       transition:border-color .3s;
     }
+    /* The phone sits on its own line, centred and narrower — it is the
+       most optional of the three, and giving it a full row would have
+       claimed more of the eye than it deserves. After .pib-mail, not
+       before: same specificity, so source order is what decides. */
+    .pib-mail-phone { max-width:260px; margin-top:10px; }
     .pib-mail:focus-within { border-color:rgba(255,255,255,.34); }
     .pib-mail input {
       min-width:0; background:none; border:none; outline:none;
       font-family:inherit; font-size:13.5px; color:#ffffff;
     }
-    .pib-mail #note-email    { flex:1 1 58%; }
-    .pib-mail #note-telegram { flex:1 1 42%; }
-    .pib-mail-sep { width:1px; align-self:stretch; background:rgba(255,255,255,.28); flex:none; }
+    .pib-mail input { width:100%; }
     .pib-mail input::placeholder { color:rgba(255,255,255,.6); }
     .pib-mail input.error::placeholder { color:rgba(248,113,113,.8); }
 
@@ -4094,13 +4135,19 @@ one keyframe at a time</div>
       </div>
     </div>
 
-    <!-- Kept deliberately: the component has no email field, but a note
-         with no way to answer it is not much use. It sits in its own bar
-         under the card rather than inside it — see .pib-mail. -->
-    <div class="pib-mail">
-      <input type="email" id="note-email" placeholder="your@email.com" autocomplete="email">
-      <span class="pib-mail-sep"></span>
-      <input type="text" id="note-telegram" placeholder="@telegram (optional)" autocomplete="off">
+    <!-- Kept deliberately: the component has no contact fields, but a
+         note with no way to answer it is not much use. They sit under
+         the card in bars of their own — see .pib-mail. -->
+    <div class="pib-contact">
+      <div class="pib-mail">
+        <input type="email" id="note-email" placeholder="your@email.com" autocomplete="email">
+      </div>
+      <div class="pib-mail">
+        <input type="text" id="note-telegram" placeholder="@telegram (optional)" autocomplete="off">
+      </div>
+    </div>
+    <div class="pib-mail pib-mail-phone">
+      <input type="tel" id="note-phone" placeholder="phone (optional)" autocomplete="tel">
     </div>
 
     <!-- Full-size preview, the component's ImageViewDialog -->
@@ -9967,6 +10014,7 @@ async function submitNote() {
   const emailVal = document.getElementById('note-email').value.trim();
   const igVal = '';
   const tgVal = (document.getElementById('note-telegram')?.value || '').trim();
+  const phoneVal = (document.getElementById('note-phone')?.value || '').trim();
   const msg = raw;
 
   let ok = true;
@@ -9992,6 +10040,7 @@ async function submitNote() {
     // way — the attachment goes to Telegram and no further.
     const payload = { message: msg, email: emailVal,
                       instagram: igVal || null, telegram: tgVal || null,
+                      phone: phoneVal || null,
                       website: document.getElementById('note-website')?.value || '' };
     if (noteImage) payload.image = { name: noteImage.file.name, type: noteImage.file.type,
                                      data: await fileToBase64(noteImage.file) };
@@ -10007,7 +10056,7 @@ async function submitNote() {
     document.getElementById('note-success').classList.add('show');
   } catch(e) {
     btn.disabled = false; paintNoteGo();
-    const body = encodeURIComponent(`${msg}\n\n---\nEmail: ${emailVal}${igVal ? '\nInstagram: ' + igVal : ''}${tgVal ? '\nTelegram: ' + tgVal : ''}`);
+    const body = encodeURIComponent(`${msg}\n\n---\nEmail: ${emailVal}${igVal ? '\nInstagram: ' + igVal : ''}${tgVal ? '\nTelegram: ' + tgVal : ''}${phoneVal ? '\nPhone: ' + phoneVal : ''}`);
     window.location.href = `mailto:halirezamahdavi@gmail.com?subject=Portfolio note&body=${body}`;
   }
 }
