@@ -2995,18 +2995,27 @@
        grid, a scrim, then the contents. Everything but the contents is
        inert to the pointer, and the contents are always the top layer, so
        no effect here can be what makes the form hard to read. */
+    /* The shader canvas is off while the card wears the gradient. It
+       paints an opaque #0b1220 base before its blobs, so it was covering
+       .grad-panel's gradient completely — the card kept its old navy and
+       looked like the colour had simply not been changed. Hidden rather
+       than removed: the canvas and its loop are untouched, so this is one
+       line to undo if the shader is wanted back instead. */
     .pib .note-bg {
       position:absolute; inset:0; z-index:0; pointer-events:none;
-      display:block; width:100%; height:100%; border-radius:inherit;
+      display:none; width:100%; height:100%; border-radius:inherit;
     }
     .pib-pixels {
       position:absolute; inset:0; z-index:1; pointer-events:none;
       display:block; border-radius:inherit;
     }
-    /* Holds the type off a bright gradient without flattening it. */
+    /* Holds the type off a bright gradient without flattening it. Lighter
+       than it was: at .42 it was veiling a shader that ran genuinely
+       bright, where the gradient's resting state is already dark and the
+       same veil just turned it grey. */
     .pib::after {
       content:''; position:absolute; inset:0; z-index:2; pointer-events:none;
-      background:rgba(8,14,26,.42); border-radius:inherit;
+      background:rgba(8,14,26,.18); border-radius:inherit;
     }
     .pib > *:not(.note-bg):not(.pib-pixels) { position:relative; z-index:3; }
 
