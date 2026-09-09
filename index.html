@@ -1396,10 +1396,88 @@
 
     /* ─────────────────── NOTE PAGE ─────────────────── */
 
-    .note-success { display:none; flex-direction:column; align-items:flex-start; gap:10px; padding-top:4px; }
-    .note-success.show { display:flex; animation:fadeUp .4s ease both; }
-    .note-bubble { background:#1a1a1a; color:#fff; border-radius:16px 16px 16px 4px; padding:14px 18px; font-size:14.5px; line-height:1.45; }
-    .note-bubble-sub { margin-top:4px; font-size:12.5px; opacity:.5; }
+
+    /* ── Toast, ported from 21st.dev's "Promise Toast" (@cnippet-dev) ──
+       A promise toast: it opens pending, then resolves in place into a
+       success or an error rather than being replaced. That is why the
+       note now uses one — sending is a promise, and the composer had
+       been standing in for the pending state by disabling its own
+       button and then vanishing entirely.
+
+       Geometry and type are the component's own, read off the rendered
+       bundle: a 360px cap inside a 16px inset (32px from 640px up),
+       10px radius on a 1px hairline, 12px/14px padding, 14px/20px text
+       with the title at 500 and the description at the muted
+       foreground, and its transform easing — .5s cubic-bezier(.22,1,
+       .36,1) — on transform with a plain .5s on opacity.
+
+       Two departures. The source parks the viewport in a corner and
+       slides toasts in from the nearest screen edge; this one sits in
+       the middle of the page, where an edge slide has nothing to come
+       from, so the same easing drives a short rise and settle instead.
+       And the source nests a padded row inside the shell to carry the
+       stacking transform on the outer element; with one toast at a time
+       there is no stack, so the two are collapsed into one box. */
+    #toast-viewport {
+      --toast-inset:16px;
+      /* Below the middle rather than on it: dead centre put the toast
+         straight over the composer it is reporting on, and the point of
+         leaving the composer up is that you can still see it. */
+      position:fixed; z-index:9999; left:50%; top:76%;
+      transform:translate(-50%,-50%);
+      display:flex; flex-direction:column; gap:12px;
+      width:calc(100% - var(--toast-inset)*2); max-width:360px;
+      /* The viewport spans the middle of the page; only the toasts in it
+         are clickable, or it would swallow taps on the composer. */
+      pointer-events:none;
+    }
+    @media (min-width:640px) { #toast-viewport { --toast-inset:32px; } }
+
+    .toast {
+      --toast-bg:#fff;
+      --toast-edge:rgba(0,0,0,.10);
+      --toast-fg:#0a0a0a;
+      --toast-muted:#737373;
+      --toast-lip:0 1px rgba(0,0,0,.04);
+      pointer-events:auto; position:relative;
+      display:flex; align-items:flex-start; gap:8px;
+      padding:12px 14px; border-radius:10px;
+      border:1px solid var(--toast-edge);
+      background:var(--toast-bg); color:var(--toast-fg);
+      box-shadow:0 10px 15px -3px rgba(0,0,0,.05), 0 4px 6px -4px rgba(0,0,0,.05);
+      cursor:pointer;
+      opacity:0; transform:translateY(10px) scale(.97);
+      transition:transform .5s cubic-bezier(.22,1,.36,1), opacity .5s;
+    }
+    .toast[data-in] { opacity:1; transform:none; }
+    body.dark .toast {
+      --toast-bg:#171717;
+      --toast-edge:rgba(255,255,255,.10);
+      --toast-fg:#fafafa;
+      --toast-muted:#b5b5b5;
+      --toast-lip:0 -1px rgba(255,255,255,.06);
+    }
+    /* The component's inner lip: a 1px highlight just inside the edge,
+       above in dark and below in light, so the shell reads as raised
+       against either ground. */
+    .toast::before {
+      content:''; position:absolute; inset:0; border-radius:9px;
+      pointer-events:none; box-shadow:var(--toast-lip);
+    }
+    .toast-icon { flex:none; width:16px; height:16px; margin-top:2px; display:block; }
+    .toast-icon svg { display:block; width:16px; height:16px; }
+    .toast[data-type="success"] .toast-icon { color:#10b981; }
+    .toast[data-type="error"]   .toast-icon { color:#ef4444; }
+    .toast[data-type="loading"] .toast-icon { color:var(--toast-muted); }
+    .toast-icon .toast-spin { animation:toastSpin .9s linear infinite; }
+    @keyframes toastSpin { to { transform:rotate(360deg); } }
+    .toast-text  { display:flex; flex-direction:column; gap:2px; min-width:0; }
+    .toast-title { margin:0; font-size:14px; font-weight:500; line-height:20px; }
+    .toast-desc  { margin:0; font-size:14px; font-weight:400; line-height:20px; color:var(--toast-muted); }
+    @media (prefers-reduced-motion:reduce) {
+      .toast { transition:opacity .2s; transform:none; }
+      .toast-icon .toast-spin { animation:none; }
+    }
 
     /* ─────────────────── ANALYTICS PAGE ─────────────────── */
     .an-nav-btn { display:none !important; }
@@ -4084,13 +4162,6 @@ one keyframe at a time</div>
         <button type="button" class="pib-dialog-x" id="pib-dialog-x" aria-label="Close">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
-      </div>
-    </div>
-
-    <div class="note-success" id="note-success">
-      <div class="note-bubble">
-        Got it — thanks for reaching out.
-        <div class="note-bubble-sub">I'll get back to you soon.</div>
       </div>
     </div>
     </div><!-- /note-content-wrap -->
@@ -9723,6 +9794,59 @@ function pibHasContent() {
 
 /* Two permanent controls: the mic never leaves, and the send disc grows in
    beside it as soon as there is something to send. */
+
+/* Toast — see the .toast rules for where the look came from. One at a
+   time is all the page ever raises, but the viewport is a column so a
+   second would stack rather than land on top of the first. */
+const TOAST_ICONS = {
+  loading: '<svg class="toast-spin" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.4" opacity=".25"/><path d="M14.4 8A6.4 6.4 0 0 0 8 1.6" stroke-linecap="round"/></svg>',
+  success: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.4"/><path d="m5.3 8.2 1.9 1.9 3.5-4.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  error:   '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.4"/><path d="M8 4.7v3.9M8 11.2h.01" stroke-linecap="round"/></svg>'
+};
+
+function showToast(opts) {
+  const vp = document.getElementById('toast-viewport');
+  if (!vp) return { update() {}, close() {} };
+
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.setAttribute('role', 'status');
+  el.innerHTML = '<span class="toast-icon"></span>' +
+                 '<div class="toast-text"><h2 class="toast-title"></h2><p class="toast-desc"></p></div>';
+  const iconEl  = el.querySelector('.toast-icon');
+  const titleEl = el.querySelector('.toast-title');
+  const descEl  = el.querySelector('.toast-desc');
+
+  let timer = 0, closed = false;
+
+  function update(o) {
+    o = o || {};
+    if (o.type) { el.dataset.type = o.type; iconEl.innerHTML = TOAST_ICONS[o.type] || ''; }
+    if (o.title != null) titleEl.textContent = o.title;
+    if (o.desc  != null) { descEl.textContent = o.desc; descEl.hidden = !o.desc; }
+    clearTimeout(timer);
+    // A pending toast has no end of its own — it waits for the promise.
+    if (o.duration) timer = setTimeout(close, o.duration);
+  }
+  function close() {
+    if (closed) return;
+    closed = true;
+    clearTimeout(timer);
+    el.removeAttribute('data-in');
+    // The removal is timed rather than hung off transitionend, which
+    // never fires if the toast is closed in a hidden tab.
+    setTimeout(() => el.remove(), 600);
+  }
+  el.addEventListener('click', close);
+
+  vp.appendChild(el);
+  update(opts);
+  // The resting state is the transition's destination, so the starting
+  // one has to be painted for a frame before it is taken off.
+  requestAnimationFrame(() => { el.dataset.in = '1'; });
+
+  return { update, close };
+}
 function paintNoteGo() {
   const mic  = document.getElementById('note-mic-btn');
   const send = document.getElementById('note-send-btn');
@@ -9960,6 +10084,12 @@ async function submitNote() {
 
   const btn = document.getElementById('note-send-btn');
   btn.disabled = true;
+  /* The composer used to disappear on success and a bubble took its
+     place, which closed the conversation on the one screen where
+     someone might want to say a second thing. It stays put now — the
+     outcome is reported by a toast in the middle of the page, and the
+     box is emptied and handed back ready. */
+  const toast = showToast({ type:'loading', title:'Sending your note…' });
 
   try {
     // Supabase used to take these; it is quota-blocked, so the note now goes
@@ -9979,10 +10109,18 @@ async function submitNote() {
     });
     if (!res.ok) throw new Error(res.status);
     noteImage = null; noteVoice = null; renderNoteAttach();
-    document.getElementById('note-card').style.display = 'none';
-    document.getElementById('note-success').classList.add('show');
+    const ta = document.getElementById('note-msg');
+    ta.value = '';
+    // The textarea resizes itself and repaints the send button on input,
+    // so clearing it by hand has to say so.
+    ta.dispatchEvent(new Event('input'));
+    btn.disabled = false; paintNoteGo();
+    toast.update({ type: 'success', title: 'Got it — thanks for reaching out.',
+                   desc: "I'll get back to you soon.", duration: 5000 });
   } catch(e) {
     btn.disabled = false; paintNoteGo();
+    toast.update({ type: 'error', title: 'That didn’t send.',
+                   desc: 'Opening your mail app instead.', duration: 6000 });
     const body = encodeURIComponent(`${msg}\n\n---\nEmail: ${emailVal}${igVal ? '\nInstagram: ' + igVal : ''}${tgVal ? '\nTelegram: ' + tgVal : ''}${phoneVal ? '\nPhone: ' + phoneVal : ''}`);
     window.location.href = `mailto:halirezamahdavi@gmail.com?subject=Portfolio note&body=${body}`;
   }
@@ -15534,5 +15672,6 @@ void main () {
 })();
 </script>
 
+<div id="toast-viewport" role="region" aria-live="polite" aria-label="Notifications"></div>
 </body>
 </html>
