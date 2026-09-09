@@ -3004,6 +3004,33 @@
     .block-dup:hover { transform:scale(1.15); }
     .block-dup svg { width:13px; height:13px; }
 
+    /* The segment toolbar and an avatar's own toolbar were positioned
+       identically — same offset above, same centring, same z-index — so
+       on a one-avatar segment they landed on top of each other and the
+       segment's buttons took the hit test. Reaching for an avatar's
+       delete meant leaving the avatar, which dropped :hover and took the
+       toolbar away before it could be clicked.
+
+       Resolved by precedence rather than by nudging one of them: the
+       more specific control wins. Over an avatar you get that avatar's
+       buttons; anywhere else in the segment — the handle, the "\ at"
+       text, the padding — you get the segment's. */
+    .edit-on .avg-seg:has(.avg-item:hover) .avg-seg-ctrls { display:none; }
+
+    /* Width control for the blocks with no media wrap to hang one in.
+       Sits left of Duplicate, in the same row of round buttons. */
+    .block-width-btn {
+      display:none;
+      position:absolute; top:8px; right:92px;
+      width:22px; height:22px; border-radius:50%;
+      background:rgba(26,23,20,.7); border:none; cursor:pointer;
+      color:#fff; align-items:center; justify-content:center;
+      transition:transform .15s;
+    }
+    .edit-on .block-width-btn { display:flex; }
+    .block-width-btn:hover { transform:scale(1.15); }
+    .block-width-btn svg { width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+    .block-width-menu { top:36px; right:8px; left:auto; bottom:auto; }
     .move-menu {
       display:none; position:fixed; z-index:1000;
       min-width:150px; max-height:220px; overflow-y:auto;
@@ -11611,6 +11638,68 @@ function makeBlockEl(block, proj) {
   // so they sit on the real thumbnail instead of the full grid-column width —
   // narrower/portrait media would otherwise leave them floating off to the side.
   const btnHost = inner || wrap;
+
+  /* Width control for the two strip-shaped blocks. A media block gets
+     its widths from the layout menu inside the media wrap; these have no
+     media wrap, so they were stuck at the default six columns — which is
+     what kept an avatar row and a tool stack from ever sharing a line.
+     With a width set, the free 2D drag already on every block does the
+     rest: drag one to the left half, the other to the right. */
+  if (block.type === 'avatars' || block.type === 'toolstack') {
+    const wBtn = document.createElement('button');
+    wBtn.className = 'block-width-btn';
+    wBtn.type = 'button';
+    wBtn.title = 'Width';
+    wBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 8v8M20 8v8M7 12h10"/><path d="M7 12l2.5-2.5M7 12l2.5 2.5M17 12l-2.5-2.5M17 12l-2.5 2.5"/></svg>';
+
+    const wMenu = document.createElement('div');
+    wMenu.className = 'resize-menu block-width-menu';
+    const wLbl = document.createElement('div');
+    wLbl.className = 'rsz-section-lbl';
+    wLbl.textContent = 'Width';
+    wMenu.appendChild(wLbl);
+
+    const wGrid = document.createElement('div');
+    wGrid.className = 'rsz-pos-grid';
+    POS_PRESETS.forEach(p => {
+      const b = document.createElement('button');
+      b.className = 'pos-opt' + ((block._cols || 6) === p.cols ? ' active' : '');
+      b.innerHTML = makePosIcon(p.vis) + `<span>${p.label}</span>`;
+      b.title = p.label;
+      b.onclick = (e) => {
+        e.stopPropagation();
+        block._cols = p.cols;
+        /* A centred block is given the whole board to span, on the
+           understanding that its real width comes from the media wrap
+           inside it. These have no media wrap, so a width set while
+           centred would have done nothing at all — which is exactly what
+           it did. Narrowing one makes it a real grid item; Full leaves
+           the alignment as it was. This is the block's grid placement,
+           not the avatars' own left/centre/right, which is a separate
+           field and stays put. */
+        if (p.cols < 6) block._align = 'left';
+        block._colStart = 1;
+        relayoutBlockGrid();
+        wGrid.querySelectorAll('.pos-opt').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        requestAnimationFrame(() => setBlockRowSpan(wrap));
+        if (activeKey) saveProject(activeKey);
+        wMenu.classList.remove('open');
+      };
+      wGrid.appendChild(b);
+    });
+    wMenu.appendChild(wGrid);
+
+    wBtn.onclick = (e) => {
+      e.stopPropagation();
+      // Only one of these open at a time, the same way the media blocks'
+      // layout menus behave.
+      document.querySelectorAll('.resize-menu.open').forEach(m => { if (m !== wMenu) m.classList.remove('open'); });
+      wMenu.classList.toggle('open');
+    };
+    btnHost.appendChild(wBtn);
+    btnHost.appendChild(wMenu);
+  }
 
   // duplicate button — top-right of the visible box, left of move
   const dup = document.createElement('button');
