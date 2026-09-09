@@ -2184,6 +2184,84 @@
     .edit-on .avg-fields { display:flex; }
     .avg-name-fld { font-size:11.5px; font-weight:600; text-align:center; max-width:100%; line-height:1.25; }
     .avg-role-fld { font-size:10.5px; color:#999; text-align:center; max-width:100%; line-height:1.25; }
+
+    /* ── Tool stack, ported from 21st.dev's "Tool Calls Section"
+       (@theshanelevine) ────────────────────────────────────────────
+       A row of icon plates, overlapped and alternately tilted, then a
+       count and a chevron; the whole thing opens into a list with a
+       connector line running down the icon column. Geometry is the
+       source's: 32px plates on a -8px overlap, ±8deg alternating, 8px
+       radius, a 12px medium label, an 18px chevron that turns 180°, and
+       11px/20px rows under a 1px rule.
+
+       Its icons come from the same picker the avatars and the Tools I
+       use cards already share, so a logo added anywhere on the site can
+       be reused here without uploading it a second time. */
+    .block-toolstack { width:100%; display:flex; flex-direction:column; margin-bottom:8px; }
+    .tstack { width:fit-content; max-width:100%; }
+    .tstack-head {
+      display:flex; align-items:center; gap:8px; padding:6px 0;
+      background:none; border:0; cursor:pointer;
+      color:#8a8a8a; font-family:inherit;
+      transition:color .2s;
+    }
+    .tstack-head:hover { color:#1a1a1a; }
+    body.dark .tstack-head { color:#8f9295; }
+    body.dark .tstack-head:hover { color:#fff; }
+    .tstack-icons { display:flex; align-items:center; min-height:32px; }
+    /* The overlap is a negative margin rather than the source's
+       -space-x-2 utility, which is the same thing: every plate after the
+       first slides 8px under its neighbour. */
+    .tstack-icons > * + * { margin-left:-8px; }
+    .tstack-plate {
+      width:32px; height:32px; flex:none; border-radius:8px; overflow:hidden;
+      display:flex; align-items:center; justify-content:center;
+      background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.07);
+      color:#6f6f6f; font-size:11px; font-weight:700; letter-spacing:-.02em;
+    }
+    body.dark .tstack-plate { background:#26282a; box-shadow:0 0 0 1px rgba(255,255,255,.10); color:#a9abad; }
+    /* contain for the same reason the Tools I use plate uses it: a
+       non-square logo would lose its edges under cover. */
+    .tstack-plate img { width:100%; height:100%; object-fit:contain; }
+    .tstack-lbl { font-size:12px; font-weight:500; white-space:nowrap; }
+    .tstack-chev { width:18px; height:18px; flex:none; transition:transform .2s; }
+    .tstack-chev svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .tstack.open .tstack-chev { transform:rotate(180deg); }
+
+    .tstack-body { overflow:hidden; max-height:0; opacity:0; transition:max-height .2s, opacity .2s; }
+    .tstack.open .tstack-body { max-height:2000px; opacity:1; }
+    .tstack-row { display:flex; align-items:stretch; gap:8px; }
+    .tstack-rail { display:flex; flex-direction:column; align-items:center; align-self:stretch; }
+    .tstack-rail .tstack-plate { margin:0; }
+    .tstack-line { width:1px; flex:1; min-height:16px; background:rgba(0,0,0,.12); }
+    body.dark .tstack-line { background:rgba(255,255,255,.14); }
+    .tstack-text { flex:1; min-width:0; padding-top:6px; padding-bottom:10px; }
+    .tstack-name { font-size:12px; font-weight:500; color:#4a4a4a; outline:none; }
+    body.dark .tstack-name { color:#c8cacc; }
+    .tstack-sub { font-size:11px; color:#a0a0a0; text-transform:capitalize; outline:none; }
+    body.dark .tstack-sub { color:#7c7e81; }
+    .edit-on .tstack-name:empty:before, .edit-on .tstack-sub:empty:before {
+      content:attr(data-ph); color:#bbb; text-transform:none;
+    }
+    .edit-on .tstack-name, .edit-on .tstack-sub { cursor:text; }
+
+    /* Edit-mode affordances. The add plate joins the stack so a new icon
+       lands where it will actually sit, rather than in a separate tray. */
+    .tstack-add { display:none; cursor:pointer; font-size:16px; font-weight:400;
+                  border:1px dashed rgba(0,0,0,.22); background:none; }
+    body.dark .tstack-add { border-color:rgba(255,255,255,.26); }
+    .edit-on .tstack-add { display:flex; }
+    .edit-on .tstack-plate { cursor:pointer; }
+    .tstack-del {
+      display:none; margin-left:6px; width:18px; height:18px; flex:none;
+      border:0; border-radius:50%; background:rgba(0,0,0,.55); color:#fff;
+      font-size:12px; line-height:1; cursor:pointer; align-items:center; justify-content:center;
+    }
+    .edit-on .tstack-del { display:flex; }
+    .tstack-del:hover { background:#dc2626; }
+    @media (prefers-reduced-motion:reduce) {
+      .tstack-chev, .tstack-body { transition:none; }
+    }
     /* Per-avatar logo-size slider — only on avatars using the logo <img>
        path (a.isLogo), so a fix that only some logos needed doesn't
        force a size change onto every avatar. */
@@ -4336,6 +4414,10 @@ one keyframe at a time</div>
       <button class="add-btn" onclick="addAvatars()" title="Avatar Group — credit a brand, collaborator, etc.">
         <svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7"/><circle cx="17" cy="8" r="3.2"/></svg>
         Add avatar
+      </button>
+      <button class="add-btn" onclick="addToolStack()" title="Tool stack — the tools or brands behind a piece">
+        <svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="9" height="9" rx="2.2" transform="rotate(-8 7 11.5)"/><rect x="12.5" y="7" width="9" height="9" rx="2.2" transform="rotate(8 17 11.5)"/></svg>
+        Add tool stack
       </button>
     </div>
   </div><!-- /view-project -->
@@ -10196,6 +10278,12 @@ function updateEditUI() {
   list.querySelectorAll('.block-text').forEach(el => {
     el.contentEditable = editMode ? 'true' : 'false';
   });
+  // Tool stack rows read `editMode` when they render, so a stack drawn
+  // before the toggle would keep whatever it was built with. Its fields
+  // are not .block-text — that class carries the body-copy styling.
+  list.querySelectorAll('.tstack-name, .tstack-sub').forEach(el => {
+    el.contentEditable = editMode ? 'true' : 'false';
+  });
 
   // title & subtitle editable in edit mode
   dTitle.contentEditable = editMode ? 'true' : 'false';
@@ -11066,6 +11154,12 @@ function makeBlockEl(block, proj) {
     av.className = 'block-avatars';
     body.appendChild(av);
     renderAvatarsBlock(block, av);
+  } else if (block.type === 'toolstack') {
+    // Tool stack — the small stacked-icon strip; see renderToolStackBlock().
+    const ts = document.createElement('div');
+    ts.className = 'block-toolstack';
+    body.appendChild(ts);
+    renderToolStackBlock(block, ts);
   } else {
     // image or video — shared media-wrap with overlay controls
     mw = document.createElement('div');
@@ -11904,7 +11998,7 @@ function renderCarouselBlock(block, mount, captionEl) {
 // — isLogo flags a brand-logo pick so the resulting avatar itself
 // renders with background-size:contain (full logo visible) instead of
 // cover (which crops a wide logotype down to an illegible fragment).
-let _avgPickPanel = null, _avgPickBackdrop = null, _avgPickResolve = null;
+let _avgPickPanel = null, _avgPickBackdrop = null, _avgPickResolve = null, _avgPickBody = null;
 
 function avgEnsurePickPanel() {
   if (_avgPickPanel) return;
@@ -11949,40 +12043,252 @@ function avgEnsurePickPanel() {
   };
   panel.appendChild(uploadBtn);
 
-  const brandLogos = window.SITE_BRAND_LOGOS || [];
-  if (brandLogos.length) {
+  // Filled on every open rather than once here: the second section is
+  // whatever is already placed around the site, which changes as soon as
+  // the picker is used, and a panel built once would keep showing the
+  // library as it stood the first time it was opened.
+  const bodyEl = document.createElement('div');
+  bodyEl.className = 'avg-pick-panel-body';
+  panel.appendChild(bodyEl);
+
+  document.body.appendChild(panel);
+  _avgPickPanel = panel;
+  _avgPickBody = bodyEl;
+}
+
+function avgFillPickPanel() {
+  if (!_avgPickBody) return;
+  _avgPickBody.innerHTML = '';
+
+  const section = (label, items) => {
+    if (!items.length) return;
     const lbl = document.createElement('div');
     lbl.className = 'avg-pick-panel-lbl';
-    lbl.textContent = 'Or pick a brand logo';
-    panel.appendChild(lbl);
+    lbl.textContent = label;
+    _avgPickBody.appendChild(lbl);
 
     const grid = document.createElement('div');
     grid.className = 'avg-pick-panel-grid';
-    brandLogos.forEach(logo => {
+    items.forEach(logo => {
       const cell = document.createElement('button');
       cell.type = 'button';
       cell.className = 'avg-pick-logo-cell';
-      cell.title = logo.name;
+      cell.title = logo.name || '';
       const img = document.createElement('img');
       img.src = logo.src;
-      img.alt = logo.name;
+      img.alt = logo.name || '';
       cell.appendChild(img);
       cell.onclick = () => {
         const resolve = _avgPickResolve;
         avgCloseImagePicker();
+        // true == "this is a logo", which is what the avatar renderer
+        // uses to pick the <img> path over the cropped-photo one.
         if (resolve) resolve(logo.src, true);
       };
       grid.appendChild(cell);
     });
-    panel.appendChild(grid);
-  }
+    _avgPickBody.appendChild(grid);
+  };
 
-  document.body.appendChild(panel);
-  _avgPickPanel = panel;
+  const brandLogos = window.SITE_BRAND_LOGOS || [];
+  section('Or pick a brand logo', brandLogos);
+  // Anything already sitting on a project, a tool stack or a Tools I use
+  // card. Brand logos are dropped from this list so the same mark does
+  // not appear in both sections.
+  const known = new Set(brandLogos.map(l => l.src));
+  section('Already used on the site', collectSiteIcons().filter(i => !known.has(i.src)));
 }
 
+/* ─── Tool stack block ─────────────────────────────────────────────
+   See the .tstack rules for where the look came from. The data is a
+   plain list of {id, src, name, sub}: src is an icon from the shared
+   picker, name is what the row reads, sub the small line under it. */
+
+function tstackLabel(block) {
+  const n = (block.tools || []).length;
+  return (block.label || '').trim() || `Used ${n} tool${n === 1 ? '' : 's'}`;
+}
+
+const TSTACK_CHEV = '<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>';
+
+// A plate on its own — used both in the stacked header and in the rail
+// of each expanded row, so the two can never drift apart.
+function tstackPlate(tool) {
+  const p = document.createElement('div');
+  p.className = 'tstack-plate';
+  if (tool.src) {
+    const img = document.createElement('img');
+    img.src = tool.src; img.alt = '';
+    p.appendChild(img);
+  } else {
+    p.textContent = (tool.name || '?').trim().slice(0, 2).toUpperCase();
+  }
+  return p;
+}
+
+function renderToolStackBlock(block, mount) {
+  if (!Array.isArray(block.tools)) block.tools = [];
+  const wasOpen = mount.querySelector('.tstack')?.classList.contains('open');
+  mount.innerHTML = '';
+
+  const root = document.createElement('div');
+  root.className = 'tstack' + (wasOpen ? ' open' : '');
+
+  const head = document.createElement('button');
+  head.type = 'button';
+  head.className = 'tstack-head';
+
+  const icons = document.createElement('div');
+  icons.className = 'tstack-icons';
+  block.tools.forEach((t, i) => {
+    const p = tstackPlate(t);
+    // The source tilts alternate icons and stacks them front to back, so
+    // the row reads as a small pile rather than a straight strip.
+    p.style.rotate = block.tools.length > 1 ? (i % 2 === 0 ? '8deg' : '-8deg') : '0deg';
+    p.style.zIndex = i;
+    // Bound unconditionally and gated inside, so a stack rendered before
+    // edit mode was switched on still answers the click. No title: it
+    // would read as an instruction to a visitor, who cannot act on it.
+    p.addEventListener('click', (e) => {
+      if (!editMode) return;
+      e.stopPropagation();
+      avgOpenImagePicker((src) => { t.src = src; renderToolStackBlock(block, mount); avgSave(block); });
+    });
+    icons.appendChild(p);
+  });
+
+  const add = document.createElement('div');
+  add.className = 'tstack-plate tstack-add';
+  add.textContent = '+';
+  add.title = 'Add an icon';
+  add.addEventListener('click', (e) => {
+    e.stopPropagation();
+    avgOpenImagePicker((src) => {
+      block.tools.push({ id: uid(), src, name: '', sub: '' });
+      renderToolStackBlock(block, mount);
+      avgSave(block);
+    });
+  });
+  icons.appendChild(add);
+  head.appendChild(icons);
+
+  const lbl = document.createElement('span');
+  lbl.className = 'tstack-lbl';
+  lbl.textContent = tstackLabel(block);
+  head.appendChild(lbl);
+
+  const chev = document.createElement('span');
+  chev.className = 'tstack-chev';
+  chev.innerHTML = TSTACK_CHEV;
+  head.appendChild(chev);
+
+  head.addEventListener('click', () => root.classList.toggle('open'));
+  root.appendChild(head);
+
+  const body = document.createElement('div');
+  body.className = 'tstack-body';
+  block.tools.forEach((t, i) => {
+    const row = document.createElement('div');
+    row.className = 'tstack-row';
+
+    const rail = document.createElement('div');
+    rail.className = 'tstack-rail';
+    rail.appendChild(tstackPlate(t));
+    // The line joins one row to the next, so the last row has none.
+    if (i < block.tools.length - 1) {
+      const line = document.createElement('div');
+      line.className = 'tstack-line';
+      rail.appendChild(line);
+    }
+    row.appendChild(rail);
+
+    const text = document.createElement('div');
+    text.className = 'tstack-text';
+
+    const name = document.createElement('div');
+    name.className = 'tstack-name';
+    name.textContent = t.name || '';
+    name.dataset.ph = 'What it did';
+    const sub = document.createElement('div');
+    sub.className = 'tstack-sub';
+    sub.textContent = t.sub || '';
+    sub.dataset.ph = 'Tool name';
+
+    [[name, 'name'], [sub, 'sub']].forEach(([el, field]) => {
+      el.contentEditable = editMode ? 'true' : 'false';
+      el.addEventListener('blur', () => {
+        const v = el.textContent.trim();
+        if (v === (t[field] || '')) return;
+        t[field] = v;
+        lbl.textContent = tstackLabel(block);
+        avgSave(block);
+      });
+    });
+
+    const nameRow = document.createElement('div');
+    nameRow.style.display = 'flex';
+    nameRow.style.alignItems = 'center';
+    nameRow.appendChild(name);
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'tstack-del';
+    del.textContent = '×';
+    del.title = 'Remove this icon';
+    del.addEventListener('click', () => {
+      block.tools = block.tools.filter(x => x !== t);
+      renderToolStackBlock(block, mount);
+      avgSave(block);
+    });
+    nameRow.appendChild(del);
+
+    text.appendChild(nameRow);
+    text.appendChild(sub);
+    row.appendChild(text);
+    body.appendChild(row);
+  });
+  root.appendChild(body);
+  mount.appendChild(root);
+}
+
+function addToolStack() {
+  const proj = PROJECTS[activeKey];
+  const b = { id: uid(), type: 'toolstack', label: '', tools: [] };
+  proj.blocks.push(b);
+  const list = document.getElementById('block-list');
+  const el = makeBlockEl(b, proj);
+  el.classList.add('block-enter');
+  list.appendChild(el);
+  requestAnimationFrame(() => setBlockRowSpan(el));
+  saveProject(activeKey);
+}
+
+/* Every icon already placed somewhere on the site, so one added for a
+   project's credits can be picked again for a tool stack or a Tools I
+   use card without being uploaded twice. Keyed by src — the same file
+   under two names is one icon — and data: URIs are included, since the
+   Netbina mark and several others live inline. */
+function collectSiteIcons() {
+  const seen = new Map();
+  const add = (src, name) => {
+    if (!src || seen.has(src)) return;
+    seen.set(src, { src, name: (name || '').trim() });
+  };
+  Object.values(PROJECTS || {}).forEach(proj => {
+    (proj.blocks || []).forEach(b => {
+      if (b.type === 'avatars') {
+        (b.segments || []).forEach(seg => (seg.avatars || []).forEach(a => add(a.src, a.name)));
+      } else if (b.type === 'toolstack') {
+        (b.tools || []).forEach(t => add(t.src, t.name || t.sub));
+      }
+    });
+  });
+  ((_cachedSettings && _cachedSettings.tools) || []).forEach(t => add(t.iconSrc, t.name));
+  return [...seen.values()];
+}
 function avgOpenImagePicker(onResolveSrc) {
   avgEnsurePickPanel();
+  avgFillPickPanel();
   _avgPickResolve = onResolveSrc;
   _avgPickBackdrop.classList.add('open');
   _avgPickPanel.classList.add('open');
@@ -12554,6 +12860,9 @@ function _cloneBlockDeep(block) {
         seg.avatars.forEach(a => { a.id = uid(); });
       }
     });
+  }
+  if (clone.type === 'toolstack' && Array.isArray(clone.tools)) {
+    clone.tools.forEach(t => { t.id = uid(); });
   }
   return clone;
 }
