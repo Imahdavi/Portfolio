@@ -7759,11 +7759,19 @@ function _wireStripDragScroll(strip) {
   // gesture, so turn it off.
   strip.addEventListener('dragstart', e => e.preventDefault());
 
-  // Tiles start at their natural width and get their real aspect ratio on
-  // load, so paint once now and again after a tile resizes.
+  // Tiles start at a placeholder ratio and get their real one when the
+  // file reports its dimensions, which changes the tile's width but not
+  // the strip's — so observing only the strip meant the resize this was
+  // meant to catch never fired, and a tile that loaded late kept the
+  // centring offset computed for the 4/3 placeholder. On a portrait clip
+  // that is a dozen pixels of slack too much, pushed all to one side:
+  // the media sat visibly off-centre in its frame. Every tile is watched
+  // now. New tiles only ever arrive with a rebuilt row, which re-runs
+  // this wiring, so there is nothing to re-observe in between.
   paintParallax();
   const ro = new ResizeObserver(paintParallax);
   ro.observe(strip);
+  strip.querySelectorAll('.pli-tile').forEach(t => ro.observe(t));
 
   _stripDrivers.push(() => {
     if (raf !== null) cancelAnimationFrame(raf);
