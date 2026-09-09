@@ -502,314 +502,75 @@
        admin-only while the list view was being checked over. Boards with
        no media are skipped in that list unless you are editing — see
        renderHomeSections. ── */
-    /* ── View switch — ported from 21st.dev's "Bluetooth key"
-       (@theutkarshmail). The source is one checkbox key; this is two of
-       them side by side on a radio group, so pressing either lights it
-       and darkens its neighbour.
+    /* ── View switch — ported from 21st.dev's "Switch" (@shugar): a
+       segmented control, radios inside labels with the checked one
+       filled. Geometry is the component's own — 4px of padding inside a
+       1px track, an 8px outer radius against a 6px chip, and its 150ms
+       fade.
 
-       Its checked semantics are inverted here. In the source, unchecked
-       is the lit state and :checked runs a set of "turn off" animations
-       — fine for a toggle that starts on, wrong for a pair where the
-       checked one is the one you chose. So the lit rules hang off
-       :checked and the resting state is dark.
+       Its colours are Vercel Geist tokens, and only some of them
+       resolved inside the preview bundle, so they are read off the
+       rendered component where they did (track #0a0a0a, border
+       rgba(255,255,255,.14), idle text #a1a1a1) and taken from the Geist
+       scale where they did not (chip gray-100 #1a1a1a, active text
+       gray-1000 #ededed). That set is the dark theme; light is the same
+       relationship re-pitched, where the track is the lighter surface
+       and the chip sits a step darker on it rather than a step lighter.
 
-       Everything is sized in the source's own pixels and then scaled as
-       a whole, rather than being redrawn smaller. A key is a stack of
-       blurs, insets and rim lights tuned to each other at 154px; nudging
-       the numbers individually pulls that apart, where scaling the
-       finished object keeps every relationship intact. --key-scale is
-       the only size dial. */
-    /* Each key is a column: the key itself, scaled, with its name in
-       ordinary page type underneath. The label used to sit on the key's
-       face, which set the floor on how small the key could go — a word
-       has to stay legible, so the face had to stay big enough to hold
-       one. Outside, the key only has to carry its mark, and can shrink
-       to a keycap. */
-    .view-keys {
-      --key-scale:.25;
-      display:flex; justify-content:center; align-items:flex-start;
-      gap:12px;
-      margin:10px auto 30px;
+       Marks are kept from the keys this replaced. The component ships an
+       icon variant built exactly this way — a span beside the label
+       inside the same chip — so they belong here rather than being
+       something bolted on. */
+    .view-switch {
+      --vsw-track:#ffffff;
+      --vsw-border:rgba(0,0,0,.10);
+      --vsw-chip:#f1f0ee;
+      --vsw-idle:#7a7570;
+      --vsw-on:#171717;
+      display:flex; width:max-content; margin:0 auto 26px;
+      height:36px; padding:4px;
+      background:var(--vsw-track);
+      border:1px solid var(--vsw-border);
+      border-radius:8px;
     }
-    @media (max-width:539px) { .view-keys { --key-scale:.22; gap:8px; } }
+    body.dark .view-switch {
+      --vsw-track:#0a0a0a;
+      --vsw-border:rgba(255,255,255,.14);
+      --vsw-chip:#1a1a1a;
+      --vsw-idle:#a1a1a1;
+      --vsw-on:#ededed;
+    }
+    .vsw-opt { display:flex; flex:1 1 auto; height:100%; }
+    /* The source hides the radio outright and lets the label carry the
+       click. Kept, with the outline moved onto the chip so the control
+       is still keyboard-navigable — display:none would drop it out of
+       the tab order entirely. */
+    .vsw-opt input {
+      position:absolute; width:1px; height:1px; opacity:0;
+      margin:0; pointer-events:none;
+    }
+    .vsw-opt > span {
+      display:flex; flex:1; align-items:center; justify-content:center; gap:6px;
+      padding:0 12px; border-radius:6px;
+      font-family:inherit; font-size:13px; font-weight:500; white-space:nowrap;
+      color:var(--vsw-idle); cursor:pointer;
+      transition:background .15s, color .15s;
+    }
+    .vsw-opt > span:hover { color:var(--vsw-on); }
+    .vsw-opt input:checked + span { background:var(--vsw-chip); color:var(--vsw-on); }
+    .vsw-opt input:focus-visible + span { outline:2px solid var(--vsw-on); outline-offset:1px; }
 
-    .key-slot { display:flex; flex-direction:column; align-items:center; }
-    /* A transform paints smaller but reserves the same box, so the key
-       still claimed its full 154 x 150 of layout while drawing at a
-       third of it. Vertically that just left a hole; horizontally it
-       pushed the two keys 110px apart no matter what gap was set, which
-       is what made them look stranded. Negative margins pull the
-       reserved box back to the painted size on both axes — 178px is the
-       key plus the lamp that hangs below it. */
-    .key-slot .key-wrap {
-      margin-bottom:calc(178px * var(--key-scale) - 150px);
-      margin-inline:calc((154px * var(--key-scale) - 154px) / 2);
-    }
+    .vsw-mark { width:15px; height:15px; display:block; flex:none; }
+    .vsw-mark svg { display:block; width:100%; height:100%; }
+    /* One of these marks is drawn in fills and the other mostly in
+       strokes, so each is matched on the attribute lottie actually
+       wrote — forcing a stroke onto a fill-only shape would outline it. */
+    .vsw-mark svg [fill]:not([fill="none"])     { fill:currentColor !important; }
+    .vsw-mark svg [stroke]:not([stroke="none"]) { stroke:currentColor !important; }
 
-    .key-cap {
-      margin-top:9px;
-      font-size:12.5px; font-weight:600; letter-spacing:.01em;
-      color:#8a8480; white-space:nowrap; cursor:pointer;
-      text-align:center; line-height:1.25;
-      transition:color .25s;
-    }
-    .key-slot:has(input:checked) .key-cap { color:#1a1a1a; }
-    /* The source's own key, restored for the dark page — this is what it
-       was drawn as, and the light set above is the adaptation. */
-    body.dark .key-wrap {
-      --key-body:#2c3238;
-      --key-bevel:#2b2b2c;
-      --key-bevel-top:#414244;
-      --key-bevel-bottom:#15161a;
-      --key-face-a:#232324;
-      --key-face-b:#46484b;
-      --key-face-press-b:#3b3d40;
-      --key-face-inset:
-        inset 0 -5px 15px -1px #0000004d,
-        inset 0 -4px 3px -3px #000,
-        inset 0 -10px 20px -8px #fff6,
-        inset 0 1px 0 1px #fff3;
-      --key-face-inset-press:
-        inset 0 -5px 15px -1px #0000004d,
-        inset 0 -4px 3px -3px #000,
-        inset 0 -10px 20px -8px #fff3,
-        inset 0 1px 0 1px #ffffff1a;
-      --key-recess:#000;
-      --key-recess-line:#000;
-      --key-rim:#ffffff66;
-      --key-mark:#8f9296;
-      --key-mark-on:#e8eaec;
-    }
-
-    body.dark .key-cap { color:var(--d-text-3); }
-    body.dark .key-slot:has(input:checked) .key-cap { color:var(--d-text); }
-    .key-beta {
-      display:block;
-      font-size:8.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
-      opacity:.6;
-    }
-
-    /* The key's surfaces are tokens so the light and dark versions swap
-       values rather than restating every rule. Light is the default: a
-       pale keycap on paper. body.dark restores the source's charcoal,
-       which is what it was drawn as. */
-    .key-wrap {
-      --radius:30px;
-      --key-body:#dfe1e5;
-      --key-bevel:#cfd2d7;
-      --key-bevel-top:#f2f3f5;
-      --key-bevel-bottom:#a8acb3;
-      /* The face is DARKER than the body at its top edge and lighter at
-         the bottom — the same relationship the dark key has, and what
-         makes it read as a well rather than a raised pad. Getting this
-         the wrong way round (bright at the top) was why the light key
-         looked like a blob sitting on the keycap. */
-      --key-face-a:#c9ccd3;
-      --key-face-b:#f2f3f6;
-      --key-face-press-b:#e4e6ea;
-      /* Light falls from above, so the top inner edge of the well is in
-         shadow and the bottom lip catches it. The dark key builds the
-         same shape out of black shadow and white glow; on paper those
-         values do nothing, so it gets its own recipe. */
-      --key-face-inset:
-        inset 0 3px 5px -1px rgba(0,0,0,.20),
-        inset 0 1px 0 0 rgba(0,0,0,.13),
-        inset 0 -7px 11px -7px rgba(255,255,255,.95),
-        inset 0 -1px 0 0 rgba(255,255,255,.85);
-      --key-face-inset-press:
-        inset 0 4px 7px -1px rgba(0,0,0,.26),
-        inset 0 1px 0 0 rgba(0,0,0,.16),
-        inset 0 -6px 9px -7px rgba(255,255,255,.7),
-        inset 0 -1px 0 0 rgba(255,255,255,.6);
-      --key-recess:#b9bcc2;
-      --key-recess-line:#00000024;
-      --key-rim:#ffffffcc;
-      --key-mark:#7d8288;
-      --key-mark-on:#1b1d20;
-      position:relative;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      width:154px; height:150px;
-      flex:0 0 auto;
-      pointer-events:none;
-      transform:scale(var(--key-scale));
-      transform-origin:top center;
-    }
-    /* Soft light behind the pair, and the shadow they sit in. */
-    .key-wrap:before {
-      content:''; position:absolute;
-      width:350px; height:300px; border-radius:50px;
-      background-color:#ffffff0d; filter:blur(60px);
-      transform:skewY(-20deg);
-    }
-    .key-wrap:after {
-      content:''; position:absolute; inset:0;
-      width:100%; height:100%; border-radius:50px;
-      background-color:#00000080; filter:blur(30px);
-    }
-    /* The input is the whole hit area, laid over the key at full size —
-       the key itself is inert, which is why .key-wrap turns pointer
-       events off and only this turns them back on. */
-    .key-wrap input {
-      position:absolute; inset:0; width:100%; height:100%;
-      opacity:0; z-index:999; cursor:pointer; pointer-events:all;
-      -webkit-user-select:none; user-select:none;
-      margin:0;
-    }
-
-    .key {
-      position:relative; z-index:2; overflow:hidden;
-      width:154px; height:150px;
-      border:0; border-radius:var(--radius);
-      background-color:var(--key-body);
-      transition:all .3s;
-      box-shadow:inset 0 1px 1px var(--key-rim),
-                 inset 0 -6px 1px -4px #0084ff,
-                 inset 0 -15px 6px -8px #003cff;
-    }
-    .key:before {
-      content:''; position:absolute; inset:0;
-      border-radius:calc(var(--radius) * .8);
-      border:40px solid var(--key-bevel);
-      border-top:50px solid var(--key-bevel-top);
-      border-bottom:50px solid var(--key-bevel-bottom);
-      filter:blur(6px); transition:all .5s;
-    }
-    /* The glow that leaks from under the key's bottom edge. */
-    .key:after {
-      content:''; position:absolute; top:101%; left:0; right:0; margin:auto;
-      width:120px; height:50px; border-radius:50px 50px 0 0;
-      background:#009cff; filter:contrast(10) blur(7px);
-      opacity:1; transition:all .3s;
-    }
-    .key .corner { opacity:.1; transition:all .4s; }
-    .key .corner:before, .key .corner:after {
-      content:''; position:absolute; top:0;
-      border-top:55px solid #fff;
-      border-left:15px solid #0000; border-right:15px solid #0000;
-      filter:blur(6px);
-    }
-    .key .corner:before { left:8px;  transform:rotate(-40deg); }
-    .key .corner:after  { right:8px; transform:rotate(40deg); }
-    .key-wrap input:hover + .key .corner { opacity:.15; }
-
-    /* The moulded face the mark sits on. */
-    .key .inner {
-      position:absolute; top:22px; right:20px; bottom:22px; left:20px;
-      z-index:9;
-      display:flex; align-items:center; justify-content:center;
-      border-radius:calc(var(--radius) * .85);
-      background:linear-gradient(var(--key-face-a) 5%, var(--key-face-b));
-      transition:all .3s;
-      box-shadow:var(--key-face-inset);
-    }
-    /* The site's own mark replaces the source's bluetooth glyph. With
-       the label gone from the face it can take most of it. */
-    .key-mark { width:58px; height:58px; display:block; }
-    .key-mark svg { display:block; width:100%; height:100%; }
-    .key-mark svg [fill]:not([fill="none"])     { fill:var(--key-mark) !important; }
-    .key-mark svg [stroke]:not([stroke="none"]) { stroke:var(--key-mark) !important; }
-
-    /* The recess the key sits in. */
-    .key-bg {
-      position:absolute; inset:-7px; z-index:1; overflow:hidden;
-      border-radius:calc(var(--radius) * 1.25);
-      background-color:var(--key-recess);
-      transition:all .3s;
-      box-shadow:0 20px 10px -10px #0000004d;
-    }
-    .key-bg:before {
-      content:''; position:absolute; inset:0; z-index:1; border-radius:inherit;
-      box-shadow:inset 0 -2px 0 -1px #78b0ff52,
-                 inset 0 0 5px 1px var(--key-recess-line),
-                 inset 0 0 0 1px var(--key-recess-line);
-    }
-    .key-bg .shine-1, .key-bg .shine-2:before {
-      content:''; position:absolute; bottom:0; left:0; right:0; margin:auto;
-      width:100px; height:10px; border-radius:50%;
-      background:#003cff; filter:blur(2px);
-      z-index:0; transition:all .3s;
-      transform:translateY(0) scale(0);
-    }
-    .key-bg .shine-2 { opacity:0; transition:all .5s linear; }
-    .key-bg .shine-2:before { animation:key-bg 2.4s linear infinite; }
-
-    /* The lamp under the key. Dark until this key is the chosen one. */
-    /* Bigger than the source's 6px, because the key it belongs to is
-       scaled to a third and the lamp went with it — at 6px there was
-       barely a pixel of it left to light up. */
-    .key-led {
-      position:absolute; top:100%; z-index:10;
-      width:15px; height:15px; margin-top:26px; border-radius:50%;
-      background-color:#000;
-      box-shadow:0 0 0 3px #0000001a;
-      transition:all .3s;
-    }
-    .key-glow { transition:all .5s linear; }
-    .key-glow:before {
-      content:''; position:absolute; inset:0;
-      border-radius:30px; filter:blur(12px); opacity:0;
-      background:linear-gradient(#984fff, #000);
-    }
-
-    /* ── Pressed ── */
-    .key-wrap input:hover + .key { transform:scale(1.02); }
-    .key-wrap input:active + .key {
-      background-color:#0000; filter:contrast(1.07); transform:scale(.97);
-    }
-    .key-wrap input:active + .key:before { box-shadow:0 -10px 10px 10px #000; }
-    .key-wrap input:active + .key .inner {
-      background:linear-gradient(var(--key-face-a) 5%, var(--key-face-press-b));
-      transform:scale(.95);
-      box-shadow:var(--key-face-inset-press);
-    }
-    .key-wrap input:active + .key .corner { opacity:0; }
-
-    /* ── Chosen: the lamp comes up and the rim lights ── */
-    .key-wrap input:checked + .key .inner .key-mark svg [fill]:not([fill="none"])     { fill:var(--key-mark-on) !important; }
-    .key-wrap input:checked + .key .inner .key-mark svg [stroke]:not([stroke="none"]) { stroke:var(--key-mark-on) !important; }
-    /* The lit lamp, for a light page.
-
-       The source throws its halo upward and wide — 0 -10px 35px 17px —
-       so it washes the dark surface the key stands on. On paper that
-       does two unhelpful things at once: most of the halo hides behind
-       the key, and what escapes is a pale blue smear that reads as a
-       printing error rather than a light. So it is centred, tightened
-       and made denser, and the lamp keeps a dark bezel to sit in, which
-       is what gives a small bright dot its edge against white.
-
-       Dark mode below restores the source's version, where a wide soft
-       halo is exactly right. */
-    .key-wrap input:checked ~ .key-led {
-      background-color:#4df2ff;
-      box-shadow:0 0 0 2.5px rgba(0,0,0,.6),
-                 0 0 5px 1px rgba(0,110,255,.95),
-                 0 0 12px 5px rgba(0,80,255,.55),
-                 0 0 24px 10px rgba(0,70,255,.28),
-                 inset 0 1px 2px #fff9;
-    }
-    body.dark .key-wrap input:checked ~ .key-led {
-      background-color:#3aeaf3;
-      box-shadow:0 -10px 35px 17px #003cff,
-                 inset 0 1px 2px #fff9,
-                 0 0 0 3px #0009,
-                 0 0 2px 4px #004f98cc;
-    }
-    .key-wrap input:checked ~ .key-bg .shine-1 { animation:key-bg 2.4s linear .3s; }
-    .key-wrap input:checked ~ .key-glow:before { animation:key-glow 3s linear backwards; }
-    .key-wrap input:not(:checked) + .key:after { opacity:0; }
-    .key-wrap input:not(:checked):hover ~ .key-bg .shine-2 { opacity:1; }
-    .key-wrap input:not(:checked):active ~ .key-bg .shine-2 { opacity:0; }
-
-    @keyframes key-bg {
-      0%   { transform:translateY(0) scale(0); }
-      12%  { transform:translateY(0) scale(25); }
-      60%, 100% { transform:translateY(-280px) scale(20, 18); }
-    }
-    @keyframes key-glow {
-      0% { opacity:0; } 40% { opacity:1; } 80%, 100% { opacity:0; }
-    }
-    @media (prefers-reduced-motion:reduce) {
-      .key-bg .shine-1, .key-bg .shine-2:before, .key-glow:before { animation:none !important; }
+    .vsw-beta {
+      font-style:normal; font-size:8.5px; font-weight:700;
+      letter-spacing:.08em; text-transform:uppercase; opacity:.6;
     }
     /* ── Projects list — an alternate write-up-style view of the same
        cards: year, title, category line, a short description, and a
@@ -1913,7 +1674,7 @@
        always forces Grid (see updateHomeEditUI), so hide the toggle
        rather than leave a "Projects" option that silently does nothing
        while editing. */
-    #view-home.home-edit .view-keys { display:none; }
+    #view-home.home-edit .view-switch { display:none; }
     #view-home.home-edit .sec-label {
       display:inline-block;
       outline:1.5px dashed rgba(0,0,0,.18); border-radius:4px;
@@ -4050,44 +3811,17 @@ one keyframe at a time</div>
 
     <div class="home-divider" aria-hidden="true"></div>
 
-    <div class="view-keys" id="homeViewToggle">
-      <div class="key-slot">
-        <div class="key-wrap">
-          <input type="radio" name="home-view" id="viewKeyGrid" value="grid" checked
-                 aria-label="Category" onchange="setHomeView('grid')">
-          <div class="key" aria-hidden="true">
-            <div class="corner"></div>
-            <div class="inner"><span class="key-mark" id="hvtGridIcon"></span></div>
-          </div>
-          <div class="key-led" aria-hidden="true"></div>
-          <div class="key-bg" aria-hidden="true">
-            <div class="shine-1"></div>
-            <div class="shine-2"></div>
-          </div>
-          <div class="key-glow" aria-hidden="true"></div>
-        </div>
-        <!-- for= rather than wrapping, so the caption sits outside the
-             scaled key and stays at page type size while still being a
-             click target for it. -->
-        <label class="key-cap" for="viewKeyGrid">Category</label>
-      </div>
-      <div class="key-slot">
-        <div class="key-wrap">
-          <input type="radio" name="home-view" id="viewKeyBrand" value="list"
-                 aria-label="Brand, beta" onchange="setHomeView('list')">
-          <div class="key" aria-hidden="true">
-            <div class="corner"></div>
-            <div class="inner"><span class="key-mark" id="hvtBrandIcon"></span></div>
-          </div>
-          <div class="key-led" aria-hidden="true"></div>
-          <div class="key-bg" aria-hidden="true">
-            <div class="shine-1"></div>
-            <div class="shine-2"></div>
-          </div>
-          <div class="key-glow" aria-hidden="true"></div>
-        </div>
-        <label class="key-cap" for="viewKeyBrand">Brand<span class="key-beta">beta</span></label>
-      </div>
+    <div class="view-switch" id="homeViewToggle">
+      <label class="vsw-opt">
+        <input type="radio" name="home-view" value="grid" checked
+               aria-label="Category" onchange="setHomeView('grid')">
+        <span><span class="vsw-mark" id="hvtGridIcon" aria-hidden="true"></span>Category</span>
+      </label>
+      <label class="vsw-opt">
+        <input type="radio" name="home-view" value="list"
+               aria-label="Brand, beta" onchange="setHomeView('list')">
+        <span><span class="vsw-mark" id="hvtBrandIcon" aria-hidden="true"></span>Brand<i class="vsw-beta">beta</i></span>
+      </label>
     </div>
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
     <div id="home-sections" style="opacity:0;transition:opacity .3s ease"></div>
@@ -5429,7 +5163,7 @@ const UI_SOUND_MAP = [
   { sel: '#bg-toggle-btn',    hover: 'tick', click: 'toggle'  },
   { sel: '.nav-btn',          hover: 'tick', click: 'scan'    },
   // The Grid/Projects switch. A tab, so it clacks like one.
-  { sel: '.key-wrap',         hover: 'tick', click: 'toggle'  },
+  { sel: '.vsw-opt',          hover: 'tick', click: 'toggle'  },
   { sel: '.social-btn',       hover: 'tick', click: 'pulse'   },
   // Both are "take me out of here" controls rather than destinations, so
   // they get the nav's own tick instead of a sound of their own.
@@ -9140,14 +8874,14 @@ function mountSectionLottie(mount, path, hoverHost) {
 }
 
 
-/* The keys are static markup, so this mounts once at startup rather
-   than from a render. Each mark's box is sized in CSS, so the key's
-   layout is settled before the file lands. */
+/* The switch is static markup, so this mounts once at startup rather
+   than from a render. Each mark's box is sized in CSS, so the control's
+   width is settled before the file lands. */
 document.addEventListener('DOMContentLoaded', () => {
   [['hvtGridIcon', '/media/site/category.json'],
    ['hvtBrandIcon', '/media/site/grid-sections.json']].forEach(([id, path]) => {
     const mount = document.getElementById(id);
-    if (mount) mountSectionLottie(mount, path, mount.closest('.key-wrap'));
+    if (mount) mountSectionLottie(mount, path, mount.closest('.vsw-opt'));
   });
 });
 
@@ -13182,12 +12916,18 @@ function webInk(a) {
   /* Controls, and the Projects media strip — dragging that strip ends in a
      click, so without it every pull to see more work also fired a web.
 
+     label is in the list because a control is not always the thing you
+     hit. The view switch is radios inside labels with the input visually
+     hidden, so a press lands on the <span> that draws the chip — which
+     matches none of the element selectors, and flung a web every time
+     you changed view.
+
      And the Brand list as a whole. Its rows are a heading, a paragraph
      and a strip in a tall block with a lot of dead space between them,
      so reading down the page meant slinging a web from the avatar over
      the work every time you clicked anywhere. The grid is a wall of
      cards with gaps you clearly click past; this is a page you read. */
-  const NO_SHOOT = 'button,a,input,.nav-btn,.social-dock,.pli-media-strip,.projects-list';
+  const NO_SHOOT = 'button,a,input,label,.nav-btn,.social-dock,.pli-media-strip,.projects-list';
 
   let _tx=0,_ty=0,_lastTouch=0;
   document.addEventListener('touchstart',e=>{
