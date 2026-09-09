@@ -74,8 +74,8 @@ module.exports = async function handler(req, res) {
 
   try {
     const b = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-    const { message = '', email = '', instagram = '', telegram = '', website = '',
-            image = null, voice = null } = b;
+    const { message = '', email = '', instagram = '', telegram = '', phone = '',
+            website = '', image = null, voice = null } = b;
 
     // Honeypot: a real person never sees this field, a bot fills everything in.
     if (website) return res.status(200).json({ ok: true });
@@ -97,6 +97,11 @@ module.exports = async function handler(req, res) {
     ];
     if (instagram) lines.push(`📷 ${esc(instagram)}`);
     if (telegram)  lines.push(`✈️ ${esc(telegram)}`);
+    /* The form has sent this since the phone field went in; it was being
+       dropped on arrival — not in the destructure, not in the message —
+       so a number typed into the site reached nobody. Capped like the
+       rest, since none of these are validated beyond the email. */
+    if (phone)     lines.push(`📞 ${esc(String(phone).slice(0, 40))}`);
 
     await tg(token, 'sendMessage', {
       chat_id: chatId, text: lines.join('\n'),

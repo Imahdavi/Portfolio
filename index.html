@@ -1405,6 +1405,13 @@
     .an-nav-btn { display:none !important; }
     body.is-admin .an-nav-btn { display:flex !important; }
 
+    /* Taste is admin-only for now, the same way Analytics is. The tab
+       opens on a Coming soon card, and a visitor has no use for a door
+       into an empty room — it comes back the moment TASTE_ALBUMS has
+       something in it. */
+    #nb-taste { display:none !important; }
+    body.is-admin #nb-taste { display:flex !important; }
+
     /* Taste — the placeholder while the section is being filled. Set big
        rather than as a caption: this is the whole view for now, and a
        small grey word floating in an empty page reads as something that
@@ -2878,21 +2885,108 @@
        taller than the screen. */
     #view-soon.active { display:flex; flex-direction:column; justify-content:center; }
 
+
+    /* ── Gradient panels, ported from 21st.dev's "Gradient Button"
+       (@wanhaha) ────────────────────────────────────────────────
+       A radial gradient whose position, spread, stops and colours are all
+       registered custom properties, which is the whole trick: @property
+       gives them a type, and a typed custom property can be transitioned.
+       Without the @property block these would swap instantly and the
+       component would be a flat colour change.
+
+       Applied to the note's four panels rather than to buttons. The card
+       you write in takes the blue variant, the three answers below take
+       the default — one main surface and its three attendants, which is
+       the pairing the component's own demo shows.
+
+       The source animates on :hover, which is right for a button you
+       press and leave. These are panels you type into, so they move on
+       :focus-within as well — reaching for the field is the same intent
+       as reaching for the button. */
+    @property --pos-x     { syntax:'<percentage>'; initial-value:11.14%;  inherits:false; }
+    @property --pos-y     { syntax:'<percentage>'; initial-value:140%;    inherits:false; }
+    @property --spread-x  { syntax:'<percentage>'; initial-value:150%;    inherits:false; }
+    @property --spread-y  { syntax:'<percentage>'; initial-value:180.06%; inherits:false; }
+    @property --color-1   { syntax:'<color>'; initial-value:#000;    inherits:false; }
+    @property --color-2   { syntax:'<color>'; initial-value:#08012c; inherits:false; }
+    @property --color-3   { syntax:'<color>'; initial-value:#4e1e40; inherits:false; }
+    @property --color-4   { syntax:'<color>'; initial-value:#70464e; inherits:false; }
+    @property --color-5   { syntax:'<color>'; initial-value:#88394c; inherits:false; }
+    @property --border-angle   { syntax:'<angle>'; initial-value:20deg; inherits:true; }
+    @property --border-color-1 { syntax:'<color>'; initial-value:hsla(340,75%,60%,.2);  inherits:true; }
+    @property --border-color-2 { syntax:'<color>'; initial-value:hsla(340,75%,40%,.75); inherits:true; }
+    @property --stop-1 { syntax:'<percentage>'; initial-value:37.35%; inherits:false; }
+    @property --stop-2 { syntax:'<percentage>'; initial-value:61.36%; inherits:false; }
+    @property --stop-3 { syntax:'<percentage>'; initial-value:78.42%; inherits:false; }
+    @property --stop-4 { syntax:'<percentage>'; initial-value:89.52%; inherits:false; }
+    @property --stop-5 { syntax:'<percentage>'; initial-value:100%;   inherits:false; }
+
+    .grad-panel {
+      position:relative;
+      background:radial-gradient(
+        var(--spread-x) var(--spread-y) at var(--pos-x) var(--pos-y),
+        var(--color-1) var(--stop-1),
+        var(--color-2) var(--stop-2),
+        var(--color-3) var(--stop-3),
+        var(--color-4) var(--stop-4),
+        var(--color-5) var(--stop-5));
+      transition:
+        --pos-x .5s, --pos-y .5s, --spread-x .5s, --spread-y .5s,
+        --color-1 .5s, --color-2 .5s, --color-3 .5s, --color-4 .5s, --color-5 .5s,
+        --border-angle .5s, --border-color-1 .5s, --border-color-2 .5s,
+        --stop-1 .5s, --stop-2 .5s, --stop-3 .5s, --stop-4 .5s, --stop-5 .5s;
+    }
+    /* The 1px lit edge: a gradient painted into a padding box and masked
+       so only the ring survives. */
+    .grad-panel::before {
+      content:''; position:absolute; inset:0; border-radius:inherit;
+      padding:1px; pointer-events:none;
+      background:linear-gradient(var(--border-angle), var(--border-color-1), var(--border-color-2));
+      -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite:xor; mask-composite:exclude;
+    }
+    .grad-panel:hover, .grad-panel:focus-within {
+      --pos-x:0%; --pos-y:91.51%;
+      --spread-x:120.24%; --spread-y:103.18%;
+      --color-1:#c96287; --color-2:#c66c64; --color-3:#cc7d23;
+      --color-4:#37140a; --color-5:#000;
+      --border-angle:190deg;
+      --border-color-1:hsla(340,78%,90%,.1);
+      --border-color-2:hsla(340,75%,90%,.6);
+      --stop-1:0%; --stop-2:8.8%; --stop-3:21.44%; --stop-4:71.34%; --stop-5:85.76%;
+    }
+
+    .grad-panel-blue {
+      --color-1:#000022; --color-2:#1f3f6d; --color-3:#469396; --color-4:#f1ffa5;
+      --border-angle:200deg;
+      --border-color-1:hsla(320,75%,90%,.6);
+      --border-color-2:hsla(320,50%,90%,.15);
+    }
+    .grad-panel-blue:hover, .grad-panel-blue:focus-within {
+      --pos-x:0%; --pos-y:95.51%;
+      --spread-x:110.24%; --spread-y:110.2%;
+      --color-1:#000020; --color-2:#f1ffa5; --color-3:#469396;
+      --color-4:#1f3f6d; --color-5:#000;
+      --stop-1:0%; --stop-2:10%; --stop-3:35.44%; --stop-4:71.34%; --stop-5:90.76%;
+      --border-angle:210deg;
+      --border-color-1:hsla(320,75%,90%,.2);
+      --border-color-2:hsla(320,50%,90%,.75);
+    }
+    @media (prefers-reduced-motion:reduce) { .grad-panel { transition:none; } }
     .pib {
       position:relative; isolation:isolate;
       width:100%; max-width:470px; margin:0 auto;
-      /* Liquid glass, now that there is a moving gradient to refract. The
-         backdrop blur earns its cost here — it is the effect, not decoration
-         behind an opaque panel like the last time it was on this rule. The
-         inset highlight along the top edge is what makes it read as a pane
-         of glass rather than a grey box. */
-      background:#0b1220;
-      border:1px solid rgba(255,255,255,.18);
-      border-radius:24px; padding:8px; overflow:hidden;
-      box-shadow:0 10px 36px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.22);
-      transition:border-color .3s;
+      /* Background and edge come from .grad-panel — a flat fill here
+         would sit on top of the gradient, and its border would double
+         the lit ring the component draws with a masked pseudo-element. */
+      border:0; border-radius:24px; padding:8px; overflow:hidden;
+      box-shadow:0 10px 36px rgba(0,0,0,.38);
     }
-    .pib.recording { border-color:rgba(239,68,68,.7); }
+    /* Recording used to tint the border, which no longer exists — the
+       edge is .grad-panel's masked ring, so the red goes into the two
+       colours that ring is drawn from. */
+    .pib.recording { --border-color-1:rgba(239,68,68,.55); --border-color-2:rgba(239,68,68,.9); }
 
     /* Contents sit above the composer's own layers, and the cipher over
        them again — it is what you look through to reach the form. */
@@ -2951,18 +3045,15 @@
       display:flex; align-items:center;
       width:100%; max-width:470px; margin:10px auto 0;
       padding:11px 16px;
-      background:#0b1220;
-      border:1px solid rgba(255,255,255,.18);
-      border-radius:16px;
-      box-shadow:0 6px 20px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.18);
-      transition:border-color .3s;
+      /* As on .pib — the gradient and its ring come from .grad-panel. */
+      border:0; border-radius:16px;
+      box-shadow:0 6px 20px rgba(0,0,0,.28);
     }
     /* The phone sits on its own line, centred and narrower — it is the
        most optional of the three, and giving it a full row would have
        claimed more of the eye than it deserves. After .pib-mail, not
        before: same specificity, so source order is what decides. */
     .pib-mail-phone { max-width:260px; margin-top:10px; }
-    .pib-mail:focus-within { border-color:rgba(255,255,255,.34); }
     .pib-mail input {
       min-width:0; background:none; border:none; outline:none;
       font-family:inherit; font-size:13.5px; color:#ffffff;
@@ -3421,29 +3512,38 @@
     .nav-btn:hover  { color:#444; transform:translateY(-2px); }
     .nav-btn:active { transform:scale(.86); }
 
-    /* Experience tab's icon is a Lottie animation (a hand-off "star medal"
-       burst), not an inline currentColor svg, so it can't pick up the
-       .nav-btn active/hover/dark-mode color the way the others do — its
-       stroke is baked into the file. Only the dark-mode flip is worth
-       fighting for (pure black would vanish on the dark page); active/hover
-       just don't tint it, which the animation itself is lively enough to
-       carry. */
+    /* Two tabs carry a Lottie instead of an inline svg — Experience's
+       star medal and Taste's music mark. Their paint is baked into the
+       file, so they used to sit outside the nav's colour entirely: the
+       others are stroke:currentColor and follow .nav-btn from #6f6f6f to
+       #111 when active, while these stayed whatever the file said and
+       got a dark-mode override bolted on to stop them vanishing.
+
+       They take currentColor now, matched on the attribute lottie
+       actually wrote — the star is drawn in strokes and the music mark
+       in fills, and forcing a stroke onto a fill-only shape outlines it.
+       That earns the active, hover and dark states for free, and the
+       dark-only rule is gone with it. */
     .nav-lottie-icon { width:25px; height:25px; pointer-events:none; --nav-lottie-scale:1; }
+    .nav-lottie-icon svg [fill]:not([fill="none"])     { fill:currentColor !important; }
+    .nav-lottie-icon svg [stroke]:not([stroke="none"]) { stroke:currentColor !important; }
+
     /* How much of its own 512x512 composition an animation's artwork
-       actually fills varies per file, so the correction is per icon and
-       each one is measured against its rendered ink box rather than
-       guessed. The star leaves room around itself for the burst to
-       travel outward and comes out small next to the hand-drawn icons,
-       which are cropped tight to their own 24x24 viewBox; the taste icon
-       fills its frame and needs no help at all — at 1.3 it overflowed
-       the box at 30.6px against the star's 24.8. Scaling the rendered
-       SVG rather than the box leaves nav spacing untouched. */
-    #nb-exp-star { --nav-lottie-scale:1.3; }
+       fills varies per file, so each is measured against its rendered
+       ink box rather than guessed, and scaled to sit at the same visual
+       weight as the hand-drawn icons — those run about 16 x 16.7.
+
+       Measured before: the star came out 15.3 x 19.8, nearly three
+       pixels taller than its neighbours, and the music mark 18.8 square,
+       three wider. Both read as a different size rather than a different
+       drawing, which is what made them look out of place. Scaling the
+       rendered SVG rather than the box leaves nav spacing untouched. */
+    #nb-exp-star   { --nav-lottie-scale:1.12; }
+    #nb-taste-icon { --nav-lottie-scale:.9; }
     /* !important: lottie-web sets its own inline transform (a no-op
        translate3d(0,0,0)) on this svg every frame, which otherwise wins
        over a plain stylesheet rule regardless of selector weight. */
     .nav-lottie-icon svg { transform:scale(var(--nav-lottie-scale)) !important; transform-origin:50% 50%; }
-    body.dark .nav-lottie-icon svg path { stroke:var(--d-text) !important; }
 
     /* ── Nav tooltip ── */
     .nav-tip {
@@ -3883,7 +3983,7 @@ one keyframe at a time</div>
          control. The toggles, the gradient dividers, the 64px previews with
          their full-size dialog, paste and drop, and the recorder replacing
          the text are all from that component. -->
-    <div class="pib" id="note-card">
+    <div class="pib grad-panel grad-panel-blue" id="note-card">
       <canvas class="pib-pixels" id="pib-pixels" aria-hidden="true"></canvas>
       <div class="pib-files" id="note-attach"></div>
 
@@ -3921,14 +4021,14 @@ one keyframe at a time</div>
          note with no way to answer it is not much use. They sit under
          the card in bars of their own — see .pib-mail. -->
     <div class="pib-contact">
-      <div class="pib-mail">
+      <div class="pib-mail grad-panel">
         <input type="email" id="note-email" placeholder="your@email.com" autocomplete="email">
       </div>
-      <div class="pib-mail">
+      <div class="pib-mail grad-panel">
         <input type="text" id="note-telegram" placeholder="@telegram (optional)" autocomplete="off">
       </div>
     </div>
-    <div class="pib-mail pib-mail-phone">
+    <div class="pib-mail pib-mail-phone grad-panel">
       <input type="tel" id="note-phone" placeholder="phone (optional)" autocomplete="tel">
     </div>
 
