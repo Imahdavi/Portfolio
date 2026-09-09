@@ -2960,8 +2960,15 @@
       --stop-1:0%; --stop-2:8.8%; --stop-3:21.44%; --stop-4:71.34%; --stop-5:85.76%;
     }
 
+    /* --color-5 is set here too. The variant never declared one, so it
+       fell back to the @property initial-value, a dusty rose (#88394c)
+       belonging to the magenta default — which blended with #f1ffa5 at
+       the outermost stop and put a tan, orange-leaning corner on an
+       otherwise blue card. Falling off into the panel's own darkest
+       colour instead. */
     .grad-panel-blue {
       --color-1:#000022; --color-2:#1f3f6d; --color-3:#469396; --color-4:#f1ffa5;
+      --color-5:#000022;
       --border-angle:200deg;
       --border-color-1:hsla(320,75%,90%,.6);
       --border-color-2:hsla(320,50%,90%,.15);
