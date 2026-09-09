@@ -2185,6 +2185,76 @@
     .avg-name-fld { font-size:11.5px; font-weight:600; text-align:center; max-width:100%; line-height:1.25; }
     .avg-role-fld { font-size:10.5px; color:#999; text-align:center; max-width:100%; line-height:1.25; }
 
+
+    /* ── Media loading state, ported from 21st.dev's "Loading State"
+       (@theshanelevine) ────────────────────────────────────────────
+       A 3×3 grid of 4px pixels blinking on a staggered 650ms loop, a
+       shimmering label, and a monospace tabular counter — the source's
+       geometry, timings and delays exactly. What it counts is the one
+       change: the source shows elapsed seconds, which tells you nothing
+       you did not already know, while a video reports how much of itself
+       has arrived. So the counter is a real percentage read off the
+       element's own buffered ranges, not a timer and not a guess.
+
+       It sits over a video that has not got its data yet — the state the
+       lazy loader leaves media in while it waits its turn — and hands
+       over at 100%, fading out as the clip fades in. */
+    @keyframes mloadPixel  { 0%, 100% { opacity:.12; } 50% { opacity:1; } }
+    @keyframes mloadShimmer { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
+
+    .mload {
+      position:absolute; inset:0; z-index:3; pointer-events:none;
+      display:flex; align-items:center; justify-content:center;
+      color:#3a3a3a;
+      --mload-dim:rgba(58,58,58,.45);
+      transition:opacity .35s ease;
+    }
+    body.dark .mload { color:#e6e7e8; --mload-dim:rgba(230,231,232,.45); }
+    .mload.is-done { opacity:0; }
+    .mload-row { display:flex; align-items:center; gap:10px; }
+    .mload-grid { display:grid; grid-template-columns:repeat(3, 4px); gap:1.5px; }
+    .mload-grid i {
+      width:4px; height:4px; border-radius:1px; background:currentColor;
+      opacity:.12; animation:mloadPixel .65s ease-in-out infinite;
+    }
+    /* The label is painted by a gradient clipped to the glyphs, which is
+       why it needs a transparent colour — the sweep is the animation. */
+    .mload-lbl {
+      font-size:13px; font-weight:500; white-space:nowrap;
+      background:linear-gradient(90deg, var(--mload-dim) 35%, currentColor 50%, var(--mload-dim) 65%);
+      background-size:200% 100%;
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      animation:mloadShimmer 1.4s linear infinite;
+    }
+    .mload-pct {
+      font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size:12px; font-variant-numeric:tabular-nums; color:var(--mload-dim);
+    }
+    /* A strip tile is ~95px across at its narrowest. The word is the
+       first thing to go: the glyph already says "working" and the number
+       already says how far. */
+    .mload.is-compact { gap:6px; }
+    .mload.is-compact .mload-row { gap:6px; }
+    .mload.is-compact .mload-lbl { display:none; }
+    .mload.is-compact .mload-pct { font-size:11px; }
+    /* The clip is held back until it can actually show a frame, so the
+       hand-over is one crossfade rather than a pop. */
+    video.mload-hold { opacity:0; }
+    video.mload-shown { opacity:1; transition:opacity .35s ease; }
+    /* .media-inner is a dark plate whatever the page theme is, so the
+       overlay over one is always the light pairing. */
+    .media-wrap .media-inner .mload { color:#e6e7e8; --mload-dim:rgba(230,231,232,.45); }
+    /* Every tile in every row exists from the start, and only the ones
+       scrolled to are ever revealed — leaving nine blinking pixels plus a
+       shimmer running in each of the rest would be hundreds of animations
+       for something nobody is looking at. */
+    .pli-tile:not([data-revealed]) .mload-grid i,
+    .pli-tile:not([data-revealed]) .mload-lbl { animation:none; }
+    @media (prefers-reduced-motion:reduce) {
+      .mload-grid i, .mload-lbl { animation:none; }
+      .mload-lbl { color:currentColor; }
+      video.mload-shown { transition:none; }
+    }
     /* ── Tool stack, ported from 21st.dev's "Tool Calls Section"
        (@theshanelevine) ────────────────────────────────────────────
        A row of icon plates, overlapped and alternately tilted, then a
@@ -7988,6 +8058,12 @@ function buildProjectListItem(card) {
         el.loading = 'lazy';
       }
       tile.appendChild(el);
+      // Strip clips queue behind a concurrency cap, so a tile can sit
+      // with nothing in it for a while — this is exactly the wait the
+      // loading state is for. Images are left alone: the browser gives
+      // no byte progress for one, and a percentage that isn't measured
+      // is worse than none.
+      if (m.type === 'video') attachMediaLoadState(el, tile);
 
       // Edit-mode only (CSS keeps it hidden otherwise). Takes the tile out
       // of THIS list and nothing else — the board keeps the block.
@@ -9075,6 +9151,97 @@ const STRIP_MAX_RETRIES = 2;
 // a request was started, which is not the same thing at all.
 function _stripPlayable(v) { return v.readyState >= 2; }
 
+/* ─── Media loading state ──────────────────────────────────────────
+   See the .mload rules for where the look came from. One call per
+   video: it draws the overlay into `host` (which must be the
+   positioned box the media fills), tracks how much of the file has
+   arrived, and takes itself off once there is a frame to show.
+
+   The percentage is real. A video reports what it has buffered, so
+   `buffered.end / duration` is how much of the clip is actually here.
+   Before metadata lands there is no duration to divide by, and the
+   overlay simply shows the glyph with no number rather than inventing
+   one. It only ever climbs — a buffered range can be replaced by a
+   shorter one after a seek, and a counter that walked backwards would
+   read as a fault. */
+
+// The pixel delays are the source's, in its order: a 3x3 grid lit in a
+// loose diagonal rather than a scan.
+const MLOAD_DELAYS = [90, 180, 270, 0, 90, 180, 90, 180, 270];
+const MLOAD_COMPACT_MAX = 180;   // px — below this the label is dropped
+
+function attachMediaLoadState(video, host, label) {
+  if (!video || !host || video._mloadWired) return;
+  video._mloadWired = true;
+
+  const el = document.createElement('div');
+  el.className = 'mload';
+  el.setAttribute('aria-hidden', 'true');
+
+  const row = document.createElement('div');
+  row.className = 'mload-row';
+
+  const grid = document.createElement('div');
+  grid.className = 'mload-grid';
+  MLOAD_DELAYS.forEach(d => {
+    const i = document.createElement('i');
+    i.style.animationDelay = d + 'ms';
+    grid.appendChild(i);
+  });
+  row.appendChild(grid);
+
+  const lbl = document.createElement('span');
+  lbl.className = 'mload-lbl';
+  lbl.textContent = label || 'Loading';
+  row.appendChild(lbl);
+
+  const pct = document.createElement('span');
+  pct.className = 'mload-pct';
+  row.appendChild(pct);
+
+  el.appendChild(row);
+  // Measured now rather than by a media query: what decides this is how
+  // wide this particular box is, and strip tiles and board blocks sit at
+  // very different widths on the same viewport.
+  if (host.clientWidth && host.clientWidth < MLOAD_COMPACT_MAX) el.classList.add('is-compact');
+  host.appendChild(el);
+  video.classList.add('mload-hold');
+
+  let shown = 0, finished = false;
+
+  const paint = () => {
+    if (finished) return;
+    const d = video.duration;
+    if (!d || !isFinite(d) || !video.buffered.length) return;
+    const end = video.buffered.end(video.buffered.length - 1);
+    const p = Math.min(99, Math.floor((end / d) * 100));
+    if (p > shown) { shown = p; pct.textContent = shown + '%'; }
+  };
+
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    pct.textContent = '100%';
+    video.classList.remove('mload-hold');
+    video.classList.add('mload-shown');
+    el.classList.add('is-done');
+    off();
+    setTimeout(() => el.remove(), 400);
+  };
+
+  // A file that fails is handed back to the loader with its src cleared,
+  // and will be tried again — so the overlay stays up rather than
+  // reporting a finish that did not happen. It goes away with the tile.
+  const onError = () => { shown = 0; pct.textContent = ''; };
+
+  const evs = [['progress', paint], ['timeupdate', paint], ['loadedmetadata', paint],
+               ['loadeddata', finish], ['canplay', finish], ['error', onError]];
+  const off = () => evs.forEach(([n, f]) => video.removeEventListener(n, f));
+  evs.forEach(([n, f]) => video.addEventListener(n, f));
+
+  // Already there — a cached clip never fires another event.
+  if (video.readyState >= 2) finish();
+}
 function _stripPump() {
   while (_stripLoading.size < STRIP_MAX_LOADING) {
     let next = null, best = Infinity;
@@ -11206,6 +11373,9 @@ function makeBlockEl(block, proj) {
       vid.playsInline = true;
       block._muted = true;
       inner.appendChild(vid);
+      // Same wait as the strip's, one level up: setupLazyVideos holds the
+      // src until the block nears the viewport.
+      attachMediaLoadState(vid, inner);
 
       // mute / unmute button (top-right, shows on video hover)
       const muteBtn = document.createElement('button');
