@@ -2946,7 +2946,17 @@
       mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
       -webkit-mask-composite:xor; mask-composite:exclude;
     }
-    .grad-panel:hover, .grad-panel:focus-within {
+    /* The blue card is excluded. Its hover state promotes #f1ffa5 from
+       --color-4 at a far stop to --color-2 at 10%, which swings a pale
+       yellow-green right into the middle of the card — striking on a
+       button you press for a moment, wrong on a panel you rest the
+       pointer over while reading and typing. It holds its resting
+       gradient instead; the three answer bars below still respond.
+
+       :not() rather than deleting the blue hover block, because without
+       it the blue panel would simply inherit this one and go magenta. */
+    .grad-panel:not(.grad-panel-blue):hover,
+    .grad-panel:not(.grad-panel-blue):focus-within {
       --pos-x:0%; --pos-y:91.51%;
       --spread-x:120.24%; --spread-y:103.18%;
       --color-1:#c96287; --color-2:#c66c64; --color-3:#cc7d23;
@@ -2962,16 +2972,6 @@
       --border-angle:200deg;
       --border-color-1:hsla(320,75%,90%,.6);
       --border-color-2:hsla(320,50%,90%,.15);
-    }
-    .grad-panel-blue:hover, .grad-panel-blue:focus-within {
-      --pos-x:0%; --pos-y:95.51%;
-      --spread-x:110.24%; --spread-y:110.2%;
-      --color-1:#000020; --color-2:#f1ffa5; --color-3:#469396;
-      --color-4:#1f3f6d; --color-5:#000;
-      --stop-1:0%; --stop-2:10%; --stop-3:35.44%; --stop-4:71.34%; --stop-5:90.76%;
-      --border-angle:210deg;
-      --border-color-1:hsla(320,75%,90%,.2);
-      --border-color-2:hsla(320,50%,90%,.75);
     }
     @media (prefers-reduced-motion:reduce) { .grad-panel { transition:none; } }
     .pib {
