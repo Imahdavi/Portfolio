@@ -2946,15 +2946,8 @@
       mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
       -webkit-mask-composite:xor; mask-composite:exclude;
     }
-    /* The blue card is excluded. Its hover state promotes #f1ffa5 from
-       --color-4 at a far stop to --color-2 at 10%, which swings a pale
-       yellow-green right into the middle of the card — striking on a
-       button you press for a moment, wrong on a panel you rest the
-       pointer over while reading and typing. It holds its resting
-       gradient instead; the three answer bars below still respond.
-
-       :not() rather than deleting the blue hover block, because without
-       it the blue panel would simply inherit this one and go magenta. */
+    /* Split so the blue card can keep its own hover. The :not() is what
+       stops it falling through to this one and turning magenta. */
     .grad-panel:not(.grad-panel-blue):hover,
     .grad-panel:not(.grad-panel-blue):focus-within {
       --pos-x:0%; --pos-y:91.51%;
@@ -2972,6 +2965,23 @@
       --border-angle:200deg;
       --border-color-1:hsla(320,75%,90%,.6);
       --border-color-2:hsla(320,50%,90%,.15);
+    }
+    /* The source swaps --color-2 and --color-4 on hover, which pulls
+       #f1ffa5 from a far stop into the second one and leaves a pale
+       yellow-green blot sitting in the middle of the card like a hole
+       punched through it. The light still sweeps up from the bottom-left
+       — same origin, spread and stops as the source — but it climbs
+       through the panel's own blue into its teal rather than out of the
+       family, so the card brightens without a gap opening in it. */
+    .grad-panel-blue:hover, .grad-panel-blue:focus-within {
+      --pos-x:0%; --pos-y:95.51%;
+      --spread-x:110.24%; --spread-y:110.2%;
+      --color-1:#000020; --color-2:#1f3f6d; --color-3:#469396;
+      --color-4:#1b4a6b; --color-5:#000;
+      --stop-1:0%; --stop-2:10%; --stop-3:35.44%; --stop-4:71.34%; --stop-5:90.76%;
+      --border-angle:210deg;
+      --border-color-1:hsla(320,75%,90%,.2);
+      --border-color-2:hsla(320,50%,90%,.75);
     }
     @media (prefers-reduced-motion:reduce) { .grad-panel { transition:none; } }
     .pib {
