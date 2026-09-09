@@ -3214,23 +3214,59 @@
 
     /* Send / mic / stop */
     .pib-right { display:flex; align-items:center; }
+    /* The two discs are the same liquid glass as the bottom nav's pills:
+       a translucent white over a blurred, slightly saturated backdrop,
+       a hairline edge, an inner top highlight for thickness, and a
+       diagonal specular sheen. What they are filtering here is the
+       card's own gradient, so they take their colour from whatever is
+       behind them rather than sitting on it as flat white — which is
+       the point of the material and the reason it suits this panel in
+       particular. */
     .pib-go {
-      width:32px; height:32px; flex-shrink:0; border:none; cursor:pointer;
+      position:relative;
+      width:32px; height:32px; flex-shrink:0; cursor:pointer;
       border-radius:50%; display:flex; align-items:center; justify-content:center;
-      background:#fff; color:#1F2023; overflow:hidden;
-      transition:background .2s, color .2s, box-shadow .2s;
+      overflow:hidden;
+      background:rgba(255,255,255,.22);
+      -webkit-backdrop-filter:blur(14px) saturate(160%);
+      backdrop-filter:blur(14px) saturate(160%);
+      border:1px solid rgba(255,255,255,.45);
+      color:#fff;
+      box-shadow:
+        0 4px 14px rgba(0,0,0,.20),
+        inset 0 1px 0 rgba(255,255,255,.55),
+        inset 0 -1.5px 2px rgba(0,0,0,.10);
+      transition:background .2s, color .2s, border-color .2s, box-shadow .2s;
     }
-    .pib-go svg { width:18px; height:18px; flex-shrink:0; }
-    .pib-go:hover { background:rgba(255,255,255,.8); }
-    .pib-go.rec { background:transparent; color:#ef4444; }
-    .pib-go.rec:hover { background:rgba(75,85,99,.3); color:#f87171; }
+    /* The sheen is absolutely positioned, so it paints above anything in
+       normal flow — the icon has to be lifted out of the flow layer or
+       the highlight washes over it. */
+    .pib-go::before {
+      content:''; position:absolute; inset:0; border-radius:inherit;
+      background:linear-gradient(125deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.10) 34%, rgba(255,255,255,0) 60%);
+      pointer-events:none;
+    }
+    .pib-go svg { position:relative; z-index:1; width:18px; height:18px; flex-shrink:0; }
+    .pib-go:hover { background:rgba(255,255,255,.34); border-color:rgba(255,255,255,.62); }
+    .pib-go.rec { background:rgba(239,68,68,.20); border-color:rgba(255,255,255,.30); color:#f87171; }
+    .pib-go.rec:hover { background:rgba(239,68,68,.32); color:#fca5a5; }
     .pib-go:disabled { opacity:.5; cursor:default; }
 
     /* The mic is permanent. Once there is something to send it steps down to
-       the quiet outline treatment and the send disc takes the primary slot. */
-    .pib-mic.ghost { background:transparent; color:rgba(255,255,255,.82);
-                     box-shadow:inset 0 0 0 1px rgba(255,255,255,.24); }
-    .pib-mic.ghost:hover { background:rgba(255,255,255,.14); color:#fff; }
+       the quiet outline treatment and the send disc takes the primary slot.
+       Still glass, just thinner — the two discs have to stay legible as a
+       pair, so the step down is in the fill and the edge, not the material. */
+    .pib-mic.ghost {
+      background:rgba(255,255,255,.07);
+      border-color:rgba(255,255,255,.24);
+      color:rgba(255,255,255,.82);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.22);
+    }
+    .pib-mic.ghost:hover {
+      background:rgba(255,255,255,.16);
+      border-color:rgba(255,255,255,.40);
+      color:#fff;
+    }
 
     /* Collapsed to nothing until there is content, so the mic slides across
        on its own rather than being swapped out.
