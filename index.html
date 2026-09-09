@@ -3528,6 +3528,25 @@
     .nav-lottie-icon svg [fill]:not([fill="none"])     { fill:currentColor !important; }
     .nav-lottie-icon svg [stroke]:not([stroke="none"]) { stroke:currentColor !important; }
 
+    /* Colour alone did not make them match, because what set them apart
+       was line weight. These are 512-unit compositions scaled to 25px,
+       so their strokes land wherever that division leaves them —
+       measured, the star drew at 1.4px and the music mark at 1.12px
+       against the hand-drawn icons' 1.67px. Thinner lines at the same
+       colour read as a lighter grey, which is what looked like a colour
+       that had not been changed.
+
+       non-scaling-stroke takes stroke-width out of user units and into
+       screen pixels, so one value matches both files without working
+       back through each composition's own scale. The selector is the
+       same one used for colour above, and that matters: the fill-only
+       shapes carry no stroke attribute at all, so they cannot be caught
+       by this and given an outline they were never drawn with. */
+    .nav-lottie-icon svg [stroke]:not([stroke="none"]) {
+      vector-effect:non-scaling-stroke;
+      stroke-width:1.67px !important;
+    }
+
     /* How much of its own 512x512 composition an animation's artwork
        fills varies per file, so each is measured against its rendered
        ink box rather than guessed, and scaled to sit at the same visual
