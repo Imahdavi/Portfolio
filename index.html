@@ -4151,6 +4151,40 @@
      main script at the bottom would paint the white page first and flash
      on every load for anyone who reads the site dark. */
   try { if (localStorage.getItem('pf_theme') === 'dark') document.body.classList.add('dark'); } catch (e) {}
+
+  /* Same reasoning, for everything else the backend owns.
+
+     The Worker takes anywhere from 1 to 12 seconds to answer, and until it
+     does the page sits on the fallbacks compiled into this file: 540px wide
+     instead of the saved width, "tools I use" instead of the real heading,
+     a "Contact me:" label the settings have since emptied. When the reply
+     lands it all swaps at once — that is the flicker on refresh, and the
+     width change reflows the whole page.
+
+     The last good settings are already cached for the offline path (see
+     cacheBackend), so they are applied here instead, before the first
+     paint. loadSettings still runs and still wins; this only removes the
+     gap. A first-ever visit has no cache and starts on the fallbacks, which
+     is the best that can be done without rendering on the server.
+
+     Variables only in this pass — nothing below <body> exists yet. The text
+     is done further down, once its elements are parsed. */
+  try {
+    var _pfRaw = localStorage.getItem('pf_cache_settings');
+    if (_pfRaw) {
+      var _pf = (JSON.parse(_pfRaw)[0] || {}).data;
+      if (_pf) {
+        window.__pfEarly = _pf;
+        var _r = document.documentElement;
+        if (_pf.siteWidth != null) _r.style.setProperty('--site-width', _pf.siteWidth + 'px');
+        var _c = _pf.navLimelightColor;
+        if (_c && /^#[0-9a-f]{6}$/i.test(_c)) {
+          _r.style.setProperty('--nav-limelight-rgb',
+            parseInt(_c.slice(1, 3), 16) + ',' + parseInt(_c.slice(3, 5), 16) + ',' + parseInt(_c.slice(5, 7), 16));
+        }
+      }
+    }
+  } catch (e) { /* corrupt or unavailable cache — fall back to the markup */ }
 </script>
 <div id="site-cursor">
   <svg width="28" height="33" viewBox="0 0 171 205" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -4305,6 +4339,39 @@ one keyframe at a time</div>
         <span class="db-dot bottom left"></span>
         <div class="tools-label" data-ph="tools I use">tools I use</div>
       </span>
+      <script>
+        /* Second half of the pre-paint restore begun at the top of <body>.
+           Placed here because it needs the profile and label elements, and
+           every one of them is above this point. Mirrors what loadSettings
+           does with the same fields, including the empty-contact-label case
+           and the age's "yo" suffix, so the value shown now is the value
+           that arrives later rather than something that will change again. */
+        try {
+          var s = window.__pfEarly;
+          if (s) {
+            var set = function (sel, txt) { var el = document.querySelector(sel); if (el && txt != null) el.textContent = txt; };
+            if (s.toolsLabel) set('.tools-label', s.toolsLabel);
+            if (s.trustedByLabel) set('.brand-grid-label', s.trustedByLabel);
+            if (s.profile) {
+              if (s.profile.title) { var r = document.querySelector('.profile-role'); if (r) r.innerText = s.profile.title; }
+              if (s.profile.age != null) {
+                var a = String(s.profile.age);
+                set('.profile-age', /^\d+$/.test(a) ? a + ' yo ✦' : a);
+              }
+              if (s.profile.contactLabel != null) {
+                var c = document.getElementById('contactLblBefore');
+                if (c) { c.textContent = s.profile.contactLabel; c.classList.toggle('is-empty', !String(s.profile.contactLabel).trim()); }
+              }
+              var slot = document.querySelector('.avatar-overlay-slot');
+              if (slot) {
+                if (s.profile.avatarDX != null) slot.style.setProperty('--avatar-dx', s.profile.avatarDX + 'px');
+                if (s.profile.avatarDY != null) slot.style.setProperty('--avatar-dy', s.profile.avatarDY + 'px');
+                if (s.profile.avatarScale != null) slot.style.setProperty('--avatar-scale', (s.profile.avatarScale / 100).toFixed(2));
+              }
+            }
+          }
+        } catch (e) { /* leave the markup's fallbacks in place */ }
+      </script>
       <div class="tools-bulk-bar" id="tools-bulk-bar"></div>
       <div class="tools-stack" id="tools-stack"></div>
     </div>
