@@ -6611,6 +6611,14 @@ const BACKEND_TIMEOUT = 12000;
 // True while the page is showing a cached copy because the backend could not
 // be reached. Saving is refused in that state — see saveSettings.
 let _settingsStale = false;
+/* settings.savedAt as it stood when this tab loaded. A save POSTs the whole
+   settings blob, so a tab that has been open a while holds a complete
+   snapshot of an older site — one stray save from it silently reverts every
+   change made since. That is not hypothetical: it happened while restoring
+   the Brand rows, a background tab on an older build wrote its snapshot back
+   and undid the lot. saveSettings compares this against the server before
+   writing. */
+let _settingsLoadedAt = null;
 
 async function fetchBackend(path) {
   let lastErr = null;
@@ -6654,12 +6662,29 @@ async function saveSettings() {
     if (typeof showUploadToast === 'function') showUploadToast('Backend unreachable — not saved', true);
     return;
   }
+  /* Refuse to write over a copy newer than the one this tab loaded. The POST
+     replaces the whole blob, so without this an old tab reverts everything
+     saved since it loaded. A failed check is not treated as a conflict —
+     the backend is flaky and locking the admin out on a dropped request
+     would be worse than the race this guards against. */
+  try {
+    const cur = await fetch(`${API_URL}/api/settings`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null);
+    const serverAt = cur && cur[0] && cur[0].data && cur[0].data.savedAt;
+    if (serverAt && _settingsLoadedAt && serverAt > _settingsLoadedAt) {
+      console.warn('Settings changed elsewhere since this page loaded — not saving.');
+      if (typeof showUploadToast === 'function') showUploadToast('Page is out of date — reload before editing', true);
+      return;
+    }
+  } catch (e) { /* check failed; fall through and save */ }
   // Serialize saves: if one is already running, mark dirty and let it re-run
   // afterwards. This prevents many concurrent PATCHes from arriving out of
   // order and clobbering newer data (e.g. a just-uploaded thumbnail).
   if (_saveInFlight) { _saveDirty = true; return; }
   _saveInFlight = true;
   try {
+    // Stamp the write so other tabs can tell their copy has been superseded.
+    _cachedSettings.savedAt = Date.now();
+    _settingsLoadedAt = _cachedSettings.savedAt;
     await fetch(`${API_URL}/api/settings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -6856,6 +6881,9 @@ async function loadSettings() {
   try {
     if (!rows || !rows[0]) { renderHomeSections(DEFAULT_SECTIONS); renderToolsStack(); return; }
     const s = rows[0].data;
+    // What this tab's snapshot is based on — saveSettings won't write over
+    // anything newer than this.
+    _settingsLoadedAt = s.savedAt || null;
     _cachedSettings = s;
 
     // fonts
