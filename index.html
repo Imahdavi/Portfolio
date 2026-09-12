@@ -4685,7 +4685,7 @@ one keyframe at a time</div>
  </div>
 </nav>
 
-<!-- "We're down" banner — shown by markBackendDown() when Supabase is
+<!-- "We're down" banner — shown by markBackendDown() when the backend is
      unreachable, so the site says something instead of just rendering
      with no project cards. Hidden by default; pure CSS/JS, no data. -->
 <div class="backend-down-banner" id="backendDownBanner">
@@ -6372,14 +6372,19 @@ function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
   });
 }
 
-/* ─── Supabase config ──────────────────────────────────── */
-// Storage (SB_URL/SB_KEY) is still referenced by tusUpload()'s bucket/path
-// scheme (see below), but the actual bytes now go to Vercel Blob — SB_URL
-// itself is only used there as a namespacing string, never fetched.
-const SB_URL    = 'https://jbdirevxdgcffpaeizcd.supabase.co';
-const SB_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiZGlyZXZ4ZGdjZmZwYWVpemNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NzAwNjgsImV4cCI6MjA5NjU0NjA2OH0._09c4ViKGJvDQXDUGOFEmVWyCg9scPMb6VBGV7DJvoI';
-const SB_BUCKET       = 'Portfolio';
-const SB_MEDIA_BUCKET = 'Media';
+/* ─── Upload namespaces ────────────────────────────────────
+   Nothing here talks to Supabase any more. The project is paused, and both
+   things it used to do have moved: the data to the Worker's D1 (below), and
+   the media bytes into this repo, committed by the Worker and served by
+   Vercel. The SB_URL and SB_KEY constants that used to sit here were dead —
+   declared and never read once uploads moved — and SB_KEY was a live anon
+   JWT sitting in a public HTML file, so both are gone.
+
+   These two remain because tusUpload still sends a `bucket` to the Worker,
+   which uses it as the folder under /media/. They are plain directory
+   names now, not storage buckets. */
+const BUCKET_PORTFOLIO = 'Portfolio';
+const BUCKET_MEDIA     = 'Media';
 
 /* ─── Settings/project data — Cloudflare Worker + D1 ──────
    Supabase's REST API (portfolio_settings/portfolio_projects) is on the
@@ -7019,7 +7024,7 @@ async function loadSettings() {
       });
     }
 
-    // render dynamic sections (fall back to defaults if Supabase is empty)
+    // render dynamic sections (fall back to defaults if settings has none)
     renderHomeSections((s.sections && s.sections.length) ? s.sections : DEFAULT_SECTIONS);
 
     // render work experience
@@ -9211,7 +9216,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ext  = (file.name.split('.').pop() || 'bin').toLowerCase();
         const path = `uploads/${Date.now()}_${uid()}.${ext}`;
         // Same upload path as the project page's own uploads.
-        const url  = await tusUpload(file, SB_MEDIA_BUCKET, path, () => {});
+        const url  = await tusUpload(file, BUCKET_MEDIA, path, () => {});
         addMediaToProject(key, { type: file.type.startsWith('video') ? 'video' : 'image', src: url });
         showUploadToast('Uploaded ✓');
       } catch (e) {
@@ -9798,7 +9803,7 @@ async function loadProjects() {
 
 /* ─── "We're down" banner ──────────────────────────────────
    Shown once, the first time either loadSettings() or loadProjects() gets a
-   non-ok response from Supabase — a soft, honest "coming back soon" instead
+   non-ok response from the backend — a soft, honest "coming back soon" instead
    of the site just quietly rendering with no project cards. Nothing here
    assumes WHY the backend is down; it only reacts to the response. */
 function markBackendDown() {
@@ -9806,7 +9811,7 @@ function markBackendDown() {
   if (el) el.classList.add('show');
 }
 
-/* ─── Default sections (shown when Supabase has no sections saved) ── */
+/* ─── Default sections (shown when settings has no sections saved) ── */
 /* Mirrors the sections currently saved in settings, so an outage falls back
    to the real card list instead of an older, shorter one. Thumbs stay empty
    on purpose — the thumb images live in the backend that's unavailable in
@@ -9830,12 +9835,12 @@ const DEFAULT_SECTIONS = [
 
 /* ─── Project data ─────────────────────────────────────── */
 const PROJECTS = {
-  lina:   { name:'Lina',         sub:'Food & snacks brand',                      blocks:[{ id:uid(), type:'text', content:'Lina Industrial and Food Group has been operating since 2001 and is active in the field of puffed chips.' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Portfolio/Lina_LM.mp4' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Logo%20Motion/Chillix%20Logo%20Type.mp4' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Logo%20Motion/Chillix%20Logo.mp4' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Logo%20Motion/Logo-Type%20-%20%20Full%20.mp4' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Portfolio/Chips%20cock.mp4' }] },
+  lina:   { name:'Lina',         sub:'Food & snacks brand',                      blocks:[{ id:uid(), type:'text', content:'Lina Industrial and Food Group has been operating since 2001 and is active in the field of puffed chips.' }] },
   tosan:  { name:'Tosan',        sub:'Industrial tools',                         blocks:[{ id:uid(), type:'text', content:'Motion Designer & Editor for Tosan industrial tools brand — brand identity motion graphics and promotional content.' }] },
   vam30:  { name:'Vam30',        sub:'Fintech company',                          blocks:[{ id:uid(), type:'text', content:'Visual & Motion Designer for Vam30 — a consumer financing platform. UI motion, onboarding animations, and social media content.' }] },
-  logo:   { name:'Logo Motion',  sub:'Brand intros & logo animations',           blocks:[{ id:uid(), type:'text', content:'Logo animation and brand motion graphics — creating engaging intro animations for brands and companies.' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Logo%20Motion/Chillix%20Logo%20Type.mp4' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Logo%20Motion/Chillix%20Logo.mp4' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Logo%20Motion/Logo-Type%20-%20%20Full%20.mp4' }] },
+  logo:   { name:'Logo Motion',  sub:'Brand intros & logo animations',           blocks:[{ id:uid(), type:'text', content:'Logo animation and brand motion graphics — creating engaging intro animations for brands and companies.' }] },
   social: { name:'Social Media', sub:'Instagram, X Content',                      blocks:[{ id:uid(), type:'text', content:'Motion graphics, reels, and story animations for Instagram and other social media platforms.' }] },
-  ui:     { name:'Ui Motion',    sub:'Interaction, Web, App',                     blocks:[{ id:uid(), type:'text', content:'UI/UX design for web and mobile — interaction design, prototyping, and design systems.' },{ id:uid(), type:'video', content:'https://jbdirevxdgcffpaeizcd.supabase.co/storage/v1/object/public/Ui/3%20engine%20-%20Instagram.mp4' }] },
+  ui:     { name:'Ui Motion',    sub:'Interaction, Web, App',                     blocks:[{ id:uid(), type:'text', content:'UI/UX design for web and mobile — interaction design, prototyping, and design systems.' }] },
   edit:   { name:'Documentary',  sub:'Thesis & personal documentaries',          blocks:[{ id:uid(), type:'text', content:'Documentary edits made for academic and personal projects — dynamic cuts and motion-synced storytelling.' }] },
   web:    { name:'Banners & Cubox',sub:'Banners & interactive Cubox displays',   blocks:[{ id:uid(), type:'text', content:'Animated banners and interactive Cubox display motion — LED/LCD screens where the motion responds and plays interactively for the viewer.' }] },
 };
@@ -10016,7 +10021,7 @@ function teardownScrollReveal() {
 
 // Lazy-load videos: only set src (= start downloading) when a block nears the
 // viewport, and pause when it leaves. rootMargin ~one screen ahead so playback
-// is ready by the time the user scrolls to it. Big Supabase egress saver.
+// is ready by the time the user scrolls to it. Big bandwidth saver.
 /* Two observers, because fetching a video and decoding one cost very
    different amounts.
 
@@ -10249,7 +10254,8 @@ function updateNoteEditUI() {
 }
 
 /* ─── Note form submission ──────────────────────────── */
-/* Supabase table needed:
+/* Superseded — the note goes to /api/contact, which relays it to Telegram
+   and stores nothing. Kept as a record of the shape it once had:
    CREATE TABLE notes (
      id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
      created_at timestamptz DEFAULT now(),
@@ -11597,7 +11603,7 @@ function makeBlockEl(block, proj) {
     } else {
       // video: loop, muted, no controls. Lazy-loaded — src is deferred and
       // only set once the block nears the viewport (see setupLazyVideos), so
-      // off-screen videos never download. Saves Supabase egress.
+      // off-screen videos never download. Saves bandwidth.
       const vid = document.createElement('video');
       vid.dataset.lazySrc = block.content;
       vid.preload = 'none';
@@ -12297,7 +12303,7 @@ async function mcUploadInto(block, files, onDone) {
     const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
     const path = `uploads/${Date.now()}_${uid()}.${ext}`;
     try {
-      const url = await tusUpload(file, SB_MEDIA_BUCKET, path, () => {});
+      const url = await tusUpload(file, BUCKET_MEDIA, path, () => {});
       block.items.push({ src: url, caption: '' });
     } catch (e) {
       showUploadToast('Upload failed: ' + e.message, true);
@@ -12502,7 +12508,7 @@ function avgEnsurePickPanel() {
       const f = files[0];
       const ext = (f.name.split('.').pop() || 'jpg').toLowerCase();
       const path = `uploads/${Date.now()}_${uid()}.${ext}`;
-      tusUpload(f, SB_MEDIA_BUCKET, path, () => {}).then(url => resolve(url, false))
+      tusUpload(f, BUCKET_MEDIA, path, () => {}).then(url => resolve(url, false))
         .catch(err => showUploadToast('Upload failed: ' + err.message, true));
     });
   };
@@ -13528,7 +13534,7 @@ document.getElementById('thumbInput').addEventListener('change', async function(
     // site — collisions are as unlikely here as they are there, so this
     // doesn't need the old dedicated retry-on-409 loop.
     const path = `uploads/thumb_${Date.now()}_${uid()}.${ext}`;
-    const url = await tusUpload(small, SB_BUCKET, path, () => {});
+    const url = await tusUpload(small, BUCKET_PORTFOLIO, path, () => {});
     thumbEl.style.background = '';
     let img = thumbEl.querySelector('img');
     if (!img) { img = document.createElement('img'); thumbEl.insertBefore(img, thumbEl.firstChild); }
@@ -13555,7 +13561,7 @@ document.getElementById('avatarInput').addEventListener('change', async function
   const ext  = file.name.split('.').pop().toLowerCase();
   const path = `uploads/avatar_${Date.now()}_${uid()}.${ext}`;
   try {
-    const url = await tusUpload(file, SB_BUCKET, path, () => {});
+    const url = await tusUpload(file, BUCKET_PORTFOLIO, path, () => {});
     if (imgEl) imgEl.src = url;
     if (!_cachedSettings) _cachedSettings = {};
     if (!_cachedSettings.profile) _cachedSettings.profile = {};
@@ -13628,7 +13634,7 @@ async function uploadFiles(files) {
     let uploadOk = false;
     try {
       console.log('[upload] starting', file.name, file.type, file.size, 'path:', path);
-      const url = await tusUpload(file, SB_MEDIA_BUCKET, path, (done, total) => {
+      const url = await tusUpload(file, BUCKET_MEDIA, path, (done, total) => {
         if (lbl) lbl.textContent = Math.round(done / total * 100) + '%';
       });
       uploadOk = true;
