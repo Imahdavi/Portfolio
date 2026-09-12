@@ -800,9 +800,10 @@
        4-ratio picker (see wireStripCrop) that sets the TILE's own frame
        shape instead of the video/image's natural one — object-fit:cover
        (already in place) does the actual cropping, centred, with no drag
-       or transform involved. Stored on the block as _listCropRatio,
-       separate from the board page's own layout ratio: the strip usually
-       wants a tighter crop than the block's board placement. */
+       or transform involved. Stored per row against the file's src (see
+       setListCrop), separate from the board page's own layout ratio: the
+       strip usually wants a tighter crop than the block's board
+       placement, and Brand never edits the board. */
     .pli-tile-crop {
       position:absolute; bottom:5px; left:5px; z-index:3; display:none;
       width:19px; height:19px; border:none; border-radius:50%;
@@ -7767,6 +7768,53 @@ function setListHidden(key, srcs) {
    Keyed by src, for the same reason hiding and links are: re-saving a
    board can hand the same file a new block id, and an order pinned to
    ids would come apart under it. */
+/* ── Media added on the Brand page itself ──────────────────
+   Kept here rather than as blocks on the board. Brand is a view over the
+   Category boards: it reads their media, but nothing done on it may write
+   to them. Adding used to push a real block onto the board, which meant a
+   clip added here appeared in Category too — and removing it deleted the
+   board's block, so tidying a Brand row deleted work from Category. Both
+   directions of that are wrong; extras live in settings and the board is
+   never opened. */
+function getListExtra(key) {
+  const all = _cachedSettings && _cachedSettings.projectsListExtra;
+  const saved = all && all[key];
+  return Array.isArray(saved) ? saved.map(m => Object.assign({}, m)) : [];
+}
+
+function setListExtra(key, items) {
+  if (!_cachedSettings) _cachedSettings = {};
+  if (!_cachedSettings.projectsListExtra) _cachedSettings.projectsListExtra = {};
+  if (items && items.length) _cachedSettings.projectsListExtra[key] = items.slice();
+  else delete _cachedSettings.projectsListExtra[key];
+  saveSettings();
+}
+
+function isListExtra(key, src) {
+  return getListExtra(key).some(m => m.src === src);
+}
+
+/* Per-row crop. Also a Brand-only concern, and it used to be written onto
+   the board block and saved with saveProject — so choosing a crop here
+   edited the Category board. Keyed by src for the same reason hiding is:
+   re-saving a board can hand the same file a new block id. */
+function getListCrop(key) {
+  const all = _cachedSettings && _cachedSettings.projectsListCrop;
+  const saved = all && all[key];
+  return (saved && typeof saved === 'object') ? saved : {};
+}
+
+function setListCrop(key, src, ratioKey) {
+  if (!src) return;
+  if (!_cachedSettings) _cachedSettings = {};
+  if (!_cachedSettings.projectsListCrop) _cachedSettings.projectsListCrop = {};
+  const forKey = Object.assign({}, _cachedSettings.projectsListCrop[key]);
+  if (ratioKey) forKey[src] = ratioKey; else delete forKey[src];
+  if (Object.keys(forKey).length) _cachedSettings.projectsListCrop[key] = forKey;
+  else delete _cachedSettings.projectsListCrop[key];
+  saveSettings();
+}
+
 function getListOrder(key) {
   const all = _cachedSettings && _cachedSettings.projectsListOrder;
   const saved = all && all[key];
@@ -7866,6 +7914,14 @@ function listMediaFor(key, fallbackThumb) {
         .filter(b => (b.type === 'image' || b.type === 'video') && b.content && !hidden.has(b.content))
         .map(b => ({ id: b.id, type: b.type, src: b.content, link: links[b.content] || '' }))
     : [];
+  // Then this row's own additions, which exist only here. Skipped if the
+  // board already carries the same file, so re-adding something that is
+  // on the board doesn't double it up.
+  const onBoard = new Set(media.map(m => m.src));
+  getListExtra(key).forEach(m => {
+    if (!m || !m.src || hidden.has(m.src) || onBoard.has(m.src)) return;
+    media.push({ id: m.id, type: m.type, src: m.src, link: links[m.src] || '', extra: true });
+  });
   // Every media block, not a capped preview: edit mode wraps the strip so
   // the whole board is visible and reorderable at once, and commitStrip-
   // Order can only write back an order it can see all of. Cost is low —
@@ -8143,12 +8199,12 @@ function buildProjectListItem(card) {
       tile.style.setProperty('--pli-uv', STRIP_UV_SCALE);
 
       const el = document.createElement(m.type === 'video' ? 'video' : 'img');
-      // Crop — only for block-backed tiles (m.id): a fallback thumb has no
-      // block to save the choice on. _listCropRatio, when set, pins the
-      // TILE's frame to one of CROP_RATIOS instead of the file's own shape;
-      // object-fit:cover (already in place) does the actual cropping,
-      // centred, so this is the only thing a ratio choice has to change.
-      const cropBlock = m.id ? (PROJECTS[card.key].blocks || []).find(b => b.id === m.id) : null;
+      // Crop — a per-row setting keyed by src, not a property of the board
+      // block. When set it pins the TILE's frame to one of CROP_RATIOS
+      // instead of the file's own shape; object-fit:cover (already in
+      // place) does the actual cropping, centred, so this is the only thing
+      // a ratio choice has to change.
+      const cropRatio = getListCrop(card.key)[m.src] || '';
       // The frame's width comes from the file's OWN dimensions, not the
       // block's box on the board — a block the user resized to a wide slot
       // can still hold a square video, so the board's stored _freeAspect is
@@ -8157,14 +8213,12 @@ function buildProjectListItem(card) {
       // default), so CSS holds a placeholder ratio and this swaps in the
       // real one — unless a manual crop ratio overrides it.
       const applyAspect = () => {
-        if (cropBlock && cropBlock._listCropRatio) return;
+        if (getListCrop(card.key)[m.src]) return;
         const w = el.videoWidth || el.naturalWidth;
         const h = el.videoHeight || el.naturalHeight;
         if (w && h) tile.style.aspectRatio = w + ' / ' + h;
       };
-      if (cropBlock && cropBlock._listCropRatio) {
-        tile.style.aspectRatio = CROP_RATIOS[cropBlock._listCropRatio] || '';
-      }
+      if (cropRatio) tile.style.aspectRatio = CROP_RATIOS[cropRatio] || '';
       el.addEventListener(m.type === 'video' ? 'loadedmetadata' : 'load', applyAspect);
       if (m.type === 'video') {
         // Muted+playsInline so it can autoplay; these are short loops, so
@@ -8192,8 +8246,8 @@ function buildProjectListItem(card) {
       del.type = 'button';
       del.textContent = '×';
       del.title = isListOwnedMedia(card.key, m.src)
-        ? 'Remove — added here, so this takes it out for good'
-        : 'Hide from this list (stays on the project page)';
+        ? 'Remove from this row (was added here; the file itself is kept)'
+        : 'Remove from this row (stays on the project page)';
       del.addEventListener('pointerdown', e => e.stopPropagation()); // don't start a reorder drag
       del.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -8306,8 +8360,7 @@ function buildProjectListItem(card) {
       tile.appendChild(linkBtn);
 
       applyLink(m.link || '');
-
-      if (cropBlock) wireStripCrop(tile, el, cropBlock, card.key);
+      wireStripCrop(tile, el, m.src, card.key);
 
       strip.appendChild(tile);
     });
@@ -8586,10 +8639,11 @@ function wireProjectsListEditing() {
    the file into it needs no transform on the video/image itself, which is
    what a drag-to-pan version here (an earlier pass) was doing — and, on a
    playing <video>, setting `transform` mid-drag doesn't always leave it
-   playing on the browsers this runs on. Saved on the block as
-   _listCropRatio, separate from the board page's own layout ratio, since
-   the strip usually wants a tighter crop than the block's board frame. */
-function wireStripCrop(tile, el, block, key) {
+   playing on the browsers this runs on. Saved per row against the file's
+   src (see setListCrop), separate from the board page's own layout ratio,
+   since the strip usually wants a tighter crop than the block's board
+   frame — and because the board must not be edited from here at all. */
+function wireStripCrop(tile, el, src, key) {
   const btn = tile.querySelector('.pli-tile-crop') || (() => {
     const b = document.createElement('button');
     b.className = 'pli-tile-crop';
@@ -8600,22 +8654,20 @@ function wireStripCrop(tile, el, block, key) {
     tile.appendChild(b);
     return b;
   })();
-  btn.classList.toggle('has-crop', !!block._listCropRatio);
+  btn.classList.toggle("has-crop", !!getListCrop(key)[src]);
 
   const menu = document.createElement('div');
   menu.className = 'pli-crop-menu';
-  // Tags the menu back to its tile's block — dropTileFromStrip reads this
+  // Tags the menu back to its tile's file — dropTileFromStrip reads this
   // to clean up the body-appended menu when its tile is removed in place,
   // outside a full renderHomeSections rebuild.
-  menu.dataset.blockId = block.id;
+  menu.dataset.src = src;
   menu.addEventListener('pointerdown', e => e.stopPropagation());
 
   const setRatio = (key2) => {
     if (key2) {
-      block._listCropRatio = key2;
       tile.style.aspectRatio = CROP_RATIOS[key2];
     } else {
-      delete block._listCropRatio;
       // Not just clearing the inline style: applyAspect only runs once, on
       // the media's own load/loadedmetadata, which already fired long
       // before this menu ever opens. Clearing the style with nothing left
@@ -8632,13 +8684,13 @@ function wireStripCrop(tile, el, block, key) {
     }
     btn.classList.toggle('has-crop', !!key2);
     menu.querySelectorAll('.pli-crop-opt').forEach(o => o.classList.toggle('active', o.dataset.key === (key2 || '')));
-    saveProject(key);
+    setListCrop(key, src, key2 || null);   // row-side only; the board is untouched
   };
 
   CROP_RATIO_LABELS.forEach(({ key: rk, label }) => {
     const opt = document.createElement('button');
     opt.type = 'button';
-    opt.className = 'pli-crop-opt' + (block._listCropRatio === rk ? ' active' : '');
+    opt.className = 'pli-crop-opt' + (getListCrop(key)[src] === rk ? ' active' : '');
     opt.dataset.key = rk;
     opt.textContent = label;
     opt.addEventListener('click', (e) => { e.stopPropagation(); setRatio(rk); menu.classList.remove('open'); });
@@ -8755,25 +8807,24 @@ function wireStripReorder(strip, key) {
       return;
     }
 
-    // Different project: move the block across. Position is worked out
-    // from the destination's own media blocks, so it lands where it was
-    // dropped rather than always at the end.
-    const src = PROJECTS[key];
-    const blockId = moved.dataset.blockId;
-    const i = src?.blocks?.findIndex(b => b.id === blockId);
-    if (i == null || i < 0) return;
-    const block = src.blocks[i];
+    /* Different row: move it between the two ROWS, not between the boards.
+       It used to splice the block out of the source board and save it,
+       which deleted the clip from Category just for rearranging Brand.
+       Now the source row hides it (or drops its own extra) and the
+       destination row gains an extra — both boards are left alone. */
+    const srcFile = moved.dataset.src;
+    if (!srcFile) return;
 
     let atIndex;
     if (dest) {
-      const destProj = PROJECTS[destKey];
-      const destPos = (destProj.blocks || []).findIndex(b => b.id === dest.dataset.blockId);
+      const destExtras = getListExtra(destKey);
+      const destPos = destExtras.findIndex(m => m.src === dest.dataset.src);
       if (destPos >= 0) atIndex = destAfter ? destPos + 1 : destPos;
     }
 
-    src.blocks.splice(i, 1);
-    addMediaToProject(destKey, { type: block.type, src: block.content, aspect: block._freeAspect }, atIndex);
-    saveProject(key);
+    const movedType = moved.querySelector('video') ? 'video' : 'image';
+    removeFromProjectsList(key, srcFile);
+    addMediaToProject(destKey, { type: movedType, src: srcFile }, atIndex);
     refreshProjectsList();
   };
   strip.addEventListener('pointerup', finish);
@@ -8816,69 +8867,56 @@ function dropTileFromStrip(key, src) {
   // Each tile's crop popover lives on <body> (see wireStripCrop), so
   // removing the tile alone would leave it behind.
   tiles.forEach(t => {
-    if (t.dataset.blockId) {
-      document.querySelectorAll(`.pli-crop-menu[data-block-id="${t.dataset.blockId}"]`).forEach(m => m.remove());
-    }
+    document.querySelectorAll('.pli-crop-menu').forEach(m => { if (m.dataset.src === src) m.remove(); });
     t.remove();
   });
   return true;
 }
 
-/* Taking a tile out of a Projects-list row.
-
-   What that should mean depends on where the block came from, which is
-   why addMediaToProject stamps _fromList on the ones it creates:
-
-   - Media that belongs to the board (added on the project page) is only
-     hidden. It's someone else's work on another surface; a curation
-     click here must not reach into the board and delete it.
-   - Media added through this list only exists because of this list, so
-     taking it out here removes it outright — leaving an invisible block
-     behind on the board would be its own surprise.
-
-   Matching on the block object rather than filtering by src, because
-   two blocks may legitimately hold the same file and only the one this
-   tile stands for should go. */
+/* Takes a file out of a Brand row, and only out of the row. Board media is
+   hidden for this row; a row-only extra is dropped. Neither path opens the
+   board, so the clip stays in Category either way — removing it there is
+   the board editor's job, which is where you go when that is what you
+   mean. */
 function removeFromProjectsList(key, src) {
-  const proj = PROJECTS[key];
-  const block = ((proj && proj.blocks) || [])
-    .find(b => b.content === src && (b.type === 'image' || b.type === 'video'));
-  if (!block || !block._fromList) { hideMediaFromList(key, src); return; }
-  proj.blocks = proj.blocks.filter(b => b !== block);
-  saveProject(key);
-  // Drop any hide left over from before it was re-added, so the entry
-  // can't linger and suppress the file if it's picked back in later.
-  const hidden = getListHidden(key);
-  if (hidden.includes(src)) setListHidden(key, hidden.filter(s => s !== src));
-  if (!dropTileFromStrip(key, src)) refreshProjectsList();
-}
-
-// True when taking this file out of the row would delete it rather than
-// just hide it — used to label the × honestly per tile.
-function isListOwnedMedia(key, src) {
-  const proj = PROJECTS[key];
-  const block = ((proj && proj.blocks) || [])
-    .find(b => b.content === src && (b.type === 'image' || b.type === 'video'));
-  return !!(block && block._fromList);
-}
-
-function addMediaToProject(key, media, atIndex) {
-  const proj = PROJECTS[key];
-  if (!proj) return null;
-  if (!proj.blocks) proj.blocks = [];
-  // A fresh id per placement: the same file can sit in several projects,
-  // and reordering matches tiles to blocks by id.
-  // _fromList marks it as this list's own, so removing it here removes it
-  // for real instead of hiding a block the board never asked for.
-  const block = { id: uid(), type: media.type, content: media.src, _fromList: true };
-  if (media.aspect) block._freeAspect = media.aspect;
-  if (typeof atIndex === 'number' && atIndex >= 0 && atIndex <= proj.blocks.length) {
-    proj.blocks.splice(atIndex, 0, block);
-  } else {
-    proj.blocks.push(block);
+  const extras = getListExtra(key);
+  if (extras.some(m => m.src === src)) {
+    setListExtra(key, extras.filter(m => m.src !== src));
+    if (!dropTileFromStrip(key, src)) refreshProjectsList();
+    return;
   }
-  saveProject(key);
-  return block;
+  hideMediaFromList(key, src);
+}
+
+// Whether this file is the row's own rather than the board's. Only used to
+// word the × tooltip — both cases leave Category untouched.
+function isListOwnedMedia(key, src) {
+  return isListExtra(key, src);
+}
+
+/* Adds a file to a Brand row. The board is not touched: the entry is
+   recorded against the row in settings, and listMediaFor merges it in. If
+   the file is already on the board there is nothing to add — it is showing
+   in the row already, and a hide from earlier is lifted so it comes back. */
+function addMediaToProject(key, media, atIndex) {
+  if (!media || !media.src) return null;
+  const hidden = getListHidden(key);
+  if (hidden.includes(media.src)) setListHidden(key, hidden.filter(s => s !== media.src));
+
+  const onBoard = ((PROJECTS[key] && PROJECTS[key].blocks) || [])
+    .some(b => b.content === media.src && (b.type === 'image' || b.type === 'video'));
+  if (onBoard) { refreshProjectsList(); return null; }
+
+  const extras = getListExtra(key);
+  if (extras.some(m => m.src === media.src)) return null;
+  // A fresh id per placement: the same file can sit in several rows, and
+  // the strip matches tiles to entries by id.
+  const item = { id: uid(), type: media.type, src: media.src };
+  if (media.aspect) item.aspect = media.aspect;
+  if (typeof atIndex === 'number' && atIndex >= 0 && atIndex <= extras.length) extras.splice(atIndex, 0, item);
+  else extras.push(item);
+  setListExtra(key, extras);
+  return item;
 }
 
 // The picker's library, derived from board contents. Used to be read from
