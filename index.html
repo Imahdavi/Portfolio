@@ -2584,6 +2584,25 @@
     }
     .edit-on .tstack-name, .edit-on .tstack-sub { cursor:text; }
     .tstack-size { display:none; margin-top:6px; }
+    /* Row reorder grip; see renderToolStackBlock. */
+    .tstack-grip {
+      display:none; flex:none; align-self:flex-start; margin:6px 2px 0 -4px;
+      width:16px; height:22px; padding:0; border:none; background:none;
+      color:rgba(0,0,0,.28); cursor:grab; touch-action:none;
+      align-items:center; justify-content:center; border-radius:4px;
+    }
+    .tstack-grip svg { width:8px; height:13px; fill:currentColor; pointer-events:none; }
+    .tstack-grip:hover { color:rgba(0,0,0,.6); background:rgba(0,0,0,.05); }
+    .tstack-grip:active { cursor:grabbing; }
+    .edit-on .tstack-grip { display:flex; }
+    body.dark .tstack-grip { color:rgba(255,255,255,.3); }
+    body.dark .tstack-grip:hover { color:rgba(255,255,255,.7); background:rgba(255,255,255,.06); }
+    /* Lifted while it moves, so it is plain which row is travelling. */
+    .tstack-row.tstack-row-dragging {
+      position:relative; z-index:2; border-radius:8px;
+      background:rgba(0,0,0,.035); box-shadow:0 4px 14px rgba(0,0,0,.08);
+    }
+    body.dark .tstack-row.tstack-row-dragging { background:rgba(255,255,255,.05); box-shadow:0 4px 14px rgba(0,0,0,.4); }
     .edit-on .tstack-size { display:block; }
     /* The shared drag handle is vertically centred, which is right for a
        text block and wrong for one that grows: an opened stack put its
@@ -13378,6 +13397,55 @@ function renderToolStackBlock(block, mount) {
   block.tools.forEach((t, i) => {
     const row = document.createElement('div');
     row.className = 'tstack-row';
+    if (!t.id) t.id = uid();
+    row.dataset.toolId = t.id;
+
+    /* Reorder: a grip at the start of each row, edit mode only. Dragging it
+       moves the row live among its siblings; letting go writes that order
+       back to block.tools and re-renders, which also redraws the connector
+       lines and the tilted pile up top in the new order. A button, so the
+       block's own free drag (which skips buttons) never picks it up. */
+    const grip = document.createElement('button');
+    grip.type = 'button';
+    grip.className = 'tstack-grip';
+    grip.title = 'Drag to reorder';
+    grip.setAttribute('aria-label', 'Drag to reorder');
+    grip.innerHTML = '<svg viewBox="0 0 10 16"><circle cx="3" cy="3" r="1.3"/><circle cx="7" cy="3" r="1.3"/><circle cx="3" cy="8" r="1.3"/><circle cx="7" cy="8" r="1.3"/><circle cx="3" cy="13" r="1.3"/><circle cx="7" cy="13" r="1.3"/></svg>';
+    grip.addEventListener('pointerdown', (e) => {
+      if (!editMode) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const listEl = row.parentElement;
+      if (!listEl) return;
+      row.classList.add('tstack-row-dragging');
+      try { grip.setPointerCapture(e.pointerId); } catch (err) {}
+      const move = (ev) => {
+        let before = null;
+        for (const r of listEl.children) {
+          if (r === row) continue;
+          const b = r.getBoundingClientRect();
+          if (ev.clientY < b.top + b.height / 2) { before = r; break; }
+        }
+        if (before) { if (row.nextElementSibling !== before) listEl.insertBefore(row, before); }
+        else if (listEl.lastElementChild !== row) listEl.appendChild(row);
+      };
+      const end = () => {
+        grip.removeEventListener('pointermove', move);
+        grip.removeEventListener('pointerup', end);
+        grip.removeEventListener('pointercancel', end);
+        row.classList.remove('tstack-row-dragging');
+        const order = [...listEl.children].map(r => r.dataset.toolId);
+        const was = block.tools.map(x => x.id).join();
+        block.tools.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+        if (block.tools.map(x => x.id).join() === was) return;   // dropped where it started
+        renderToolStackBlock(block, mount);
+        avgSave(block);
+      };
+      grip.addEventListener('pointermove', move);
+      grip.addEventListener('pointerup', end);
+      grip.addEventListener('pointercancel', end);
+    });
+    row.appendChild(grip);
 
     const rail = document.createElement('div');
     rail.className = 'tstack-rail';
