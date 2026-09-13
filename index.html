@@ -11688,17 +11688,30 @@ function pullInlineNeighbours(list, els) {
   if (list.querySelector(':scope > .col-dragging')) return;   // a drag owns the layout
   const byId = new Map(proj.blocks.map(b => [b.id, b]));
   const bodyOf = e => e.querySelector(':scope > .block-body');
-  // The offset already applied. Measured positions include it, so it is
-  // taken back out to get where the content naturally sits — rather than
-  // clearing it to measure, which would restart the glide on every pass.
-  const offsetOf = bd => { const m = /translateX\((-?[\d.]+)px\)/.exec(bd.style.transform || ''); return m ? +m[1] : 0; };
+  // The offset this code last set, read back from the style.
+  const targetOf = bd => {
+    const m = /translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/.exec(bd.style.transform || '');
+    return m ? { x: +m[1], y: +m[2] } : { x: 0, y: 0 };
+  };
   // Mid-glide the rects are wherever the animation has got to, while the
   // style already names where it is going. Measuring has to take out the
   // former, or a pass during a glide would aim somewhere else and restart it.
-  const liveShiftOf = bd => {
+  const liveOf = bd => {
     const t = getComputedStyle(bd).transform;
-    if (!t || t === 'none') return 0;
-    try { return new DOMMatrixReadOnly(t).m41; } catch (e) { return offsetOf(bd); }
+    if (!t || t === 'none') return { x: 0, y: 0 };
+    try { const m = new DOMMatrixReadOnly(t); return { x: m.m41, y: m.m42 }; }
+    catch (e) { return targetOf(bd); }
+  };
+  // The line a block's content reads along, for matching two of them up:
+  // a tool stack's header, an avatar row's circles. Not the whole row —
+  // in edit mode an avatar carries its name, role and size slider under
+  // the circle, which would drag the middle down off the logos.
+  const lineOf = (e, type) => {
+    const el = type === 'toolstack'
+      ? e.querySelector('.tstack-head')
+      : (e.querySelector('.avg-avatar') || e.querySelector('.avg-seg'));
+    const r = el && el.getBoundingClientRect();
+    return r && r.height ? (r.top + r.bottom) / 2 : null;
   };
 
   const cands = els.map(e => ({ e, b: byId.get(e.dataset.id) }))
@@ -11706,7 +11719,7 @@ function pullInlineNeighbours(list, els) {
     .map(x => ({ ...x, top: x.e.offsetTop, cs: x.b._colStart || 1 }));
   cands.sort((a, c) => a.top - c.top || a.cs - c.cs);
 
-  const want = new Map();   // body -> offset for this pass
+  const want = new Map();   // body -> {x, y} for this pass
   for (let i = 0; i + 1 < cands.length; i++) {
     const L = cands[i], R = cands[i + 1];
     if (Math.abs(R.top - L.top) > ROW_TOP_TOLERANCE) continue;
@@ -11714,23 +11727,36 @@ function pullInlineNeighbours(list, els) {
     const bd = bodyOf(R.e);
     const rParts = bd && inlineParts(R.e, R.b.type);
     if (!rParts || !rParts.length) continue;
-    const rLeft = Math.min(...rParts.map(r => r.left)) - liveShiftOf(bd);
-    const bandTop = Math.min(...rParts.map(r => r.top));
-    const bandBot = Math.max(...rParts.map(r => r.bottom));
+    const live = liveOf(bd);
+
+    // Vertical: the right block's line onto the left block's. Two blocks
+    // that read as one line should share a centre — an avatar row carries
+    // padding a stack's header does not, which sat its logos 9px low.
+    const lLine = lineOf(L.e, L.b.type), rLine = lineOf(R.e, R.b.type);
+    const y = (lLine != null && rLine != null) ? Math.round(lLine - (rLine - live.y)) : 0;
+
+    // Horizontal: slide in to INLINE_GAP past the left block's content,
+    // counting only the left content that shares height with the right.
+    const rLeft = Math.min(...rParts.map(r => r.left)) - live.x;
+    const bandTop = Math.min(...rParts.map(r => r.top)) - live.y + y;
+    const bandBot = Math.max(...rParts.map(r => r.bottom)) - live.y + y;
     const lParts = inlineParts(L.e, L.b.type).filter(r => r.bottom > bandTop && r.top < bandBot);
-    if (!lParts.length) continue;
-    const lRight = Math.max(...lParts.map(r => r.right));
-    const d = Math.round(rLeft - (lRight + INLINE_GAP));
-    // Only ever closer. Content already tight, or crowding past the gap,
-    // is left exactly where the grid put it.
-    want.set(bd, d > 0 ? -d : 0);
+    let x = 0;
+    if (lParts.length) {
+      const d = Math.round(rLeft - (Math.max(...lParts.map(r => r.right)) + INLINE_GAP));
+      // Only ever closer. Content already tight, or crowding past the gap,
+      // is left exactly where the grid put it.
+      if (d > 0) x = -d;
+    }
+    want.set(bd, { x, y });
   }
 
   // Everything that had an offset and is no longer a pair gives it back.
-  els.forEach(e => { const bd = bodyOf(e); if (bd && bd.style.transform && !want.has(bd)) want.set(bd, 0); });
-  want.forEach((px, bd) => {
-    if (offsetOf(bd) === px) return;
-    bd.style.transform = px ? 'translateX(' + px + 'px)' : '';
+  els.forEach(e => { const bd = bodyOf(e); if (bd && bd.style.transform && !want.has(bd)) want.set(bd, { x: 0, y: 0 }); });
+  want.forEach((o, bd) => {
+    const cur = targetOf(bd);
+    if (cur.x === o.x && cur.y === o.y) return;
+    bd.style.transform = (o.x || o.y) ? 'translate(' + o.x + 'px, ' + o.y + 'px)' : '';
     // The first placement lands instantly, so a board does not open with
     // its avatars sliding into place; after that, moves glide.
     if (!bd.dataset.pullReady) requestAnimationFrame(() => { bd.dataset.pullReady = '1'; });
