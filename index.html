@@ -2531,13 +2531,12 @@
       color:#6f6f6f; font-size:11px; font-weight:700; letter-spacing:-.02em;
     }
     body.dark .tstack-plate { color:#a9abad; }
-    /* No ground and no ring by default: an icon that fills its plate IS
-       the tile, and a surface behind it only shows up as a rim of white
-       around the mark. One is painted back for the two cases that need
-       a plate to sit on — an icon dialled below full size, and the
-       initials fallback, neither of which covers the square. */
-    .tstack-plate.has-ground { background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.07); }
-    body.dark .tstack-plate.has-ground { box-shadow:0 0 0 1px rgba(255,255,255,.10); }
+    /* No ground and no ring, at any size. An icon at full size is the tile
+       itself; a shrunk one used to get a white plate and a 1px ring back so
+       it had something to sit on, but that read as a frame drawn round a
+       smaller mark. The mark stands on its own now. The one cost: a dark
+       logo with a transparent background has nothing behind it in dark
+       mode — app icons, which carry their own colour, are unaffected. */
     /* contain for the same reason the Tools I use plate uses it: a
        non-square logo would lose its edges under cover. */
     .tstack-plate img {
@@ -13311,15 +13310,9 @@ function tstackPlate(tool) {
     // tool.size is a percentage of the plate, the same unit an avatar's
     // logoSize uses. Unset means the icon fills the plate.
     if (tool.size) p.style.setProperty('--ts-fill', String(tool.size / 100));
-    // A plate to sit on only where one is needed. An icon at full size
-    // covers the square itself, and a ground behind it reads as a rim of
-    // white around the mark; one dialled back does not cover it, and
-    // without a surface a dark logo would be floating on the page.
-    if (tool.size && tool.size < 100) p.classList.add('has-ground');
     p.appendChild(img);
   } else {
     p.textContent = (tool.name || '?').trim().slice(0, 2).toUpperCase();
-    p.classList.add('has-ground');
   }
   return p;
 }
@@ -13519,12 +13512,10 @@ function renderToolStackBlock(block, mount) {
         const f = String(t.size / 100);
         const n = [...block.tools].indexOf(t);
         // Both copies of this plate: the one in this row and the one in
-        // the stack up top. The ground comes and goes with the size —
-        // below full the icon no longer covers the square.
+        // the stack up top.
         [...row.querySelectorAll('.tstack-plate'), icons.children[n]].forEach(p => {
           if (!p) return;
           p.style.setProperty('--ts-fill', f);
-          p.classList.toggle('has-ground', t.size < 100);
         });
       });
       size.addEventListener('change', () => avgSave(block));
