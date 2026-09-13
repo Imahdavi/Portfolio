@@ -612,8 +612,12 @@
       display:flex; flex-direction:row; flex-wrap:wrap; align-items:baseline; gap:4px;
       flex:0 0 auto;
       font-family:var(--font-body); font-size:12.5px; font-weight:600;
-      color:#b4a99a; line-height:1.35;
+      /* Near-black, the title's colour. It was a pale beige (#b4a99a),
+         about 2.3:1 on the page — under the 4.5 small text needs, and it
+         read as a faded afterthought beside the heading it dates. */
+      color:#1a1a1a; line-height:1.35;
     }
+    body.dark .pli-year { color:var(--d-text); }
     .pli-year-sep { font-weight:400; opacity:.65; }
     /* What's left of the old date column: edit-mode row controls only, so
        it takes no width at all for a visitor. */
