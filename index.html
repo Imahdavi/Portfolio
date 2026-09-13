@@ -14248,7 +14248,15 @@ function openMoveMenu(anchorBtn, blockId) {
     return;
   }
 
-  const targets = Object.keys(PROJECTS).filter(k => k !== activeKey);
+  /* Only boards that are tiles on the Category grid, in the grid's order.
+     This used to list every key in PROJECTS — fifty-odd, including the
+     Brand-only rows (listOnly), cards hidden from the grid, and leftover
+     keys with no card at all, such as dated backups. None of those is a
+     board you can open from the grid to find the block afterwards. */
+  const targets = ((_cachedSettings && _cachedSettings.sections) || [])
+    .flatMap(sec => sec.cards || [])
+    .filter(c => c && !c.listOnly && !c.hidden && c.key !== activeKey && PROJECTS[c.key])
+    .map(c => c.key);
   menu.innerHTML = targets.length
     ? ''
     : '<div class="move-empty">No other boards</div>';
