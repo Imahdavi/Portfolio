@@ -1503,6 +1503,10 @@
     .blk-bar-sep { width:1px; height:16px; background:rgba(255,255,255,.18); margin:0 3px; }
     .blk-bar-del:hover { background:#dc2626; color:#fff; }
     .blk-grip-top { align-self:flex-start; margin-top:4px; }
+    /* A short block pulled toward its neighbour (see pullInlineNeighbours)
+       glides when that changes — matching the tool stack's own open, which
+       is what usually changes it. */
+    .block-body[data-pull-ready] { transition:transform .3s cubic-bezier(.4,0,.2,1); }
     /* Add below: a round + on the block's lower edge, half over the seam so
        it reads as belonging to the gap, not to either block. Out of sight
        until the block is pointed at — fourteen of them showing at once
@@ -11641,6 +11645,96 @@ function syncBlockRows(list) {
     }
     if (!changed) break;
   }
+  pullInlineNeighbours(list, els);
+}
+
+/* ─── Short blocks side by side sit as close as their contents allow ──
+   An avatar row and a tool stack each hold one line of small marks, and
+   put next to each other they read as one line: "Used 2 tools   \ at
+   [logos]". But they are two grid blocks, so the space between them was
+   whatever remained of the left block's column — anywhere up to a
+   hundred-odd pixels — where the same pairing inside a Brand row, a date
+   beside its avatars, sits 14px apart.
+
+   The grid placement is left alone; the right block's content is slid
+   left until it is INLINE_GAP past the left block's content. Only the
+   body moves, by transform, so the row's height, the block's toolbar and
+   its drag slot are all unchanged, and nothing reflows under it.
+
+   "The left block's content" is measured only where it shares height
+   with the right one. An opened tool stack drops a list below its
+   header; a long first row there would collide with avatars beside it,
+   so it counts — the rows further down, which the avatars never reach,
+   do not. A closed stack's rows are still in the DOM, clipped to nothing,
+   and are left out for the same reason. */
+const INLINE_TYPES = new Set(['avatars', 'toolstack']);
+const INLINE_GAP = 14;   // px — the date-to-avatars gap in a Brand row
+
+function inlineParts(el, type) {
+  let parts;
+  if (type === 'toolstack') {
+    const root = el.querySelector('.tstack');
+    parts = [el.querySelector('.tstack-head')];
+    if (root && root.classList.contains('open')) parts.push(...el.querySelectorAll('.tstack-row'));
+  } else {
+    parts = [...el.querySelectorAll('.avg-seg')];
+  }
+  return parts.filter(Boolean).map(p => p.getBoundingClientRect()).filter(r => r.width && r.height);
+}
+
+function pullInlineNeighbours(list, els) {
+  const proj = PROJECTS[activeKey];
+  if (!proj) return;
+  if (list.querySelector(':scope > .col-dragging')) return;   // a drag owns the layout
+  const byId = new Map(proj.blocks.map(b => [b.id, b]));
+  const bodyOf = e => e.querySelector(':scope > .block-body');
+  // The offset already applied. Measured positions include it, so it is
+  // taken back out to get where the content naturally sits — rather than
+  // clearing it to measure, which would restart the glide on every pass.
+  const offsetOf = bd => { const m = /translateX\((-?[\d.]+)px\)/.exec(bd.style.transform || ''); return m ? +m[1] : 0; };
+  // Mid-glide the rects are wherever the animation has got to, while the
+  // style already names where it is going. Measuring has to take out the
+  // former, or a pass during a glide would aim somewhere else and restart it.
+  const liveShiftOf = bd => {
+    const t = getComputedStyle(bd).transform;
+    if (!t || t === 'none') return 0;
+    try { return new DOMMatrixReadOnly(t).m41; } catch (e) { return offsetOf(bd); }
+  };
+
+  const cands = els.map(e => ({ e, b: byId.get(e.dataset.id) }))
+    .filter(x => x.b && INLINE_TYPES.has(x.b.type) && (x.b._align || 'left') !== 'center' && (x.b._cols || 6) < 6)
+    .map(x => ({ ...x, top: x.e.offsetTop, cs: x.b._colStart || 1 }));
+  cands.sort((a, c) => a.top - c.top || a.cs - c.cs);
+
+  const want = new Map();   // body -> offset for this pass
+  for (let i = 0; i + 1 < cands.length; i++) {
+    const L = cands[i], R = cands[i + 1];
+    if (Math.abs(R.top - L.top) > ROW_TOP_TOLERANCE) continue;
+    if (R.cs < L.cs + (L.b._cols || 6)) continue;          // overlapping columns: not a pair
+    const bd = bodyOf(R.e);
+    const rParts = bd && inlineParts(R.e, R.b.type);
+    if (!rParts || !rParts.length) continue;
+    const rLeft = Math.min(...rParts.map(r => r.left)) - liveShiftOf(bd);
+    const bandTop = Math.min(...rParts.map(r => r.top));
+    const bandBot = Math.max(...rParts.map(r => r.bottom));
+    const lParts = inlineParts(L.e, L.b.type).filter(r => r.bottom > bandTop && r.top < bandBot);
+    if (!lParts.length) continue;
+    const lRight = Math.max(...lParts.map(r => r.right));
+    const d = Math.round(rLeft - (lRight + INLINE_GAP));
+    // Only ever closer. Content already tight, or crowding past the gap,
+    // is left exactly where the grid put it.
+    want.set(bd, d > 0 ? -d : 0);
+  }
+
+  // Everything that had an offset and is no longer a pair gives it back.
+  els.forEach(e => { const bd = bodyOf(e); if (bd && bd.style.transform && !want.has(bd)) want.set(bd, 0); });
+  want.forEach((px, bd) => {
+    if (offsetOf(bd) === px) return;
+    bd.style.transform = px ? 'translateX(' + px + 'px)' : '';
+    // The first placement lands instantly, so a board does not open with
+    // its avatars sliding into place; after that, moves glide.
+    if (!bd.dataset.pullReady) requestAnimationFrame(() => { bd.dataset.pullReady = '1'; });
+  });
 }
 
 /* ─── Render blocks ────────────────────────────────────── */
@@ -13147,6 +13241,10 @@ function renderToolStackBlock(block, mount) {
   });
   root.appendChild(body);
   mount.appendChild(root);
+  // Its width can change with no change in height, which the block's
+  // resize observer never hears about; see pullInlineNeighbours.
+  const hostBlock = mount.closest('.block');
+  if (hostBlock) setBlockRowSpan(hostBlock);
 }
 
 function addToolStack() {
@@ -13634,6 +13732,10 @@ function renderAvatarsBlock(block, mount) {
   mount.appendChild(row);
 
   if (migrated && activeKey) avgSave(block);
+  // As in renderToolStackBlock. Brand rows mount this outside any block,
+  // so there it finds nothing and does nothing.
+  const hostBlock = mount.closest('.block');
+  if (hostBlock) setBlockRowSpan(hostBlock);
 }
 
 /* ─── Add blocks ───────────────────────────────────────── */
