@@ -812,7 +812,13 @@
     }
     .pli-tile-crop svg { width:10px; height:10px; }
     #view-home.home-edit .pli-tile:hover .pli-tile-crop { display:flex; }
-    .pli-tile-crop.active, .pli-tile-crop.has-crop { display:flex; background:#2563EB; }
+    /* Scoped like the hover rule above. These two were not, so a tile
+       that had been given a crop showed its blue badge to every visitor
+       — an edit control sitting on the public page, and the only one of
+       the tile buttons that leaked (the link and delete badges were
+       already behind home-edit). */
+    #view-home.home-edit .pli-tile-crop.active,
+    #view-home.home-edit .pli-tile-crop.has-crop { display:flex; background:#2563EB; }
 
     /* Fixed and body-appended, not absolute inside the tile — .pli-tile
        clips overflow (for the crop itself), which was clipping this too
@@ -2285,7 +2291,21 @@
        use cards already share, so a logo added anywhere on the site can
        be reused here without uploading it a second time. */
     .block-toolstack { width:100%; display:flex; flex-direction:column; margin-bottom:8px; }
-    .tstack { width:fit-content; max-width:100%; }
+    /* One scale for the whole component. The source is built at a 32px
+       plate; this sits at 28, which is the "a bit big" taken off without
+       redrawing any of its proportions — the overlap, the radius and the
+       chevron all come off the same number.
+
+       --ts-fill is the source's iconSize expressed as a fraction of the
+       plate rather than as a second absolute: 21 of 32 is .66, and
+       keeping it proportional means changing --ts-plate alone rescales
+       the icon with it. Per icon it is overridden inline from tool.size,
+       the way an avatar carries its own logoSize — a wordmark and a
+       square app icon do not want the same share of a plate. */
+    .tstack {
+      --ts-plate:28px; --ts-fill:.66;
+      width:fit-content; max-width:100%;
+    }
     .tstack-head {
       display:flex; align-items:center; gap:8px; padding:6px 0;
       background:none; border:0; cursor:pointer;
@@ -2295,13 +2315,14 @@
     .tstack-head:hover { color:#1a1a1a; }
     body.dark .tstack-head { color:#8f9295; }
     body.dark .tstack-head:hover { color:#fff; }
-    .tstack-icons { display:flex; align-items:center; min-height:32px; }
+    .tstack-icons { display:flex; align-items:center; min-height:var(--ts-plate); }
     /* The overlap is a negative margin rather than the source's
        -space-x-2 utility, which is the same thing: every plate after the
        first slides 8px under its neighbour. */
-    .tstack-icons > * + * { margin-left:-8px; }
+    .tstack-icons > * + * { margin-left:calc(var(--ts-plate) / -4); }
     .tstack-plate {
-      width:32px; height:32px; flex:none; border-radius:8px; overflow:hidden;
+      width:var(--ts-plate); height:var(--ts-plate); flex:none;
+      border-radius:calc(var(--ts-plate) / 4); overflow:hidden;
       display:flex; align-items:center; justify-content:center;
       background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.07);
       color:#6f6f6f; font-size:11px; font-weight:700; letter-spacing:-.02em;
@@ -2309,9 +2330,16 @@
     body.dark .tstack-plate { background:#26282a; box-shadow:0 0 0 1px rgba(255,255,255,.10); color:#a9abad; }
     /* contain for the same reason the Tools I use plate uses it: a
        non-square logo would lose its edges under cover. */
-    .tstack-plate img { width:100%; height:100%; object-fit:contain; }
-    .tstack-lbl { font-size:12px; font-weight:500; white-space:nowrap; }
-    .tstack-chev { width:18px; height:18px; flex:none; transition:transform .2s; }
+    /* The icon is inset in the plate rather than filling it — the plate
+       is the surface, the icon is the mark on it, which is the whole
+       reason the source carries a separate iconSize. Filling it edge to
+       edge, as this did, left no plate to see. */
+    .tstack-plate img {
+      width:calc(100% * var(--ts-fill)); height:calc(100% * var(--ts-fill));
+      object-fit:contain;
+    }
+    .tstack-lbl { font-size:11.5px; font-weight:500; white-space:nowrap; }
+    .tstack-chev { width:16px; height:16px; flex:none; transition:transform .2s; }
     .tstack-chev svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
     .tstack.open .tstack-chev { transform:rotate(180deg); }
 
@@ -2331,6 +2359,8 @@
       content:attr(data-ph); color:#bbb; text-transform:none;
     }
     .edit-on .tstack-name, .edit-on .tstack-sub { cursor:text; }
+    .tstack-size { display:none; margin-top:6px; }
+    .edit-on .tstack-size { display:block; }
 
     /* Edit-mode affordances. The add plate joins the stack so a new icon
        lands where it will actually sit, rather than in a separate tray. */
@@ -12681,6 +12711,9 @@ function tstackPlate(tool) {
   if (tool.src) {
     const img = document.createElement('img');
     img.src = tool.src; img.alt = '';
+    // tool.size is a percentage of the plate, the same unit an avatar's
+    // logoSize uses. Unset means the source's own 21-of-32.
+    if (tool.size) p.style.setProperty('--ts-fill', String(tool.size / 100));
     p.appendChild(img);
   } else {
     p.textContent = (tool.name || '?').trim().slice(0, 2).toUpperCase();
@@ -12806,6 +12839,31 @@ function renderToolStackBlock(block, mount) {
 
     text.appendChild(nameRow);
     text.appendChild(sub);
+
+    /* Per-icon size, the same knob an avatar logo has and for the same
+       reason: a wide wordmark and a square app icon want different shares
+       of the plate. Lives in the opened list, where the rest of the
+       editing already is, and drives both copies of the plate — the one
+       in this row and the one in the stack up top. */
+    if (t.src) {
+      const size = document.createElement('input');
+      size.type = 'range';
+      size.className = 'avg-size-slider tstack-size';
+      size.min = '30'; size.max = '100'; size.step = '1';
+      size.value = String(t.size || 66);
+      size.title = 'Icon size';
+      size.addEventListener('pointerdown', (e) => e.stopPropagation());
+      size.addEventListener('input', () => {
+        t.size = +size.value;
+        const f = String(t.size / 100);
+        row.querySelectorAll('.tstack-plate').forEach(p => p.style.setProperty('--ts-fill', f));
+        const n = [...block.tools].indexOf(t);
+        const up = icons.children[n];
+        if (up) up.style.setProperty('--ts-fill', f);
+      });
+      size.addEventListener('change', () => avgSave(block));
+      text.appendChild(size);
+    }
     row.appendChild(text);
     body.appendChild(row);
   });
