@@ -152,10 +152,10 @@
          obvious on a thin ring. */
       position:absolute; bottom:0; left:50%; margin-left:-13.5px;
       color:#1a1a1a;
-      /* Swings from where the thread meets it — the top of the head, 6.9px
+      /* Swings from where the thread meets it — the top of the head, 7.35px
          down this box — not from the box's top edge, which sits above the
          head at the raised front legs. */
-      transform-origin:50% 6.9px; display:block;
+      transform-origin:50% 7.35px; display:block;
     }
     body.dark .site-spider .spider-body { color:var(--d-text); }
     /* Positioning root for the avatar overlap — its box height comes
@@ -4366,7 +4366,7 @@
           <path class="rope-path" d="M10,0 L10,30"/>
         </svg>
         <!-- Traced from the line icon onto a 24-unit grid (its 512px art at
-             0.046875), stroke kept at the original's proportion. Its own
+             0.046875), stroke thinned from the original's proportion (1.5 units, about 2.6px at this size, heavier than anything near it) to .85 — about 1.5px, a touch over the thread it hangs from. Its own
              thread is left out: the page draws the real one, down from the
              M, and it meets this at the top of the head, between the two
              raised front legs where the icon's line ran.
@@ -4375,7 +4375,7 @@
              is the spider and nothing else — BODY_TOP_GAP and the tagline
              clearance both measure this box. -->
         <svg class="spider-body" viewBox="4.2 5.3 15.6 18.6" width="27" height="32" fill="none"
-             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+             stroke="currentColor" stroke-width=".85" stroke-linecap="round" stroke-linejoin="round">
           <path d="M10.3 10.8 7.4 8.3 9.4 6.3"/>
           <path d="M13.7 10.8 16.6 8.3 14.6 6.3"/>
           <path d="M9.6 11.6 5.9 11.2 5.1 9.4"/>
@@ -4384,7 +4384,7 @@
           <path d="M11 14.5 9.8 15.9 9.8 23"/>
           <path d="M13 14.5 14.2 15.9 14.2 23"/>
           <path d="M13.5 13.4 16.5 14.8 16.5 15.7"/>
-          <circle cx="16.5" cy="17.7" r=".75" fill="currentColor" stroke="none"/>
+          <circle cx="16.5" cy="17.7" r=".45" fill="currentColor" stroke="none"/>
           <path d="M16.5 19.6v1"/>
           <circle cx="12" cy="15.47" r="1.1"/>
           <circle cx="12" cy="12" r="2"/>
@@ -15152,9 +15152,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let t = 0;
   let anchorFrame = 0;
   // Box height below the top of the head, where the thread attaches: the
-  // head's outer top is at y 9.28 in a viewBox running from 5.3 over 18.6
-  // units, drawn 32px tall — (18.6 - (9.28 - 5.3)) / 18.6 * 32.
-  const BODY_TOP_GAP = 25.2;
+  // head's outer top is at y 9.575 (radius 2 plus half the .85 stroke) in a
+  // viewBox running from 5.3 over 18.6 units, drawn 32px tall —
+  // (18.6 - (9.575 - 5.3)) / 18.6 * 32.
+  const BODY_TOP_GAP = 24.6;
 
   function tick() {
     // The spider hangs off the home header; on any other view it is inside a
