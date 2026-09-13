@@ -12008,6 +12008,21 @@ function makeBlockEl(block, proj) {
      With a width set, the free 2D drag already on every block does the
      rest: drag one to the left half, the other to the right. */
   if (block.type === 'avatars' || block.type === 'toolstack') {
+    /* A drag handle, the way text blocks get one. The free 2D drag is
+       bound on the wrap and skips buttons and editable text — and these
+       two blocks are almost entirely buttons and editable text. The tool
+       stack's header IS a button, the avatars' names and roles are all
+       contenteditable, so there was practically nowhere left to grab and
+       the width setting had no way to be used: both halves would sit in
+       column 1, one above the other, with no way to push either across.
+       First child of the wrap, which is the flex row the text blocks put
+       theirs in too. */
+    const grip = document.createElement('div');
+    grip.className = 'block-drag-handle';
+    grip.title = 'Drag to move';
+    grip.innerHTML = '<svg viewBox="0 0 10 16"><circle cx="3" cy="3" r="1.3"/><circle cx="7" cy="3" r="1.3"/><circle cx="3" cy="8" r="1.3"/><circle cx="7" cy="8" r="1.3"/><circle cx="3" cy="13" r="1.3"/><circle cx="7" cy="13" r="1.3"/></svg>';
+    wrap.insertBefore(grip, wrap.firstChild);
+
     const wBtn = document.createElement('button');
     wBtn.className = 'block-width-btn';
     wBtn.type = 'button';
@@ -12040,7 +12055,22 @@ function makeBlockEl(block, proj) {
            not the avatars' own left/centre/right, which is a separate
            field and stays put. */
         if (p.cols < 6) block._align = 'left';
-        block._colStart = 1;
+        /* Land beside the block above when that one is narrow and has
+           room left on its row, rather than always back in column 1.
+           Setting two blocks to a half each is the whole reason this
+           control exists, and dropping both into column 1 meant they
+           stacked and still had to be dragged apart. */
+        const list = PROJECTS[activeKey] && PROJECTS[activeKey].blocks;
+        let start = 1;
+        if (list && p.cols < 6) {
+          const prev = list[list.indexOf(block) - 1];
+          if (prev && (prev._align || 'left') !== 'center') {
+            const pStart = prev._colStart || 1, pCols = prev._cols || 6;
+            // Six columns, so grid lines run 1..7.
+            if (pStart + pCols + p.cols <= 7) start = pStart + pCols;
+          }
+        }
+        block._colStart = start;
         relayoutBlockGrid();
         wGrid.querySelectorAll('.pos-opt').forEach(x => x.classList.remove('active'));
         b.classList.add('active');
