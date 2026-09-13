@@ -747,6 +747,40 @@
       background:rgba(59,130,246,.09); outline:1.5px dashed rgba(59,130,246,.55);
     }
 
+    /* ── Strip tile toolbar ─────────────────────────────────────────
+       The same dark pill as the board's block toolbar, inside the tile
+       because the tile clips its overflow for the crop. Link, crop, a
+       rule, delete. Hover to see it; a tile that already has a link or
+       a crop keeps it up, so an existing setting is still findable
+       without hunting tile by tile — the rule the separate badges had. */
+    .pli-tile-bar {
+      position:absolute; top:6px; left:50%; transform:translateX(-50%); z-index:3;
+      display:none; align-items:center; gap:1px;
+      background:#1a1a1a; border-radius:8px; padding:2px;
+      box-shadow:0 3px 10px rgba(0,0,0,.25);
+    }
+    #view-home.home-edit .pli-tile:hover .pli-tile-bar,
+    #view-home.home-edit .pli-tile-bar:has(.has-link, .has-crop, .active) { display:flex; }
+    /* The three used to be absolutely placed in their own corners, each
+       with its own display rule; inside the pill they are just buttons. */
+    #view-home.home-edit .pli-tile-bar > button {
+      position:static; display:flex; flex:none;
+      width:22px; height:22px; border-radius:6px; border:none; padding:0;
+      background:none; color:rgba(255,255,255,.85); cursor:pointer;
+      align-items:center; justify-content:center;
+      transition:background .12s, color .12s;
+    }
+    #view-home.home-edit .pli-tile-bar > button:hover { background:rgba(255,255,255,.15); color:#fff; }
+    #view-home.home-edit .pli-tile-bar > button svg { width:13px; height:13px; display:block; pointer-events:none; }
+    #view-home.home-edit .pli-tile-bar > .pli-tile-link.has-link,
+    #view-home.home-edit .pli-tile-bar > .pli-tile-crop.has-crop,
+    #view-home.home-edit .pli-tile-bar > .pli-tile-crop.active { background:#2563eb; color:#fff; }
+    #view-home.home-edit .pli-tile-bar > .pli-tile-del:hover { background:#dc2626; }
+    .pli-tile-bar > .pli-tile-link { order:1; }
+    .pli-tile-bar > .pli-tile-crop { order:2; }
+    .pli-tile-bar > .pli-tile-bar-sep { order:3; margin:0 2px; height:13px; }
+    .pli-tile-bar > .pli-tile-del  { order:4; }
+
     .pli-tile-del {
       position:absolute; top:5px; right:5px; z-index:3; display:none;
       width:19px; height:19px; border:none; border-radius:50%;
@@ -2226,7 +2260,8 @@
     .avg-seg-ctrls {
       display:none; position:absolute; bottom:calc(100% + 6px); left:50%;
       transform:translateX(-50%); z-index:60;
-      align-items:center; gap:1px; background:#1a1a1a; border-radius:7px; padding:3px;
+      align-items:center; gap:1px; background:#1a1a1a; border-radius:8px; padding:3px;
+      box-shadow:0 4px 14px rgba(0,0,0,.22);
     }
     .edit-on .avg-seg:hover .avg-seg-ctrls { display:flex; }
     .avg-seg-ctrls button {
@@ -2236,7 +2271,10 @@
     }
     .avg-seg-ctrls button svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
     .avg-seg-ctrls button:hover { background:rgba(255,255,255,.15); color:#fff; }
-    .avg-seg-ctrls button.avg-seg-del-btn:hover { background:#ff4444; color:#fff; }
+    /* Same red and the same rule before it as the block toolbar's delete —
+       one vocabulary for "this removes something" across the page. */
+    .avg-seg-ctrls button.avg-seg-del-btn:hover { background:#dc2626; color:#fff; }
+    .avg-seg-ctrls .blk-bar-sep, .avg-item-ctrls .blk-bar-sep { height:14px; margin:0 2px; }
 
     /* text segment — reuses .block-text so the sitewide bold/italic
        toolbar (which triggers off that class) works on it for free */
@@ -2497,13 +2535,19 @@
     body.dark .tstack-add { border-color:rgba(255,255,255,.26); }
     .edit-on .tstack-add { display:flex; }
     .edit-on .tstack-plate { cursor:pointer; }
+    /* The same trash mark the toolbars use, as a quiet inline button: it
+       sits in a row of text, where a dark pill would shout. Red only on
+       approach, like every other delete on the page. */
     .tstack-del {
-      display:none; margin-left:6px; width:18px; height:18px; flex:none;
-      border:0; border-radius:50%; background:rgba(0,0,0,.55); color:#fff;
-      font-size:12px; line-height:1; cursor:pointer; align-items:center; justify-content:center;
+      display:none; margin-left:6px; width:22px; height:22px; flex:none; padding:0;
+      border:0; border-radius:6px; background:none; color:rgba(0,0,0,.38);
+      cursor:pointer; align-items:center; justify-content:center;
+      transition:background .12s, color .12s;
     }
+    .tstack-del svg { width:13px; height:13px; display:block; pointer-events:none; }
     .edit-on .tstack-del { display:flex; }
-    .tstack-del:hover { background:#dc2626; }
+    .tstack-del:hover { background:#dc2626; color:#fff; }
+    body.dark .tstack-del { color:rgba(255,255,255,.4); }
     @media (prefers-reduced-motion:reduce) {
       .tstack-chev, .tstack-body { transition:none; }
     }
@@ -2570,7 +2614,8 @@
     .avg-item-ctrls {
       display:none; position:absolute; bottom:calc(100% + 6px); left:50%;
       transform:translateX(-50%); z-index:60;
-      align-items:center; gap:1px; background:#1a1a1a; border-radius:7px; padding:3px;
+      align-items:center; gap:1px; background:#1a1a1a; border-radius:8px; padding:3px;
+      box-shadow:0 4px 14px rgba(0,0,0,.22);
     }
     .edit-on .avg-item:hover .avg-item-ctrls { display:flex; }
     .avg-item-ctrls button {
@@ -2580,7 +2625,7 @@
     }
     .avg-item-ctrls button svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
     .avg-item-ctrls button:hover { background:rgba(255,255,255,.15); color:#fff; }
-    .avg-item-ctrls button.avg-item-del-btn:hover { background:#ff4444; color:#fff; }
+    .avg-item-ctrls button.avg-item-del-btn:hover { background:#dc2626; color:#fff; }
     .avg-add-tile {
       display:none; position:relative; width:42px; height:42px; flex:none; align-items:center; justify-content:center;
       border:1.5px dashed #bbb; border-radius:50%; background:#fff;
@@ -8397,10 +8442,24 @@ function buildProjectListItem(card) {
 
       // Edit-mode only (CSS keeps it hidden otherwise). Takes the tile out
       // of THIS list and nothing else — the board keeps the block.
+      /* The tile's edit controls share one pill, the same one every block
+         on a board now has. They were three 19px badges in three different
+         corners of a tile that can be as narrow as 95px, one of them an
+         emoji — each a separate thing to find, and together they covered
+         three corners of the artwork. Order is set in CSS, since the crop
+         button is added later by wireStripCrop. */
+      const tileBar = document.createElement('div');
+      tileBar.className = 'pli-tile-bar';
+      tileBar.addEventListener('pointerdown', e => e.stopPropagation()); // not a reorder drag
+      const tileSep = document.createElement('span');
+      tileSep.className = 'blk-bar-sep pli-tile-bar-sep';
+      tileBar.appendChild(tileSep);
+      tile.appendChild(tileBar);
+
       const del = document.createElement('button');
       del.className = 'pli-tile-del';
       del.type = 'button';
-      del.textContent = '×';
+      del.innerHTML = SVG_TRASH;
       del.title = isListOwnedMedia(card.key, m.src)
         ? 'Remove from this row (was added here; the file itself is kept)'
         : 'Remove from this row (stays on the project page)';
@@ -8409,7 +8468,7 @@ function buildProjectListItem(card) {
         e.stopPropagation();
         removeFromProjectsList(card.key, tile.dataset.src);
       });
-      tile.appendChild(del);
+      tileBar.appendChild(del);
 
       // A tile with a link behaves like a grid card: the image is the
       // control. The corner arrow is what makes that discoverable — without
@@ -8437,7 +8496,7 @@ function buildProjectListItem(card) {
       const linkBtn = document.createElement('button');
       linkBtn.className = 'pli-tile-link';
       linkBtn.type = 'button';
-      linkBtn.textContent = '🔗';
+      linkBtn.innerHTML = SVG_LINK.replace(/stroke="#1A1714"/, 'stroke="currentColor"');
 
       const applyLink = (url) => {
         const safe = normalizeListLink(url);
@@ -8513,7 +8572,7 @@ function buildProjectListItem(card) {
         input.focus();
         input.select();
       });
-      tile.appendChild(linkBtn);
+      tileBar.appendChild(linkBtn);
 
       applyLink(m.link || '');
       wireStripCrop(tile, el, m.src, card.key);
@@ -8805,9 +8864,9 @@ function wireStripCrop(tile, el, src, key) {
     b.className = 'pli-tile-crop';
     b.type = 'button';
     b.title = 'Crop to a fixed ratio';
-    b.innerHTML = SVG_CROP.replace(/stroke="#1A1714"/, 'stroke="#fff"');
+    b.innerHTML = SVG_CROP.replace(/stroke="#1A1714"/, 'stroke="currentColor"');
     b.addEventListener('pointerdown', e => e.stopPropagation()); // don't start a reorder drag
-    tile.appendChild(b);
+    (tile.querySelector('.pli-tile-bar') || tile).appendChild(b);
     return b;
   })();
   btn.classList.toggle("has-crop", !!getListCrop(key)[src]);
@@ -12956,7 +13015,7 @@ function renderToolStackBlock(block, mount) {
     const del = document.createElement('button');
     del.type = 'button';
     del.className = 'tstack-del';
-    del.textContent = '×';
+    del.innerHTML = SVG_TRASH;
     del.title = 'Remove this icon';
     del.addEventListener('click', () => {
       block.tools = block.tools.filter(x => x !== t);
@@ -13185,6 +13244,10 @@ function avgRenderAvatarItem(a, idx, avatars, block, mount) {
     avgSave(block);
     renderAvatarsBlock(block, mount);
   };
+  // A rule before delete, as in every other toolbar on the page.
+  const delSep = document.createElement('span');
+  delSep.className = 'blk-bar-sep';
+  ctrls.appendChild(delSep);
   ctrls.appendChild(del);
 
   item.appendChild(ctrls);
@@ -13338,6 +13401,10 @@ function avgSegCtrls(block, seg, mount, canDuplicate) {
     avgSave(block);
     renderAvatarsBlock(block, mount);
   };
+  // A rule before delete, as in every other toolbar on the page.
+  const delSep = document.createElement('span');
+  delSep.className = 'blk-bar-sep';
+  ctrls.appendChild(delSep);
   ctrls.appendChild(del);
 
   return ctrls;
