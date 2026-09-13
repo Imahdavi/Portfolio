@@ -117,10 +117,8 @@
     /* Little spider that hangs permanently from a thread above the
        name — no drop/retract cycle, it just stays down. Anchored to
        .profile-header-wrap (position:relative, above), independent of
-       the avatar's own positioning system. Its eyes track the cursor
-       — see the mousemove handler near the other profile-header
-       scripts, which nudges .pupil circles a fraction of a viewBox
-       unit toward wherever the pointer is.
+       the avatar's own positioning system. The drawing is a line icon
+       with no eyes, so there is no longer anything tracking the cursor.
 
        No CSS sway animation here on purpose — the swing is driven by
        a real spring-physics rAF loop (see "Site spider pendulum
@@ -146,15 +144,20 @@
     }
     .site-spider .rope-path { fill:none; stroke:rgba(0,0,0,.3); stroke-width:1px; }
     body.dark .site-spider .rope-path { stroke:rgba(255,255,255,.32); }
-    body.dark .site-spider .spider-body g { stroke:var(--d-text); }
-    body.dark .site-spider .spider-body ellipse[rx="8.3"] { fill:var(--d-text); }
-    body.dark .site-spider .spider-body ellipse[rx="3.0"] { fill:var(--d-bg); }
-    body.dark .site-spider .spider-body .pupil { fill:var(--d-text); }
+    /* One colour, drawn through currentColor, so dark mode is a single
+       swap rather than a rule per shape keyed on its attributes. */
     .site-spider .spider-body {
-      position:absolute; bottom:0; left:50%; margin-left:-11.5px;
-      transform-origin:50% 0%; display:block;
+      /* Half its 27px width, so the head is centred on the thread. The old
+         -11.5 set it 2px to the right, hidden by a round filled body and
+         obvious on a thin ring. */
+      position:absolute; bottom:0; left:50%; margin-left:-13.5px;
+      color:#1a1a1a;
+      /* Swings from where the thread meets it — the top of the head, 6.9px
+         down this box — not from the box's top edge, which sits above the
+         head at the raised front legs. */
+      transform-origin:50% 6.9px; display:block;
     }
-    .site-spider .pupil { transition:transform .1s linear; }
+    body.dark .site-spider .spider-body { color:var(--d-text); }
     /* Positioning root for the avatar overlap — its box height comes
        from .profile-name-display (two lines), so the avatar (centered
        via .avatar-overlay-slot) lands on the seam between them. */
@@ -4362,22 +4365,29 @@
         <svg class="spider-rope" overflow="visible">
           <path class="rope-path" d="M10,0 L10,30"/>
         </svg>
-        <svg class="spider-body" viewBox="0 0 32 26" width="27" height="22">
-          <g stroke="#1a1a1a" stroke-width="1.4" stroke-linecap="round" fill="none">
-            <path d="M11 10 C6 8, 3 6, 1 4"/>
-            <path d="M11 12 C5 11, 2 11, 0 11"/>
-            <path d="M11 14 C5 15, 2 17, 0 19"/>
-            <path d="M11 16 C6 18, 4 21, 2 24"/>
-            <path d="M21 10 C26 8, 29 6, 31 4"/>
-            <path d="M21 12 C27 11, 30 11, 32 11"/>
-            <path d="M21 14 C27 15, 30 17, 32 19"/>
-            <path d="M21 16 C26 18, 28 21, 30 24"/>
-          </g>
-          <ellipse cx="16" cy="13" rx="8.3" ry="7.8" fill="#1a1a1a"/>
-          <ellipse cx="12.4" cy="10.7" rx="3.0" ry="3.7" fill="#fff"/>
-          <ellipse cx="19.6" cy="10.7" rx="3.0" ry="3.7" fill="#fff"/>
-          <circle class="pupil" cx="12.4" cy="10.7" r="1.45" fill="#1a1a1a"/>
-          <circle class="pupil" cx="19.6" cy="10.7" r="1.45" fill="#1a1a1a"/>
+        <!-- Traced from the line icon onto a 24-unit grid (its 512px art at
+             0.046875), stroke kept at the original's proportion. Its own
+             thread is left out: the page draws the real one, down from the
+             M, and it meets this at the top of the head, between the two
+             raised front legs where the icon's line ran.
+
+             viewBox cropped to the drawing plus half a stroke, so the box
+             is the spider and nothing else — BODY_TOP_GAP and the tagline
+             clearance both measure this box. -->
+        <svg class="spider-body" viewBox="4.2 5.3 15.6 18.6" width="27" height="32" fill="none"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.3 10.8 7.4 8.3 9.4 6.3"/>
+          <path d="M13.7 10.8 16.6 8.3 14.6 6.3"/>
+          <path d="M9.6 11.6 5.9 11.2 5.1 9.4"/>
+          <path d="M14.4 11.6 18.1 11.2 18.9 9.4"/>
+          <path d="M10.5 13.4 7.5 14.8 7.5 20.6"/>
+          <path d="M11 14.5 9.8 15.9 9.8 23"/>
+          <path d="M13 14.5 14.2 15.9 14.2 23"/>
+          <path d="M13.5 13.4 16.5 14.8 16.5 15.7"/>
+          <circle cx="16.5" cy="17.7" r=".75" fill="currentColor" stroke="none"/>
+          <path d="M16.5 19.6v1"/>
+          <circle cx="12" cy="15.47" r="1.1"/>
+          <circle cx="12" cy="12" r="2"/>
         </svg>
       </div>
       <div class="profile-name-block">
@@ -15141,7 +15151,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const damping = 0.92, stiffness = 0.02;
   let t = 0;
   let anchorFrame = 0;
-  const BODY_TOP_GAP = 17.6; // (26 - 5.2) / 26 * 22px SVG height
+  // Box height below the top of the head, where the thread attaches: the
+  // head's outer top is at y 9.28 in a viewBox running from 5.3 over 18.6
+  // units, drawn 32px tall — (18.6 - (9.28 - 5.3)) / 18.6 * 32.
+  const BODY_TOP_GAP = 25.2;
 
   function tick() {
     // The spider hangs off the home header; on any other view it is inside a
@@ -15193,42 +15206,6 @@ document.addEventListener('DOMContentLoaded', () => {
   tick();
 })();
 
-/* ── Site spider eye-tracking ──────────────────────────────
-   Nudges the two pupil circles a fraction of a viewBox unit toward
-   wherever the cursor is. maxOffset (1.5 viewBox units) is deliberately
-   just shy of the white eye's own radius (rx:3.0) so the pupil always
-   stays inside it. rAF-throttled so a rapid mousemove burst still only
-   costs one getBoundingClientRect() + one style write per frame.
-   Selects .spider-body specifically (not spider .rope which is also
-   an <svg>, and sits first in DOM order) since that's the one with
-   the eyes on it. */
-(function () {
-  const spider = document.querySelector('.site-spider');
-  if (!spider) return;
-  const pupils = spider.querySelectorAll('.pupil');
-  const svg = spider.querySelector('.spider-body');
-  if (!pupils.length || !svg) return;
-
-  const maxOffset = 1.5;
-  let mx = 0, my = 0, rafPending = false;
-
-  function update() {
-    rafPending = false;
-    const rect = svg.getBoundingClientRect();
-    const cx = rect.left + rect.width * 0.5;
-    const cy = rect.top + rect.height * 0.44; // eyes sit slightly above the SVG's own vertical center
-    const dx = mx - cx, dy = my - cy;
-    const dist = Math.hypot(dx, dy) || 1;
-    const ox = (dx / dist) * maxOffset;
-    const oy = (dy / dist) * maxOffset;
-    pupils.forEach(p => p.style.transform = `translate(${ox}px, ${oy}px)`);
-  }
-
-  window.addEventListener('mousemove', (e) => {
-    mx = e.clientX; my = e.clientY;
-    if (!rafPending) { rafPending = true; requestAnimationFrame(update); }
-  });
-})();
 
 /* ── Experience tab's star Lottie ────────────────────────
    Plays once on load (a little hello), then replays from frame 0 every
