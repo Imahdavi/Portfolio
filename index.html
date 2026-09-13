@@ -1404,6 +1404,46 @@
     /* ─────────────────── NOTE PAGE ─────────────────── */
 
 
+    /* ── Block toolbar ──────────────────────────────────────────────
+       One pill per block, in a strip reserved above it. What was here
+       before was four loose round buttons along the top edge of whatever
+       they belonged to — on the artwork, on the text, on the Add avatar
+       tile — and on a short block there was no top edge to speak of, so
+       they covered most of it. Above the block instead: nothing is ever
+       hidden behind a control, and the targets can be a usable size.
+
+       Same dark pill as the avatar and segment toolbars, because it is
+       the same idea and there is no reason for the page to have two
+       vocabularies for it. */
+    .blk-bar {
+      display:none; position:absolute; top:4px; right:0;
+      z-index:60; align-items:center; gap:1px;
+      background:#1a1a1a; border-radius:9px; padding:3px;
+      box-shadow:0 4px 14px rgba(0,0,0,.22);
+    }
+    .edit-on .blk-bar { display:flex; }
+    .blk-bar-btn {
+      width:26px; height:26px; border-radius:6px; border:none; background:none;
+      color:rgba(255,255,255,.82); cursor:pointer; padding:0;
+      display:flex; align-items:center; justify-content:center;
+      transition:background .12s, color .12s;
+    }
+    .blk-bar-btn:hover { background:rgba(255,255,255,.15); color:#fff; }
+    .blk-bar-btn:focus-visible { outline:2px solid #fff; outline-offset:-2px; }
+    .blk-bar-btn svg { width:15px; height:15px; display:block; pointer-events:none; }
+    /* Set apart from the rest so it is never the one hit by being a few
+       pixels out, and red only on approach — a permanently red button in
+       every toolbar would be the loudest thing on the board. */
+    .blk-bar-sep { width:1px; height:16px; background:rgba(255,255,255,.18); margin:0 3px; }
+    .blk-bar-del:hover { background:#dc2626; color:#fff; }
+    .blk-grip-top { align-self:flex-start; margin-top:4px; }
+    /* Opens under the bar, hanging left from its right edge, so it never
+       covers the block it is resizing. */
+    /* Doubled selector: the .resize-menu base it overrides is declared
+       further down the sheet, and at equal specificity source order is
+       what decides. */
+    .resize-menu.block-width-menu { top:calc(100% + 6px); right:0; left:auto; bottom:auto; }
+
     /* ── Toast, ported from 21st.dev's "Promise Toast" (@cnippet-dev) ──
        A promise toast: it opens pending, then resolves in place into a
        success or an error rather than being replaced. That is why the
@@ -1481,6 +1521,17 @@
     .toast-text  { display:flex; flex-direction:column; gap:2px; min-width:0; }
     .toast-title { margin:0; font-size:14px; font-weight:500; line-height:20px; }
     .toast-desc  { margin:0; font-size:14px; font-weight:400; line-height:20px; color:var(--toast-muted); }
+    /* The undo. Right of the text and vertically centred against it, so
+       the toast reads as a sentence with its remedy on the end. */
+    .toast-action {
+      margin-left:auto; align-self:center; flex:none;
+      padding:5px 10px; border-radius:7px;
+      border:1px solid var(--toast-edge); background:none;
+      font-family:inherit; font-size:12.5px; font-weight:500;
+      color:var(--toast-fg); cursor:pointer;
+      transition:background .15s, border-color .15s;
+    }
+    .toast-action:hover { background:var(--toast-edge); }
     @media (prefers-reduced-motion:reduce) {
       .toast { transition:opacity .2s; transform:none; }
       .toast-icon .toast-spin { animation:none; }
@@ -1946,7 +1997,9 @@
       grid-column:1 / span 6; transition:box-shadow .2s;
       box-sizing:border-box;
     }
-    .edit-on .block { padding:0; cursor:grab; }
+    /* The strip the block toolbar sits in; see .blk-bar. Edit mode only,
+       so nothing about the published page moves. */
+    .edit-on .block { padding:36px 0 0; cursor:grab; }
     .edit-on .block:active { cursor:grabbing; }
     .edit-on .block-text, .edit-on .block video, .edit-on .block button { cursor:auto; }
     .edit-on .resize-corner { cursor:ns-resize !important; }
@@ -2382,28 +2435,16 @@
     .edit-on .tstack-name, .edit-on .tstack-sub { cursor:text; }
     .tstack-size { display:none; margin-top:6px; }
     .edit-on .tstack-size { display:block; }
-    /* The block's round controls sit at the top-right of its box, and
-       neither of these blocks is much taller than they are — they landed
-       on the icons, the label, the Add avatar tile. In edit mode both
-       start below them instead, so all of it is reachable. */
-    .edit-on .block-toolstack,
-    .edit-on .block-avatars { padding-top:34px; }
     /* The shared drag handle is vertically centred, which is right for a
        text block and wrong for one that grows: an opened stack put its
        grip a hundred pixels down the block, floating beside whichever row
        happened to be there. These keep it at the top, level with the
        thing it moves. */
-    .blk-grip-top { align-self:flex-start; margin-top:38px; }
-    /* Four 22px buttons and their gaps need about 114px of top edge. At a
-       sixth of the board there are 82, so anchored from the right they
-       ran off the left of the page entirely. On a block that narrow they
-       are anchored from the left instead and overhang into the space
-       beside it, which at least keeps them on screen and clickable. */
-    .blk-ctrls-left .block-del       { right:auto; left:0;    }
-    .blk-ctrls-left .block-move      { right:auto; left:28px; }
-    .blk-ctrls-left .block-dup       { right:auto; left:56px; }
-    .blk-ctrls-left .block-width-btn { right:auto; left:84px; }
-    .blk-ctrls-left .block-width-menu { right:auto; left:0; top:36px; }
+    /* One pill is 140px at its widest and a sixth of the board is 82, so
+       on the narrowest blocks it hangs left of its own box rather than
+       running off the page. */
+    .blk-ctrls-left .blk-bar { right:auto; left:0; }
+    .blk-ctrls-left .resize-menu.block-width-menu { right:auto; left:0; }
 
     /* Edit-mode affordances. The add plate joins the stack so a new icon
        lands where it will actually sit, rather than in a separate tray. */
@@ -3053,47 +3094,6 @@
     .pos-opt.active { background:rgba(255,255,255,.18); color:#fff; }
     .rsz-divider { height:1px; background:rgba(255,255,255,.1); margin:3px 6px; }
 
-    /* Delete btn (edit mode only) */
-    .block-del {
-      display:none;
-      position:absolute; top:8px; right:8px;
-      width:22px; height:22px; border-radius:50%;
-      background:#ff4444; border:none; cursor:pointer;
-      color:#fff; font-size:14px; line-height:1;
-      align-items:center; justify-content:center;
-      transition:transform .15s;
-    }
-    .edit-on .block-del { display:flex; }
-    .block-del:hover { transform:scale(1.15); }
-
-    /* Move-to-board btn (edit mode only) */
-    .block-move {
-      display:none;
-      position:absolute; top:8px; right:36px;
-      width:22px; height:22px; border-radius:50%;
-      background:rgba(26,23,20,.7); border:none; cursor:pointer;
-      align-items:center; justify-content:center;
-      transition:transform .15s;
-    }
-    .edit-on .block-move { display:flex; }
-    .block-move:hover { transform:scale(1.15); }
-    .block-move svg { width:13px; height:13px; }
-
-    /* Duplicate btn (edit mode only) — copies the whole block/section
-       (segments, avatars, text, etc.) as a new block right after it, so
-       it can then be moved to a different board via .block-move. */
-    .block-dup {
-      display:none;
-      position:absolute; top:8px; right:64px;
-      width:22px; height:22px; border-radius:50%;
-      background:rgba(26,23,20,.7); border:none; cursor:pointer;
-      align-items:center; justify-content:center;
-      transition:transform .15s;
-    }
-    .edit-on .block-dup { display:flex; }
-    .block-dup:hover { transform:scale(1.15); }
-    .block-dup svg { width:13px; height:13px; }
-
     /* The segment toolbar and an avatar's own toolbar were positioned
        identically — same offset above, same centring, same z-index — so
        on a one-avatar segment they landed on top of each other and the
@@ -3106,24 +3106,7 @@
        buttons; anywhere else in the segment — the handle, the "\ at"
        text, the padding — you get the segment's. */
     .edit-on .avg-seg:has(.avg-item:hover) .avg-seg-ctrls { display:none; }
-
-    /* Width control for the blocks with no media wrap to hang one in.
-       Sits left of Duplicate, in the same row of round buttons. */
-    .block-width-btn {
-      display:none;
-      position:absolute; top:8px; right:92px;
-      width:22px; height:22px; border-radius:50%;
-      background:rgba(26,23,20,.7); border:none; cursor:pointer;
-      color:#fff; align-items:center; justify-content:center;
-      transition:transform .15s;
-    }
-    .edit-on .block-width-btn { display:flex; }
-    .block-width-btn:hover { transform:scale(1.15); }
     .block-width-btn svg { width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
-    /* Beside the button row rather than under it: these blocks are short,
-       and a menu dropping from the top edge covered the very thing being
-       resized. */
-    .block-width-menu { top:5px; right:120px; left:auto; bottom:auto; }
     .move-menu {
       display:none; position:fixed; z-index:1000;
       min-width:150px; max-height:220px; overflow-y:auto;
@@ -5939,6 +5922,9 @@ const SVG_RESIZE  = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"
 const SVG_LINK    = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>`;
 const SVG_MOVE    = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4l7 8-7 8"/><path d="M2 12h17"/></svg>`;
 const SVG_DUP      = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>`;
+/* currentColor, unlike the two above, so the toolbar can tint it red
+   on hover without swapping the markup. */
+const SVG_TRASH    = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>`;
 const SVG_CROP     = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A1714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.13 1L6 16a2 2 0 0 0 2 2h15"/><path d="M1 6.13L16 6a2 2 0 0 1 2 2v15"/></svg>`;
 
 /* ─── Layout presets ───────────────────────────────────── */
@@ -10442,10 +10428,12 @@ function showToast(opts) {
   el.className = 'toast';
   el.setAttribute('role', 'status');
   el.innerHTML = '<span class="toast-icon"></span>' +
-                 '<div class="toast-text"><h2 class="toast-title"></h2><p class="toast-desc"></p></div>';
+                 '<div class="toast-text"><h2 class="toast-title"></h2><p class="toast-desc"></p></div>' +
+                 '<button type="button" class="toast-action" hidden></button>';
   const iconEl  = el.querySelector('.toast-icon');
   const titleEl = el.querySelector('.toast-title');
   const descEl  = el.querySelector('.toast-desc');
+  const actEl   = el.querySelector('.toast-action');
 
   let timer = 0, closed = false;
 
@@ -10454,6 +10442,15 @@ function showToast(opts) {
     if (o.type) { el.dataset.type = o.type; iconEl.innerHTML = TOAST_ICONS[o.type] || ''; }
     if (o.title != null) titleEl.textContent = o.title;
     if (o.desc  != null) { descEl.textContent = o.desc; descEl.hidden = !o.desc; }
+    // An action turns the toast into the undo path for whatever just
+    // happened, which is why a destructive edit can skip its confirm.
+    if (o.action !== undefined) {
+      actEl.hidden = !o.action;
+      if (o.action) {
+        actEl.textContent = o.action.label || 'Undo';
+        actEl.onclick = (e) => { e.stopPropagation(); close(); o.action.onClick(); };
+      }
+    }
     clearTimeout(timer);
     // A pending toast has no end of its own — it waits for the promise.
     if (o.duration) timer = setTimeout(close, o.duration);
@@ -11955,6 +11952,7 @@ function makeBlockEl(block, proj) {
      what kept an avatar row and a tool stack from ever sharing a line.
      With a width set, the free 2D drag already on every block does the
      rest: drag one to the left half, the other to the right. */
+  let wBtn = null, wMenu = null;
   if (block.type === 'avatars' || block.type === 'toolstack') {
     /* A drag handle, the way text blocks get one. The free 2D drag is
        bound on the wrap and skips buttons and editable text — and these
@@ -11975,13 +11973,13 @@ function makeBlockEl(block, proj) {
     const narrowCtrls = () => wrap.classList.toggle('blk-ctrls-left', (block._cols || 6) <= 2);
     narrowCtrls();
 
-    const wBtn = document.createElement('button');
-    wBtn.className = 'block-width-btn';
+    wBtn = document.createElement('button');
+    wBtn.className = 'block-width-btn blk-bar-btn';
     wBtn.type = 'button';
     wBtn.title = 'Width';
     wBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 8v8M20 8v8M7 12h10"/><path d="M7 12l2.5-2.5M7 12l2.5 2.5M17 12l-2.5-2.5M17 12l-2.5 2.5"/></svg>';
 
-    const wMenu = document.createElement('div');
+    wMenu = document.createElement('div');
     wMenu.className = 'resize-menu block-width-menu';
     const wLbl = document.createElement('div');
     wLbl.className = 'rsz-section-lbl';
@@ -12047,32 +12045,56 @@ function makeBlockEl(block, proj) {
       document.querySelectorAll('.resize-menu.open').forEach(m => { if (m !== wMenu) m.classList.remove('open'); });
       wMenu.classList.toggle('open');
     };
-    btnHost.appendChild(wBtn);
-    btnHost.appendChild(wMenu);
   }
 
-  // duplicate button — top-right of the visible box, left of move
+  /* One toolbar, above the block rather than on it.
+
+     These were four loose round buttons scattered along the top edge of
+     whatever they belonged to, sitting on the artwork, the text, the Add
+     avatar tile — and on a short block there was no top edge to speak of,
+     so they covered most of it. Edit mode now reserves a strip above
+     every block and the toolbar lives there, which means nothing is ever
+     hidden behind a control and the targets can be a usable size.
+
+     Anchored to the visible box, not the grid column: a portrait image in
+     a wide column would otherwise leave its buttons floating off to one
+     side, which is why they were on the thumbnail to begin with. */
+  const bar = document.createElement('div');
+  bar.className = 'blk-bar';
+  bar.addEventListener('pointerdown', (e) => e.stopPropagation());
+
   const dup = document.createElement('button');
-  dup.className = 'block-dup';
+  dup.type = 'button';
+  dup.className = 'block-dup blk-bar-btn';
   dup.innerHTML = SVG_DUP;
   dup.title = 'Duplicate section';
   dup.onclick = (e) => { e.stopPropagation(); duplicateBlock(block.id); };
-  btnHost.appendChild(dup);
 
-  // move-to-board button — top-right of the visible box, left of delete
   const move = document.createElement('button');
-  move.className = 'block-move';
+  move.type = 'button';
+  move.className = 'block-move blk-bar-btn';
   move.innerHTML = SVG_MOVE;
   move.title = 'Move to board';
   move.onclick = (e) => { e.stopPropagation(); openMoveMenu(move, block.id); };
-  btnHost.appendChild(move);
 
-  // delete button — top-right of the visible box
   const del = document.createElement('button');
-  del.className = 'block-del';
-  del.textContent = '×';
-  del.onclick = () => deleteBlock(block.id);
-  btnHost.appendChild(del);
+  del.type = 'button';
+  del.className = 'block-del blk-bar-btn blk-bar-del';
+  del.innerHTML = SVG_TRASH;
+  del.title = 'Delete section';
+  del.onclick = (e) => { e.stopPropagation(); deleteBlock(block.id); };
+
+  // Width first where it exists, then the two that make copies, then the
+  // one that destroys — behind a rule, so it is never the button you hit
+  // by being a few pixels out.
+  if (wBtn) { bar.appendChild(wBtn); bar.appendChild(wMenu); }
+  bar.appendChild(dup);
+  bar.appendChild(move);
+  const sep = document.createElement('span');
+  sep.className = 'blk-bar-sep';
+  bar.appendChild(sep);
+  bar.appendChild(del);
+  wrap.appendChild(bar);
 
   // migrate old layout data and apply grid position
   migrateBlockLayout(block);
@@ -13485,18 +13507,52 @@ function pickLottie(key) {
   saveProject(activeKey);
 }
 
+/* Deleting is undoable rather than confirmed. A dialog in front of every
+   removal taxes the ninety-nine deletions you meant for the one you did
+   not; an undo costs nothing until it is needed. The block and where it
+   sat are held in the closure, so restoring puts it back in its place
+   rather than at the end. */
 function deleteBlock(id) {
   const proj = PROJECTS[activeKey];
-  const block = proj.blocks.find(b => b.id === id);
-  if (block?._lottieInst) { try { block._lottieInst.destroy(); } catch(e){} }
-  proj.blocks = proj.blocks.filter(b => b.id !== id);
+  const idx = proj.blocks.findIndex(b => b.id === id);
+  if (idx === -1) return;
+  const block = proj.blocks[idx];
+  const key = activeKey;
+  // The lottie instance is a live runtime object, not data. Stopped now
+  // so it is not left animating against a detached node; restoring
+  // re-renders the block, which builds a fresh one.
+  if (block._lottieInst) { try { block._lottieInst.destroy(); } catch(e){} delete block._lottieInst; }
+
+  proj.blocks.splice(idx, 1);
   const el = document.querySelector(`[data-id="${id}"]`);
   if (el) {
     el.style.animation = 'fadeUp .2s reverse ease both';
     setTimeout(() => el.remove(), 180);
   }
-  saveProject(activeKey);
+  saveProject(key);
+
+  const label = BLOCK_LABELS[block.type] || 'Section';
+  showToast({
+    type: 'success', title: label + ' deleted', duration: 7000,
+    action: { label: 'Undo', onClick: () => {
+      const p = PROJECTS[key];
+      if (!p) return;
+      // Clamped: other edits may have landed while the toast was up.
+      p.blocks.splice(Math.min(idx, p.blocks.length), 0, block);
+      saveProject(key);
+      if (activeKey === key) renderBlocks();
+      else showToast({ type: 'success', title: label + ' restored',
+                       desc: 'On ' + (p.name || key), duration: 4000 });
+    } }
+  });
 }
+
+// What the toast calls the thing that just went. "Section deleted" is
+// true of all of them and useful about none.
+const BLOCK_LABELS = {
+  image: 'Image', video: 'Video', text: 'Text', divider: 'Divider',
+  avatars: 'Avatar row', toolstack: 'Tool stack', carousel: 'Carousel',
+};
 
 // Deep-clones a block (JSON round-trip, stripping transient runtime
 // fields like _lottieInst first) and mints fresh ids for it and any
