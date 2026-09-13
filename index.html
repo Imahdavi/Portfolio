@@ -2346,11 +2346,26 @@
     .tstack-chev svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
     .tstack.open .tstack-chev { transform:rotate(180deg); }
 
-    /* The first row sat straight under the header. The source sets the
-       two apart and so does this. */
-    .tstack-body { overflow:hidden; max-height:0; opacity:0; transition:max-height .2s, opacity .2s; }
-    .tstack.open .tstack-body { padding-top:9px; }
-    .tstack.open .tstack-body { max-height:2000px; opacity:1; }
+    /* Opens on grid-template-rows, not max-height. A max-height run from
+       0 to some number large enough for any list reaches the real height
+       in the first fraction of the transition and spends the rest going
+       nowhere — so everything below the block snapped down and then
+       waited. 0fr to 1fr animates the row's actual height, whatever that
+       turns out to be, and the page follows it the whole way.
+
+       The inner wrapper is what the trick needs: the grid row is what
+       animates, and its child is what gets clipped. Padding lives on the
+       wrapper too, but as a margin on the first row rather than padding
+       on the wrapper: padding is not covered by min-height:0, so it
+       survived the collapse and left a 9px gap under a shut stack. */
+    .tstack-body {
+      display:grid; grid-template-rows:0fr; opacity:0;
+      transition:grid-template-rows .3s cubic-bezier(.4,0,.2,1), opacity .2s;
+    }
+    .tstack.open .tstack-body { grid-template-rows:1fr; opacity:1; }
+    .tstack-list { overflow:hidden; min-height:0; }
+    .tstack-list > .tstack-row:first-child { margin-top:9px; }
+     (prefers-reduced-motion:reduce) { .tstack-body { transition:opacity .15s; } }
     .tstack-row { display:flex; align-items:stretch; gap:8px; }
     .tstack-rail { display:flex; flex-direction:column; align-items:center; align-self:stretch; }
     .tstack-rail .tstack-plate { margin:0; }
@@ -2367,6 +2382,11 @@
     .edit-on .tstack-name, .edit-on .tstack-sub { cursor:text; }
     .tstack-size { display:none; margin-top:6px; }
     .edit-on .tstack-size { display:block; }
+    /* The block's round controls sit at the top-right of its box, and a
+       collapsed stack is barely taller than they are — they landed on
+       the icons and the label. In edit mode the stack starts below them
+       instead, so both are reachable. */
+    .edit-on .block-toolstack { padding-top:34px; }
 
     /* Edit-mode affordances. The add plate joins the stack so a new icon
        lands where it will actually sit, rather than in a separate tray. */
@@ -3083,7 +3103,10 @@
     .edit-on .block-width-btn { display:flex; }
     .block-width-btn:hover { transform:scale(1.15); }
     .block-width-btn svg { width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
-    .block-width-menu { top:36px; right:8px; left:auto; bottom:auto; }
+    /* Beside the button row rather than under it: these blocks are short,
+       and a menu dropping from the top edge covered the very thing being
+       resized. */
+    .block-width-menu { top:5px; right:120px; left:auto; bottom:auto; }
     .move-menu {
       display:none; position:fixed; z-index:1000;
       min-width:150px; max-height:220px; overflow-y:auto;
@@ -12794,6 +12817,11 @@ function renderToolStackBlock(block, mount) {
 
   const body = document.createElement('div');
   body.className = 'tstack-body';
+  // The grid-row open animates this wrapper's height; the list inside is
+  // what gets clipped while it does. See .tstack-body.
+  const list = document.createElement('div');
+  list.className = 'tstack-list';
+  body.appendChild(list);
   block.tools.forEach((t, i) => {
     const row = document.createElement('div');
     row.className = 'tstack-row';
@@ -12882,7 +12910,7 @@ function renderToolStackBlock(block, mount) {
       text.appendChild(size);
     }
     row.appendChild(text);
-    body.appendChild(row);
+    list.appendChild(row);
   });
   root.appendChild(body);
   mount.appendChild(root);
