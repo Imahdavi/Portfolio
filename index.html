@@ -2200,7 +2200,24 @@
        It sits over a video that has not got its data yet — the state the
        lazy loader leaves media in while it waits its turn — and hands
        over at 100%, fading out as the clip fades in. */
-    @keyframes mloadPixel  { 0%, 100% { opacity:.12; } 50% { opacity:1; } }
+    /* The glyph is 21st.dev's "Diamond" (@theshanelevine), which replaced
+       the Loading State's own 3x3 grid: eight 4-unit pixels on a 20-unit
+       ring, each flashing on for a hundredth of its 0.8s cycle and fading
+       out over the rest, staggered 0.1s apart so the lit one travels
+       round. Its geometry, timings and delays are the source's; it is
+       drawn straight into the markup rather than through a component, and
+       the delays live in CSS rather than in eight generated classes. */
+    @keyframes mloadSpin { 0% { opacity:0; } 1% { opacity:1; } 100% { opacity:0; } }
+    .mload-mark { width:17px; height:17px; display:block; flex:none; fill:currentColor; }
+    .mload-mark rect { animation:mloadSpin .8s ease-in-out infinite; opacity:0; }
+    .mload-mark rect:nth-of-type(1) { animation-delay:0s;   }
+    .mload-mark rect:nth-of-type(2) { animation-delay:.1s;  }
+    .mload-mark rect:nth-of-type(3) { animation-delay:.2s;  }
+    .mload-mark rect:nth-of-type(4) { animation-delay:.3s;  }
+    .mload-mark rect:nth-of-type(5) { animation-delay:.4s;  }
+    .mload-mark rect:nth-of-type(6) { animation-delay:.5s;  }
+    .mload-mark rect:nth-of-type(7) { animation-delay:.6s;  }
+    .mload-mark rect:nth-of-type(8) { animation-delay:.7s;  }
     @keyframes mloadShimmer { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
 
     .mload {
@@ -2213,11 +2230,6 @@
     body.dark .mload { color:#e6e7e8; --mload-dim:rgba(230,231,232,.45); }
     .mload.is-done { opacity:0; }
     .mload-row { display:flex; align-items:center; gap:10px; }
-    .mload-grid { display:grid; grid-template-columns:repeat(3, 4px); gap:1.5px; }
-    .mload-grid i {
-      width:4px; height:4px; border-radius:1px; background:currentColor;
-      opacity:.12; animation:mloadPixel .65s ease-in-out infinite;
-    }
     /* The label is painted by a gradient clipped to the glyphs, which is
        why it needs a transparent colour — the sweep is the animation. */
     .mload-lbl {
@@ -2246,13 +2258,17 @@
        overlay over one is always the light pairing. */
     .media-wrap .media-inner .mload { color:#e6e7e8; --mload-dim:rgba(230,231,232,.45); }
     /* Every tile in every row exists from the start, and only the ones
-       scrolled to are ever revealed — leaving nine blinking pixels plus a
+       scrolled to are ever revealed — leaving a travelling ring plus a
        shimmer running in each of the rest would be hundreds of animations
-       for something nobody is looking at. */
-    .pli-tile:not([data-revealed]) .mload-grid i,
+       for something nobody is looking at. The ring rests at 0 opacity
+       between flashes, so stopping it has to light it back up or the
+       glyph would simply not be there. */
+    .pli-tile:not([data-revealed]) .mload-mark rect,
     .pli-tile:not([data-revealed]) .mload-lbl { animation:none; }
+    .pli-tile:not([data-revealed]) .mload-mark rect { opacity:.55; }
     @media (prefers-reduced-motion:reduce) {
-      .mload-grid i, .mload-lbl { animation:none; }
+      .mload-mark rect, .mload-lbl { animation:none; }
+      .mload-mark rect { opacity:.55; }
       .mload-lbl { color:currentColor; }
       video.mload-shown { transition:none; }
     }
@@ -7984,7 +8000,14 @@ function listMediaFor(key, fallbackThumb) {
   const media = proj
     ? (proj.blocks || [])
         .filter(b => (b.type === 'image' || b.type === 'video') && b.content && !hidden.has(b.content))
-        .map(b => ({ id: b.id, type: b.type, src: b.content, link: links[b.content] || '' }))
+        // w/h are the file's own pixel dimensions if they have been seen
+        // before, so the frame can be the right shape before the file is
+        // fetched at all; fa is the board's box as the fallback guess.
+        .map(b => {
+          const sz = getMediaSize(b.content);
+          return { id: b.id, type: b.type, src: b.content, link: links[b.content] || '',
+                   w: sz ? sz[0] : 0, h: sz ? sz[1] : 0, fa: b._freeAspect || 0 };
+        })
     : [];
   // Then this row's own additions, which exist only here. Skipped if the
   // board already carries the same file, so re-adding something that is
@@ -8285,12 +8308,36 @@ function buildProjectListItem(card) {
       // default), so CSS holds a placeholder ratio and this swaps in the
       // real one — unless a manual crop ratio overrides it.
       const applyAspect = () => {
-        if (getListCrop(card.key)[m.src]) return;
         const w = el.videoWidth || el.naturalWidth;
         const h = el.videoHeight || el.naturalHeight;
-        if (w && h) tile.style.aspectRatio = w + ' / ' + h;
+        if (!w || !h) return;
+        // Learn the shape while it is here to be learned, so the next
+        // visit can frame this file correctly before fetching it. Recorded
+        // even under a crop: a crop can be cleared later, and the file's
+        // own shape is what it falls back to.
+        rememberMediaSize(m.src, w, h);
+        if (cropRatio) return;
+        tile.style.aspectRatio = w + ' / ' + h;
       };
-      if (cropRatio) tile.style.aspectRatio = CROP_RATIOS[cropRatio] || '';
+      if (cropRatio) {
+        tile.style.aspectRatio = CROP_RATIOS[cropRatio] || '';
+      } else if (m.w && m.h) {
+        tile.style.aspectRatio = m.w + ' / ' + m.h;
+      } else if (m.fa) {
+        /* The CSS placeholder is 4/3, so every tile landed wide and then
+           snapped on load — wrong for most of these, since a good third
+           of them are 9:16 reels.
+
+           The board already knew better. _freeAspect is the box the media
+           was drawn into on its project page, and those were drawn to fit
+           what is inside them: the portrait ones sit at 0.563, which is
+           9/16 to three decimals. It is on 151 of the 195 media blocks and
+           costs nothing to read, so it frames the tile until the file
+           arrives with its exact shape — and applyAspect then records that
+           exact shape on the block, so the guess is only ever needed once
+           per file. */
+        tile.style.aspectRatio = String(m.fa);
+      }
       el.addEventListener(m.type === 'video' ? 'loadedmetadata' : 'load', applyAspect);
       if (m.type === 'video') {
         // Muted+playsInline so it can autoplay; these are short loops, so
@@ -9381,6 +9428,45 @@ const STRIP_MAX_RETRIES = 2;
 // a request was started, which is not the same thing at all.
 function _stripPlayable(v) { return v.readyState >= 2; }
 
+/* ─── Remembering a file's shape ───────────────────────────────────
+   A media block stores the box it was drawn in, never the pixel size of
+   the file inside it, so the Brand strip had nothing to frame a tile
+   with until the file itself arrived and reported. Everything started at
+   the CSS placeholder's 4/3 and snapped on load, which is wrong for most
+   of these — the reels are 9:16.
+
+   So the shape is recorded the first time it is observed. It goes in
+   settings, keyed by src, next to the strip's own crops and link
+   overrides — not onto the board block, because the Brand list is a view
+   and nothing there may write to a Category board. Keyed by src rather
+   than by block for the same reason the crops are: one file used on two
+   boards is the same shape both times.
+
+   Only the admin writes: a visitor learning a dimension has nowhere to
+   put it, and a save fired off on a stranger's page load would be
+   nothing but traffic. One pass over the Brand tab records the lot. */
+let _mediaSizeTimer = 0;
+
+function getMediaSize(src) {
+  const all = _cachedSettings && _cachedSettings.mediaSizes;
+  const got = src && all && all[src];
+  return (Array.isArray(got) && got.length === 2) ? got : null;
+}
+
+function rememberMediaSize(src, w, h) {
+  if (!src || !w || !h) return;
+  if (!document.body.classList.contains('is-admin')) return;
+  const had = getMediaSize(src);
+  if (had && had[0] === w && had[1] === h) return;
+  if (!_cachedSettings) _cachedSettings = {};
+  if (!_cachedSettings.mediaSizes) _cachedSettings.mediaSizes = {};
+  _cachedSettings.mediaSizes[src] = [w, h];
+  // Batched: a strip reports a dozen files within a few frames of each
+  // other, and settings is one row to save either way.
+  clearTimeout(_mediaSizeTimer);
+  _mediaSizeTimer = setTimeout(saveSettings, 2500);
+}
+
 /* ─── Media loading state ──────────────────────────────────────────
    See the .mload rules for where the look came from. One call per
    video: it draws the overlay into `host` (which must be the
@@ -9395,9 +9481,21 @@ function _stripPlayable(v) { return v.readyState >= 2; }
    shorter one after a seek, and a counter that walked backwards would
    read as a fault. */
 
-// The pixel delays are the source's, in its order: a 3x3 grid lit in a
-// loose diagonal rather than a scan.
-const MLOAD_DELAYS = [90, 180, 270, 0, 90, 180, 90, 180, 270];
+/* The Diamond's eight pixels, in the source's order — top, then
+   clockwise — on its 20-unit viewBox. Written out rather than generated
+   from an angle so the coordinates stay the component's own; the stagger
+   that makes the lit one travel is in the CSS. */
+const MLOAD_MARK_SVG =
+  '<svg class="mload-mark" viewBox="0 0 20 20" aria-hidden="true">' +
+  '<rect x="8"  y="0"  width="4" height="4"/>' +
+  '<rect x="12" y="4"  width="4" height="4"/>' +
+  '<rect x="16" y="8"  width="4" height="4"/>' +
+  '<rect x="12" y="12" width="4" height="4"/>' +
+  '<rect x="8"  y="16" width="4" height="4"/>' +
+  '<rect x="4"  y="12" width="4" height="4"/>' +
+  '<rect x="0"  y="8"  width="4" height="4"/>' +
+  '<rect x="4"  y="4"  width="4" height="4"/>' +
+  '</svg>';
 const MLOAD_COMPACT_MAX = 180;   // px — below this the label is dropped
 
 function attachMediaLoadState(video, host, label) {
@@ -9411,14 +9509,7 @@ function attachMediaLoadState(video, host, label) {
   const row = document.createElement('div');
   row.className = 'mload-row';
 
-  const grid = document.createElement('div');
-  grid.className = 'mload-grid';
-  MLOAD_DELAYS.forEach(d => {
-    const i = document.createElement('i');
-    i.style.animationDelay = d + 'ms';
-    grid.appendChild(i);
-  });
-  row.appendChild(grid);
+  row.insertAdjacentHTML('beforeend', MLOAD_MARK_SVG);
 
   const lbl = document.createElement('span');
   lbl.className = 'mload-lbl';
