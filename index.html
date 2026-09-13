@@ -2325,10 +2325,16 @@
       width:var(--ts-plate); height:var(--ts-plate); flex:none;
       border-radius:calc(var(--ts-plate) / 4); overflow:hidden;
       display:flex; align-items:center; justify-content:center;
-      background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.07);
       color:#6f6f6f; font-size:11px; font-weight:700; letter-spacing:-.02em;
     }
-    body.dark .tstack-plate { background:#26282a; box-shadow:0 0 0 1px rgba(255,255,255,.10); color:#a9abad; }
+    body.dark .tstack-plate { color:#a9abad; }
+    /* No ground and no ring by default: an icon that fills its plate IS
+       the tile, and a surface behind it only shows up as a rim of white
+       around the mark. One is painted back for the two cases that need
+       a plate to sit on — an icon dialled below full size, and the
+       initials fallback, neither of which covers the square. */
+    .tstack-plate.has-ground { background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.07); }
+    body.dark .tstack-plate.has-ground { box-shadow:0 0 0 1px rgba(255,255,255,.10); }
     /* contain for the same reason the Tools I use plate uses it: a
        non-square logo would lose its edges under cover. */
     .tstack-plate img {
@@ -2340,7 +2346,10 @@
     .tstack-chev svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
     .tstack.open .tstack-chev { transform:rotate(180deg); }
 
+    /* The first row sat straight under the header. The source sets the
+       two apart and so does this. */
     .tstack-body { overflow:hidden; max-height:0; opacity:0; transition:max-height .2s, opacity .2s; }
+    .tstack.open .tstack-body { padding-top:9px; }
     .tstack.open .tstack-body { max-height:2000px; opacity:1; }
     .tstack-row { display:flex; align-items:stretch; gap:8px; }
     .tstack-rail { display:flex; flex-direction:column; align-items:center; align-self:stretch; }
@@ -12711,13 +12720,15 @@ function tstackPlate(tool) {
     // tool.size is a percentage of the plate, the same unit an avatar's
     // logoSize uses. Unset means the icon fills the plate.
     if (tool.size) p.style.setProperty('--ts-fill', String(tool.size / 100));
-    // White under a logo whatever the page theme is — the same call the
-    // avatars make, for the same reason: these marks are drawn for light
-    // grounds, and the dark plate swallowed the dark ones whole.
-    p.style.background = '#fff';
+    // A plate to sit on only where one is needed. An icon at full size
+    // covers the square itself, and a ground behind it reads as a rim of
+    // white around the mark; one dialled back does not cover it, and
+    // without a surface a dark logo would be floating on the page.
+    if (tool.size && tool.size < 100) p.classList.add('has-ground');
     p.appendChild(img);
   } else {
     p.textContent = (tool.name || '?').trim().slice(0, 2).toUpperCase();
+    p.classList.add('has-ground');
   }
   return p;
 }
@@ -12857,10 +12868,15 @@ function renderToolStackBlock(block, mount) {
       size.addEventListener('input', () => {
         t.size = +size.value;
         const f = String(t.size / 100);
-        row.querySelectorAll('.tstack-plate').forEach(p => p.style.setProperty('--ts-fill', f));
         const n = [...block.tools].indexOf(t);
-        const up = icons.children[n];
-        if (up) up.style.setProperty('--ts-fill', f);
+        // Both copies of this plate: the one in this row and the one in
+        // the stack up top. The ground comes and goes with the size —
+        // below full the icon no longer covers the square.
+        [...row.querySelectorAll('.tstack-plate'), icons.children[n]].forEach(p => {
+          if (!p) return;
+          p.style.setProperty('--ts-fill', f);
+          p.classList.toggle('has-ground', t.size < 100);
+        });
       });
       size.addEventListener('change', () => avgSave(block));
       text.appendChild(size);
