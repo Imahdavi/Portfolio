@@ -11211,10 +11211,6 @@ function saveHomeEdits() {
 
   // build a lookup of previously-saved thumbs so a render glitch can never wipe them
   const _prevThumbs = {};
-  // Same idea for the Projects-list fields: they have no input in the grid
-  // DOM at all (they're edited in the list view), so they'd read as empty
-  // here and get dropped on every grid save if they weren't carried over.
-  const _prevMeta = {};
   // The Grid and the Projects list are independent views, and this rebuild is
   // the one place that could break that: it reconstructs sections purely from
   // the grid DOM, so any card without a tile there would be dropped. Two kinds
@@ -11224,10 +11220,11 @@ function saveHomeEdits() {
   // a real deletion. Remembered per section title so they go back where they
   // were.
   const _carry = [];
+  const _prevCards = {};
   (_cachedSettings.sections || []).forEach(sec =>
     (sec.cards || []).forEach(c => {
       if (c.thumb) _prevThumbs[c.key] = c.thumb;
-      _prevMeta[c.key] = { year: c.year, yearEnd: c.yearEnd, category: c.category, desc: c.desc };
+      _prevCards[c.key] = c;
       _carry.push({ card: c, section: sec.title });
     }));
 
@@ -11245,15 +11242,22 @@ function saveHomeEdits() {
       const mediaEl = cardEl.querySelector('.proj-thumb img, .proj-thumb video');
       const thumb = mediaEl?.getAttribute('src') || _prevThumbs[key] || '';
       const hidden = cardEl.dataset.hidden === 'true';
-      const meta = _prevMeta[key] || {};
-      cards.push({
-        key, name, sub,
-        ...(thumb ? { thumb } : {}), ...(hidden ? { hidden: true } : {}),
-        ...(meta.year ? { year: meta.year } : {}),
-        ...(meta.yearEnd ? { yearEnd: meta.yearEnd } : {}),
-        ...(meta.category ? { category: meta.category } : {}),
-        ...(meta.desc ? { desc: meta.desc } : {}),
-      });
+      /* Everything the card already had, then what the grid owns on top.
+
+         This used to build each card from an allow-list — key, name, sub,
+         thumb, hidden, and the four date/category/description fields — so
+         any other field on a card with a tile was dropped on every grid
+         save. The Brand row keeps its own data on the same card object:
+         its avatars, its own title, and listOnly, the flag that keeps a
+         Brand-made card off this grid. So saving the grid quietly stripped
+         Brand rows of their logos and headings, and turned list-only cards
+         back into hidden tiles here. */
+      const card = { ...(_prevCards[key] || {}), key, name, sub };
+      if (thumb) card.thumb = thumb; else delete card.thumb;
+      if (hidden) card.hidden = true; else delete card.hidden;
+      // It has a tile, so by definition it is not list-only.
+      delete card.listOnly;
+      cards.push(card);
       if (PROJECTS[key]) { PROJECTS[key].name = name; PROJECTS[key].sub = sub; }
     });
     sections.push({ title: labelEl.textContent.trim(), cards });
