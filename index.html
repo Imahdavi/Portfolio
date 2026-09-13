@@ -11548,13 +11548,67 @@ function wireBentoDrag(list) {
 }
 
 /* ─── Row span for masonry layout ─────────────────────── */
+/* Row spans, and why they are shared.
+
+   The board is a 1px-row grid where each block spans its own height, so
+   every column stacks on its own like masonry. That put two blocks side
+   by side on different clocks. An avatar row beside a tool stack is 70px
+   next to 82, so whatever sat under the stack started 12px lower than
+   whatever sat under the avatars; and opening the stack pushed down only
+   its own column, leaving the other where it was. What reads as a row of
+   two was being laid out as two unrelated columns.
+
+   Blocks that start on the same line are a row now, and every block in a
+   row spans to the bottom of its tallest member. The next row starts
+   level across the whole board, and anything growing in a row moves all
+   of what follows. Boards were checked before this: the patterns that
+   depend on per-column stacking are all zig-zag pairs of equal media
+   (left, right, right, left), which come out identical as rows.
+
+   Done for the whole list in one pass per frame. A single block's height
+   changing can move every row below it, so there is no correct answer
+   for one block on its own. */
+let _rowSyncRaf = 0;
 function setBlockRowSpan(el) {
   // Bento boards position their blocks outright; a masonry row span would
   // fight that (and the list is not a grid there at all).
   if (isBentoBoard(PROJECTS[activeKey])) return;
-  const h = el.offsetHeight;
-  if (!h) return;
-  el.style.gridRow = 'span ' + (h + 10);
+  const list = el && el.parentElement;
+  if (!list || _rowSyncRaf) return;
+  _rowSyncRaf = requestAnimationFrame(() => { _rowSyncRaf = 0; syncBlockRows(list); });
+}
+
+const ROW_TOP_TOLERANCE = 6;   // px — a zig-zag pair sits a line apart
+
+function syncBlockRows(list) {
+  if (!list || isBentoBoard(PROJECTS[activeKey])) return;
+  const els = [...list.children].filter(e => e.classList.contains('block'));
+  if (!els.length) return;
+  // Natural spans first, so the tops below are where each block would be
+  // on its own. offsetTop, not a client rect: a block mid-drag carries a
+  // transform, and its row is the slot underneath, not where it is drawn.
+  els.forEach(e => { const h = e.offsetHeight; if (h) e.style.gridRow = 'span ' + (h + 10); });
+  // Rows from the top down. Stretching a row moves every row after it, so
+  // each pass settles one more row; a board is a few dozen blocks, and a
+  // pass that changes nothing ends it.
+  for (let pass = 0; pass < els.length; pass++) {
+    const ordered = els.filter(e => e.offsetHeight)
+                       .map(e => ({ e, top: e.offsetTop, h: e.offsetHeight }))
+                       .sort((a, b) => a.top - b.top);
+    let changed = false;
+    for (let i = 0; i < ordered.length; ) {
+      let j = i + 1;
+      while (j < ordered.length && ordered[j].top - ordered[i].top <= ROW_TOP_TOLERANCE) j++;
+      const row = ordered.slice(i, j);
+      const bottom = Math.max(...row.map(r => r.top + r.h));
+      row.forEach(r => {
+        const want = 'span ' + (bottom - r.top + 10);
+        if (r.e.style.gridRow !== want) { r.e.style.gridRow = want; changed = true; }
+      });
+      i = j;
+    }
+    if (!changed) break;
+  }
 }
 
 /* ─── Render blocks ────────────────────────────────────── */
