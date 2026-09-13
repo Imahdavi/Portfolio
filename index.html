@@ -3284,19 +3284,25 @@
     .block-width-btn svg { width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
     .move-menu {
       display:none; position:fixed; z-index:1000;
-      min-width:150px; max-height:220px; overflow-y:auto;
+      min-width:150px; max-height:260px; overflow-y:auto; overscroll-behavior:contain;
       background:rgba(26,23,20,.94); backdrop-filter:blur(8px);
       border-radius:10px; padding:5px; flex-direction:column; gap:1px;
       box-shadow:0 8px 24px rgba(0,0,0,.28);
     }
     .move-menu.open { display:flex; animation:fadeUp .15s ease both; }
+    /* flex:none, or the column squeezes every item to fit the 260px cap.
+       overflow:hidden (there for the ellipsis) takes away a flex item's
+       minimum height, so with many boards each row was crushed below its
+       own text and the lines ran into one another instead of the menu
+       scrolling. */
     .move-opt {
+      flex:none;
       padding:7px 10px; border-radius:6px; border:none; background:transparent;
       color:rgba(255,255,255,.75); font-size:12.5px; text-align:left; cursor:pointer;
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     }
     .move-opt:hover { background:rgba(255,255,255,.12); color:#fff; }
-    .move-empty { padding:8px 10px; font-size:12px; color:rgba(255,255,255,.4); }
+    .move-empty { flex:none; padding:8px 10px; font-size:12px; color:rgba(255,255,255,.4); }
 
     /* Add bar — horizontally scrollable so it doesn't get squeezed
        unreadable/unreachable as more block types are added. */
