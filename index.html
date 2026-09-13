@@ -2296,14 +2296,15 @@
        redrawing any of its proportions — the overlap, the radius and the
        chevron all come off the same number.
 
-       --ts-fill is the source's iconSize expressed as a fraction of the
-       plate rather than as a second absolute: 21 of 32 is .66, and
-       keeping it proportional means changing --ts-plate alone rescales
-       the icon with it. Per icon it is overridden inline from tool.size,
-       the way an avatar carries its own logoSize — a wordmark and a
-       square app icon do not want the same share of a plate. */
+       --ts-fill is how much of the plate the icon takes. It defaults to
+       all of it: the source's icons are app tiles that already fill
+       their own rounded square, so inset ones left a frame sitting
+       around each mark instead of a mark. What remains of the plate is a
+       hairline and the rounded clip. Per icon it is overridden inline
+       from tool.size, the way an avatar carries its own logoSize — a
+       wide wordmark needs dialling back where a square icon does not. */
     .tstack {
-      --ts-plate:28px; --ts-fill:.66;
+      --ts-plate:28px; --ts-fill:1;
       width:fit-content; max-width:100%;
     }
     .tstack-head {
@@ -2330,10 +2331,6 @@
     body.dark .tstack-plate { background:#26282a; box-shadow:0 0 0 1px rgba(255,255,255,.10); color:#a9abad; }
     /* contain for the same reason the Tools I use plate uses it: a
        non-square logo would lose its edges under cover. */
-    /* The icon is inset in the plate rather than filling it — the plate
-       is the surface, the icon is the mark on it, which is the whole
-       reason the source carries a separate iconSize. Filling it edge to
-       edge, as this did, left no plate to see. */
     .tstack-plate img {
       width:calc(100% * var(--ts-fill)); height:calc(100% * var(--ts-fill));
       object-fit:contain;
@@ -12712,8 +12709,12 @@ function tstackPlate(tool) {
     const img = document.createElement('img');
     img.src = tool.src; img.alt = '';
     // tool.size is a percentage of the plate, the same unit an avatar's
-    // logoSize uses. Unset means the source's own 21-of-32.
+    // logoSize uses. Unset means the icon fills the plate.
     if (tool.size) p.style.setProperty('--ts-fill', String(tool.size / 100));
+    // White under a logo whatever the page theme is — the same call the
+    // avatars make, for the same reason: these marks are drawn for light
+    // grounds, and the dark plate swallowed the dark ones whole.
+    p.style.background = '#fff';
     p.appendChild(img);
   } else {
     p.textContent = (tool.name || '?').trim().slice(0, 2).toUpperCase();
@@ -12850,7 +12851,7 @@ function renderToolStackBlock(block, mount) {
       size.type = 'range';
       size.className = 'avg-size-slider tstack-size';
       size.min = '30'; size.max = '100'; size.step = '1';
-      size.value = String(t.size || 66);
+      size.value = String(t.size || 100);
       size.title = 'Icon size';
       size.addEventListener('pointerdown', (e) => e.stopPropagation());
       size.addEventListener('input', () => {
