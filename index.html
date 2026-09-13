@@ -3831,13 +3831,18 @@
     body.dark #bg-toggle-btn:hover { color:var(--d-text); }
 
     /* The lamp. Off in light mode — the shade is an outline like every
-       other icon here. On in dark: a warm fill and a small halo, so the
-       one lit thing in the room is the switch that lit it. */
+       other icon here. On in dark: a white fill and a white glow, so the
+       one lit thing in the room is the switch that lit it. White rather
+       than a warm bulb colour: against the charcoal page it is the colour
+       that reads as light, not as a yellow shape. */
     #bg-toggle-btn .lamp { overflow:visible; }
     #bg-toggle-btn .lamp-light,
     #bg-toggle-btn .lamp-halo { opacity:0; transition:opacity .35s ease; }
-    body.dark #bg-toggle-btn .lamp-light { opacity:.92; }
-    body.dark #bg-toggle-btn .lamp-halo  { opacity:.7; }
+    body.dark #bg-toggle-btn .lamp-light { opacity:1; }
+    body.dark #bg-toggle-btn .lamp-halo  { opacity:.9; }
+    /* A second, softer halo for reach — the blur alone stays tight to the
+       shade at this size and reads as an outline rather than light. */
+    body.dark #bg-toggle-btn .lamp { filter:drop-shadow(0 0 4px rgba(255,255,255,.35)); }
     /* The pull: the cord stretches from where it hangs and the bead drops
        with its end, then both spring back. transform-box so the origin is
        the cord's own top, not the corner of the whole icon. The page
@@ -4824,11 +4829,11 @@ one keyframe at a time</div>
   <svg class="lamp" viewBox="0 0 24 24" fill="none">
     <defs>
       <filter id="lampGlow" x="-100%" y="-100%" width="300%" height="300%">
-        <feGaussianBlur stdDeviation="1.8"/>
+        <feGaussianBlur stdDeviation="2.4"/>
       </filter>
     </defs>
-    <path class="lamp-halo"  d="M8.5 3.5h7l3.5 8h-14z" fill="#ffcf66" filter="url(#lampGlow)"/>
-    <path class="lamp-light" d="M8.5 3.5h7l3.5 8h-14z" fill="#ffd978"/>
+    <path class="lamp-halo"  d="M8.5 3.5h7l3.5 8h-14z" fill="#ffffff" filter="url(#lampGlow)"/>
+    <path class="lamp-light" d="M8.5 3.5h7l3.5 8h-14z" fill="#ffffff"/>
     <path d="M8.5 3.5h7l3.5 8h-14z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
     <path d="M12 11.5v9M8.5 20.5h7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
     <path class="lamp-cord-line" d="M16.6 11.5v2.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
