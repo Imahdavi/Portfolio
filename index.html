@@ -3830,6 +3830,31 @@
     body.dark #bg-toggle-btn { color:var(--d-text-2); }
     body.dark #bg-toggle-btn:hover { color:var(--d-text); }
 
+    /* The lamp. Off in light mode — the shade is an outline like every
+       other icon here. On in dark: a warm fill and a small halo, so the
+       one lit thing in the room is the switch that lit it. */
+    #bg-toggle-btn .lamp { overflow:visible; }
+    #bg-toggle-btn .lamp-light,
+    #bg-toggle-btn .lamp-halo { opacity:0; transition:opacity .35s ease; }
+    body.dark #bg-toggle-btn .lamp-light { opacity:.92; }
+    body.dark #bg-toggle-btn .lamp-halo  { opacity:.7; }
+    /* The pull: the cord stretches from where it hangs and the bead drops
+       with its end, then both spring back. transform-box so the origin is
+       the cord's own top, not the corner of the whole icon. The page
+       changes at the bottom of the pull (see toggleDarkMode), which is
+       where a real cord clicks. */
+    #bg-toggle-btn .lamp-cord-line,
+    #bg-toggle-btn .lamp-cord-bead { transform-box:fill-box; }
+    #bg-toggle-btn .lamp-cord-line { transform-origin:50% 0; }
+    #bg-toggle-btn.pulling .lamp-cord-line { animation:lampCordLine .52s cubic-bezier(.3,1.5,.5,1); }
+    #bg-toggle-btn.pulling .lamp-cord-bead { animation:lampCordBead .52s cubic-bezier(.3,1.5,.5,1); }
+    @keyframes lampCordLine { 0% { transform:scaleY(1); } 32% { transform:scaleY(2); } 100% { transform:scaleY(1); } }
+    @keyframes lampCordBead { 0% { transform:translateY(0); } 32% { transform:translateY(2.6px); } 100% { transform:translateY(0); } }
+    @media (prefers-reduced-motion:reduce) {
+      #bg-toggle-btn .lamp-light, #bg-toggle-btn .lamp-halo { transition:none; }
+      #bg-toggle-btn.pulling .lamp-cord-line, #bg-toggle-btn.pulling .lamp-cord-bead { animation:none; }
+    }
+
     /* Scroll-to-top button — mirrors back-btn position on the right.
        Same --site-width fix as back-btn: right was hardcoded assuming
        a fixed 540px #app (280 = 540/2 + 10px clearance). */
@@ -4788,10 +4813,26 @@ one keyframe at a time</div>
  <div class="bottom-nav-group">
   <button id="bg-toggle-btn" onclick="toggleDarkMode()" aria-label="Toggle dark mode">
   <span class="nav-tip">Dark mode</span>
-  <!-- half-filled circle: the usual "switch the surface" mark -->
-  <svg viewBox="0 0 24 24" fill="none">
-    <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
-    <path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor"/>
+  <!-- A table lamp with a pull cord, in the same 2px rounded stroke as the
+       rest of the nav. The theme is the light in the room: pull the cord
+       and the page goes dark, and the shade comes on with it.
+
+       The glow is its own blurred copy of the shade behind the lit one,
+       filtered in SVG rather than with CSS drop-shadow — CSS filters on
+       shapes inside an SVG are not applied everywhere, and this has to
+       read the same on every browser. -->
+  <svg class="lamp" viewBox="0 0 24 24" fill="none">
+    <defs>
+      <filter id="lampGlow" x="-100%" y="-100%" width="300%" height="300%">
+        <feGaussianBlur stdDeviation="1.8"/>
+      </filter>
+    </defs>
+    <path class="lamp-halo"  d="M8.5 3.5h7l3.5 8h-14z" fill="#ffcf66" filter="url(#lampGlow)"/>
+    <path class="lamp-light" d="M8.5 3.5h7l3.5 8h-14z" fill="#ffd978"/>
+    <path d="M8.5 3.5h7l3.5 8h-14z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M12 11.5v9M8.5 20.5h7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <path class="lamp-cord-line" d="M16.6 11.5v2.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    <circle class="lamp-cord-bead" cx="16.6" cy="15.3" r="1.05" fill="currentColor"/>
   </svg>
   </button>
   <button id="sound-toggle-btn" class="muted" onclick="toggleWebSound()" aria-label="Toggle spider sound">
@@ -5928,9 +5969,25 @@ syncSoundWorlds();
    near <body> (see the pf_theme restore), or the light page would show
    for a frame and flash. */
 function toggleDarkMode() {
-  const on = !document.body.classList.contains('dark');
-  document.body.classList.toggle('dark', on);
-  try { localStorage.setItem('pf_theme', on ? 'dark' : 'light'); } catch (e) {}
+  const flip = () => {
+    const on = !document.body.classList.contains('dark');
+    document.body.classList.toggle('dark', on);
+    try { localStorage.setItem('pf_theme', on ? 'dark' : 'light'); } catch (e) {}
+  };
+  const btn = document.getElementById('bg-toggle-btn');
+  if (!btn || matchMedia('(prefers-reduced-motion: reduce)').matches) { flip(); return; }
+
+  // The cord is pulled first and the page follows at the bottom of the
+  // pull, ~170ms in — the point where a real lamp cord clicks.
+  // Restarted on every click, so a quick second pull still reads as one.
+  btn.classList.remove('pulling');
+  void btn.offsetWidth;   // lets the same animation run again from the top
+  btn.classList.add('pulling');
+  clearTimeout(btn._pullEnd);
+  btn._pullEnd = setTimeout(() => btn.classList.remove('pulling'), 560);
+  // Not cancelled by a second click: each pull is its own switch, so two
+  // quick pulls turn the light on and off again rather than once.
+  setTimeout(flip, 170);
 }
 
 /* ─── Avatar white-key ───────────────────────────────────
