@@ -1437,6 +1437,32 @@
     .blk-bar-sep { width:1px; height:16px; background:rgba(255,255,255,.18); margin:0 3px; }
     .blk-bar-del:hover { background:#dc2626; color:#fff; }
     .blk-grip-top { align-self:flex-start; margin-top:4px; }
+    /* Add below: a round + on the block's lower edge, half over the seam so
+       it reads as belonging to the gap, not to either block. Out of sight
+       until the block is pointed at — fourteen of them showing at once
+       would be a column of noise down the middle of the board — except
+       where there is no hover to point with. */
+    .blk-add-here {
+      display:none; position:absolute; left:50%; bottom:-13px;
+      transform:translateX(-50%) scale(.85); z-index:59;
+      width:26px; height:26px; border-radius:50%; padding:0;
+      border:1px solid rgba(0,0,0,.12); background:#fff; color:#1a1a1a;
+      box-shadow:0 2px 8px rgba(0,0,0,.12); cursor:pointer;
+      align-items:center; justify-content:center;
+      opacity:0; transition:opacity .15s, transform .15s, background .15s;
+    }
+    .edit-on .blk-add-here { display:flex; }
+    .edit-on .block:hover > .blk-add-here,
+    .edit-on .blk-add-here:focus-visible { opacity:1; transform:translateX(-50%) scale(1); }
+    .blk-add-here:hover { background:#1a1a1a; color:#fff; border-color:#1a1a1a; }
+    .blk-add-here svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; }
+    body.dark .blk-add-here { background:var(--d-raised); color:var(--d-text); border-color:var(--d-line); }
+    body.dark .blk-add-here:hover { background:#fff; color:#111; border-color:#fff; }
+    @media (hover:none) {
+      .edit-on .blk-add-here { opacity:1; transform:translateX(-50%) scale(1); }
+    }
+    /* A dragged block is carrying its own + with it; hide it for the ride. */
+    .block.col-dragging > .blk-add-here { display:none; }
     /* Opens under the bar, hanging left from its right edge, so it never
        covers the block it is resizing. */
     /* Doubled selector: the .resize-menu base it overrides is declared
@@ -2008,8 +2034,26 @@
     .block.drop-center { outline:2px solid rgba(66,133,244,.5); outline-offset:2px; border-radius:14px; }
     .block.col-dragging .media-inner { outline:2px solid rgba(66,133,244,.7) !important; outline-offset:2px; }
     /* Lifted while dragging so it rides over its neighbours. The block keeps
-       its grid slot underneath — that reserved gap is the drop preview, so
-       there's no separate placeholder element to keep in sync. */
+       its grid slot underneath, and that slot used to be the whole drop
+       preview — an empty gap. But a gap reads as nothing: on a busy board
+       it is indistinguishable from the ordinary space between rows, and it
+       says nothing about how wide the block will land or which columns it
+       takes. So the slot is drawn now. See .blk-drop-ghost. */
+    .blk-drop-ghost {
+      position:fixed; z-index:55; pointer-events:none;
+      border:2px dashed rgba(59,130,246,.7); border-radius:16px;
+      background:rgba(59,130,246,.07);
+      transition:left .12s ease, top .12s ease, width .12s ease, height .12s ease;
+    }
+    body.dark .blk-drop-ghost { border-color:rgba(96,165,250,.75); background:rgba(96,165,250,.09); }
+    /* Where it lands, said in words on the ghost's edge — "Centred" and
+       "Columns 1–3" are what the dashed box cannot show by itself. */
+    .blk-drop-ghost span {
+      position:absolute; left:8px; top:-11px;
+      padding:2px 8px; border-radius:6px;
+      background:#3b82f6; color:#fff;
+      font-size:11px; font-weight:600; white-space:nowrap;
+    }
     .block.col-dragging {
       z-index:60; will-change:transform; cursor:grabbing;
       transition:none !important;
@@ -12096,6 +12140,17 @@ function makeBlockEl(block, proj) {
   bar.appendChild(del);
   wrap.appendChild(bar);
 
+  // Add straight after this block; see openAddHereMenu.
+  const addHere = document.createElement('button');
+  addHere.type = 'button';
+  addHere.className = 'blk-add-here';
+  addHere.title = 'Add a section below';
+  addHere.setAttribute('aria-label', 'Add a section below');
+  addHere.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
+  addHere.addEventListener('pointerdown', (e) => e.stopPropagation());
+  addHere.onclick = (e) => { e.stopPropagation(); openAddHereMenu(addHere, block.id); };
+  wrap.appendChild(addHere);
+
   // migrate old layout data and apply grid position
   migrateBlockLayout(block);
   applyBlockGrid(wrap, block);
@@ -12128,6 +12183,16 @@ function startFreeDrag(e, wrap) {
   const cols  = block._cols || 6;
 
   wrap.classList.add('col-dragging');
+
+  // The landing slot, drawn. Appended to the body and positioned from the
+  // slot's own rect each move, so it follows the grid wherever the block
+  // is about to settle; see .blk-drop-ghost.
+  const ghost = document.createElement('div');
+  ghost.className = 'blk-drop-ghost';
+  ghost.hidden = true;
+  const ghostLbl = document.createElement('span');
+  ghost.appendChild(ghostLbl);
+  document.body.appendChild(ghost);
 
   let lastCS    = block._colStart || 1;
   let lastAlign = block._align || 'left';
@@ -12226,6 +12291,18 @@ function startFreeDrag(e, wrap) {
     // transformed box's.
     wrap.style.transform = '';
     const slot = wrap.getBoundingClientRect();
+    // The block's box in edit mode includes the toolbar strip above its
+    // content, and the ghost should outline where the content lands.
+    const stripPx = parseFloat(getComputedStyle(wrap).paddingTop) || 0;
+    ghost.hidden = false;
+    ghost.style.left   = slot.left + 'px';
+    ghost.style.top    = (slot.top + stripPx) + 'px';
+    ghost.style.width  = slot.width + 'px';
+    ghost.style.height = Math.max(24, slot.height - stripPx) + 'px';
+    ghostLbl.textContent = (block._align === 'center')
+      ? 'Centred'
+      : (cols === 6 ? 'Full width'
+                    : 'Columns ' + (block._colStart || 1) + '–' + ((block._colStart || 1) + cols - 1));
     wrap.style.transform =
       'translate(' + ((ev.clientX - grabX) - slot.left) + 'px,' +
                      ((ev.clientY - grabY) - slot.top)  + 'px)';
@@ -12236,6 +12313,7 @@ function startFreeDrag(e, wrap) {
   function onUp() {
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
+    ghost.remove();
     wrap.classList.remove('col-dragging');
     wrap.style.transform = '';   // hand it back to its slot
 
@@ -12439,11 +12517,11 @@ function onDragEnd(e) {
 function addMagneticCarousel() {
   const proj = PROJECTS[activeKey];
   const b = { id: uid(), type: 'carousel', items: [] };
-  proj.blocks.push(b);
+  proj.blocks.splice(takeInsertIndex(proj), 0, b);
   const list = document.getElementById('block-list');
   const el = makeBlockEl(b, proj);
   el.classList.add('block-enter');
-  list.appendChild(el);
+  placeBlockEl(list, el, proj, b);
   requestAnimationFrame(() => setBlockRowSpan(el));
   saveProject(activeKey);
 }
@@ -12929,11 +13007,11 @@ function renderToolStackBlock(block, mount) {
 function addToolStack() {
   const proj = PROJECTS[activeKey];
   const b = { id: uid(), type: 'toolstack', label: '', tools: [] };
-  proj.blocks.push(b);
+  proj.blocks.splice(takeInsertIndex(proj), 0, b);
   const list = document.getElementById('block-list');
   const el = makeBlockEl(b, proj);
   el.classList.add('block-enter');
-  list.appendChild(el);
+  placeBlockEl(list, el, proj, b);
   requestAnimationFrame(() => setBlockRowSpan(el));
   saveProject(activeKey);
 }
@@ -13409,10 +13487,10 @@ function renderAvatarsBlock(block, mount) {
 function addText() {
   const proj = PROJECTS[activeKey];
   const b = { id: uid(), type: 'text', content: '' };
-  proj.blocks.push(b);
+  proj.blocks.splice(takeInsertIndex(proj), 0, b);
   const list = document.getElementById('block-list');
   const el = makeBlockEl(b, proj);
-  list.appendChild(el);
+  placeBlockEl(list, el, proj, b);
   requestAnimationFrame(() => setBlockRowSpan(el));
   // focus the new text block
   const t = el.querySelector('.block-text');
@@ -13426,35 +13504,37 @@ function addMedia() {
 function addDivider() {
   const proj = PROJECTS[activeKey];
   const b = { id: uid(), type: 'divider', content: '' };
-  proj.blocks.push(b);
+  proj.blocks.splice(takeInsertIndex(proj), 0, b);
   const list = document.getElementById('block-list');
   const el = makeBlockEl(b, proj);
   el.classList.add('block-enter');
-  list.appendChild(el);
+  placeBlockEl(list, el, proj, b);
   requestAnimationFrame(() => setBlockRowSpan(el));
-  avgSave(block);
+  // Was avgSave(block), with no `block` in scope — a ReferenceError after
+  // the divider was drawn, so it appeared and was never saved.
+  saveProject(activeKey);
 }
 
 function addStarDivider() {
   const proj = PROJECTS[activeKey];
   const b = { id: uid(), type: 'divider', dividerStyle: 'star', content: '' };
-  proj.blocks.push(b);
+  proj.blocks.splice(takeInsertIndex(proj), 0, b);
   const list = document.getElementById('block-list');
   const el = makeBlockEl(b, proj);
   el.classList.add('block-enter');
-  list.appendChild(el);
+  placeBlockEl(list, el, proj, b);
   requestAnimationFrame(() => setBlockRowSpan(el));
-  avgSave(block);
+  saveProject(activeKey);   // see addDivider
 }
 
 function addAvatars() {
   const proj = PROJECTS[activeKey];
   const b = { id: uid(), type: 'avatars', align: 'center', segments: [{ id: uid(), kind: 'group', avatars: [] }] };
-  proj.blocks.push(b);
+  proj.blocks.splice(takeInsertIndex(proj), 0, b);
   const list = document.getElementById('block-list');
   const el = makeBlockEl(b, proj);
   el.classList.add('block-enter');
-  list.appendChild(el);
+  placeBlockEl(list, el, proj, b);
   requestAnimationFrame(() => setBlockRowSpan(el));
   saveProject(activeKey);
 }
@@ -13498,11 +13578,11 @@ function pickLottie(key) {
   const proj = PROJECTS[activeKey];
   if (!proj) return;
   const b = { id: uid(), type: 'lottie', content: key, _freeAspect: +(141/43).toFixed(4) };
-  proj.blocks.push(b);
+  proj.blocks.splice(takeInsertIndex(proj), 0, b);
   const list  = document.getElementById('block-list');
   const newEl = makeBlockEl(b, proj);
   newEl.classList.add('block-enter');
-  list.appendChild(newEl);
+  placeBlockEl(list, newEl, proj, b);
   requestAnimationFrame(() => setBlockRowSpan(newEl));
   saveProject(activeKey);
 }
@@ -13650,6 +13730,94 @@ function openMoveMenu(anchorBtn, blockId) {
   menu.style.visibility = '';
   menu._anchor = anchorBtn;
 }
+
+
+/* ─── Adding a block where you are ─────────────────────────────────
+   Every add used to push onto the end of the board, and the bar that
+   triggers them sits at the bottom — so putting a text block between the
+   second and third images meant scrolling down, adding, then dragging
+   the new block all the way back up.
+
+   Each block now carries a + on its lower edge that opens the same list
+   of block types and drops the result straight after that block. The
+   bar at the bottom still adds to the end, exactly as before.
+
+   The mechanism is one index rather than a second copy of every add
+   function: the + sets _insertAt, and the adds read it through
+   takeInsertIndex and placeBlockEl in place of their push and append.
+   That keeps the media and animation paths working, which only reach
+   their push after a file picker or a chooser has closed. */
+let _insertAt = null;
+
+function takeInsertIndex(proj) {
+  const at = _insertAt;
+  _insertAt = null;
+  return (at == null || at > proj.blocks.length) ? proj.blocks.length : at;
+}
+
+// Puts a freshly built block element where its data already sits: before
+// the element of whatever block now follows it, or at the end if nothing
+// does.
+function placeBlockEl(list, el, proj, b) {
+  const next = proj.blocks[proj.blocks.indexOf(b) + 1];
+  const ref = next && list.querySelector(':scope > [data-id="' + next.id + '"]');
+  if (ref) list.insertBefore(el, ref); else list.appendChild(el);
+}
+
+const ADD_HERE_OPTIONS = [
+  ['Text',          'addText'],
+  ['Image / video', 'addMedia'],
+  ['Animation',     'addLottie'],
+  ['Divider',       'addDivider'],
+  ['Star divider',  'addStarDivider'],
+  ['Carousel',      'addMagneticCarousel'],
+  ['Avatars',       'addAvatars'],
+  ['Tool stack',    'addToolStack'],
+];
+
+function openAddHereMenu(anchorBtn, afterId) {
+  document.querySelectorAll('.resize-menu.open, .link-popover.open').forEach(m => m.classList.remove('open'));
+  const menu = getMoveMenu();
+  if (menu.classList.contains('open') && menu._anchor === anchorBtn) {
+    menu.classList.remove('open');
+    return;
+  }
+  menu.innerHTML = '';
+  ADD_HERE_OPTIONS.forEach(([label, fn]) => {
+    const opt = document.createElement('button');
+    opt.type = 'button';
+    opt.className = 'move-opt';
+    opt.textContent = label;
+    opt.onclick = () => {
+      menu.classList.remove('open');
+      const proj = PROJECTS[activeKey];
+      if (!proj || typeof window[fn] !== 'function') return;
+      // Read at click time, not when the menu opened — the board may have
+      // been reordered in between.
+      const i = proj.blocks.findIndex(b => b.id === afterId);
+      _insertAt = i === -1 ? null : i + 1;
+      window[fn]();
+    };
+    menu.appendChild(opt);
+  });
+
+  menu.style.visibility = 'hidden';
+  menu.classList.add('open');
+  const r = anchorBtn.getBoundingClientRect();
+  const mh = menu.offsetHeight, mw = menu.offsetWidth;
+  let top = r.bottom + 6;
+  if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 6);
+  let left = r.left + r.width / 2 - mw / 2;
+  left = Math.max(8, Math.min(left, window.innerWidth - mw - 8));
+  menu.style.top  = top + 'px';
+  menu.style.left = left + 'px';
+  menu.style.visibility = '';
+  menu._anchor = anchorBtn;
+}
+
+// The bottom bar means "at the end", always. Cleared on the way in, so a
+// + whose file picker was cancelled cannot redirect the next add from it.
+document.getElementById('addBar')?.addEventListener('click', () => { _insertAt = null; }, true);
 
 function moveBlockToProject(blockId, targetKey) {
   const srcKey = activeKey;
@@ -13859,11 +14027,19 @@ async function uploadFiles(files) {
   if (!list) { showUploadToast('Error: open a project first', true); return; }
   if (!activeKey) { showUploadToast('Error: no active project', true); return; }
 
+  // Taken once for the whole batch: several files picked together land in
+  // order from that point, each one after the last. A null index is the
+  // end of the board, which is where the bottom bar has always put them.
+  let at = takeInsertIndex(PROJECTS[activeKey]);
+
   for (const file of files) {
     const placeholderEl = document.createElement('div');
     placeholderEl.className = 'block block-uploading';
     placeholderEl.innerHTML = `<div class="block-body"><div class="media-wrap"><div class="media-inner"><div class="upload-spinner"></div><div class="upload-progress-lbl">0%</div></div></div></div>`;
-    list.appendChild(placeholderEl);
+    // Where the finished block will go, so the progress shows there too.
+    const followerId = PROJECTS[activeKey].blocks[at] && PROJECTS[activeKey].blocks[at].id;
+    const follower = followerId && list.querySelector(':scope > [data-id="' + followerId + '"]');
+    if (follower) list.insertBefore(placeholderEl, follower); else list.appendChild(placeholderEl);
     requestAnimationFrame(() => setBlockRowSpan(placeholderEl));
     const lbl = placeholderEl.querySelector('.upload-progress-lbl');
 
@@ -13880,7 +14056,10 @@ async function uploadFiles(files) {
       const proj = PROJECTS[activeKey];
       const type = file.type.startsWith('video') ? 'video' : 'image';
       const b    = { id: uid(), type, content: url };
-      proj.blocks.push(b);
+      // Clamped: a long upload leaves time for the board to change.
+      at = Math.min(at, proj.blocks.length);
+      proj.blocks.splice(at, 0, b);
+      at++;
       const newEl = makeBlockEl(b, proj);
       newEl.classList.add('block-enter');
       list.replaceChild(newEl, placeholderEl);
