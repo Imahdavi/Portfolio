@@ -2382,11 +2382,28 @@
     .edit-on .tstack-name, .edit-on .tstack-sub { cursor:text; }
     .tstack-size { display:none; margin-top:6px; }
     .edit-on .tstack-size { display:block; }
-    /* The block's round controls sit at the top-right of its box, and a
-       collapsed stack is barely taller than they are — they landed on
-       the icons and the label. In edit mode the stack starts below them
-       instead, so both are reachable. */
-    .edit-on .block-toolstack { padding-top:34px; }
+    /* The block's round controls sit at the top-right of its box, and
+       neither of these blocks is much taller than they are — they landed
+       on the icons, the label, the Add avatar tile. In edit mode both
+       start below them instead, so all of it is reachable. */
+    .edit-on .block-toolstack,
+    .edit-on .block-avatars { padding-top:34px; }
+    /* The shared drag handle is vertically centred, which is right for a
+       text block and wrong for one that grows: an opened stack put its
+       grip a hundred pixels down the block, floating beside whichever row
+       happened to be there. These keep it at the top, level with the
+       thing it moves. */
+    .blk-grip-top { align-self:flex-start; margin-top:38px; }
+    /* Four 22px buttons and their gaps need about 114px of top edge. At a
+       sixth of the board there are 82, so anchored from the right they
+       ran off the left of the page entirely. On a block that narrow they
+       are anchored from the left instead and overhang into the space
+       beside it, which at least keeps them on screen and clickable. */
+    .blk-ctrls-left .block-del       { right:auto; left:0;    }
+    .blk-ctrls-left .block-move      { right:auto; left:28px; }
+    .blk-ctrls-left .block-dup       { right:auto; left:56px; }
+    .blk-ctrls-left .block-width-btn { right:auto; left:84px; }
+    .blk-ctrls-left .block-width-menu { right:auto; left:0; top:36px; }
 
     /* Edit-mode affordances. The add plate joins the stack so a new icon
        lands where it will actually sit, rather than in a separate tray. */
@@ -6022,6 +6039,17 @@ const POS_PRESETS = [
   { key:'w4',   label:'2/3',  cols:4, vis:[1,1,1,1,0,0] },
   { key:'w3',   label:'1/2',  cols:3, vis:[1,1,1,0,0,0] },
   { key:'w2',   label:'1/3',  cols:2, vis:[1,1,0,0,0,0] },
+];
+
+/* The avatars row and the tool stack use these instead. A media block
+   never wants to be a sixth of the board; these two often do — they hold
+   a line of small marks, and anything wider is empty space that shoves
+   whatever sits beside them off to the middle of the page. */
+const NARROW_POS_PRESETS = [
+  { key:'full', label:'Full', cols:6, vis:[1,1,1,1,1,1] },
+  { key:'w3',   label:'1/2',  cols:3, vis:[1,1,1,0,0,0] },
+  { key:'w2',   label:'1/3',  cols:2, vis:[1,1,0,0,0,0] },
+  { key:'w1',   label:'1/6',  cols:1, vis:[1,0,0,0,0,0] },
 ];
 
 function makePosIcon(vis) {
@@ -12018,10 +12046,14 @@ function makeBlockEl(block, proj) {
        First child of the wrap, which is the flex row the text blocks put
        theirs in too. */
     const grip = document.createElement('div');
-    grip.className = 'block-drag-handle';
+    grip.className = 'block-drag-handle blk-grip-top';
     grip.title = 'Drag to move';
     grip.innerHTML = '<svg viewBox="0 0 10 16"><circle cx="3" cy="3" r="1.3"/><circle cx="7" cy="3" r="1.3"/><circle cx="3" cy="8" r="1.3"/><circle cx="7" cy="8" r="1.3"/><circle cx="3" cy="13" r="1.3"/><circle cx="7" cy="13" r="1.3"/></svg>';
     wrap.insertBefore(grip, wrap.firstChild);
+    // Below about a third of the board the control row no longer fits
+    // along the top edge; see .blk-ctrls-left.
+    const narrowCtrls = () => wrap.classList.toggle('blk-ctrls-left', (block._cols || 6) <= 2);
+    narrowCtrls();
 
     const wBtn = document.createElement('button');
     wBtn.className = 'block-width-btn';
@@ -12038,7 +12070,12 @@ function makeBlockEl(block, proj) {
 
     const wGrid = document.createElement('div');
     wGrid.className = 'rsz-pos-grid';
-    POS_PRESETS.forEach(p => {
+    /* Narrower steps than a media block gets. These two hold very little
+       — "\ at" and one avatar is about ninety pixels — so a half-width
+       column left most of its width empty and pushed whatever sat beside
+       it right out to the middle of the board. A sixth is 64px and a
+       quarter 104, which is the range this content actually occupies. */
+    NARROW_POS_PRESETS.forEach(p => {
       const b = document.createElement('button');
       b.className = 'pos-opt' + ((block._cols || 6) === p.cols ? ' active' : '');
       b.innerHTML = makePosIcon(p.vis) + `<span>${p.label}</span>`;
@@ -12071,6 +12108,7 @@ function makeBlockEl(block, proj) {
           }
         }
         block._colStart = start;
+        narrowCtrls();
         relayoutBlockGrid();
         wGrid.querySelectorAll('.pos-opt').forEach(x => x.classList.remove('active'));
         b.classList.add('active');
