@@ -13126,8 +13126,12 @@ function renderToolStackBlock(block, mount) {
   block.tools.forEach((t, i) => {
     const p = tstackPlate(t);
     // The source tilts alternate icons and stacks them front to back, so
-    // the row reads as a small pile rather than a straight strip.
-    p.style.rotate = block.tools.length > 1 ? (i % 2 === 0 ? '8deg' : '-8deg') : '0deg';
+    // the row reads as a small pile rather than a straight strip. It sets
+    // a lone icon dead straight, which beside tilted piles elsewhere on a
+    // board looked like a different component. A single icon keeps the
+    // first card's angle instead — the same 8deg it already has in a pile,
+    // so adding a second icon doesn't swing the first one round.
+    p.style.rotate = (i % 2 === 0 ? '8deg' : '-8deg');
     p.style.zIndex = i;
     // Bound unconditionally and gated inside, so a stack rendered before
     // edit mode was switched on still answers the click. No title: it
