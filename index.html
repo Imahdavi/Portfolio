@@ -1150,6 +1150,38 @@
     /* Titles are contenteditable in edit mode; here the row is a handle,
        so typing into it would fight the drag. */
     .projects-list.pli-compact [contenteditable] { pointer-events:none; }
+
+    /* Reorder mode keeps the date. Titles alone left rows that share a
+       name — or a client, across years — indistinguishable, and ordering
+       by time is most of what this mode is for. It is the real date
+       element, moved beside the title rather than re-rendered, so it can
+       never disagree with what was typed; everything else in its row
+       (the avatars) stays hidden.
+
+       IDs in the selectors because the edit-mode rules they override
+       (#view-home.home-edit .pli-year-*) carry one: those turn empty dates
+       into dashed "From" / "To / Present" boxes for typing into, which
+       here would be clutter on a label that cannot be typed into anyway. */
+    #view-home .projects-list.pli-compact .pli-meta-row {
+      display:flex !important; margin:0 0 0 10px; gap:0; flex-wrap:nowrap;
+    }
+    #view-home .projects-list.pli-compact .pli-meta-row > :not(.pli-year) { display:none !important; }
+    #view-home .projects-list.pli-compact .pli-year { flex-wrap:nowrap; gap:3px; }
+    #view-home .projects-list.pli-compact .pli-year-from,
+    #view-home .projects-list.pli-compact .pli-year-to,
+    #view-home .projects-list.pli-compact .pli-year-sep {
+      outline:none; padding:0; min-width:0; min-height:0;
+      font-size:12px; font-weight:500; color:#a59c93; white-space:nowrap;
+    }
+    #view-home .projects-list.pli-compact .pli-year-from:empty,
+    #view-home .projects-list.pli-compact .pli-year-to:empty,
+    #view-home .projects-list.pli-compact .pli-year.no-end .pli-year-sep,
+    #view-home .projects-list.pli-compact .pli-year-from:empty + .pli-year-sep { display:none; }
+    #view-home .projects-list.pli-compact .pli-year-from:empty:before,
+    #view-home .projects-list.pli-compact .pli-year-to:empty:before { content:none; }
+    body.dark #view-home .projects-list.pli-compact .pli-year-from,
+    body.dark #view-home .projects-list.pli-compact .pli-year-to,
+    body.dark #view-home .projects-list.pli-compact .pli-year-sep { color:var(--d-text-3); }
     .projects-list.pli-compact .pli-row-dragging { opacity:.5; }
 
     body.dark .pli-reorder-btn { border-color:var(--d-line-2); color:var(--d-text-3); }
