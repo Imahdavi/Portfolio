@@ -2517,6 +2517,17 @@
       transition:color .2s;
     }
     .tstack-head:hover { color:#1a1a1a; }
+    /* No outline round the header on focus. Opening or closing the stack
+       is a click on this button, and browsers that draw a focus ring for
+       mouse focus drew it here — a dark box round the icon pile and the
+       label, appearing exactly when the stack opened or shut. Keyboard
+       focus still gets a cue, on the label, where it cannot box the
+       icons in. */
+    .tstack-head:focus { outline:none; }
+    .tstack-head:focus-visible .tstack-lbl {
+      color:#1a1a1a; text-decoration:underline; text-underline-offset:3px;
+    }
+    body.dark .tstack-head:focus-visible .tstack-lbl { color:#fff; }
     body.dark .tstack-head { color:#8f9295; }
     body.dark .tstack-head:hover { color:#fff; }
     .tstack-icons { display:flex; align-items:center; min-height:var(--ts-plate); }
