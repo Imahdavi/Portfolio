@@ -3723,11 +3723,6 @@
       box-shadow:0 6px 18px rgba(0,0,0,.4);
     }
     body.dark .pib-mail:focus-within { border-color:rgba(255,255,255,.24); }
-    /* The phone sits on its own line, centred and narrower — it is the
-       most optional of the three, and giving it a full row would have
-       claimed more of the eye than it deserves. After .pib-mail, not
-       before: same specificity, so source order is what decides. */
-    .pib-mail-phone { max-width:260px; margin-top:10px; }
     .pib-mail input {
       min-width:0; background:none; border:none; outline:none;
       font-family:inherit; font-size:13.5px; color:#1a1a1a;
@@ -4894,9 +4889,6 @@ one keyframe at a time</div>
       <div class="pib-mail">
         <input type="text" id="note-telegram" placeholder="@telegram (optional)" autocomplete="off">
       </div>
-    </div>
-    <div class="pib-mail pib-mail-phone">
-      <input type="tel" id="note-phone" placeholder="phone (optional)" autocomplete="tel">
     </div>
 
     <!-- Full-size preview, the component's ImageViewDialog -->
@@ -11477,7 +11469,6 @@ async function submitNote() {
   const emailVal = document.getElementById('note-email').value.trim();
   const igVal = '';
   const tgVal = (document.getElementById('note-telegram')?.value || '').trim();
-  const phoneVal = (document.getElementById('note-phone')?.value || '').trim();
   const msg = raw;
 
   let ok = true;
@@ -11509,7 +11500,6 @@ async function submitNote() {
     // way — the attachment goes to Telegram and no further.
     const payload = { message: msg, email: emailVal,
                       instagram: igVal || null, telegram: tgVal || null,
-                      phone: phoneVal || null,
                       website: document.getElementById('note-website')?.value || '' };
     if (noteImage) payload.image = { name: noteImage.file.name, type: noteImage.file.type,
                                      data: await fileToBase64(noteImage.file) };
@@ -11533,7 +11523,7 @@ async function submitNote() {
     btn.disabled = false; paintNoteGo();
     toast.update({ type: 'error', title: 'That didn’t send.',
                    desc: 'Opening your mail app instead.', duration: 6000 });
-    const body = encodeURIComponent(`${msg}\n\n---\nEmail: ${emailVal}${igVal ? '\nInstagram: ' + igVal : ''}${tgVal ? '\nTelegram: ' + tgVal : ''}${phoneVal ? '\nPhone: ' + phoneVal : ''}`);
+    const body = encodeURIComponent(`${msg}\n\n---\nEmail: ${emailVal}${igVal ? '\nInstagram: ' + igVal : ''}${tgVal ? '\nTelegram: ' + tgVal : ''}`);
     window.location.href = `mailto:halirezamahdavi@gmail.com?subject=Portfolio note&body=${body}`;
   }
 }
