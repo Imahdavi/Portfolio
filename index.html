@@ -3579,13 +3579,12 @@
        pointer is read over without moving the text. */
     .tk-repel {
       position:relative;   /* the letters' offsetLeft/Top are measured against this */
-      margin:0 auto 26px; padding:22px 16px; width:max-content; max-width:100%;
+      margin:0 auto 18px; padding:22px 16px; width:max-content; max-width:100%;
       display:flex; flex-wrap:wrap; justify-content:center; align-items:center;
-      /* The "trusted by" label's face, Inter, set bold and tight at display
-         size, in sentence case. Fira Code's monospace spaces made the gaps
-         between words as wide as a letter. */
-      font-family:Inter, sans-serif; font-size:clamp(38px, 10vw, 58px); font-weight:700;
-      line-height:1; letter-spacing:-.04em; word-spacing:.04em; text-transform:none; color:#0a0a0a;
+      /* The "trusted by" label's face, Inter, at a quiet 34px medium in
+         sentence case. */
+      font-family:Inter, sans-serif; font-size:clamp(26px, 7vw, 34px); font-weight:500;
+      line-height:1; letter-spacing:-.03em; text-transform:none; color:#262626;
       cursor:default; user-select:none; -webkit-user-select:none; touch-action:pan-y;
     }
     .tk-repel span { display:inline-block; white-space:pre; will-change:transform; }
@@ -14879,7 +14878,9 @@ window.addEventListener('scroll', closeAddBlockMenu, true);
 (function initTicketRepel() {
   const root = document.getElementById('tkRepel');
   if (!root) return;
-  const RADIUS = 120, STRENGTH = 45, K = 180, C = 14, M = 0.4;
+  // Radius and push scaled down from 120 / 45 with the heading, which is a
+  // third of the demo's size; the spring is the component's.
+  const RADIUS = 80, STRENGTH = 20, K = 180, C = 14, M = 0.4;
   const text = root.dataset.text || root.textContent;
   root.setAttribute('aria-label', text);
   root.textContent = '';
