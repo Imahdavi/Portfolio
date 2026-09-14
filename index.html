@@ -3573,6 +3573,21 @@
 
        Narrower than the page so the pluses have room to sit on its corners
        without running off a phone's edges. */
+    /* "Get in touch", after 21st.dev's "Text Repel" (@componentry): each
+       letter is pushed away from the pointer and springs back. See
+       initTicketRepel for the numbers. The padding widens the area the
+       pointer is read over without moving the text. */
+    .tk-repel {
+      position:relative;   /* the letters' offsetLeft/Top are measured against this */
+      margin:0 auto 26px; padding:22px 16px; width:max-content; max-width:100%;
+      display:flex; flex-wrap:wrap; justify-content:center; align-items:center;
+      font-family:var(--font-heading); font-size:clamp(40px, 11vw, 64px); font-weight:700;
+      line-height:1; letter-spacing:-.02em; color:#0a0a0a;
+      cursor:default; user-select:none; -webkit-user-select:none; touch-action:pan-y;
+    }
+    .tk-repel span { display:inline-block; white-space:pre; will-change:transform; }
+    body.dark .tk-repel { color:var(--d-text); }
+
     .tk-frame {
       --tk-line:#e5e5e5;
       --tk-mark:#0a0a0a;
@@ -4810,6 +4825,7 @@ one keyframe at a time</div>
 
   <!-- ══════════════════════════════ NOTE ══════════════════════════════ -->
   <div class="view" id="view-soon">
+    <h1 class="tk-repel" id="tkRepel" data-text="Get in touch">Get in touch</h1>
     <div id="note-content-wrap" class="tk-frame">
     <!-- Frame from 21st.dev's "CTA 3" (@efferd): a hairline above and
          below, side guides that run past both, a dashed centre line behind
@@ -14848,6 +14864,84 @@ function openAddBlockMenu(anchorBtn, afterId) {
 
 // Scrolling the page would leave a fixed menu hanging off its trigger.
 window.addEventListener('scroll', closeAddBlockMenu, true);
+
+/* ─── Ticket heading: Text Repel ───────────────────────────────────
+   Ported from 21st.dev's "Text Repel" (@componentry), which is React and
+   framer-motion. Its numbers are kept: a letter within 120px of the
+   pointer is pushed straight away from it by (1 - d/120)² × 45px, and
+   rides a spring (stiffness 180, damping 14, mass 0.4) to that offset and
+   back, tilting 0.3° per pixel it has moved sideways. The spring is
+   stepped here per frame, and the loop stops once every letter is at
+   rest. Touch drives it too — a finger dragged across the heading. */
+(function initTicketRepel() {
+  const root = document.getElementById('tkRepel');
+  if (!root) return;
+  const RADIUS = 120, STRENGTH = 45, K = 180, C = 14, M = 0.4;
+  const text = root.dataset.text || root.textContent;
+  root.setAttribute('aria-label', text);
+  root.textContent = '';
+  const letters = [...text].map(ch => {
+    const s = document.createElement('span');
+    s.textContent = ch;
+    s.setAttribute('aria-hidden', 'true');
+    root.appendChild(s);
+    return { el: s, space: ch === ' ', cx: 0, cy: 0, x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0 };
+  });
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Letter centres in the heading's own box, from layout rather than the
+  // screen, so a letter already pushed aside is still measured at home.
+  const measure = () => letters.forEach(l => {
+    l.cx = l.el.offsetLeft + l.el.offsetWidth / 2;
+    l.cy = l.el.offsetTop + l.el.offsetHeight / 2;
+  });
+
+  let px = -9999, py = -9999, raf = 0, last = 0;
+  const aim = () => letters.forEach(l => {
+    if (l.space) return;
+    const dx = l.cx - px, dy = l.cy - py, d = Math.hypot(dx, dy);
+    if (d < RADIUS && d > 0) {
+      const f = (1 - d / RADIUS) ** 2 * STRENGTH, a = Math.atan2(dy, dx);
+      l.tx = Math.cos(a) * f; l.ty = Math.sin(a) * f;
+    } else { l.tx = 0; l.ty = 0; }
+  });
+  const frame = (now) => {
+    const dt = Math.min(0.032, (now - (last || now)) / 1000) || 0.016;
+    last = now;
+    let moving = false;
+    letters.forEach(l => {
+      if (l.space) return;
+      // Two half-steps a frame keep a stiff, light spring stable.
+      for (let i = 0; i < 2; i++) {
+        const h = dt / 2;
+        l.vx += ((-K * (l.x - l.tx) - C * l.vx) / M) * h; l.x += l.vx * h;
+        l.vy += ((-K * (l.y - l.ty) - C * l.vy) / M) * h; l.y += l.vy * h;
+      }
+      if (Math.abs(l.x - l.tx) + Math.abs(l.y - l.ty) + Math.abs(l.vx) + Math.abs(l.vy) > 0.02) moving = true;
+      else { l.x = l.tx; l.y = l.ty; l.vx = l.vy = 0; }
+      l.el.style.transform = `translate(${l.x.toFixed(2)}px, ${l.y.toFixed(2)}px) rotate(${(l.x * 0.3).toFixed(2)}deg)`;
+    });
+    raf = moving ? requestAnimationFrame(frame) : 0;
+    if (!moving) last = 0;
+  };
+  const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
+  const move = (e) => {
+    if (reduced) return;
+    const r = root.getBoundingClientRect();
+    px = e.clientX - r.left; py = e.clientY - r.top;
+    aim(); kick();
+  };
+  const leave = () => { px = py = -9999; aim(); kick(); };
+
+  root.addEventListener('pointerdown', (e) => { measure(); move(e); });
+  root.addEventListener('pointermove', move);
+  root.addEventListener('pointerleave', leave);
+  root.addEventListener('pointercancel', leave);
+  root.addEventListener('pointerenter', measure);
+  window.addEventListener('resize', measure);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+  measure();
+})();
 
 // Kept so existing callers of the old name reach the new menu.
 function openAddHereMenu(anchorBtn, afterId) { openAddBlockMenu(anchorBtn, afterId); }
