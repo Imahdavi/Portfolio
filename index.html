@@ -575,58 +575,6 @@
       font-style:normal; font-size:8.5px; font-weight:700;
       letter-spacing:.08em; text-transform:uppercase; opacity:.6;
     }
-    .vsw-admin { display:none; }
-    body.is-admin .vsw-admin { display:flex; }
-
-    /* Brand as cards — see renderBrandStack. The card is the Animated
-       Card Stack's: 12px corners, a 4px inset around a 200px cover with its
-       own 12px corners and a hairline outline, a 16px gap to the name over
-       the category, and a 40px pill. Here each one is whole (bordered all
-       round) and they run down the page 16px apart; an open one grows its
-       Brand row beneath the card. */
-    .bst { display:flex; flex-direction:column; gap:16px; width:100%; max-width:512px; margin:0 auto 24px; }
-    .bst-item { scroll-margin-top:16px; }
-    .bst-card {
-      padding:4px; box-sizing:border-box; cursor:pointer;
-      background:#fff; border:1px solid #e5e5e5; border-radius:12px;
-      box-shadow:0 10px 15px -3px rgba(0,0,0,.06), 0 4px 6px -4px rgba(0,0,0,.06);
-      display:flex; flex-direction:column; gap:16px;
-      transition:box-shadow .2s ease, transform .2s ease;
-    }
-    .bst-card:hover { box-shadow:0 14px 24px -6px rgba(0,0,0,.12), 0 4px 8px -4px rgba(0,0,0,.08); }
-    .bst-card:active { transform:scale(.995); }
-    .bst-card:focus-visible { outline:2px solid #0a0a0a; outline-offset:2px; }
-    .bst-media { height:200px; flex:none; transition:height .35s cubic-bezier(.2,.8,.2,1), opacity .25s ease; border-radius:10px; overflow:hidden; outline:1px solid rgba(0,0,0,.1); outline-offset:-1px; background:#f5f5f5; }
-    /* Open, the cover folds away and the card is left as the header of its row. */
-    .bst-item.open .bst-card { gap:0; }
-    .bst-item.open .bst-media { height:0; opacity:0; outline-color:transparent; }
-    .bst-item.open .bst-info { padding:8px 8px 8px 12px; }
-    /* Set while a row closes because another opened, so it snaps shut instead
-       of growing its cover back over .35s under the reader. */
-    .bst-instant .bst-media, .bst-instant .bst-info { transition:none !important; }
-    .bst-media img, .bst-media video { width:100%; height:100%; object-fit:cover; display:block; user-select:none; pointer-events:none; }
-    .bst-info { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 12px 20px; transition:padding .35s cubic-bezier(.2,.8,.2,1); }
-    .bst-text { display:flex; flex-direction:column; min-width:0; flex:1; }
-    .bst-title { font-weight:500; font-size:16px; color:#0a0a0a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .bst-desc { font-size:14px; color:#737373; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .bst-open {
-      display:flex; align-items:center; gap:2px; height:40px; flex:none; padding:0 12px 0 16px;
-      border-radius:999px; background:#0a0a0a; color:#fff; font:500 14px/1 var(--font-body);
-    }
-    .bst-open svg { transition:transform .25s ease; }
-    .bst-item.open .bst-open svg { transform:rotate(90deg); }
-    .bst-panel { padding:22px 4px 8px; animation:bstIn .4s ease both; }
-    .bst-panel .projects-list { margin-bottom:0; }
-    /* The card above already says the name and category. */
-    .bst-panel .pli-title-row, .bst-panel .pli-category { display:none; }
-    @keyframes bstIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:none; } }
-    @media (prefers-reduced-motion:reduce) { .bst-panel { animation:none; } .bst-open svg { transition:none; } }
-    body.dark .bst-card { background:var(--d-surface); border-color:var(--d-line); box-shadow:0 10px 15px -3px rgba(0,0,0,.45); }
-    body.dark .bst-card:focus-visible { outline-color:var(--d-text); }
-    body.dark .bst-media { outline-color:rgba(255,255,255,.1); background:var(--d-raised); }
-    body.dark .bst-title { color:var(--d-text); }
-    body.dark .bst-desc { color:var(--d-text-3); }
-    body.dark .bst-open { background:var(--d-text); color:var(--d-bg); }
     /* ── Projects list — an alternate write-up-style view of the same
        cards: year, title, category line, a short description, and a
        filmstrip of that project's own images. The strip's sizing is just
@@ -4771,12 +4719,6 @@ one keyframe at a time</div>
         <input type="radio" name="home-view" value="list"
                aria-label="Brand, beta" onchange="setHomeView('list')">
         <span><span class="vsw-mark" id="hvtBrandIcon" aria-hidden="true"></span>Brand<i class="vsw-beta">beta</i></span>
-      </label>
-      <!-- Trial of the Brand view as a card stack; admin-only until it replaces the list. -->
-      <label class="vsw-opt vsw-admin">
-        <input type="radio" name="home-view" value="stack"
-               aria-label="Brand stack, trial" onchange="setHomeView('stack')">
-        <span><span class="vsw-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="9" width="14" height="11" rx="2"/><path d="M7 5.5h10M9 2.5h6"/></svg></span>Stack<i class="vsw-beta">new</i></span>
       </label>
     </div>
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
@@ -10528,154 +10470,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-/* ─── Brand, as cards (trial) ────────────────────────────────────
-   The same rows as the Brand list, reached a different way: every brand
-   is a card in one column, drawn after 21st.dev's "Animated Card Stack"
-   card — a 200px cover in a 4px inset, the name and category under it,
-   and an Open pill — and pressing one opens its Brand row right there
-   under the card, exactly as the list draws it. Admin-only for now (see
-   .vsw-admin); if it works out it replaces the list's entry point.
-
-   The component's Animate button and cycling stack are left out: the
-   brands are a list to read down, not a deck to flip through.
-
-   Covers are stills. A cover that was a video used to autoplay, so
-   opening the page — or a brand — set clips running you had not asked
-   for; now a card prefers the board's thumbnail or an image, and a video
-   cover shows its first frame and stays paused.
-
-   Edit mode goes to the list (see _updateHomeEditUI): the rows are edited
-   there. */
-let _bstOpenKey = null;  // the brand whose row is open, if any
-
-function brandStackCards(sections) {
-  const all = sections.flatMap(sec => sec.cards || []);
-  return getProjectsListKeys()
-    .map(key => all.find(c => c.key === key))
-    .filter(card => card && listMediaFor(card.key, card.thumb).length);
-}
-
-function _bstCover(card) {
-  if (card.thumb) return { type: 'image', src: card.thumb };
-  const media = listMediaFor(card.key, card.thumb);
-  return media.find(m => m.type === 'image') || media[0];
-}
-
-const BST_CHEVRON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M9.5 18L15.5 12L9.5 6"/></svg>';
-
-function _bstCardEl(card) {
-  const el = document.createElement('div');
-  el.className = 'bst-card';
-  el.dataset.key = card.key;
-  el.setAttribute('role', 'button');
-  el.tabIndex = 0;
-  const cover = _bstCover(card);
-  const title = card.listTitle || card.name || '';
-  const media = document.createElement('div');
-  media.className = 'bst-media';
-  if (cover) {
-    const m = document.createElement(cover.type === 'video' ? 'video' : 'img');
-    if (cover.type === 'video') {
-      // A still: the first frame, never played.
-      // Fetched only as its card nears the screen (see renderBrandStack),
-      // so a column of video covers is not twenty downloads at once.
-      m.muted = true; m.playsInline = true; m.preload = 'metadata';
-      m.dataset.bstSrc = cover.src + '#t=0.1';
-    } else {
-      m.src = cover.src; m.alt = title; m.draggable = false; m.decoding = 'async'; m.loading = 'lazy';
-    }
-    media.appendChild(m);
-  }
-  const info = document.createElement('div');
-  info.className = 'bst-info';
-  info.innerHTML = `<div class="bst-text"><span class="bst-title"></span><span class="bst-desc"></span></div>` +
-    `<span class="bst-open"><span class="bst-open-lbl">Open</span>${BST_CHEVRON}</span>`;
-  info.querySelector('.bst-title').textContent = title;
-  info.querySelector('.bst-desc').textContent = card.category || card.sub || '';
-  el.append(media, info);
-  return el;
-}
-
-function renderBrandStack(container, sections) {
-  const cards = brandStackCards(sections);
-  const wrap = document.createElement('div');
-  wrap.className = 'bst';
-  container.appendChild(wrap);
-
-  requestAnimationFrame(() => {
-    container.style.opacity = '1';
-    setHomeView(homeView);
-  });
-  if (!cards.length) { wrap.innerHTML = '<div class="an-empty" style="text-align:center">No brands yet</div>'; return; }
-
-  // One row open at a time; its strip is the only one wired, so the page
-  // is not running twenty-odd strips nobody opened.
-  const close = (item) => {
-    item.classList.remove('open');
-    item.querySelector('.bst-open-lbl').textContent = 'Open';
-    const panel = item.querySelector('.bst-panel');
-    if (panel) panel.remove();
-  };
-  /* Keeps the pressed card where it was on screen. Opening used to scroll
-     the page to the card, and a row closing above it pulled the whole
-     column up under the pointer — either way the card you pressed moved. */
-  const holdPlace = (item, change) => {
-    const before = item.getBoundingClientRect().top;
-    change();
-    const delta = item.getBoundingClientRect().top - before;
-    if (Math.abs(delta) > 0.5) window.scrollTo({ top: window.scrollY + delta, behavior: 'instant' });
-  };
-  const open = (item, card) => {
-    wrap.querySelectorAll('.bst-item.open').forEach(o => {
-      o.classList.add('bst-instant');
-      close(o);
-      requestAnimationFrame(() => requestAnimationFrame(() => o.classList.remove('bst-instant')));
-    });
-    _teardownStripDrivers();
-    document.querySelectorAll('.pli-crop-menu').forEach(m => m.remove());
-    item.classList.add('open');
-    item.querySelector('.bst-open-lbl').textContent = 'Close';
-    const panel = document.createElement('div');
-    panel.className = 'bst-panel';
-    const list = document.createElement('div');
-    list.className = 'projects-list';
-    list.appendChild(buildProjectListItem(card));
-    panel.appendChild(list);
-    item.appendChild(panel);
-    _bstOpenKey = card.key;
-    requestAnimationFrame(() => {
-      setupStripVideos();
-      panel.querySelectorAll('.pli-media-strip').forEach(s => s._paintParallax?.());
-      setupProjectsListReveal();
-    });
-  };
-
-  cards.forEach(card => {
-    const item = document.createElement('div');
-    item.className = 'bst-item';
-    const cardEl = _bstCardEl(card);
-    const toggle = () => {
-      holdPlace(item, () => {
-        if (item.classList.contains('open')) { close(item); _bstOpenKey = null; _teardownStripDrivers(); }
-        else open(item, card);
-      });
-    };
-    cardEl.addEventListener('click', toggle);
-    cardEl.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
-    item.appendChild(cardEl);
-    wrap.appendChild(item);
-    if (card.key === _bstOpenKey) requestAnimationFrame(() => open(item, card));
-  });
-
-  const stills = wrap.querySelectorAll('video[data-bst-src]');
-  const load = v => { v.src = v.dataset.bstSrc; delete v.dataset.bstSrc; };
-  if (!('IntersectionObserver' in window)) { stills.forEach(load); return; }
-  const obs = new IntersectionObserver(entries => entries.forEach(en => {
-    if (en.isIntersecting) { obs.unobserve(en.target); load(en.target); }
-  }), { rootMargin: '400px 0px' });
-  stills.forEach(v => obs.observe(v));
-}
-
 function renderHomeSections(sections) {
   _lastHomeSections = sections;
   const container = document.getElementById('home-sections');
@@ -10699,8 +10493,6 @@ function renderHomeSections(sections) {
     if (!PROJECTS[card.key]) PROJECTS[card.key] = { name: card.name, sub: card.sub||'', blocks: [{ id: uid(), type:'text', content:'' }] };
     else { PROJECTS[card.key].name = card.name; PROJECTS[card.key].sub = card.sub||''; }
   }));
-
-  if (homeView === 'stack') { renderBrandStack(container, sections); return; }
 
   if (useList) {
     /* No heading. This view used to open with a "Brand" title, from when
@@ -11812,8 +11604,6 @@ function _updateHomeEditUI() {
   document.getElementById('editLabel').textContent = editMode ? 'Done' : 'Edit';
   const homeEl = document.getElementById('view-home');
   homeEl.classList.toggle('home-edit', editMode);
-  // The stack has no editing of its own; its rows are edited in the list.
-  if (editMode && homeView === 'stack') setHomeView('list');
 
   // The Projects list has its own editing — three inline fields, saved by
   // saveProjectsListEdits — and none of the card drag/rename/delete wiring
@@ -12016,7 +11806,7 @@ function saveHomeEdits() {
   // three cards under one synthetic heading, so running this there would
   // save that as the entire site structure and lose the rest. That view
   // saves through saveProjectsListEdits() instead.
-  if (homeView === 'list' || homeView === 'stack') return;
+  if (homeView === 'list') return;
   if (!_cachedSettings) _cachedSettings = {};
   if (!_cachedSettings.profile) _cachedSettings.profile = {};
 
