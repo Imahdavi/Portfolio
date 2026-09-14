@@ -575,6 +575,59 @@
       font-style:normal; font-size:8.5px; font-weight:700;
       letter-spacing:.08em; text-transform:uppercase; opacity:.6;
     }
+    .vsw-admin { display:none; }
+    body.is-admin .vsw-admin { display:flex; }
+
+    /* Brand as a card stack — see renderBrandStack. Sizes are the
+       component's: a 380px stage 644px wide at most, cards 512px wide
+       (324px on phones) and 280px tall with 12px top corners, a 4px inset
+       around a 200px image, and the Open pill 40px high. Below, a 1px rule
+       that the stage overlaps by a pixel and a 36px button. */
+    .bst { margin:0 auto 24px; max-width:644px; }
+    .bst-stage { position:relative; height:380px; overflow:hidden; }
+    .bst-card {
+      position:absolute; left:50%; bottom:0; width:min(512px, calc(100% - 24px)); height:280px;
+      padding:4px; box-sizing:border-box; overflow:hidden;
+      background:#fff; border:1px solid #e5e5e5; border-bottom:0; border-radius:12px 12px 0 0;
+      box-shadow:0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1);
+      display:flex; flex-direction:column; gap:16px;
+      transform-origin:50% 50%; will-change:transform;
+      transition:transform 1s cubic-bezier(.19,1,.22,1);
+    }
+    .bst-card[data-pos="0"] { cursor:pointer; }
+    .bst-media { height:200px; flex:none; border-radius:12px; overflow:hidden; outline:1px solid rgba(0,0,0,.1); outline-offset:-1px; background:#f5f5f5; }
+    .bst-media img, .bst-media video { width:100%; height:100%; object-fit:cover; display:block; user-select:none; pointer-events:none; }
+    .bst-info { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 12px 24px; }
+    .bst-text { display:flex; flex-direction:column; min-width:0; flex:1; }
+    .bst-title { font-weight:500; font-size:15px; color:#0a0a0a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .bst-desc { font-size:14px; color:#737373; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .bst-open, .bst-back {
+      display:flex; align-items:center; gap:2px; height:40px; flex:none; padding:0 12px 0 16px;
+      border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:500 14px/1 var(--font-body); cursor:pointer;
+    }
+    .bst-back { padding:0 16px 0 12px; height:36px; margin:0 0 22px; background:transparent; color:#525252; border:1px solid #e5e5e5; border-radius:8px; gap:4px; }
+    .bst-back:hover { background:#f5f5f5; color:#0a0a0a; }
+    .bst-bar { position:relative; z-index:10; margin-top:-1px; border-top:1px solid #e5e5e5; padding:16px 0; display:flex; align-items:center; justify-content:center; gap:12px; }
+    .bst-next {
+      height:36px; padding:0 12px; border-radius:8px; border:1px solid #e5e5e5; background:#fff;
+      font:500 14px/1 var(--font-body); color:#262626; cursor:pointer; transition:background .15s, transform .1s;
+    }
+    .bst-next:hover { background:#f5f5f5; }
+    .bst-next:active { transform:scale(.98); }
+    .bst-next:disabled { opacity:.4; cursor:default; }
+    .bst-count { font-size:12px; color:#a3a3a3; font-variant-numeric:tabular-nums; }
+    .bst-detail { animation:bstIn .45s ease both; }
+    @keyframes bstIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+    @media (max-width:640px) { .bst-card { width:min(324px, calc(100% - 16px)); } }
+    @media (prefers-reduced-motion:reduce) { .bst-card { transition-duration:.01ms; } .bst-detail { animation:none; } }
+    body.dark .bst-card { background:var(--d-surface); border-color:var(--d-line); box-shadow:0 10px 15px -3px rgba(0,0,0,.5); }
+    body.dark .bst-media { outline-color:rgba(255,255,255,.1); background:var(--d-raised); }
+    body.dark .bst-title { color:var(--d-text); }
+    body.dark .bst-desc, body.dark .bst-count { color:var(--d-text-3); }
+    body.dark .bst-open { background:var(--d-text); color:var(--d-bg); }
+    body.dark .bst-bar { border-color:var(--d-line); }
+    body.dark .bst-next, body.dark .bst-back { background:var(--d-bg); border-color:var(--d-line); color:var(--d-text); }
+    body.dark .bst-next:hover, body.dark .bst-back:hover { background:var(--d-raised); }
     /* ── Projects list — an alternate write-up-style view of the same
        cards: year, title, category line, a short description, and a
        filmstrip of that project's own images. The strip's sizing is just
@@ -4719,6 +4772,12 @@ one keyframe at a time</div>
         <input type="radio" name="home-view" value="list"
                aria-label="Brand, beta" onchange="setHomeView('list')">
         <span><span class="vsw-mark" id="hvtBrandIcon" aria-hidden="true"></span>Brand<i class="vsw-beta">beta</i></span>
+      </label>
+      <!-- Trial of the Brand view as a card stack; admin-only until it replaces the list. -->
+      <label class="vsw-opt vsw-admin">
+        <input type="radio" name="home-view" value="stack"
+               aria-label="Brand stack, trial" onchange="setHomeView('stack')">
+        <span><span class="vsw-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="9" width="14" height="11" rx="2"/><path d="M7 5.5h10M9 2.5h6"/></svg></span>Stack<i class="vsw-beta">new</i></span>
       </label>
     </div>
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
@@ -10470,6 +10529,174 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+/* ─── Brand, as a card stack (trial) ─────────────────────────────
+   The same rows as the Brand list, reached a different way: the brands
+   sit in a stack after 21st.dev's "Animated Card Stack", and opening one
+   shows its Brand row exactly as the list draws it. Admin-only for now
+   (see .vsw-admin) — if it works out it replaces the list's entry point.
+
+   The source is React with framer-motion; this page has neither, so the
+   motion is its numbers on CSS transitions. Three cards show: the front
+   at scale 1 and 12px down, then .95 at -16px and .9 at -44px, lower
+   z-index further back. Next sends the front card down 340px on top of
+   everything and removes it, the other two step forward, and a new card
+   comes in behind from -16px at .9. Its spring is duration 1, bounce 0 —
+   no overshoot — which an ease-out over the same second matches.
+
+   Edit mode goes to the list (see _updateHomeEditUI): the rows are edited
+   there, and a stack is no place to drag twenty boards into order. */
+const BST_POS = [ { s: 1, y: 12 }, { s: 0.95, y: -16 }, { s: 0.9, y: -44 } ];
+const BST_ENTER = { s: 0.9, y: -16 };
+const BST_EXIT = { s: 1, y: 340 };
+let _bstFront = 0;       // which brand is on top, kept across re-renders
+let _bstOpenKey = null;  // the brand whose row is open, if any
+
+function _bstTransform(p) { return `translateX(-50%) translateY(${p.y}px) scale(${p.s})`; }
+
+function brandStackCards(sections) {
+  const all = sections.flatMap(sec => sec.cards || []);
+  return getProjectsListKeys()
+    .map(key => all.find(c => c.key === key))
+    .filter(card => card && listMediaFor(card.key, card.thumb).length);
+}
+
+function _bstCover(card) {
+  const media = listMediaFor(card.key, card.thumb);
+  const img = media.find(m => m.type === 'image');
+  if (card.thumb) return { type: 'image', src: card.thumb };
+  return img || media[0];
+}
+
+function _bstCardEl(card, onOpen) {
+  const el = document.createElement('div');
+  el.className = 'bst-card';
+  el.dataset.key = card.key;
+  const cover = _bstCover(card);
+  const title = card.listTitle || card.name || '';
+  const desc = card.category || card.sub || '';
+  const media = document.createElement('div');
+  media.className = 'bst-media';
+  if (cover) {
+    const m = document.createElement(cover.type === 'video' ? 'video' : 'img');
+    m.src = cover.src;
+    if (cover.type === 'video') { m.muted = true; m.loop = true; m.playsInline = true; m.autoplay = true; m.preload = 'metadata'; }
+    else { m.alt = title; m.draggable = false; m.decoding = 'async'; }
+    media.appendChild(m);
+  }
+  const info = document.createElement('div');
+  info.className = 'bst-info';
+  info.innerHTML = `<div class="bst-text"><span class="bst-title"></span><span class="bst-desc"></span></div>` +
+    `<button type="button" class="bst-open">Open<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M9.5 18L15.5 12L9.5 6"/></svg></button>`;
+  info.querySelector('.bst-title').textContent = title;
+  info.querySelector('.bst-desc').textContent = desc;
+  el.append(media, info);
+  el.addEventListener('click', () => { if (el.dataset.pos === '0') onOpen(card); });
+  return el;
+}
+
+function renderBrandStack(container, sections) {
+  const cards = brandStackCards(sections);
+  const wrap = document.createElement('div');
+  wrap.className = 'bst';
+  container.appendChild(wrap);
+
+  const done = () => requestAnimationFrame(() => {
+    container.style.opacity = '1';
+    setHomeView(homeView);
+    setupStripVideos();
+    container.querySelectorAll('.pli-media-strip').forEach(s => s._paintParallax?.());
+    setupProjectsListReveal();
+  });
+
+  if (!cards.length) { wrap.innerHTML = '<div class="an-empty" style="text-align:center">No brands yet</div>'; done(); return; }
+  _bstFront = ((_bstFront % cards.length) + cards.length) % cards.length;
+
+  const open = (card) => {
+    _bstOpenKey = card.key;
+    renderHomeSections(_lastHomeSections);
+    const v = document.getElementById('view-home');
+    const top = document.getElementById('homeViewToggle');
+    if (v && top) v.scrollTo({ top: Math.max(0, top.offsetTop - 16), behavior: 'smooth' });
+  };
+
+  // An open brand: its row, as the list draws it, under a way back.
+  const openCard = _bstOpenKey && cards.find(c => c.key === _bstOpenKey);
+  if (openCard) {
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'bst-back';
+    back.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M14.5 18L8.5 12L14.5 6"/></svg>All brands';
+    back.addEventListener('click', () => { _bstOpenKey = null; renderHomeSections(_lastHomeSections); });
+    const list = document.createElement('div');
+    list.className = 'projects-list bst-detail';
+    list.appendChild(buildProjectListItem(openCard));
+    wrap.append(back, list);
+    done();
+    return;
+  }
+  _bstOpenKey = null;
+
+  const stage = document.createElement('div');
+  stage.className = 'bst-stage';
+  const bar = document.createElement('div');
+  bar.className = 'bst-bar';
+  const next = document.createElement('button');
+  next.type = 'button';
+  next.className = 'bst-next';
+  next.textContent = 'Next brand';
+  const count = document.createElement('span');
+  count.className = 'bst-count';
+  bar.append(next, count);
+  wrap.append(stage, bar);
+
+  const place = (el, i) => {
+    el.dataset.pos = String(i);
+    el.style.zIndex = String(3 - i);
+    el.style.transform = _bstTransform(BST_POS[i]);
+  };
+  const showing = Math.min(3, cards.length);
+  const at = i => cards[(_bstFront + i) % cards.length];
+  const updateCount = () => { count.textContent = `${_bstFront + 1} / ${cards.length}`; };
+  for (let i = 0; i < showing; i++) {
+    const el = _bstCardEl(at(i), open);
+    place(el, i);
+    stage.appendChild(el);
+  }
+  updateCount();
+  if (cards.length < 2) next.disabled = true;
+
+  next.addEventListener('click', () => {
+    const els = [...stage.querySelectorAll('.bst-card:not(.bst-leaving)')];
+    const front = els.find(e => e.dataset.pos === '0');
+    if (!front) return;
+    front.classList.add('bst-leaving');
+    front.dataset.pos = 'out';
+    front.style.zIndex = '10';
+    front.style.transform = _bstTransform(BST_EXIT);
+    setTimeout(() => front.remove(), 1000);
+
+    _bstFront = (_bstFront + 1) % cards.length;
+    els.filter(e => e !== front).forEach(e => place(e, Number(e.dataset.pos) - 1));
+
+    // A stack of fewer than three has no new card to bring in: the one that
+    // left comes round again at the back.
+    if (cards.length >= 2) {
+      const el = _bstCardEl(at(showing - 1), open);
+      el.dataset.pos = String(showing - 1);
+      el.style.zIndex = String(3 - (showing - 1));
+      el.style.transition = 'none';
+      el.style.transform = _bstTransform(BST_ENTER);
+      stage.appendChild(el);
+      void el.offsetWidth;
+      el.style.transition = '';
+      place(el, showing - 1);
+    }
+    updateCount();
+  });
+
+  done();
+}
+
 function renderHomeSections(sections) {
   _lastHomeSections = sections;
   const container = document.getElementById('home-sections');
@@ -10493,6 +10720,8 @@ function renderHomeSections(sections) {
     if (!PROJECTS[card.key]) PROJECTS[card.key] = { name: card.name, sub: card.sub||'', blocks: [{ id: uid(), type:'text', content:'' }] };
     else { PROJECTS[card.key].name = card.name; PROJECTS[card.key].sub = card.sub||''; }
   }));
+
+  if (homeView === 'stack') { renderBrandStack(container, sections); return; }
 
   if (useList) {
     /* No heading. This view used to open with a "Brand" title, from when
@@ -11604,6 +11833,8 @@ function _updateHomeEditUI() {
   document.getElementById('editLabel').textContent = editMode ? 'Done' : 'Edit';
   const homeEl = document.getElementById('view-home');
   homeEl.classList.toggle('home-edit', editMode);
+  // The stack has no editing of its own; its rows are edited in the list.
+  if (editMode && homeView === 'stack') setHomeView('list');
 
   // The Projects list has its own editing — three inline fields, saved by
   // saveProjectsListEdits — and none of the card drag/rename/delete wiring
@@ -11806,7 +12037,7 @@ function saveHomeEdits() {
   // three cards under one synthetic heading, so running this there would
   // save that as the entire site structure and lose the rest. That view
   // saves through saveProjectsListEdits() instead.
-  if (homeView === 'list') return;
+  if (homeView === 'list' || homeView === 'stack') return;
   if (!_cachedSettings) _cachedSettings = {};
   if (!_cachedSettings.profile) _cachedSettings.profile = {};
 
