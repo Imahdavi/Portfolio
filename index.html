@@ -282,6 +282,11 @@
     }
     #view-home.home-edit .avatar-size-ctrl { display:flex; }
     .avatar-size-ctrl .tool-size-row { display:flex; padding-left:0; margin-top:0; }
+    /* Size and Left / Right stacked, labels in one column so the sliders line up. */
+    #view-home.home-edit .avatar-size-ctrl { flex-direction:column; align-items:stretch; gap:8px; }
+    .avatar-size-ctrl .tool-size-lbl { width:62px; white-space:nowrap; }
+    .avatar-size-ctrl .tool-size-slider { width:140px; }
+    .avatar-size-ctrl .tool-size-input { width:46px; }
 
     /* Fancy display version: letters blur in via .play (added once the
        webfont is confirmed loaded, see revealProfileName()). Hidden
@@ -16219,6 +16224,67 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     sizeCtrl.appendChild(_avatarSizeCtl.row);
+
+    /* Left / right, as a slider beside Size. Dragging the photo sideways
+       works too, but it moves both axes at once and a few pixels of
+       vertical wobble come along; this moves it along the line only.
+       Same --avatar-dx and the same avatarDX setting the drag writes, so
+       the two stay in step. Zero is dead centre, snapped within 6px. */
+    const posRow = document.createElement('div');
+    posRow.className = 'tool-size-row avatar-pos-row';
+    const posLbl = document.createElement('span');
+    posLbl.className = 'tool-size-lbl';
+    posLbl.textContent = 'Left / Right';
+    const posSlider = document.createElement('input');
+    posSlider.type = 'range';
+    posSlider.className = 'tool-size-slider';
+    posSlider.step = '1';
+    const posNum = document.createElement('input');
+    posNum.type = 'number';
+    posNum.className = 'tool-size-input';
+    const reach = () => {
+      const app = document.getElementById('app');
+      const w = avatar.getBoundingClientRect().width || 46;
+      return Math.round(Math.max(20, (app ? app.getBoundingClientRect().width : 540) / 2 - w / 2 - 12));
+    };
+    const curDX = () => parseFloat(getComputedStyle(slot).getPropertyValue('--avatar-dx')) || 0;
+    const syncPos = () => {
+      const r = reach();
+      posSlider.min = posNum.min = String(-r);
+      posSlider.max = posNum.max = String(r);
+      posSlider.value = posNum.value = String(Math.round(curDX()));
+    };
+    const setDX = (v, commit) => {
+      const r = reach();
+      v = Math.max(-r, Math.min(r, Math.round(v)));
+      if (Math.abs(v) < SNAP) v = 0;
+      slot.style.setProperty('--avatar-dx', v + 'px');
+      posSlider.value = posNum.value = String(v);
+      if (commit) {
+        if (!_cachedSettings) _cachedSettings = {};
+        if (!_cachedSettings.profile) _cachedSettings.profile = {};
+        _cachedSettings.profile.avatarDX = v;
+        saveSettings();
+      }
+    };
+    // Re-measured on the way in: at startup the column may not be laid out
+    // yet, which left the range stuck at ±20px.
+    [posSlider, posNum].forEach(el => {
+      el.addEventListener('pointerdown', e => { e.stopPropagation(); syncPos(); });
+      el.addEventListener('focus', syncPos);
+    });
+    window.addEventListener('resize', syncPos);
+    posSlider.addEventListener('input', () => setDX(+posSlider.value, false));
+    posSlider.addEventListener('change', () => setDX(+posSlider.value, true));
+    posNum.addEventListener('change', () => { if (!Number.isNaN(+posNum.value)) setDX(+posNum.value, true); });
+    posRow.append(posLbl, posSlider, posNum);
+    sizeCtrl.appendChild(posRow);
+    // Settings land after this runs, and edit mode is where it is seen, so
+    // re-read the offset whenever the control is about to be used.
+    syncPos();
+    // After the class change has been laid out, not during it.
+    new MutationObserver(() => requestAnimationFrame(syncPos)).observe(document.getElementById('view-home'), { attributes: true, attributeFilter: ['class'] });
+    avatar.addEventListener('pointerup', () => requestAnimationFrame(syncPos));
   }
 });
 
