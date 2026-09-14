@@ -3406,6 +3406,53 @@
        taller than the screen. */
     #view-soon.active { display:flex; flex-direction:column; justify-content:center; }
 
+    /* ── Ticket frame, from 21st.dev's "CTA 3" (@efferd) ────────────────
+       The component's own values, read off its rendered bundle: 1px rules
+       above and below in #e5e5e5, side guides that run 24px past both, a
+       1px dashed centre line behind the content, a 24px plus drawn at 1px
+       sitting centred on each corner, a radial shade of the foreground at
+       8% from 25% across the top, and 32px/16px of padding.
+
+       Narrower than the page so the pluses have room to sit on its corners
+       without running off a phone's edges. */
+    .tk-frame {
+      --tk-line:#e5e5e5;
+      --tk-mark:#0a0a0a;
+      position:relative;
+      width:calc(100% - 28px); max-width:600px; margin:0 auto;
+      padding:32px 16px;
+      border-top:1px solid var(--tk-line); border-bottom:1px solid var(--tk-line);
+      background:radial-gradient(35% 80% at 25% 0%, rgba(10,10,10,.08), transparent);
+    }
+    body.dark .tk-frame {
+      --tk-line:rgba(255,255,255,.10);
+      --tk-mark:var(--d-text);
+      background:radial-gradient(35% 80% at 25% 0%, rgba(255,255,255,.06), transparent);
+    }
+    .tk-plus {
+      position:absolute; width:24px; height:24px; z-index:1; pointer-events:none;
+      fill:none; stroke:var(--tk-mark); stroke-width:1; stroke-linecap:round;
+    }
+    .tk-tl { top:-12.5px;    left:-11.5px; }
+    .tk-tr { top:-12.5px;    right:-11.5px; }
+    .tk-bl { bottom:-12.5px; left:-11.5px; }
+    .tk-br { bottom:-12.5px; right:-11.5px; }
+    .tk-guide {
+      position:absolute; top:-24px; bottom:-24px; width:1px; pointer-events:none;
+      background:var(--tk-line);
+    }
+    .tk-guide-l { left:0; }
+    .tk-guide-r { right:0; }
+    .tk-dash {
+      position:absolute; top:0; bottom:0; left:50%; width:0; pointer-events:none;
+      border-left:1px dashed var(--tk-line); z-index:0;
+    }
+    /* Content above the dashed line. The preview dialog is left out: it is
+       position:fixed over the whole page and must stay that way. */
+    .tk-frame > :not(.tk-plus):not(.tk-guide):not(.tk-dash):not(.pib-dialog) {
+      position:relative; z-index:1;
+    }
+
 
     .pib {
       position:relative; isolation:isolate;
@@ -4605,7 +4652,19 @@ one keyframe at a time</div>
 
   <!-- ══════════════════════════════ NOTE ══════════════════════════════ -->
   <div class="view" id="view-soon">
-    <div id="note-content-wrap">
+    <div id="note-content-wrap" class="tk-frame">
+    <!-- Frame from 21st.dev's "CTA 3" (@efferd): a hairline above and
+         below, side guides that run past both, a dashed centre line behind
+         the content, a thin plus on each corner, and a soft shade from the
+         upper left. Decoration only, so all of it is aria-hidden and out of
+         the pointer's way. -->
+    <svg class="tk-plus tk-tl" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg>
+    <svg class="tk-plus tk-tr" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg>
+    <svg class="tk-plus tk-bl" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg>
+    <svg class="tk-plus tk-br" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg>
+    <span class="tk-guide tk-guide-l" aria-hidden="true"></span>
+    <span class="tk-guide tk-guide-r" aria-hidden="true"></span>
+    <span class="tk-dash" aria-hidden="true"></span>
     <!-- Composer: a port of the 21st.dev ai-prompt-box, matched control for
          control. The toggles, the gradient dividers, the 64px previews with
          their full-size dialog, paste and drop, and the recorder replacing
