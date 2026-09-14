@@ -3363,6 +3363,60 @@
     .add-btn:hover { border-color:#555; color:#333; background:rgba(0,0,0,.04); }
     .add-btn svg   { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
 
+    /* Add block menu and its trigger; see openAddBlockMenu. Values are the
+       component's, read off its rendered bundle. */
+    .abm-trigger {
+      display:inline-flex; align-items:center; gap:8px;
+      padding:4px 14px 4px 4px; border-radius:999px;
+      border:1px solid #e5e5e5; background:#fff; color:#0a0a0a;
+      font-family:inherit; font-size:14px; font-weight:500; cursor:pointer;
+      box-shadow:0 1px 2px rgba(0,0,0,.04);
+      transition:background .15s, border-color .15s;
+    }
+    .abm-trigger:hover, .abm-trigger[aria-expanded="true"] { background:#f5f5f5; }
+    .abm-trigger-plus {
+      width:28px; height:28px; border-radius:50%; flex:none;
+      display:flex; align-items:center; justify-content:center; background:#f5f5f5;
+    }
+    .abm-trigger:hover .abm-trigger-plus, .abm-trigger[aria-expanded="true"] .abm-trigger-plus { background:#fff; }
+    .abm-trigger-plus svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+
+    .abm {
+      position:fixed; z-index:1100; min-width:216px;
+      padding:4px 4px 8px; border-radius:8px;
+      background:#fff; border:1px solid #e5e5e5; color:#0a0a0a;
+      box-shadow:0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1);
+      font-family:var(--font-body);
+      animation:abmIn .12s ease-out both;
+    }
+    @keyframes abmIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+    .abm-head { padding:6px 8px; font-size:14px; font-weight:600; }
+    .abm-item {
+      display:flex; align-items:center; gap:8px; width:100%;
+      padding:6px 8px; border:none; border-radius:6px; background:none;
+      color:inherit; font-family:inherit; text-align:left; cursor:pointer;
+      transition:background .12s;
+    }
+    .abm-item:hover, .abm-item:focus-visible { background:#f5f5f5; outline:none; }
+    .abm-icon {
+      width:32px; height:32px; flex:none; border-radius:6px;
+      border:1px solid #e5e5e5; background:#fff;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .abm-icon svg { width:16px; height:16px; opacity:.6; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .abm-text { display:flex; flex-direction:column; min-width:0; }
+    .abm-title { font-size:14px; font-weight:500; line-height:20px; }
+    .abm-desc  { font-size:12px; line-height:16px; color:#737373; white-space:nowrap; }
+    @media (prefers-reduced-motion:reduce) { .abm { animation:none; } }
+    body.dark .abm-trigger { background:var(--d-surface); border-color:var(--d-line); color:var(--d-text); }
+    body.dark .abm-trigger:hover, body.dark .abm-trigger[aria-expanded="true"] { background:var(--d-raised); }
+    body.dark .abm-trigger-plus { background:var(--d-raised); }
+    body.dark .abm-trigger:hover .abm-trigger-plus, body.dark .abm-trigger[aria-expanded="true"] .abm-trigger-plus { background:var(--d-surface); }
+    body.dark .abm { background:var(--d-surface); border-color:var(--d-line); color:var(--d-text); box-shadow:0 8px 24px rgba(0,0,0,.5); }
+    body.dark .abm-item:hover, body.dark .abm-item:focus-visible { background:var(--d-raised); }
+    body.dark .abm-icon { background:var(--d-bg); border-color:var(--d-line); }
+    body.dark .abm-desc { color:var(--d-text-3); }
+
     /* Upload placeholder block */
     .block-uploading .media-inner {
       background:#f0efed; display:flex; align-items:center; justify-content:center;
@@ -14536,60 +14590,132 @@ function placeBlockEl(list, el, proj, b) {
   if (ref) list.insertBefore(el, ref); else list.appendChild(el);
 }
 
-const ADD_HERE_OPTIONS = [
-  ['Text',          'addText'],
-  ['Image / video', 'addMedia'],
-  ['Animation',     'addLottie'],
-  ['Divider',       'addDivider'],
-  ['Star divider',  'addStarDivider'],
-  ['Carousel',      'addMagneticCarousel'],
-  ['Avatars',       'addAvatars'],
-  ['Tool stack',    'addToolStack'],
+/* ─── Add block menu ───────────────────────────────────────────────
+   Ported from 21st.dev's "Dropdown Menu 11" (@bundui), an editor's
+   "Add block" menu: a light card with a heading, and one row per block
+   type — a 32px bordered tile holding its icon, a title, and a line
+   saying what it is for. Geometry is the component's own: 216px wide at
+   least, 4px padding with 8 underneath, an 8px radius on a 1px border,
+   6px/8px rows with an 8px gap and a 6px radius, 14px titles over 12px
+   muted descriptions, and its soft two-layer shadow.
+
+   It replaces both ways of adding. The + under a block opened a dark
+   list of bare labels, and the bar at the bottom of the board was a
+   horizontal scroller of dashed tiles whose right end ran off the column,
+   so half the block types were out of sight until you scrolled it. Both
+   now open this, the bar reduced to a single "+ Add block" trigger — one
+   list, readable in full, the same wherever you add from.
+
+   The icons are the bar's own, read out of its markup before the bar is
+   replaced, so there is one drawing per block type. */
+const ADD_BLOCK_TYPES = [
+  { fn: 'addText',             title: 'Text',          desc: 'Start writing with plain text' },
+  { fn: 'addMedia',            title: 'Image / video', desc: 'Upload a picture or a clip' },
+  { fn: 'addLottie',           title: 'Animation',     desc: 'A Lottie from the library' },
+  { fn: 'addDivider',          title: 'Divider',       desc: 'A soft curve between sections' },
+  { fn: 'addStarDivider',      title: 'Star divider',  desc: 'The star mark between sections' },
+  { fn: 'addMagneticCarousel', title: 'Carousel',      desc: 'A draggable row of images' },
+  { fn: 'addAvatars',          title: 'Avatars',       desc: 'Credit a brand or a collaborator' },
+  { fn: 'addToolStack',        title: 'Tool stack',    desc: 'The tools behind a piece' },
 ];
 
-function openAddHereMenu(anchorBtn, afterId) {
-  document.querySelectorAll('.resize-menu.open, .link-popover.open').forEach(m => m.classList.remove('open'));
-  const menu = getMoveMenu();
-  if (menu.classList.contains('open') && menu._anchor === anchorBtn) {
-    menu.classList.remove('open');
-    return;
-  }
-  menu.innerHTML = '';
-  ADD_HERE_OPTIONS.forEach(([label, fn]) => {
-    const opt = document.createElement('button');
-    opt.type = 'button';
-    opt.className = 'move-opt';
-    opt.textContent = label;
-    opt.onclick = () => {
-      menu.classList.remove('open');
+(function captureAddIcons() {
+  const bar = document.getElementById('addBar');
+  if (!bar) return;
+  bar.querySelectorAll('.add-btn').forEach(btn => {
+    const m = /(\w+)\(\)/.exec(btn.getAttribute('onclick') || '');
+    const type = m && ADD_BLOCK_TYPES.find(t => t.fn === m[1]);
+    const svg = btn.querySelector('svg');
+    if (type && svg) type.icon = svg.outerHTML;
+  });
+  // The bar becomes one trigger that opens the menu for the end of the board.
+  bar.innerHTML = '<button type="button" class="abm-trigger" id="addBlockTrigger" aria-haspopup="menu" aria-expanded="false">' +
+    '<span class="abm-trigger-plus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg></span>' +
+    'Add block</button>';
+  bar.querySelector('#addBlockTrigger').addEventListener('click', (e) => {
+    e.stopPropagation();
+    openAddBlockMenu(e.currentTarget, null);
+  });
+})();
+
+let _abm = null;
+function closeAddBlockMenu() {
+  if (!_abm) return;
+  if (_abm._anchor) _abm._anchor.setAttribute('aria-expanded', 'false');
+  _abm.remove();
+  _abm = null;
+  document.removeEventListener('pointerdown', _abmOutside, true);
+  document.removeEventListener('keydown', _abmKeys, true);
+}
+function _abmOutside(e) {
+  if (_abm && !_abm.contains(e.target) && e.target !== _abm._anchor && !_abm._anchor.contains(e.target)) closeAddBlockMenu();
+}
+function _abmKeys(e) {
+  if (!_abm) return;
+  const items = [..._abm.querySelectorAll('.abm-item')];
+  const i = items.indexOf(document.activeElement);
+  if (e.key === 'Escape') { e.preventDefault(); const a = _abm._anchor; closeAddBlockMenu(); a && a.focus(); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+  else if (e.key === 'ArrowUp')   { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+}
+
+// afterId: the block to add below, or null for the end of the board.
+function openAddBlockMenu(anchorBtn, afterId) {
+  const reopen = _abm && _abm._anchor === anchorBtn;
+  closeAddBlockMenu();
+  document.querySelectorAll('.resize-menu.open, .link-popover.open, .move-menu.open').forEach(m => m.classList.remove('open'));
+  if (reopen) return;   // a second click on the same trigger closes it
+
+  const menu = document.createElement('div');
+  menu.className = 'abm';
+  menu.setAttribute('role', 'menu');
+  menu.innerHTML = '<div class="abm-head">Add block</div>';
+  ADD_BLOCK_TYPES.forEach(t => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'abm-item';
+    item.setAttribute('role', 'menuitem');
+    item.innerHTML = `<span class="abm-icon" aria-hidden="true">${t.icon || ''}</span>` +
+      `<span class="abm-text"><span class="abm-title">${t.title}</span><span class="abm-desc">${t.desc}</span></span>`;
+    item.addEventListener('click', () => {
+      closeAddBlockMenu();
       const proj = PROJECTS[activeKey];
-      if (!proj || typeof window[fn] !== 'function') return;
+      if (!proj || typeof window[t.fn] !== 'function') return;
       // Read at click time, not when the menu opened — the board may have
       // been reordered in between.
-      const i = proj.blocks.findIndex(b => b.id === afterId);
+      const i = afterId ? proj.blocks.findIndex(b => b.id === afterId) : -1;
       _insertAt = i === -1 ? null : i + 1;
-      window[fn]();
-    };
-    menu.appendChild(opt);
+      window[t.fn]();
+    });
+    menu.appendChild(item);
   });
+  document.body.appendChild(menu);
+  menu._anchor = anchorBtn;
+  anchorBtn.setAttribute('aria-expanded', 'true');
+  _abm = menu;
 
-  menu.style.visibility = 'hidden';
-  menu.classList.add('open');
+  // Below the trigger, flipped above when there is no room; held inside the
+  // window either way.
   const r = anchorBtn.getBoundingClientRect();
   const mh = menu.offsetHeight, mw = menu.offsetWidth;
   let top = r.bottom + 6;
   if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 6);
-  let left = r.left + r.width / 2 - mw / 2;
+  let left = r.left;
   left = Math.max(8, Math.min(left, window.innerWidth - mw - 8));
-  menu.style.top  = top + 'px';
+  menu.style.top = top + 'px';
   menu.style.left = left + 'px';
-  menu.style.visibility = '';
-  menu._anchor = anchorBtn;
+
+  document.addEventListener('pointerdown', _abmOutside, true);
+  document.addEventListener('keydown', _abmKeys, true);
+  const first = menu.querySelector('.abm-item');
+  if (first) first.focus({ preventScroll: true });
 }
 
-// The bottom bar means "at the end", always. Cleared on the way in, so a
-// + whose file picker was cancelled cannot redirect the next add from it.
-document.getElementById('addBar')?.addEventListener('click', () => { _insertAt = null; }, true);
+// Scrolling the page would leave a fixed menu hanging off its trigger.
+window.addEventListener('scroll', closeAddBlockMenu, true);
+
+// Kept so existing callers of the old name reach the new menu.
+function openAddHereMenu(anchorBtn, afterId) { openAddBlockMenu(anchorBtn, afterId); }
 
 function moveBlockToProject(blockId, targetKey) {
   const srcKey = activeKey;
