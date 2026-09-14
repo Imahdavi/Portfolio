@@ -1829,7 +1829,7 @@
       .ta-art:hover .ta-vinyl-spin { animation:none; }
     }
     .an-title  { font-family:var(--font-heading); font-size:27px; font-weight:600; text-align:center; margin-bottom:20px; }
-    .an-range  { display:flex; gap:6px; justify-content:center; margin-bottom:22px; }
+    .an-range  { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:22px; }
     .an-range-btn { padding:6px 16px; border-radius:20px; border:1px solid rgba(0,0,0,.12); background:#fff; font-size:12.5px; font-weight:500; color:#666; cursor:pointer; transition:all .15s; }
     .an-range-btn.active { background:#1a1a1a; color:#fff; border-color:#1a1a1a; }
 
@@ -1851,6 +1851,35 @@
     .an-section { margin-bottom:26px; }
     .an-sh  { font-size:11px; font-weight:600; color:#aaa; text-transform:uppercase; letter-spacing:.07em; margin-bottom:10px; }
     .an-cap { font-size:10px; font-weight:400; color:#cfcbc4; text-transform:none; letter-spacing:0; margin-left:5px; }
+
+    /* Visitors chart; see renderAnalyticsChart. */
+    .an-chart-head { display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+    .an-legend { display:flex; gap:12px; font-size:12px; color:#666; margin-bottom:10px; }
+    .an-legend span { display:inline-flex; align-items:center; gap:6px; }
+    .an-legend-dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+    .an-chart { position:relative; }
+    .an-svg { display:block; touch-action:pan-y; cursor:crosshair; }
+    .an-grid { stroke:#ececec; stroke-width:1; }
+    .an-tick { font-size:12px; fill:#666; font-family:var(--font-body); }
+    .an-guide { stroke:rgba(0,0,0,.28); stroke-width:1; stroke-dasharray:3 3; pointer-events:none; }
+    .an-hdot { stroke:#fff; stroke-width:2; pointer-events:none; }
+    .an-tip {
+      position:absolute; top:4px; pointer-events:none; z-index:2; min-width:150px;
+      padding:8px 10px; border-radius:8px;
+      background:#fff; border:1px solid rgba(0,0,0,.10); box-shadow:0 6px 18px rgba(0,0,0,.10);
+      font-size:12px; color:#1a1a1a;
+    }
+    .an-tip-t { font-weight:600; margin-bottom:5px; white-space:nowrap; }
+    .an-tip-r { display:flex; align-items:center; gap:6px; color:#555; line-height:1.7; }
+    .an-tip-r i { width:8px; height:8px; border-radius:50%; flex:none; }
+    .an-tip-r b { margin-left:auto; padding-left:14px; color:#1a1a1a; font-variant-numeric:tabular-nums; }
+    body.dark .an-legend, body.dark .an-tick { color:var(--d-text-2); fill:var(--d-text-2); }
+    body.dark .an-grid { stroke:rgba(255,255,255,.08); }
+    body.dark .an-guide { stroke:rgba(255,255,255,.35); }
+    body.dark .an-hdot { stroke:var(--d-bg); }
+    body.dark .an-tip { background:var(--d-surface); border-color:var(--d-line); color:var(--d-text); box-shadow:0 6px 18px rgba(0,0,0,.45); }
+    body.dark .an-tip-r { color:var(--d-text-2); }
+    body.dark .an-tip-r b { color:var(--d-text); }
 
     .an-bars    { display:flex; align-items:flex-end; gap:3px; height:68px; }
     .an-bar-col { display:flex; flex-direction:column; align-items:center; flex:1; gap:2px; }
@@ -4767,9 +4796,12 @@ one keyframe at a time</div>
   <div class="view" id="view-analytics">
     <div class="an-title">Analytics</div>
     <div class="an-range">
-      <button class="an-range-btn" onclick="loadAnalytics(1,this)">24h</button>
-      <button class="an-range-btn active" onclick="loadAnalytics(7,this)">7 days</button>
-      <button class="an-range-btn" onclick="loadAnalytics(30,this)">30 days</button>
+      <!-- Ranges are in hours; 0 is all time. -->
+      <button class="an-range-btn" onclick="loadAnalytics(1,this)">1h</button>
+      <button class="an-range-btn" onclick="loadAnalytics(8,this)">8h</button>
+      <button class="an-range-btn" onclick="loadAnalytics(24,this)">24h</button>
+      <button class="an-range-btn active" onclick="loadAnalytics(168,this)">7 days</button>
+      <button class="an-range-btn" onclick="loadAnalytics(720,this)">30 days</button>
       <button class="an-range-btn" onclick="loadAnalytics(0,this)">All time</button>
     </div>
     <div class="an-stats">
@@ -4786,8 +4818,14 @@ one keyframe at a time</div>
       </div>
     </div>
     <div class="an-section">
-      <div class="an-sh" id="an-daily-title">Daily visitors <span class="an-cap" id="an-daily-cap">unique people per day</span></div>
-      <div id="an-daily"></div>
+      <div class="an-chart-head">
+        <div class="an-sh" id="an-daily-title">Visitors <span class="an-cap" id="an-daily-cap">per day</span></div>
+        <div class="an-legend">
+          <span><i class="an-legend-dot" style="background:#0c6d62"></i>Page views</span>
+          <span><i class="an-legend-dot" style="background:#12a594"></i>Visitors</span>
+        </div>
+      </div>
+      <div id="an-daily" class="an-chart"></div>
     </div>
     <div class="an-row-2">
       <div class="an-section" style="margin-bottom:0">
@@ -6804,10 +6842,10 @@ async function trackView(project = null) {
 }
 
 /* ─── Analytics dashboard ──────────────────────────────── */
-let _analyticsRange = 7;
+let _analyticsRange = 168;   // hours; 0 = all time
 
-async function loadAnalytics(days, btn) {
-  _analyticsRange = days;
+async function loadAnalytics(hours, btn) {
+  _analyticsRange = hours;
   if (btn) {
     document.querySelectorAll('.an-range-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -6824,6 +6862,8 @@ async function loadAnalytics(days, btn) {
     all = await (await fetch(url)).json();
   } catch(e) { return; }
   if (!Array.isArray(all)) return;
+  // A later click may have changed the range while this was loading.
+  if (hours !== _analyticsRange) return;
 
   // visitor key: persistent visitor_id, falling back to session_id for old rows
   const vidOf = r => r.visitor_id || r.session_id;
@@ -6836,7 +6876,7 @@ async function loadAnalytics(days, btn) {
   });
 
   // rows within the selected range
-  const sinceTs = days > 0 ? new Date(Date.now() - days * 86400000).toISOString() : null;
+  const sinceTs = hours > 0 ? new Date(Date.now() - hours * 3600000).toISOString() : null;
   const rows = sinceTs ? all.filter(r => r.ts >= sinceTs) : all;
 
   // unique visitors in range, split into new vs returning
@@ -6857,89 +6897,7 @@ async function loadAnalytics(days, btn) {
   document.getElementById('an-split-newpct').textContent = newPct + '%';
   document.getElementById('an-split-retpct').textContent = (100 - newPct) + '%';
 
-  // visitors-over-time chart — bucketed in the viewer's LOCAL time, not UTC
-  const chartEl = document.getElementById('an-daily');
-  const pad2 = x => String(x).padStart(2, '0');
-  const localDay  = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
-  const localHour = d => `${localDay(d)} ${pad2(d.getHours())}`;
-
-  // update the chart header + caption to match the selected range
-  const chTitle = document.getElementById('an-daily-title');
-  const chCap   = document.getElementById('an-daily-cap');
-  if (chTitle) chTitle.firstChild.textContent = days === 1 ? 'Hourly visitors ' : 'Daily visitors ';
-  if (chCap)   chCap.textContent = days === 1 ? 'unique people per hour (your local time)' : 'unique people per day';
-
-  const dayMap = {};
-  rows.forEach(r => {
-    const d = localDay(new Date(r.ts));
-    if (!dayMap[d]) dayMap[d] = new Set();
-    dayMap[d].add(vidOf(r));
-  });
-
-  // 14h/2h is ambiguous across midnight — show 12h clock with AM/PM instead
-  const fmtHour = h => (h % 12 === 0 ? 12 : h % 12) + (h < 12 ? 'AM' : 'PM');
-
-  let daily = [];
-  if (days === 1) {
-    // hourly breakdown for the last 24h, in local time
-    const hourMap = {};
-    rows.forEach(r => {
-      const h = localHour(new Date(r.ts));
-      if (!hourMap[h]) hourMap[h] = new Set();
-      hourMap[h].add(vidOf(r));
-    });
-    for (let i = 23; i >= 0; i--) {
-      const t = new Date(Date.now() - i * 3600000);
-      const h = localHour(t);
-      daily.push({ d: fmtHour(t.getHours()), label: fmtHour(t.getHours()), n: hourMap[h]?.size || 0 });
-    }
-  } else if (days === 0) {
-    const allDates = Object.keys(dayMap).sort();
-    if (allDates.length) {
-      const end = new Date(); end.setHours(0,0,0,0);
-      for (let t = new Date(allDates[0] + 'T00:00:00'); t <= end; t.setDate(t.getDate()+1)) {
-        const d = localDay(t);
-        daily.push({ d, label: d.slice(8), n: dayMap[d]?.size || 0 });
-      }
-    }
-  } else {
-    for (let i = days - 1; i >= 0; i--) {
-      const t = new Date(); t.setHours(0,0,0,0); t.setDate(t.getDate() - i);
-      const d = localDay(t);
-      daily.push({ d, label: d.slice(8), n: dayMap[d]?.size || 0 });
-    }
-  }
-
-  if (!daily.length) {
-    chartEl.innerHTML = '<div class="an-empty">No data yet — visit the site to start tracking</div>';
-  } else {
-    const maxN = Math.max(...daily.map(x => x.n), 1);
-    const W = 300, CH = 76, padT = 8, padB = 20;
-    const iH = CH - padT - padB;
-    const n = daily.length;
-    const xStep = n > 1 ? W / (n - 1) : W / 2;
-    const pts = daily.map((x, i) => ({
-      x: +(i * xStep).toFixed(2),
-      y: +(padT + iH - (x.n / maxN) * iH).toFixed(2),
-      n: x.n, d: x.d, label: x.label
-    }));
-    const lineD = pts.map((p, i) => `${i===0?'M':'L'}${p.x},${p.y}`).join(' ');
-    const areaD = `${lineD} L${pts[n-1].x},${padT+iH} L0,${padT+iH} Z`;
-    const every = n <= 7 ? 1 : n <= 14 ? 2 : n <= 24 ? 4 : n <= 31 ? 5 : 7;
-    const labels = pts
-      .filter((_, i) => i === 0 || i === n-1 || i % every === 0)
-      .map(p => `<text x="${p.x}" y="${CH}" text-anchor="middle" font-size="7" fill="#bbb">${p.label}</text>`)
-      .join('');
-    const dots = pts.filter(p => p.n > 0)
-      .map(p => `<circle cx="${p.x}" cy="${p.y}" r="2.5" fill="#1a1a1a" stroke="#fff" stroke-width="1"><title>${p.n} visitors · ${p.d}</title></circle>`)
-      .join('');
-    chartEl.innerHTML = `<svg viewBox="0 0 ${W} ${CH}" width="100%" style="display:block;overflow:visible">
-      <defs><linearGradient id="ang" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a1a1a" stop-opacity=".1"/><stop offset="100%" stop-color="#1a1a1a" stop-opacity="0"/></linearGradient></defs>
-      <path d="${areaD}" fill="url(#ang)"/>
-      <path d="${lineD}" fill="none" stroke="#1a1a1a" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
-      ${dots}${labels}
-    </svg>`;
-  }
+  renderAnalyticsChart(rows, hours, vidOf);
 
   // breakdown helper
   function renderBreakdown(id, map, topN) {
@@ -6990,6 +6948,200 @@ async function loadAnalytics(days, btn) {
   document.getElementById('an-projects').innerHTML = topProj.length
     ? topProj.map(([k,v],i) => `<div class="an-proj-item"><div class="an-proj-num">${i+1}</div><div class="an-proj-name" title="${PROJECTS[k]?.name||k}">${PROJECTS[k]?.name||k}</div><div class="an-proj-cnt">${v} views</div></div>`).join('')
     : '<div class="an-empty">No project views yet</div>';
+}
+
+/* ─── Visitors chart ───────────────────────────────────────────────
+   Drawn after 21st.dev's "Area Chart" (@SubframeApp, a Recharts area
+   chart): monotone curves at 2px, each over a gradient of its own colour
+   from 70% at the top to 10% at the bottom laid at 60%, plain horizontal
+   grid lines, 12px axis labels in #666, a legend top right, and a tooltip
+   on hover. Its teal pair is kept — #0c6d62 for page views, #12a594 for
+   visitors — so the two series stay told apart.
+
+   The old chart was a 300-unit SVG scaled to the column, so its labels
+   rendered at whatever size that came out and a dot's <title> was the
+   only way to read a number. This is drawn at the container's real pixel
+   width, and pointing anywhere over it snaps to the nearest bucket and
+   shows that bucket's exact visitors and views.
+
+   Buckets follow the range, in the viewer's local time: 1h in 5-minute
+   steps, 8h in 30, 24h by the hour, and days beyond that. */
+const AN_VIEWS = '#0c6d62', AN_VISITS = '#12a594';
+
+function analyticsBuckets(hours) {
+  if (hours === 1)  return { step: 5 * 60000 };
+  if (hours === 8)  return { step: 30 * 60000 };
+  if (hours === 24) return { step: 3600000 };
+  return null;   // daily
+}
+
+// Drawn at a measured pixel width, so a resize redraws it from the rows
+// already in hand rather than fetching them again.
+let _anChartArgs = null, _anResizeT = 0;
+window.addEventListener('resize', () => {
+  clearTimeout(_anResizeT);
+  _anResizeT = setTimeout(() => {
+    const v = document.getElementById('view-analytics');
+    if (_anChartArgs && v && v.offsetParent !== null) renderAnalyticsChart(..._anChartArgs);
+  }, 150);
+});
+
+function renderAnalyticsChart(rows, hours, vidOf) {
+  _anChartArgs = [rows, hours, vidOf];
+  const el = document.getElementById('an-daily');
+  if (!el) return;
+  const pad2 = x => String(x).padStart(2, '0');
+  const clock = d => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dayLabel = d => `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+
+  const cap = document.getElementById('an-daily-cap');
+  const b = analyticsBuckets(hours);
+  const buckets = [];
+  if (b) {
+    // Aligned to the step, so a 30-minute bucket is :00–:30 rather than an
+    // arbitrary half hour ending now. The first bucket is the one the range
+    // begins in and the last is the current, still-filling one — so every
+    // row the stat cards counted lands somewhere on the chart. Twelve fixed
+    // buckets ending now started after the range did, and the 1h chart came
+    // up two views short of the card above it.
+    // Aligned in local time. Epoch milliseconds are UTC, so flooring them to
+    // the hour gave boundaries at :30 anywhere with a half-hour offset —
+    // Iran, at UTC+3:30, saw 10:30–11:30 where it expected 10:00–11:00.
+    const tz = -new Date().getTimezoneOffset() * 60000;
+    const floorLocal = t => Math.floor((t + tz) / b.step) * b.step - tz;
+    const last = floorLocal(Date.now());
+    const first = floorLocal(Date.now() - hours * 3600000);
+    for (let start = first; start <= last; start += b.step) {
+      // The date leads the title beyond the 1h view: 24h has two buckets
+      // reading 10:00–11:00, yesterday's and today's, and without it the
+      // tooltip could not say which one the pointer was on.
+      const span = clock(new Date(start)) + '–' + clock(new Date(start + b.step));
+      buckets.push({ start, end: start + b.step, label: clock(new Date(start)),
+                     title: hours === 1 ? span : dayLabel(new Date(start)) + ' · ' + span });
+    }
+    if (cap) cap.textContent = hours === 1 ? 'every 5 minutes' : hours === 8 ? 'every 30 minutes' : 'per hour';
+  } else {
+    let first;
+    if (hours > 0) {
+      // The day the range starts in, for the same reason as above.
+      first = new Date(Date.now() - hours * 3600000); first.setHours(0,0,0,0);
+    } else {
+      const earliest = rows.reduce((m, r) => (!m || r.ts < m ? r.ts : m), null);
+      if (!earliest) { el.innerHTML = '<div class="an-empty">No data yet — visit the site to start tracking</div>'; return; }
+      first = new Date(earliest); first.setHours(0,0,0,0);
+    }
+    const today = new Date(); today.setHours(0,0,0,0);
+    for (let t = new Date(first); t <= today; t.setDate(t.getDate() + 1)) {
+      const s = new Date(t), e = new Date(t); e.setDate(e.getDate() + 1);
+      buckets.push({ start: s.getTime(), end: e.getTime(), label: dayLabel(s), title: dayLabel(s) + ', ' + s.getFullYear() });
+    }
+    if (cap) cap.textContent = 'per day';
+  }
+  buckets.forEach(k => { k.visitors = new Set(); k.views = 0; });
+  // Each row is placed by its time directly, not by scanning every bucket;
+  // days go by calendar date, which is not always 24h across a clock change.
+  const t0 = buckets[0].start;
+  const dayIndex = new Map(buckets.map((k, i) => [k.start, i]));
+  rows.forEach(r => {
+    const t = new Date(r.ts).getTime();
+    let k;
+    if (b) k = buckets[Math.floor((t - t0) / b.step)];   // t0 is already local-aligned
+    else { const d = new Date(t); d.setHours(0,0,0,0); k = buckets[dayIndex.get(d.getTime())]; }
+    if (k && t >= k.start && t < k.end) { k.views++; k.visitors.add(vidOf(r)); }
+  });
+  buckets.forEach(k => { k.nVisitors = k.visitors.size; });
+
+  const W = Math.max(280, Math.round(el.clientWidth || 300));
+  const H = 230, padL = 34, padR = 10, padT = 12, padB = 26;
+  const iW = W - padL - padR, iH = H - padT - padB;
+  const maxRaw = Math.max(1, ...buckets.map(k => k.views));
+  // Round ticks: four steps of 1, 2 or 5 times a power of ten.
+  const rough = maxRaw / 4, mag = Math.pow(10, Math.floor(Math.log10(rough)));
+  const stepV = Math.max(1, [1, 2, 5, 10].map(m => m * mag).find(s => s >= rough));
+  const top = stepV * 4;
+  const n = buckets.length;
+  const xOf = i => padL + (n > 1 ? (i / (n - 1)) * iW : iW / 2);
+  const yOf = v => padT + iH - (v / top) * iH;
+
+  // Monotone cubic (Fritsch–Carlson), the "monotone" curve Recharts draws:
+  // smooth, but never overshooting a point, so a quiet hour between two busy
+  // ones never dips below zero.
+  const curve = vals => {
+    const P = vals.map((v, i) => [xOf(i), yOf(v)]);
+    if (P.length < 2) return `M${P[0][0]},${P[0][1]}`;
+    const dx = [], m = [], t = [];
+    for (let i = 0; i < P.length - 1; i++) { dx[i] = P[i+1][0] - P[i][0]; m[i] = (P[i+1][1] - P[i][1]) / dx[i]; }
+    t[0] = m[0]; t[P.length - 1] = m[P.length - 2];
+    for (let i = 1; i < P.length - 1; i++) t[i] = (m[i-1] * m[i] <= 0) ? 0 : (m[i-1] + m[i]) / 2;
+    for (let i = 0; i < m.length; i++) {
+      if (m[i] === 0) { t[i] = 0; t[i+1] = 0; continue; }
+      const a = t[i] / m[i], c = t[i+1] / m[i], s = a * a + c * c;
+      if (s > 9) { const q = 3 / Math.sqrt(s); t[i] = q * a * m[i]; t[i+1] = q * c * m[i]; }
+    }
+    let d = `M${P[0][0].toFixed(1)},${P[0][1].toFixed(1)}`;
+    for (let i = 0; i < P.length - 1; i++) {
+      const h = dx[i] / 3;
+      d += ` C${(P[i][0]+h).toFixed(1)},${(P[i][1]+t[i]*h).toFixed(1)} ${(P[i+1][0]-h).toFixed(1)},${(P[i+1][1]-t[i+1]*h).toFixed(1)} ${P[i+1][0].toFixed(1)},${P[i+1][1].toFixed(1)}`;
+    }
+    return d;
+  };
+  const area = vals => `${curve(vals)} L${xOf(n-1).toFixed(1)},${padT+iH} L${xOf(0).toFixed(1)},${padT+iH} Z`;
+
+  const grid = [0, 1, 2, 3, 4].map(g => {
+    const v = stepV * g, y = yOf(v).toFixed(1);
+    return `<line x1="${padL}" x2="${W - padR}" y1="${y}" y2="${y}" class="an-grid"/>` +
+           `<text x="${padL - 8}" y="${y}" dy="4" text-anchor="end" class="an-tick">${v}</text>`;
+  }).join('');
+  // About one label per 64px, always including both ends.
+  const every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(iW / 64))));
+  // The last label is always drawn, so a regular one too close before it is
+  // dropped rather than printed over it.
+  const xl = buckets.map((k, i) => (i === n - 1 || (i % every === 0 && n - 1 - i >= every * 0.6))
+      ? `<text x="${xOf(i).toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'}" class="an-tick">${k.label}</text>` : '').join('');
+
+  const views = buckets.map(k => k.views), vis = buckets.map(k => k.nVisitors);
+  el.innerHTML = `
+    <svg class="an-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+      <defs>
+        <linearGradient id="anGViews" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="${AN_VIEWS}" stop-opacity=".7"/><stop offset="98%" stop-color="${AN_VIEWS}" stop-opacity=".1"/></linearGradient>
+        <linearGradient id="anGVis" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="${AN_VISITS}" stop-opacity=".7"/><stop offset="98%" stop-color="${AN_VISITS}" stop-opacity=".1"/></linearGradient>
+      </defs>
+      ${grid}
+      <path d="${area(views)}" fill="url(#anGViews)" fill-opacity=".6"/>
+      <path d="${curve(views)}" fill="none" stroke="${AN_VIEWS}" stroke-width="2"/>
+      <path d="${area(vis)}" fill="url(#anGVis)" fill-opacity=".6"/>
+      <path d="${curve(vis)}" fill="none" stroke="${AN_VISITS}" stroke-width="2"/>
+      ${xl}
+      <line class="an-guide" y1="${padT}" y2="${padT + iH}" x1="0" x2="0" style="display:none"/>
+      <circle class="an-hdot" data-s="views" r="4" fill="${AN_VIEWS}" style="display:none"/>
+      <circle class="an-hdot" data-s="vis" r="4" fill="${AN_VISITS}" style="display:none"/>
+    </svg>
+    <div class="an-tip" hidden></div>`;
+
+  // Hover, and touch: snap to the nearest bucket and read out its numbers.
+  const svg = el.querySelector('svg'), tip = el.querySelector('.an-tip');
+  const guide = svg.querySelector('.an-guide');
+  const dV = svg.querySelector('[data-s="views"]'), dU = svg.querySelector('[data-s="vis"]');
+  const show = (clientX) => {
+    const r = svg.getBoundingClientRect();
+    const x = clientX - r.left;
+    const i = Math.max(0, Math.min(n - 1, Math.round(n > 1 ? ((x - padL) / iW) * (n - 1) : 0)));
+    const k = buckets[i], px = xOf(i);
+    guide.setAttribute('x1', px); guide.setAttribute('x2', px); guide.style.display = '';
+    dV.setAttribute('cx', px); dV.setAttribute('cy', yOf(k.views)); dV.style.display = '';
+    dU.setAttribute('cx', px); dU.setAttribute('cy', yOf(k.nVisitors)); dU.style.display = '';
+    tip.innerHTML = `<div class="an-tip-t">${k.title}</div>` +
+      `<div class="an-tip-r"><i style="background:${AN_VISITS}"></i>Visitors<b>${k.nVisitors}</b></div>` +
+      `<div class="an-tip-r"><i style="background:${AN_VIEWS}"></i>Page views<b>${k.views}</b></div>`;
+    tip.hidden = false;
+    const tw = tip.offsetWidth;
+    tip.style.left = Math.max(0, Math.min(W - tw, px - tw / 2)) + 'px';
+  };
+  const hide = () => { tip.hidden = true; guide.style.display = dV.style.display = dU.style.display = 'none'; };
+  svg.addEventListener('pointermove', e => show(e.clientX));
+  svg.addEventListener('pointerdown', e => show(e.clientX));
+  svg.addEventListener('pointerleave', hide);
 }
 
 async function saveProject(key) {
