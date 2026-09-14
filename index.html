@@ -584,31 +584,34 @@
        the category, and a 40px pill. Here each one is whole (bordered all
        round) and they run down the page 16px apart; an open one grows its
        Brand row beneath the card. */
-    .bst { display:flex; flex-direction:column; gap:12px; margin:0 auto 24px; }
+    .bst { display:flex; flex-direction:column; gap:16px; width:100%; max-width:512px; margin:0 auto 24px; }
     .bst-item { scroll-margin-top:16px; }
     .bst-card {
       padding:4px; box-sizing:border-box; cursor:pointer;
       background:#fff; border:1px solid #e5e5e5; border-radius:12px;
       box-shadow:0 10px 15px -3px rgba(0,0,0,.06), 0 4px 6px -4px rgba(0,0,0,.06);
-      display:flex; flex-direction:column; gap:10px;
+      display:flex; flex-direction:column; gap:16px;
       transition:box-shadow .2s ease, transform .2s ease;
     }
     .bst-card:hover { box-shadow:0 14px 24px -6px rgba(0,0,0,.12), 0 4px 8px -4px rgba(0,0,0,.08); }
     .bst-card:active { transform:scale(.995); }
     .bst-card:focus-visible { outline:2px solid #0a0a0a; outline-offset:2px; }
-    .bst-media { height:132px; flex:none; transition:height .35s cubic-bezier(.2,.8,.2,1), opacity .25s ease; border-radius:10px; overflow:hidden; outline:1px solid rgba(0,0,0,.1); outline-offset:-1px; background:#f5f5f5; }
+    .bst-media { height:200px; flex:none; transition:height .35s cubic-bezier(.2,.8,.2,1), opacity .25s ease; border-radius:10px; overflow:hidden; outline:1px solid rgba(0,0,0,.1); outline-offset:-1px; background:#f5f5f5; }
     /* Open, the cover folds away and the card is left as the header of its row. */
     .bst-item.open .bst-card { gap:0; }
     .bst-item.open .bst-media { height:0; opacity:0; outline-color:transparent; }
-    .bst-item.open .bst-info { padding:8px 6px 6px 12px; }
+    .bst-item.open .bst-info { padding:8px 8px 8px 12px; }
+    /* Set while a row closes because another opened, so it snaps shut instead
+       of growing its cover back over .35s under the reader. */
+    .bst-instant .bst-media, .bst-instant .bst-info { transition:none !important; }
     .bst-media img, .bst-media video { width:100%; height:100%; object-fit:cover; display:block; user-select:none; pointer-events:none; }
-    .bst-info { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 10px 10px; transition:padding .35s cubic-bezier(.2,.8,.2,1); }
+    .bst-info { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 12px 20px; transition:padding .35s cubic-bezier(.2,.8,.2,1); }
     .bst-text { display:flex; flex-direction:column; min-width:0; flex:1; }
-    .bst-title { font-weight:500; font-size:14px; color:#0a0a0a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .bst-desc { font-size:12.5px; color:#737373; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .bst-title { font-weight:500; font-size:16px; color:#0a0a0a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .bst-desc { font-size:14px; color:#737373; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .bst-open {
-      display:flex; align-items:center; gap:2px; height:34px; flex:none; padding:0 10px 0 14px;
-      border-radius:999px; background:#0a0a0a; color:#fff; font:500 13px/1 var(--font-body);
+      display:flex; align-items:center; gap:2px; height:40px; flex:none; padding:0 12px 0 16px;
+      border-radius:999px; background:#0a0a0a; color:#fff; font:500 14px/1 var(--font-body);
     }
     .bst-open svg { transition:transform .25s ease; }
     .bst-item.open .bst-open svg { transform:rotate(90deg); }
@@ -10613,8 +10616,21 @@ function renderBrandStack(container, sections) {
     const panel = item.querySelector('.bst-panel');
     if (panel) panel.remove();
   };
-  const open = (item, card, scroll = true) => {
-    wrap.querySelectorAll('.bst-item.open').forEach(close);
+  /* Keeps the pressed card where it was on screen. Opening used to scroll
+     the page to the card, and a row closing above it pulled the whole
+     column up under the pointer — either way the card you pressed moved. */
+  const holdPlace = (item, change) => {
+    const before = item.getBoundingClientRect().top;
+    change();
+    const delta = item.getBoundingClientRect().top - before;
+    if (Math.abs(delta) > 0.5) window.scrollTo({ top: window.scrollY + delta, behavior: 'instant' });
+  };
+  const open = (item, card) => {
+    wrap.querySelectorAll('.bst-item.open').forEach(o => {
+      o.classList.add('bst-instant');
+      close(o);
+      requestAnimationFrame(() => requestAnimationFrame(() => o.classList.remove('bst-instant')));
+    });
     _teardownStripDrivers();
     document.querySelectorAll('.pli-crop-menu').forEach(m => m.remove());
     item.classList.add('open');
@@ -10631,7 +10647,6 @@ function renderBrandStack(container, sections) {
       setupStripVideos();
       panel.querySelectorAll('.pli-media-strip').forEach(s => s._paintParallax?.());
       setupProjectsListReveal();
-      if (scroll) item.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   };
 
@@ -10640,14 +10655,16 @@ function renderBrandStack(container, sections) {
     item.className = 'bst-item';
     const cardEl = _bstCardEl(card);
     const toggle = () => {
-      if (item.classList.contains('open')) { close(item); _bstOpenKey = null; _teardownStripDrivers(); }
-      else open(item, card);
+      holdPlace(item, () => {
+        if (item.classList.contains('open')) { close(item); _bstOpenKey = null; _teardownStripDrivers(); }
+        else open(item, card);
+      });
     };
     cardEl.addEventListener('click', toggle);
     cardEl.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
     item.appendChild(cardEl);
     wrap.appendChild(item);
-    if (card.key === _bstOpenKey) requestAnimationFrame(() => open(item, card, false));
+    if (card.key === _bstOpenKey) requestAnimationFrame(() => open(item, card));
   });
 
   const stills = wrap.querySelectorAll('video[data-bst-src]');
