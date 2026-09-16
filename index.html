@@ -3634,6 +3634,69 @@
     }
 
 
+    /* Reach me — see the markup in #view-soon and initReachMe. Laid out
+       like 21st.dev's "Profile Card" (@beratberkayg): a status line over a
+       round avatar beside the name, then its two-up row of 48px rounded
+       actions. The card is .pib's material (white, hairline, soft shadow,
+       24px corners) so it reads as a pair with the composer above it. */
+    .rm { width:100%; max-width:470px; margin:26px auto 0; }
+    .rm-card {
+      background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:24px;
+      padding:18px; box-shadow:0 6px 22px rgba(0,0,0,.07);
+    }
+    .rm-top {
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      font-size:12.5px; color:#8a8480;
+    }
+    .rm-status { display:inline-flex; align-items:center; gap:7px; }
+    /* The component's pulsing dot, at its own 10px. */
+    .rm-dot {
+      width:9px; height:9px; border-radius:50%; background:#22c55e; flex:none;
+      box-shadow:0 0 0 0 rgba(34,197,94,.5); animation:rmPulse 2s ease-out infinite;
+    }
+    @keyframes rmPulse {
+      70%  { box-shadow:0 0 0 7px rgba(34,197,94,0); }
+      100% { box-shadow:0 0 0 0 rgba(34,197,94,0); }
+    }
+    .rm-clock { display:inline-flex; align-items:center; gap:5px; font-variant-numeric:tabular-nums; }
+    .rm-who { display:flex; align-items:center; gap:12px; margin:16px 0 16px; }
+    .rm-avatar {
+      width:52px; height:52px; border-radius:50%; overflow:hidden; flex:none;
+      background:#f1f0ee; box-shadow:0 0 0 2px rgba(0,0,0,.06);
+    }
+    .rm-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+    .rm-id { display:flex; flex-direction:column; min-width:0; }
+    .rm-name { font-size:16px; font-weight:600; color:#1a1a1a; letter-spacing:-.01em; }
+    .rm-mail { font-size:13px; color:#8a8480; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .rm-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .rm-btn {
+      display:flex; align-items:center; justify-content:center; gap:8px;
+      height:48px; padding:0 12px; border-radius:16px; cursor:pointer;
+      border:1px solid rgba(0,0,0,.10); background:rgba(0,0,0,.035); color:#1a1a1a;
+      font-family:inherit; font-size:14px; font-weight:500;
+      transition:background .15s, border-color .15s, transform .1s;
+    }
+    .rm-btn:hover { background:rgba(0,0,0,.07); }
+    .rm-btn:active { transform:scale(.99); }
+    .rm-btn-go { background:#1a1a1a; border-color:#1a1a1a; color:#fff; }
+    .rm-btn-go:hover { background:#000; }
+    .rm-btn.done { background:rgba(34,197,94,.12); border-color:rgba(34,197,94,.4); color:#15803d; }
+    .rm-alt {
+      display:block; margin-top:12px; text-align:center;
+      font-size:12.5px; color:#8a8480; text-decoration:none;
+    }
+    .rm-alt:hover { color:#1a1a1a; text-decoration:underline; }
+    @media (max-width:420px) { .rm-actions { grid-template-columns:1fr; } }
+    body.dark .rm-card { background:var(--d-surface); border-color:var(--d-line); box-shadow:0 6px 22px rgba(0,0,0,.4); }
+    body.dark .rm-top, body.dark .rm-mail, body.dark .rm-alt { color:var(--d-text-3); }
+    body.dark .rm-name { color:var(--d-text); }
+    body.dark .rm-avatar { background:var(--d-raised); box-shadow:0 0 0 2px rgba(255,255,255,.08); }
+    body.dark .rm-btn { background:rgba(255,255,255,.06); border-color:var(--d-line); color:var(--d-text); }
+    body.dark .rm-btn:hover { background:rgba(255,255,255,.12); }
+    body.dark .rm-btn-go { background:var(--d-text); border-color:var(--d-text); color:var(--d-bg); }
+    body.dark .rm-btn-go:hover { background:#fff; }
+    body.dark .rm-alt:hover { color:var(--d-text); }
+
     .pib {
       position:relative; isolation:isolate;
       width:100%; max-width:470px; margin:0 auto;
@@ -4905,6 +4968,48 @@ one keyframe at a time</div>
       </div>
     </div>
     </div><!-- /note-content-wrap -->
+
+    <!-- Reach me — after 21st.dev's "Profile Card" (@beratberkayg): the
+         status line with its pulsing dot on the left and a clock on the
+         right, the round avatar beside the name and role under it, and a
+         two-up row of chunky rounded actions. Its own palette is a dark
+         slab under a lime glow; this wears the page's card instead, the
+         same surface the composer above it is built from.
+
+         Its buttons were "Hire Me" and "Copy Email". Here they are the
+         two ways to actually reach the address — copy it, or open a
+         message with it already filled in. -->
+    <section class="rm" id="reachMe" aria-labelledby="rm-name">
+      <div class="rm-card">
+        <div class="rm-top">
+          <span class="rm-status"><i class="rm-dot" aria-hidden="true"></i>Open to work</span>
+          <span class="rm-clock">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            <span id="rm-time">—</span>
+          </span>
+        </div>
+
+        <div class="rm-who">
+          <span class="rm-avatar"><img id="rm-photo" alt="" decoding="async"></span>
+          <span class="rm-id">
+            <span class="rm-name" id="rm-name">Alireza Mahdavi</span>
+            <span class="rm-mail" id="rm-mail">halirezamahdavi@gmail.com</span>
+          </span>
+        </div>
+
+        <div class="rm-actions">
+          <button type="button" class="rm-btn" id="rm-copy">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            <span id="rm-copy-lbl">Copy email</span>
+          </button>
+          <button type="button" class="rm-btn rm-btn-go" id="rm-send">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="M3 7l9 6 9-6"/></svg>
+            Send email
+          </button>
+        </div>
+        <a class="rm-alt" id="rm-gmail" href="#" target="_blank" rel="noopener">or open it in Gmail on the web</a>
+      </div>
+    </section>
     <!-- The "Soon" placeholder stood in while the note form was hidden; the
          form is live now, so it would just sit under a working composer. -->
   </div><!-- /view-soon -->
@@ -7673,6 +7778,9 @@ async function loadSettings() {
 
     // Nav glow colour, per theme — see applyNavGlowColor.
     applyNavGlowColor();
+
+    // Name, photo and address on the Ticket page's card follow settings.
+    { const rm = document.getElementById('reachMe'); if (rm && rm._paint) rm._paint(); }
 
     // profile
     if (s.profile) {
@@ -14860,6 +14968,111 @@ function openAddBlockMenu(anchorBtn, afterId) {
 
 // Scrolling the page would leave a fixed menu hanging off its trigger.
 window.addEventListener('scroll', closeAddBlockMenu, true);
+
+
+/* ─── Reach me ─────────────────────────────────────────────────────
+   The card under the note composer (see .rm). Three ways at the same
+   address, because none of them works everywhere:
+
+     Copy      — the clipboard, for anyone writing from somewhere else.
+     Send      — a mailto:, which the phone hands to whatever mail app is
+                 set up (Gmail, on an Android with Gmail as the default)
+                 and the desktop to its own mail client.
+     In Gmail  — Gmail's own compose URL, for a machine with no mail app
+                 set up at all, where a mailto: does nothing visible.
+
+   The address, name and photo follow the site's settings when they are
+   set, so this does not become a second place to keep them. */
+const RM_EMAIL_FALLBACK = 'halirezamahdavi@gmail.com';
+
+function reachMeAddress() {
+  const s = (_cachedSettings && _cachedSettings.links && _cachedSettings.links.email || '').trim();
+  return s || RM_EMAIL_FALLBACK;
+}
+
+function initReachMe() {
+  const root = document.getElementById('reachMe');
+  if (!root || root._wired) return;
+  root._wired = true;
+
+  const mailEl = document.getElementById('rm-mail');
+  const copyBtn = document.getElementById('rm-copy');
+  const copyLbl = document.getElementById('rm-copy-lbl');
+  const sendBtn = document.getElementById('rm-send');
+  const gmail = document.getElementById('rm-gmail');
+  const subject = 'Hello Alireza';
+
+  const paint = () => {
+    const addr = reachMeAddress();
+    if (mailEl) mailEl.textContent = addr;
+    if (gmail) gmail.href = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(addr) +
+      '&su=' + encodeURIComponent(subject);
+    const nameEl = document.getElementById('rm-name');
+    const name = _cachedSettings && _cachedSettings.profile && _cachedSettings.profile.name;
+    if (nameEl && name) nameEl.textContent = name;
+    const photo = document.getElementById('rm-photo');
+    const src = (_cachedSettings && _cachedSettings.profile && _cachedSettings.profile.photo_url) ||
+                (document.querySelector('.pbc-avatar img') || {}).src;
+    // alt stays empty and a miss hides the frame: the card is about the
+    // address, and a broken-image icon beside it looks like a fault.
+    if (photo && src) {
+      photo.onerror = () => { const f = photo.parentElement; if (f) f.style.display = 'none'; };
+      photo.src = src;
+    }
+  };
+  paint();
+  root._paint = paint;
+
+  copyBtn.addEventListener('click', async () => {
+    const addr = reachMeAddress();
+    let ok = false;
+    try { await navigator.clipboard.writeText(addr); ok = true; }
+    catch (e) {
+      // http:, an old browser, or a denied permission — the old way still
+      // works in all three.
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = addr;
+        ta.style.cssText = 'position:fixed;top:-100px;opacity:0';
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand('copy');
+        ta.remove();
+      } catch (e2) {}
+    }
+    copyLbl.textContent = ok ? 'Copied ✓' : 'Press ⌘/Ctrl+C';
+    copyBtn.classList.toggle('done', ok);
+    clearTimeout(copyBtn._t);
+    copyBtn._t = setTimeout(() => {
+      copyLbl.textContent = 'Copy email';
+      copyBtn.classList.remove('done');
+    }, 1600);
+  });
+
+  sendBtn.addEventListener('click', () => {
+    window.location.href = 'mailto:' + reachMeAddress() + '?subject=' + encodeURIComponent(subject);
+  });
+
+  // The clock the component carries, in the reader's own time rather than
+  // mine — it is the "is he awake" glance, and that only reads if the two
+  // are compared. Mine is named beside it.
+  const timeEl = document.getElementById('rm-time');
+  const tick = () => {
+    if (!timeEl) return;
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const here = pad(now.getHours()) + ':' + pad(now.getMinutes());
+    let mine = '';
+    try {
+      mine = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tehran', hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
+    } catch (e) {}
+    timeEl.textContent = mine && mine !== here ? here + ' · Tehran ' + mine : here + ' Tehran';
+  };
+  tick();
+  setInterval(tick, 30000);
+}
+
+document.addEventListener('DOMContentLoaded', initReachMe);
 
 /* ─── Ticket heading: Text Repel ───────────────────────────────────
    Ported from 21st.dev's "Text Repel" (@componentry), which is React and
