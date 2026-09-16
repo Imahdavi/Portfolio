@@ -2089,7 +2089,16 @@
         transparent, var(--divider-ink, rgba(0,0,0,.13)) 22%,
         var(--divider-ink, rgba(0,0,0,.13)) 78%, transparent);
     }
-    body.dark .home-divider { --divider-ink:rgba(255,255,255,.16); }
+    /* The same hairline between the Experience page's sections. Wider
+       margins than the home one, which sits under a control rather than
+       between two blocks of content. */
+    .sec-divider {
+      height:1px; margin:30px auto; width:100%;
+      background:linear-gradient(to right,
+        transparent, var(--divider-ink, rgba(0,0,0,.13)) 22%,
+        var(--divider-ink, rgba(0,0,0,.13)) 78%, transparent);
+    }
+    body.dark .home-divider, body.dark .sec-divider { --divider-ink:rgba(255,255,255,.16); }
     /* Edit mode hides the keys, which would leave this sitting straight
        on top of the edit hint — two strips of chrome where the page
        wants one. */
@@ -4957,6 +4966,7 @@ one keyframe at a time</div>
   <!-- ══════════════════════════════ WORK EXP ══════════════════════════════ -->
   <div class="view" id="view-exp">
     <div class="sg" id="sg-exp"></div>
+    <div class="sec-divider" aria-hidden="true"></div>
     <div class="brand-grid-wrap">
       <div class="brand-grid-label-pill">
         <span class="brand-grid-star" aria-hidden="true">✨</span>
@@ -4969,6 +4979,7 @@ one keyframe at a time</div>
       <button type="button" class="brand-add-btn" id="brand-add-btn">+ Add logo</button>
     </div>
 
+    <div class="sec-divider" aria-hidden="true"></div>
     <div class="section-gap-handle" id="toolsGapHandle" title="Drag to adjust spacing before this section">
       <svg viewBox="0 0 24 8"><line x1="2" y1="2" x2="22" y2="2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="2" y1="6" x2="22" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     </div>
@@ -5021,6 +5032,7 @@ one keyframe at a time</div>
       <div class="tools-bulk-bar" id="tools-bulk-bar"></div>
       <div class="tools-stack" id="tools-stack"></div>
     </div>
+    <div class="sec-divider" aria-hidden="true"></div>
     <!-- Résumé — the file card from 21st.dev's "File Card Collections"
          (@urmauur), used as the component draws it: a 56x72 sheet with a
          hairline ring and rounded corners, the ruled lines of its default
