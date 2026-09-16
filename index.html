@@ -3762,21 +3762,15 @@
     .rm-btn-go { background:#1a1a1a; border-color:#1a1a1a; color:#fff; }
     .rm-btn-go:hover { background:#000; }
     .rm-btn.done { background:rgba(34,197,94,.12); border-color:rgba(34,197,94,.4); color:#15803d; }
-    .rm-alt {
-      display:block; margin-top:12px; text-align:center;
-      font-size:12.5px; color:#8a8480; text-decoration:none;
-    }
-    .rm-alt:hover { color:#1a1a1a; text-decoration:underline; }
     @media (max-width:420px) { .rm-actions { grid-template-columns:1fr; } }
     body.dark .rm-card { background:var(--d-surface); border-color:var(--d-line); box-shadow:0 6px 22px rgba(0,0,0,.4); }
-    body.dark .rm-top, body.dark .rm-mail, body.dark .rm-alt { color:var(--d-text-3); }
+    body.dark .rm-top, body.dark .rm-mail { color:var(--d-text-3); }
     body.dark .rm-name { color:var(--d-text); }
     body.dark .rm-avatar { background:var(--d-raised); box-shadow:0 0 0 2px rgba(255,255,255,.08); }
     body.dark .rm-btn { background:rgba(255,255,255,.06); border-color:var(--d-line); color:var(--d-text); }
     body.dark .rm-btn:hover { background:rgba(255,255,255,.12); }
     body.dark .rm-btn-go { background:var(--d-text); border-color:var(--d-text); color:var(--d-bg); }
     body.dark .rm-btn-go:hover { background:#fff; }
-    body.dark .rm-alt:hover { color:var(--d-text); }
 
     .pib {
       position:relative; isolation:isolate;
@@ -5194,7 +5188,6 @@ one keyframe at a time</div>
             Send email
           </button>
         </div>
-        <a class="rm-alt" id="rm-gmail" href="#" target="_blank" rel="noopener">or open it in Gmail on the web</a>
       </div>
     </section>
     <!-- The "Soon" placeholder stood in while the note form was hidden; the
@@ -15269,15 +15262,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ─── Reach me ─────────────────────────────────────────────────────
-   The card under the note composer (see .rm). Three ways at the same
-   address, because none of them works everywhere:
+   The card under the note composer (see .rm). Two ways at the same
+   address:
 
      Copy      — the clipboard, for anyone writing from somewhere else.
      Send      — a mailto:, which the phone hands to whatever mail app is
                  set up (Gmail, on an Android with Gmail as the default)
                  and the desktop to its own mail client.
-     In Gmail  — Gmail's own compose URL, for a machine with no mail app
-                 set up at all, where a mailto: does nothing visible.
 
    The address, name and photo follow the site's settings when they are
    set, so this does not become a second place to keep them. */
@@ -15297,14 +15288,11 @@ function initReachMe() {
   const copyBtn = document.getElementById('rm-copy');
   const copyLbl = document.getElementById('rm-copy-lbl');
   const sendBtn = document.getElementById('rm-send');
-  const gmail = document.getElementById('rm-gmail');
   const subject = 'Hello Alireza';
 
   const paint = () => {
     const addr = reachMeAddress();
     if (mailEl) mailEl.textContent = addr;
-    if (gmail) gmail.href = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(addr) +
-      '&su=' + encodeURIComponent(subject);
     const nameEl = document.getElementById('rm-name');
     const name = _cachedSettings && _cachedSettings.profile && _cachedSettings.profile.name;
     if (nameEl && name) nameEl.textContent = name;
