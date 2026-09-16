@@ -3038,7 +3038,9 @@
     }
     .tools-stack {
       display:grid; grid-template-areas:"stack"; place-items:center;
-      width:100%; max-width:360px; height:210px; margin:0 auto 20px;
+      width:100%; max-width:360px; margin:0 auto 20px;
+      /* One fan is 210px; each fan after it adds its own step (TOOLS_ROW_STEP). */
+      height:calc(210px + (var(--tool-rows, 1) - 1) * 132px);
       overflow:visible;
     }
     .tools-stack.tools-edit-on {
@@ -3639,19 +3641,15 @@
        round avatar beside the name, then its two-up row of 48px rounded
        actions. The card is .pib's material (white, hairline, soft shadow,
        24px corners) so it reads as a pair with the composer above it. */
-    /* Résumé card — see the markup in #view-exp and initResume. The sheet
-       is the file card from 21st.dev's "File Card Collections"
-       (@urmauur), at its own size: 56x72 with a 6px radius, a 1px ring,
-       8px of padding, its ruled lines 2px high and rounded, and the
-       extension tab hanging 8px off the right edge at 8px uppercase. */
-    .rsv { width:100%; max-width:470px; margin:30px auto 0; }
-    .rsv-row {
-      display:flex; align-items:center; gap:16px;
-      padding:16px; border-radius:18px;
-      background:#fff; border:1px solid rgba(0,0,0,.08);
-      box-shadow:0 6px 22px rgba(0,0,0,.06);
-    }
-    .rsv-file { position:relative; flex:none; }
+    /* Résumé — see the markup at the foot of #view-exp and initResume.
+       The sheet is the file card from 21st.dev's "File Card Collections"
+       (@urmauur) at its own size: 56x72, a 6px radius, a 1px ring, 8px of
+       padding, ruled lines 2px high and rounded, and the extension tab
+       hanging 8px off the right edge at 8px uppercase. Nothing is built
+       around it — the component's card stands on the page as it is, with
+       the name, the size and the two actions stacked under it. */
+    .rsv { width:100%; margin:34px auto 0; display:flex; flex-direction:column; align-items:center; }
+    .rsv-file { position:relative; }
     .rsv-sheet {
       position:relative; z-index:1;
       width:56px; height:72px; padding:8px; border-radius:6px;
@@ -3669,10 +3667,9 @@
       background:#ef4444; color:#fff;
       font-size:8px; font-weight:500; line-height:1.4; text-transform:uppercase; letter-spacing:.02em;
     }
-    .rsv-meta { display:flex; flex-direction:column; gap:2px; min-width:0; }
-    .rsv-name { font-size:15px; font-weight:600; color:#1a1a1a; }
-    .rsv-sub { font-size:12.5px; color:#8a8480; }
-    .rsv-acts { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+    .rsv-name { margin-top:14px; font-size:14px; font-weight:600; color:#1a1a1a; text-align:center; }
+    .rsv-sub { margin-top:2px; font-size:12px; color:#8a8480; }
+    .rsv-acts { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; justify-content:center; }
     .rsv-btn {
       display:inline-flex; align-items:center; gap:6px;
       height:36px; padding:0 14px; border-radius:12px; cursor:pointer; text-decoration:none;
@@ -3685,7 +3682,7 @@
     .rsv-btn-go { background:#1a1a1a; border-color:#1a1a1a; color:#fff; }
     .rsv-btn-go:hover { background:#000; }
     /* Attaching is the admin's, and only while editing. */
-    .rsv-edit { display:none; gap:8px; justify-content:center; margin-top:10px; }
+    .rsv-edit { display:none; gap:8px; justify-content:center; margin-top:12px; }
     #sg-exp.exp-edit-on ~ .rsv .rsv-edit { display:flex; }
     .rsv-ebtn {
       height:32px; padding:0 12px; border-radius:10px; cursor:pointer;
@@ -3694,11 +3691,10 @@
     }
     .rsv-ebtn:hover { border-color:rgba(0,0,0,.45); color:#1a1a1a; }
     .rsv-ebtn-del:hover { border-color:#dc2626; color:#dc2626; }
-    /* With nothing attached the card is the admin's own placeholder — a
-       visitor is shown no empty slot. */
-    .rsv.empty .rsv-row { opacity:.5; }
+    /* With nothing attached the sheet is the admin's own slot; a visitor
+       is shown nothing at all (see paintResume). */
+    .rsv.empty .rsv-file, .rsv.empty .rsv-name, .rsv.empty .rsv-sub { opacity:.45; }
     .rsv.empty .rsv-acts { display:none; }
-    body.dark .rsv-row { background:var(--d-surface); border-color:var(--d-line); box-shadow:0 6px 22px rgba(0,0,0,.4); }
     body.dark .rsv-sheet { background:var(--d-raised); box-shadow:0 0 0 1px rgba(255,255,255,.12); }
     body.dark .rsv-l { background:rgba(255,255,255,.12); }
     body.dark .rsv-l.strong { background:rgba(255,255,255,.24); }
@@ -4897,50 +4893,6 @@ one keyframe at a time</div>
   <!-- ══════════════════════════════ WORK EXP ══════════════════════════════ -->
   <div class="view" id="view-exp">
     <div class="sg" id="sg-exp"></div>
-    <!-- Résumé — the file card from 21st.dev's "File Card Collections"
-         (@urmauur): a 56x72 sheet with a hairline ring and rounded
-         corners, the ruled lines of its default placeholder drawn inside
-         at 2px, and the extension on a tab that hangs off the lower right
-         (red for a PDF, its own colour). The collection's grid of them is
-         not needed — there is one file here — so it sits in a row beside
-         the name, the size and the ways to take it. -->
-    <section class="rsv" id="resumeCard" hidden>
-      <div class="rsv-row">
-        <div class="rsv-file" aria-hidden="true">
-          <div class="rsv-sheet">
-            <span class="rsv-l w50 strong"></span>
-            <span class="rsv-pair"><span class="rsv-l w33"></span><span class="rsv-l w33"></span></span>
-            <span class="rsv-pair"><span class="rsv-l w50"></span><span class="rsv-l w33"></span></span>
-            <span class="rsv-pair"><span class="rsv-l w33"></span><span class="rsv-l w33"></span></span>
-            <span class="rsv-pair"><span class="rsv-l w33"></span><span class="rsv-l w50"></span></span>
-            <span class="rsv-l w33"></span>
-          </div>
-          <span class="rsv-ext" id="rsv-ext">pdf</span>
-        </div>
-
-        <div class="rsv-meta">
-          <span class="rsv-name" id="rsv-name">Résumé</span>
-          <span class="rsv-sub" id="rsv-sub">PDF</span>
-          <div class="rsv-acts">
-            <a class="rsv-btn rsv-btn-go" id="rsv-download" href="#" download>
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-              Download
-            </a>
-            <a class="rsv-btn" id="rsv-open" href="#" target="_blank" rel="noopener">
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-8.5 8.5"/><path d="M19 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1h5"/></svg>
-              Open
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <!-- Admin only, and only in edit mode. -->
-      <div class="rsv-edit">
-        <button type="button" class="rsv-ebtn" id="rsv-pick">Attach a file</button>
-        <button type="button" class="rsv-ebtn rsv-ebtn-del" id="rsv-clear">Remove</button>
-        <input type="file" id="rsv-input" accept=".pdf,.doc,.docx,application/pdf" hidden>
-      </div>
-    </section>
     <div class="brand-grid-wrap">
       <div class="brand-grid-label-pill">
         <span class="brand-grid-star" aria-hidden="true">✨</span>
@@ -5005,6 +4957,47 @@ one keyframe at a time</div>
       <div class="tools-bulk-bar" id="tools-bulk-bar"></div>
       <div class="tools-stack" id="tools-stack"></div>
     </div>
+    <!-- Résumé — the file card from 21st.dev's "File Card Collections"
+         (@urmauur), used as the component draws it: a 56x72 sheet with a
+         hairline ring and rounded corners, the ruled lines of its default
+         placeholder inside at 2px, and the extension on a tab hanging off
+         the lower right (red, its own colour for a PDF). No card around
+         it — the sheet IS the card. The name and size sit under it and
+         the two ways to take the file under those. -->
+    <section class="rsv" id="resumeCard" hidden>
+      <div class="rsv-file" aria-hidden="true">
+        <div class="rsv-sheet">
+          <span class="rsv-l w50 strong"></span>
+          <span class="rsv-pair"><span class="rsv-l w33"></span><span class="rsv-l w33"></span></span>
+          <span class="rsv-pair"><span class="rsv-l w50"></span><span class="rsv-l w33"></span></span>
+          <span class="rsv-pair"><span class="rsv-l w33"></span><span class="rsv-l w33"></span></span>
+          <span class="rsv-pair"><span class="rsv-l w33"></span><span class="rsv-l w50"></span></span>
+          <span class="rsv-l w33"></span>
+        </div>
+        <span class="rsv-ext" id="rsv-ext">pdf</span>
+      </div>
+
+      <span class="rsv-name" id="rsv-name">Résumé</span>
+      <span class="rsv-sub" id="rsv-sub">PDF</span>
+
+      <div class="rsv-acts">
+        <a class="rsv-btn rsv-btn-go" id="rsv-download" href="#" download>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+          Download
+        </a>
+        <a class="rsv-btn" id="rsv-open" href="#" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-8.5 8.5"/><path d="M19 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1h5"/></svg>
+          Open
+        </a>
+      </div>
+
+      <!-- Admin only, and only in edit mode. -->
+      <div class="rsv-edit">
+        <button type="button" class="rsv-ebtn" id="rsv-pick">Attach a file</button>
+        <button type="button" class="rsv-ebtn rsv-ebtn-del" id="rsv-clear">Remove</button>
+        <input type="file" id="rsv-input" accept=".pdf,.doc,.docx,application/pdf" hidden>
+      </div>
+    </section>
   </div><!-- /view-exp -->
 
 
@@ -8276,6 +8269,9 @@ const DEFAULT_TOOLS = [
   { name:'Claude',        sub:'AI',       badge:'✦',  bg:'#D97757', sizeW:139, sizeH:57 },
   { name:'Higgsfield',    sub:'AI video', badge:'H',  bg:'#111111', sizeW:139, sizeH:57 },
 ];
+const TOOLS_PER_ROW = 4;    // cards in one fan before it wraps
+const TOOLS_ROW_STEP = 132; // px between the fans, stacked
+
 const TOOL_PALETTE = ['#00005B', '#111111', '#D97757', '#2563EB', '#059669', '#7C3AED', '#B91C1C'];
 
 // Multi-select for bulk resizing — a plain id set kept outside the DOM
@@ -8460,10 +8456,18 @@ function toolsBuildCard(t, i, tools, stack) {
   if (editMode) card.classList.toggle('selected', toolsSelection.has(t.id));
 
   if (!editMode) {
-    const center = (tools.length - 1) / 2;
-    const off = i - center;
+    /* The fan runs four across and then starts a new one underneath.
+       Every card used to step 32px right and 26px down from the last, so
+       a sixth or seventh tool walked off the column and down the page in
+       one long diagonal. Each row of four is centred on its own, and the
+       rows are stacked (see --tool-rows, which sizes the block). */
+    const row = Math.floor(i / TOOLS_PER_ROW);
+    const col = i % TOOLS_PER_ROW;
+    const inRow = Math.min(TOOLS_PER_ROW, tools.length - row * TOOLS_PER_ROW);
+    const off = col - (inRow - 1) / 2;
+    const rows = Math.ceil(tools.length / TOOLS_PER_ROW);
     card.style.setProperty('--tx', (off * 32) + 'px');
-    card.style.setProperty('--ty', (off * 26) + 'px');
+    card.style.setProperty('--ty', (off * 26 + (row - (rows - 1) / 2) * TOOLS_ROW_STEP) + 'px');
     card.style.setProperty('--z', i);
   }
 
@@ -8668,6 +8672,8 @@ function renderToolsStack() {
   stack.innerHTML = '';
   stack.classList.toggle('tools-edit-on', editMode);
 
+  // The block grows with the number of fans (see .tools-stack).
+  stack.style.setProperty('--tool-rows', Math.max(1, Math.ceil(tools.length / TOOLS_PER_ROW)));
   tools.forEach((t, i) => stack.appendChild(toolsBuildCard(t, i, tools, stack)));
 
   if (editMode) {
