@@ -4614,6 +4614,68 @@
     .site-width-slider { flex:1; height:3px; accent-color:#1a1a1a; cursor:pointer; touch-action:none; }
     .site-width-val { font-size:12px; color:#555; width:56px; text-align:right; flex-shrink:0; font-variant-numeric:tabular-nums; }
 
+    /* ── Colour picker ─────────────────────────────────────────────
+       Ported from 21st.dev's "Motion Color Picker": a white dot at the
+       middle, a ring of six pastels at 20px and twelve saturated hues at
+       40px, each one's hue taken from its angle; six soft gradient blooms
+       further out that brighten as the pointer nears them; and behind it
+       all a conic gradient through the twelve hues that collapses to the
+       chosen colour and swells when you pick one.
+
+       Its source is React with motion's springs and pointer motion
+       values. This page has neither, so the dots carry a transition and a
+       pointermove handler pushes the ones within 80px of the pointer
+       away, up to 5px — the component's own numbers. Anywhere a colour is
+       chosen in edit mode opens this; see openColorPicker. */
+    .mcp-pop {
+      position:fixed; z-index:5300; padding:14px;
+      border-radius:20px; background:#fff; border:1px solid rgba(0,0,0,.08);
+      box-shadow:0 18px 50px rgba(0,0,0,.22);
+      display:flex; flex-direction:column; align-items:center; gap:12px;
+    }
+    .mcp-stage { position:relative; width:220px; height:220px; display:grid; place-items:center; }
+    .mcp-bg {
+      position:absolute; inset:18px; border-radius:50%;
+      background:conic-gradient(from 0deg, var(--mcp-stops));
+      filter:blur(14px); opacity:.55;
+      transition:transform .25s cubic-bezier(.2,1.4,.4,1), background .2s linear;
+    }
+    .mcp-solid {
+      position:absolute; inset:18px; border-radius:50%;
+      background:#fff; transform:scale(.98);
+      transition:transform .25s cubic-bezier(.2,1.4,.4,1);
+    }
+    .mcp-stage.picked .mcp-bg { transform:scale(1.1); }
+    .mcp-stage.picked .mcp-solid { transform:scale(.9); }
+    .mcp-bloom {
+      position:absolute; width:120px; height:120px; border-radius:50%;
+      pointer-events:none; opacity:.15;
+      transition:opacity .3s ease, transform .3s ease;
+    }
+    .mcp-dot {
+      position:absolute; width:16px; height:16px; border-radius:50%;
+      cursor:pointer; border:0; padding:0;
+      box-shadow:0 1px 3px rgba(0,0,0,.18);
+      transition:transform .22s cubic-bezier(.2,.8,.2,1);
+    }
+    .mcp-dot:hover { z-index:2; }
+    .mcp-dot.sel { box-shadow:0 0 0 2px #fff, 0 0 0 4px rgba(10,10,10,.55); }
+    .mcp-hex {
+      width:96px; text-align:center; font-size:12px; letter-spacing:.04em;
+      font-family:var(--font-name), monospace; text-transform:uppercase; color:#555;
+      border:1px solid rgba(0,0,0,.12); border-radius:8px; padding:6px 8px;
+      background:#fff; outline:none;
+    }
+    .mcp-hex:focus { border-color:rgba(0,0,0,.35); }
+    .mcp-hex.invalid { border-color:#d64545; color:#d64545; }
+    body.dark .mcp-pop { background:var(--d-surface); border-color:var(--d-line); box-shadow:0 18px 50px rgba(0,0,0,.6); }
+    body.dark .mcp-solid { background:var(--d-surface); }
+    body.dark .mcp-hex { background:var(--d-raised); border-color:var(--d-line); color:var(--d-text); }
+    body.dark .mcp-dot.sel { box-shadow:0 0 0 2px var(--d-surface), 0 0 0 4px var(--d-text); }
+    @media (prefers-reduced-motion:reduce) {
+      .mcp-dot, .mcp-bloom, .mcp-bg, .mcp-solid { transition:none; }
+    }
+
     /* Nav glow color picker — same dashed-box treatment as the site
        width control above, edits --nav-limelight-rgb only (the alpha
        values that shape the glow stay put, see .nav-limelight). */
@@ -4884,7 +4946,7 @@ one keyframe at a time</div>
     </div>
     <div class="nav-color-ctrl" id="navColorCtrl">
       <span class="nav-color-lbl">Nav glow color</span>
-      <input type="color" class="nav-color-input" id="navColorInput" value="#1a1a1a">
+      <button type="button" class="nav-color-input" id="navColorInput" aria-label="Choose the nav glow colour" style="background:#1a1a1a"></button>
       <input type="text" class="nav-color-hex" id="navColorHex" value="#1a1a1a" maxlength="7" spellcheck="false" autocapitalize="off" autocomplete="off">
     </div>
   </div><!-- /view-home -->
@@ -16731,6 +16793,177 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+
+/* ─── Colour picker ────────────────────────────────────────────────
+   The wheel from 21st.dev's "Motion Color Picker" (see .mcp-pop for what
+   was ported and what stood in for motion's springs), opened from any
+   colour control in edit mode.
+
+   openColorPicker(anchor, hex, onPick) puts it under the anchor and
+   calls back with a hex — live while a dot is hovered or the field is
+   typed into, and committed on a press. A hex field rides underneath:
+   the wheel's nineteen colours are the component's, and the site's inks
+   (a near-black nav glow, say) are not among them. */
+const MCP_RINGS = [{ n: 1, r: 0 }, { n: 6, r: 20 }, { n: 12, r: 40 }];
+const MCP_PUSH = 5;      // px a dot is pushed away at the pointer
+const MCP_REACH = 80;    // px within which it feels the pointer
+
+function mcpHue(angle) {
+  const deg = (angle * 180) / Math.PI - 90 - 180;
+  return ((deg % 360) + 360) % 360;
+}
+function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  const k = n => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const to = v => Math.round(v * 255).toString(16).padStart(2, '0');
+  return '#' + to(f(0)) + to(f(8)) + to(f(4));
+}
+
+let _mcp = null;
+function closeColorPicker() {
+  if (!_mcp) return;
+  document.removeEventListener('pointerdown', _mcpOutside, true);
+  document.removeEventListener('keydown', _mcpKeys, true);
+  window.removeEventListener('scroll', closeColorPicker, true);
+  _mcp.remove();
+  _mcp = null;
+}
+function _mcpOutside(e) {
+  if (_mcp && !_mcp.contains(e.target) && e.target !== _mcp._anchor && !_mcp._anchor.contains(e.target)) closeColorPicker();
+}
+function _mcpKeys(e) { if (e.key === 'Escape') { e.preventDefault(); closeColorPicker(); } }
+
+function openColorPicker(anchor, hex, onPick) {
+  const reopen = _mcp && _mcp._anchor === anchor;
+  closeColorPicker();
+  if (reopen) return;
+
+  const pop = document.createElement('div');
+  pop.className = 'mcp-pop';
+  pop._anchor = anchor;
+
+  const stage = document.createElement('div');
+  stage.className = 'mcp-stage';
+  const stops = [];
+  for (let i = 0; i <= 12; i++) stops.push(`hsl(${i * 30}, 90%, 60%)`);
+  stage.style.setProperty('--mcp-stops', stops.join(', '));
+
+  const bg = document.createElement('div'); bg.className = 'mcp-bg';
+  const solid = document.createElement('div'); solid.className = 'mcp-solid';
+  stage.append(bg, solid);
+
+  // The six blooms, at the component's radius − 40.
+  const blooms = [];
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    const bx = Math.cos(a) * 70, by = Math.sin(a) * 70;
+    const h = mcpHue(a);
+    const el = document.createElement('div');
+    el.className = 'mcp-bloom';
+    el.style.background = `radial-gradient(circle, hsla(${h},90%,60%,1) 0%, hsla(${h},90%,60%,0) 66%)`;
+    el.style.transform = `translate(${bx}px, ${by}px)`;
+    el._p = [bx, by];
+    stage.appendChild(el);
+    blooms.push(el);
+  }
+
+  const dots = [];
+  const pick = (value, committed) => {
+    onPick(value, committed);
+    if (!committed) return;
+    stage.classList.add('picked');
+    stage.style.setProperty('--mcp-stops', [value, value].join(', '));
+    dots.forEach(d => d.el.classList.toggle('sel', d.hex === value));
+    field.value = value.toUpperCase();
+  };
+
+  MCP_RINGS.forEach((ring, ri) => {
+    for (let i = 0; i < ring.n; i++) {
+      const a = (i / ring.n) * Math.PI * 2;
+      const bx = Math.cos(a) * ring.r, by = Math.sin(a) * ring.r;
+      const h = mcpHue(a);
+      const colour = ri === 0 ? '#ffffff' : ri === 1 ? hslToHex(h, 60, 85) : hslToHex(h, 90, 60);
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'mcp-dot';
+      el.style.background = colour;
+      el.style.transform = `translate(${bx}px, ${by}px)`;
+      el.title = colour.toUpperCase();
+      el.addEventListener('click', () => pick(colour, true));
+      stage.appendChild(el);
+      dots.push({ el, hex: colour, x: bx, y: by });
+    }
+  });
+  pop.appendChild(stage);
+
+  // Pointer push, and the blooms' proximity — the component's, without
+  // motion's springs: the dots' own transition carries them back.
+  stage.addEventListener('pointermove', (e) => {
+    const r = stage.getBoundingClientRect();
+    const px = e.clientX - r.left - r.width / 2;
+    const py = e.clientY - r.top - r.height / 2;
+    dots.forEach(d => {
+      const dist = Math.hypot(d.x - px, d.y - py);
+      let ox = 0, oy = 0;
+      if (dist < MCP_REACH && dist > 0) {
+        const f = (1 - dist / MCP_REACH) * MCP_PUSH;
+        ox = ((d.x - px) / dist) * f;
+        oy = ((d.y - py) / dist) * f;
+      }
+      d.el.style.transform = `translate(${d.x + ox}px, ${d.y + oy}px)`;
+    });
+    blooms.forEach(b => {
+      const near = Math.max(0, 1 - Math.hypot(b._p[0] - px, b._p[1] - py) / 100);
+      b.style.opacity = (0.15 + near * 0.2).toFixed(2);
+      b.style.transform = `translate(${b._p[0]}px, ${b._p[1]}px) scale(${(1 + near * 0.2).toFixed(2)})`;
+    });
+  });
+  stage.addEventListener('pointerleave', () => {
+    dots.forEach(d => { d.el.style.transform = `translate(${d.x}px, ${d.y}px)`; });
+    blooms.forEach(b => { b.style.opacity = '.15'; b.style.transform = `translate(${b._p[0]}px, ${b._p[1]}px)`; });
+  });
+
+  // Typed hex, for the colours the wheel does not carry.
+  const field = document.createElement('input');
+  field.type = 'text';
+  field.className = 'mcp-hex';
+  field.maxLength = 7;
+  field.spellcheck = false;
+  field.value = (hex || '#000000').toUpperCase();
+  field.addEventListener('input', () => {
+    const v = _normalizeHex(field.value);
+    field.classList.toggle('invalid', !v);
+    if (v) onPick(v, false);
+  });
+  field.addEventListener('change', () => {
+    const v = _normalizeHex(field.value);
+    if (!v) { field.value = (hex || '#000000').toUpperCase(); field.classList.remove('invalid'); return; }
+    field.value = v.toUpperCase();
+    pick(v, true);
+  });
+  field.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); field.blur(); } });
+  pop.appendChild(field);
+
+  document.body.appendChild(pop);
+  dots.forEach(d => d.el.classList.toggle('sel', d.hex.toLowerCase() === (hex || '').toLowerCase()));
+
+  // Under the control, flipped above when there is no room, held inside
+  // the window either way.
+  const r = anchor.getBoundingClientRect();
+  let top = r.bottom + 8;
+  if (top + pop.offsetHeight > window.innerHeight - 8) top = Math.max(8, r.top - pop.offsetHeight - 8);
+  let left = Math.max(8, Math.min(r.left + r.width / 2 - pop.offsetWidth / 2, window.innerWidth - pop.offsetWidth - 8));
+  pop.style.top = top + 'px';
+  pop.style.left = left + 'px';
+  _mcp = pop;
+
+  document.addEventListener('pointerdown', _mcpOutside, true);
+  document.addEventListener('keydown', _mcpKeys, true);
+  window.addEventListener('scroll', closeColorPicker, true);
+}
+
 /* ── Nav glow color picker (home edit) ─────────────────
    Only swaps --nav-limelight-rgb (the color channel the glow's rgba()
    values pull from) — every alpha in .nav-limelight/.nav-limelight-beam
@@ -16758,7 +16991,7 @@ function applyNavGlowColor() {
   document.documentElement.style.setProperty('--nav-limelight-rgb', _hexToRgbTriplet(hex));
   const cInput = document.getElementById('navColorInput');
   const cHex = document.getElementById('navColorHex');
-  if (cInput) cInput.value = hex;
+  if (cInput) cInput.style.background = hex;
   if (cHex) { cHex.value = hex; cHex.classList.remove('invalid'); }
 }
 
@@ -16786,13 +17019,18 @@ document.addEventListener('DOMContentLoaded', () => {
     _cachedSettings[navGlowKey()] = hex;
     saveSettings();
   };
+  // The swatch opens the wheel (see openColorPicker) rather than the
+  // browser's own colour dialog — one picker, wherever a colour is set.
   swatch.addEventListener('pointerdown', (e) => e.stopPropagation());
-  swatch.addEventListener('input', () => {
-    applyPreview(swatch.value);
-    hexField.value = swatch.value;
-    hexField.classList.remove('invalid');
+  swatch.addEventListener('click', () => {
+    openColorPicker(swatch, navGlowColor(), (hex, committed) => {
+      applyPreview(hex);
+      swatch.style.background = hex;
+      hexField.value = hex.toUpperCase();
+      hexField.classList.remove('invalid');
+      if (committed) commit(hex);
+    });
   });
-  swatch.addEventListener('change', () => commit(swatch.value));
 
   hexField.addEventListener('pointerdown', (e) => e.stopPropagation());
   hexField.addEventListener('input', () => {
@@ -16800,11 +17038,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!hex) { hexField.classList.add('invalid'); return; }
     hexField.classList.remove('invalid');
     applyPreview(hex);
-    swatch.value = hex;
+    swatch.style.background = hex;
   });
   hexField.addEventListener('change', () => {
     const hex = _normalizeHex(hexField.value);
-    if (!hex) { hexField.value = swatch.value; hexField.classList.remove('invalid'); return; }
+    if (!hex) { hexField.value = navGlowColor().toUpperCase(); hexField.classList.remove('invalid'); return; }
     hexField.value = hex;
     hexField.classList.remove('invalid');
     commit(hex);
