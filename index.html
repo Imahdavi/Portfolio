@@ -8460,18 +8460,18 @@ function toolsBuildCard(t, i, tools, stack) {
     /* The fan runs four across and then starts a new one underneath.
        Every card used to step 32px right and 26px down from the last, so
        a sixth or seventh tool walked off the column and down the page in
-       one long diagonal. Each row of four is centred on its own, and the
-       rows are stacked (see --tool-rows, which sizes the block). */
+       one long diagonal. The fans are centred and stacked (see
+       --tool-rows, which sizes the block).  */
     const row = Math.floor(i / TOOLS_PER_ROW);
     const col = i % TOOLS_PER_ROW;
-    const inRow = Math.min(TOOLS_PER_ROW, tools.length - row * TOOLS_PER_ROW);
-    const off = col - (inRow - 1) / 2;
+    // Centred on a full fan, not on its own count, so a short last fan
+    // starts under the first card above it instead of being nudged along
+    // the diagonal.
+    const off = col - (TOOLS_PER_ROW - 1) / 2;
     const rows = Math.ceil(tools.length / TOOLS_PER_ROW);
     card.style.setProperty('--tx', (off * 32 + (row - (rows - 1) / 2) * TOOLS_ROW_DX) + 'px');
     card.style.setProperty('--ty', (off * 26 + (row - (rows - 1) / 2) * TOOLS_ROW_STEP) + 'px');
-    // Later fans sit behind, so the one that wraps underneath tucks in
-    // rather than covering the fan above it.
-    card.style.setProperty('--z', (rows - 1 - row) * TOOLS_PER_ROW + col);
+    card.style.setProperty('--z', i);
   }
 
   const top = document.createElement('div');
