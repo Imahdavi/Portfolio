@@ -4616,7 +4616,11 @@
         window.__pfEarly = _pf;
         var _r = document.documentElement;
         if (_pf.siteWidth != null) _r.style.setProperty('--site-width', _pf.siteWidth + 'px');
-        var _c = _pf.navLimelightColor;
+        /* The theme is read straight from storage here: body has no class
+           yet this early, and the two themes keep separate glow colours. */
+        var _dark = false;
+        try { _dark = localStorage.getItem('pf_theme') === 'dark'; } catch (e) {}
+        var _c = _dark ? (_pf.navLimelightColorDark || '#eaebec') : (_pf.navLimelightColor || '#1a1a1a');
         if (_c && /^#[0-9a-f]{6}$/i.test(_c)) {
           _r.style.setProperty('--nav-limelight-rgb',
             parseInt(_c.slice(1, 3), 16) + ',' + parseInt(_c.slice(3, 5), 16) + ',' + parseInt(_c.slice(5, 7), 16));
@@ -6311,6 +6315,7 @@ function toggleDarkMode() {
   const flip = () => {
     const on = !document.body.classList.contains('dark');
     document.body.classList.toggle('dark', on);
+    if (typeof applyNavGlowColor === 'function') applyNavGlowColor();   // each theme has its own glow colour
     try { localStorage.setItem('pf_theme', on ? 'dark' : 'light'); } catch (e) {}
   };
   const btn = document.getElementById('bg-toggle-btn');
@@ -7666,14 +7671,8 @@ async function loadSettings() {
       if (wVal) wVal.textContent = s.siteWidth + 'px';
     }
 
-    // nav limelight glow color (manual override, defaults to #1a1a1a if never set)
-    if (s.navLimelightColor) {
-      document.documentElement.style.setProperty('--nav-limelight-rgb', _hexToRgbTriplet(s.navLimelightColor));
-      const cInput = document.getElementById('navColorInput');
-      const cHex = document.getElementById('navColorHex');
-      if (cInput) cInput.value = s.navLimelightColor;
-      if (cHex) cHex.value = s.navLimelightColor;
-    }
+    // Nav glow colour, per theme — see applyNavGlowColor.
+    applyNavGlowColor();
 
     // profile
     if (s.profile) {
@@ -16314,6 +16313,29 @@ document.addEventListener('DOMContentLoaded', () => {
    site width slider above. Two inputs stay in sync: the native color
    swatch and a typed hex field (shorthand #abc is accepted and expanded
    — the swatch itself only understands 6-digit hex). */
+
+/* The bottom nav's glow, which is a colour on a background — so it needs
+   one per theme. A single stored colour meant the dark ink chosen for the
+   light page (#313030) all but vanished on the dark one. navLimelightColor
+   is the light theme's, navLimelightColorDark the dark theme's, and the
+   picker in home edit writes whichever theme is showing. Left unset, each
+   falls back to that theme's own ink. */
+const NAV_GLOW_DEFAULT = { light: '#1a1a1a', dark: '#eaebec' };
+function navGlowKey() { return document.body.classList.contains('dark') ? 'navLimelightColorDark' : 'navLimelightColor'; }
+function navGlowColor() {
+  const s = _cachedSettings || {};
+  const dark = document.body.classList.contains('dark');
+  return s[navGlowKey()] || NAV_GLOW_DEFAULT[dark ? 'dark' : 'light'];
+}
+function applyNavGlowColor() {
+  const hex = navGlowColor();
+  document.documentElement.style.setProperty('--nav-limelight-rgb', _hexToRgbTriplet(hex));
+  const cInput = document.getElementById('navColorInput');
+  const cHex = document.getElementById('navColorHex');
+  if (cInput) cInput.value = hex;
+  if (cHex) { cHex.value = hex; cHex.classList.remove('invalid'); }
+}
+
 function _hexToRgbTriplet(hex) {
   const h = hex.replace('#', '');
   const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
@@ -16334,10 +16356,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const applyPreview = (hex) => document.documentElement.style.setProperty('--nav-limelight-rgb', _hexToRgbTriplet(hex));
   const commit = (hex) => {
     if (!_cachedSettings) _cachedSettings = {};
-    _cachedSettings.navLimelightColor = hex;
+    // The theme showing is the one being coloured (see navGlowKey).
+    _cachedSettings[navGlowKey()] = hex;
     saveSettings();
   };
-
   swatch.addEventListener('pointerdown', (e) => e.stopPropagation());
   swatch.addEventListener('input', () => {
     applyPreview(swatch.value);
