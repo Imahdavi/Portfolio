@@ -4622,51 +4622,43 @@
     .site-width-val { font-size:12px; color:#555; width:56px; text-align:right; flex-shrink:0; font-variant-numeric:tabular-nums; }
 
     /* ── Colour picker ─────────────────────────────────────────────
-       Ported from 21st.dev's "Motion Color Picker": a white dot at the
-       middle, a ring of six pastels at 20px and twelve saturated hues at
-       40px, each one's hue taken from its angle; six soft gradient blooms
-       further out that brighten as the pointer nears them; and behind it
-       all a conic gradient through the twelve hues that collapses to the
-       chosen colour and swells when you pick one.
-
-       Its source is React with motion's springs and pointer motion
-       values. This page has neither, so the dots carry a transition and a
-       pointermove handler pushes the ones within 80px of the pointer
-       away, up to 5px — the component's own numbers. Anywhere a colour is
-       chosen in edit mode opens this; see openColorPicker. */
+       21st.dev's "Motion Color Picker" (@motiondotdev), at its own sizes
+       from its stylesheet: a 140px disc; behind it a conic gradient through
+       twelve hues with a solid disc laid over it at 98%, so the gradient
+       shows as a thin ring round the edge; nineteen 32px dots, overlapping
+       — a white one in the middle, six pastels 20px out and twelve
+       saturated hues 40px out, each hue from its angle; and six 150px
+       blooms in color-burn under them that deepen as the pointer nears.
+       Picking a colour turns the whole ring that colour and shrinks the
+       solid disc to 90%, so the ring thickens; a dot grows 1.5x under the
+       pointer with a white overlay ring. The component's springs are
+       stepped by hand in openColorPicker. */
     .mcp-pop {
-      position:fixed; z-index:5300; padding:14px;
-      border-radius:20px; background:#fff; border:1px solid rgba(0,0,0,.08);
+      position:fixed; z-index:5300; padding:18px 18px 14px;
+      border-radius:22px; background:#fff; border:1px solid rgba(0,0,0,.08);
       box-shadow:0 18px 50px rgba(0,0,0,.22);
-      display:flex; flex-direction:column; align-items:center; gap:12px;
+      display:flex; flex-direction:column; align-items:center; gap:14px;
+      --mcp-layer:#ffffff;
     }
-    .mcp-stage { position:relative; width:220px; height:220px; display:grid; place-items:center; }
-    .mcp-bg {
-      position:absolute; inset:18px; border-radius:50%;
-      background:conic-gradient(from 0deg, var(--mcp-stops));
-      filter:blur(14px); opacity:.55;
-      transition:transform .25s cubic-bezier(.2,1.4,.4,1), background .2s linear;
-    }
-    .mcp-solid {
-      position:absolute; inset:18px; border-radius:50%;
-      background:#fff; transform:scale(.98);
-      transition:transform .25s cubic-bezier(.2,1.4,.4,1);
-    }
-    .mcp-stage.picked .mcp-bg { transform:scale(1.1); }
-    .mcp-stage.picked .mcp-solid { transform:scale(.9); }
-    .mcp-bloom {
-      position:absolute; width:120px; height:120px; border-radius:50%;
-      pointer-events:none; opacity:.15;
-      transition:opacity .3s ease, transform .3s ease;
-    }
+    .mcp-wrap { position:relative; width:140px; height:140px; display:flex; align-items:center; justify-content:center; }
+    .mcp-bg { position:absolute; inset:0; }
+    .mcp-grad { position:absolute; inset:0; border-radius:50%; z-index:0; will-change:transform; }
+    .mcp-solid { position:absolute; inset:0; border-radius:50%; z-index:1; background:var(--mcp-layer); will-change:transform; }
+    .mcp-area { position:relative; width:calc(100% - 5px); height:calc(100% - 5px); border-radius:50%; overflow:visible; z-index:2; }
     .mcp-dot {
-      position:absolute; width:16px; height:16px; border-radius:50%;
-      cursor:pointer; border:0; padding:0;
-      box-shadow:0 1px 3px rgba(0,0,0,.18);
-      transition:transform .22s cubic-bezier(.2,.8,.2,1);
+      position:absolute; top:50%; left:50%; width:32px; height:32px; border-radius:50%;
+      translate:-50% -50%; cursor:pointer; border:0; padding:0; will-change:transform;
     }
-    .mcp-dot:hover { z-index:2; }
-    .mcp-dot.sel { box-shadow:0 0 0 2px #fff, 0 0 0 4px rgba(10,10,10,.55); }
+    .mcp-dot-ring {
+      position:absolute; inset:0; border:2px solid #fff; border-radius:50%;
+      mix-blend-mode:overlay; pointer-events:none; opacity:0; transition:opacity .13s;
+    }
+    .mcp-dot:hover .mcp-dot-ring, .mcp-dot:focus-visible .mcp-dot-ring { opacity:.4; }
+    .mcp-dot:focus-visible { outline:none; }
+    .mcp-bloom {
+      position:absolute; top:50%; left:50%; width:150px; height:150px; border-radius:50%;
+      translate:-50% -50%; pointer-events:none; mix-blend-mode:color-burn; will-change:transform, opacity;
+    }
     .mcp-hex {
       width:96px; text-align:center; font-size:12px; letter-spacing:.04em;
       font-family:var(--font-name), monospace; text-transform:uppercase; color:#555;
@@ -4675,13 +4667,10 @@
     }
     .mcp-hex:focus { border-color:rgba(0,0,0,.35); }
     .mcp-hex.invalid { border-color:#d64545; color:#d64545; }
-    body.dark .mcp-pop { background:var(--d-surface); border-color:var(--d-line); box-shadow:0 18px 50px rgba(0,0,0,.6); }
-    body.dark .mcp-solid { background:var(--d-surface); }
-    body.dark .mcp-hex { background:var(--d-raised); border-color:var(--d-line); color:var(--d-text); }
-    body.dark .mcp-dot.sel { box-shadow:0 0 0 2px var(--d-surface), 0 0 0 4px var(--d-text); }
-    @media (prefers-reduced-motion:reduce) {
-      .mcp-dot, .mcp-bloom, .mcp-bg, .mcp-solid { transition:none; }
-    }
+    /* The component is drawn on its own dark layer (#13181a); dark mode
+       gets that exactly, light mode the page's white. */
+    body.dark .mcp-pop { background:#0d1111; border-color:var(--d-line); box-shadow:0 18px 50px rgba(0,0,0,.6); --mcp-layer:#13181a; }
+    body.dark .mcp-hex { background:#13181a; border-color:#1e2427; color:#ededec; }
 
     /* Nav glow color picker — same dashed-box treatment as the site
        width control above, edits --nav-limelight-rgb only (the alpha
@@ -16799,18 +16788,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 /* ─── Colour picker ────────────────────────────────────────────────
-   The wheel from 21st.dev's "Motion Color Picker" (see .mcp-pop for what
-   was ported and what stood in for motion's springs), opened from any
-   colour control in edit mode.
+   21st.dev's "Motion Color Picker" (@motiondotdev) — see .mcp-pop for the
+   geometry, taken from its stylesheet. Its behaviour is motion's springs
+   and motion values; here the same springs are stepped per frame:
 
-   openColorPicker(anchor, hex, onPick) puts it under the anchor and
-   calls back with a hex — live while a dot is hovered or the field is
-   typed into, and committed on a press. A hex field rides underneath:
-   the wheel's nineteen colours are the component's, and the site's inks
-   (a near-black nav glow, say) are not among them. */
-const MCP_RINGS = [{ n: 1, r: 0 }, { n: 6, r: 20 }, { n: 12, r: 40 }];
-const MCP_PUSH = 5;      // px a dot is pushed away at the pointer
-const MCP_REACH = 80;    // px within which it feels the pointer
+     push     a dot within 80px of the pointer (while the pointer is on the
+              disc) is pushed straight away from it by (1 - d/80) x 5px, on
+              a damping 30 / stiffness 100 spring
+     hover    scale 1.5, the white overlay ring to 40%; a press 1.2;
+              damping 30 / stiffness 200
+     blooms   opacity 0.15 to 0.35 and scale 1 to 1.2 as the pointer comes
+              within 100px, damping 30 / stiffness 100
+     pick     every conic stop tweens to the colour over 0.2s, the
+              gradient springs to 1.1 with a bounce and the solid disc to
+              0.9; picking the same dot again puts it all back
+
+   openColorPicker(anchor, hex, onPick) calls back with a hex — live while
+   the field is typed into, committed on a pick. A hex field rides under
+   the wheel, since its nineteen colours are not the site's inks. */
+const MCP_PUSH = 5, MCP_REACH = 80;
 
 function mcpHue(angle) {
   const deg = (angle * 180) / Math.PI - 90 - 180;
@@ -16824,13 +16820,28 @@ function hslToHex(h, s, l) {
   const to = v => Math.round(v * 255).toString(16).padStart(2, '0');
   return '#' + to(f(0)) + to(f(8)) + to(f(4));
 }
+function _mcpRgb(hex) { const h = hex.replace('#', ''); return [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16)); }
+
+// A spring toward t, with motion's stiffness and damping (mass 1).
+function mcpSpring(value, stiffness, damping) {
+  return {
+    x: value, v: 0, t: value, k: stiffness, c: damping,
+    step(dt) {
+      const a = -this.k * (this.x - this.t) - this.c * this.v;
+      this.v += a * dt; this.x += this.v * dt;
+      return Math.abs(this.x - this.t) + Math.abs(this.v) > 0.0005;
+    },
+  };
+}
 
 let _mcp = null;
 function closeColorPicker() {
   if (!_mcp) return;
+  cancelAnimationFrame(_mcp._raf);
   document.removeEventListener('pointerdown', _mcpOutside, true);
   document.removeEventListener('keydown', _mcpKeys, true);
   window.removeEventListener('scroll', closeColorPicker, true);
+  window.removeEventListener('pointermove', _mcp._onMove);
   _mcp.remove();
   _mcp = null;
 }
@@ -16847,90 +16858,141 @@ function openColorPicker(anchor, hex, onPick) {
   const pop = document.createElement('div');
   pop.className = 'mcp-pop';
   pop._anchor = anchor;
+  pop._raf = 0;
+  pop.innerHTML = '<div class="mcp-wrap"><div class="mcp-bg"><div class="mcp-grad"></div><div class="mcp-solid"></div></div><div class="mcp-area"></div></div>';
+  const grad = pop.querySelector('.mcp-grad');
+  const solid = pop.querySelector('.mcp-solid');
+  const area = pop.querySelector('.mcp-area');
 
-  const stage = document.createElement('div');
-  stage.className = 'mcp-stage';
-  const stops = [];
-  for (let i = 0; i <= 12; i++) stops.push(`hsl(${i * 30}, 90%, 60%)`);
-  stage.style.setProperty('--mcp-stops', stops.join(', '));
+  const ORIGINAL = [];
+  for (let i = 0; i <= 12; i++) ORIGINAL.push(hslToHex((i * 30) % 360, 90, 60));
+  let stops = ORIGINAL.map(_mcpRgb);
+  let stopFrom = null, stopTo = null, stopT = 1;
+  const paintStops = () => {
+    grad.style.background = 'conic-gradient(from 0deg, ' +
+      stops.map(c => 'rgb(' + c.map(Math.round).join(',') + ')').join(', ') + ')';
+  };
+  paintStops();
 
-  const bg = document.createElement('div'); bg.className = 'mcp-bg';
-  const solid = document.createElement('div'); solid.className = 'mcp-solid';
-  stage.append(bg, solid);
+  const gradScale = mcpSpring(1, 300, 35);
+  const solidScale = mcpSpring(0.98, 250, 20);
 
-  // The six blooms, at the component's radius − 40.
+  // The six blooms, at the disc's radius less 40.
+  const radius = (140 - 5) / 2;
   const blooms = [];
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * Math.PI * 2;
-    const bx = Math.cos(a) * 70, by = Math.sin(a) * 70;
     const h = mcpHue(a);
     const el = document.createElement('div');
     el.className = 'mcp-bloom';
-    el.style.background = `radial-gradient(circle, hsla(${h},90%,60%,1) 0%, hsla(${h},90%,60%,0) 66%)`;
-    el.style.transform = `translate(${bx}px, ${by}px)`;
-    el._p = [bx, by];
-    stage.appendChild(el);
-    blooms.push(el);
+    el.style.background = 'radial-gradient(circle, hsla(' + h + ', 90%, 60%, 1) 0%, hsla(' + h + ', 90%, 60%, 0) 66%)';
+    area.appendChild(el);
+    blooms.push({ el, x: Math.cos(a) * (radius - 40), y: Math.sin(a) * (radius - 40),
+                  op: mcpSpring(0.15, 100, 30), sc: mcpSpring(1, 100, 30) });
   }
 
+  let selected = null;
+  let field = null;
   const dots = [];
-  const pick = (value, committed) => {
-    onPick(value, committed);
-    if (!committed) return;
-    stage.classList.add('picked');
-    stage.style.setProperty('--mcp-stops', [value, value].join(', '));
-    dots.forEach(d => d.el.classList.toggle('sel', d.hex === value));
-    field.value = value.toUpperCase();
+  const kick = () => { if (!pop._raf) pop._raf = requestAnimationFrame(frame); };
+
+  const pick = (colour) => {
+    selected = colour;
+    stopFrom = stops.map(c => c.slice());
+    stopTo = colour ? ORIGINAL.map(() => _mcpRgb(colour)) : ORIGINAL.map(_mcpRgb);
+    stopT = 0;
+    if (colour) { gradScale.t = 1.1; gradScale.c = 6; gradScale.v = 2; solidScale.t = 0.9; }
+    else { gradScale.t = 1; gradScale.c = 35; solidScale.t = 0.98; }
+    if (colour) {
+      field.value = colour.toUpperCase();
+      field.classList.remove('invalid');
+      onPick(colour, true);
+    }
+    kick();
   };
 
-  MCP_RINGS.forEach((ring, ri) => {
-    for (let i = 0; i < ring.n; i++) {
-      const a = (i / ring.n) * Math.PI * 2;
-      const bx = Math.cos(a) * ring.r, by = Math.sin(a) * ring.r;
-      const h = mcpHue(a);
-      const colour = ri === 0 ? '#ffffff' : ri === 1 ? hslToHex(h, 60, 85) : hslToHex(h, 90, 60);
-      const el = document.createElement('button');
-      el.type = 'button';
-      el.className = 'mcp-dot';
-      el.style.background = colour;
-      el.style.transform = `translate(${bx}px, ${by}px)`;
-      el.title = colour.toUpperCase();
-      el.addEventListener('click', () => pick(colour, true));
-      stage.appendChild(el);
-      dots.push({ el, hex: colour, x: bx, y: by });
-    }
+  // Outer ring first so the middle sits on top — the component renders
+  // its dots reversed for the same reason.
+  const specs = [{ ring: 0, i: 0, n: 1 }];
+  for (let i = 0; i < 6; i++) specs.push({ ring: 1, i, n: 6 });
+  for (let i = 0; i < 12; i++) specs.push({ ring: 2, i, n: 12 });
+  specs.slice().reverse().forEach(s => {
+    const a = (s.i / s.n) * Math.PI * 2;
+    const h = mcpHue(a);
+    const colour = s.ring === 0 ? '#ffffff' : s.ring === 1 ? hslToHex(h, 60, 85) : hslToHex(h, 90, 60);
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'mcp-dot';
+    el.style.backgroundColor = colour;
+    el.setAttribute('aria-label', colour.toUpperCase());
+    el.innerHTML = '<span class="mcp-dot-ring"></span>';
+    const d = { el, colour, bx: Math.cos(a) * s.ring * 20, by: Math.sin(a) * s.ring * 20,
+                px: mcpSpring(0, 100, 30), py: mcpSpring(0, 100, 30), sc: mcpSpring(1, 200, 30), hover: false };
+    el.addEventListener('pointerenter', () => { d.hover = true; d.sc.t = 1.5; kick(); });
+    el.addEventListener('pointerleave', () => { d.hover = false; d.sc.t = 1; kick(); });
+    el.addEventListener('pointerdown', () => { d.sc.t = 1.2; kick(); });
+    el.addEventListener('pointerup', () => { d.sc.t = d.hover ? 1.5 : 1; kick(); });
+    el.addEventListener('click', () => pick(selected === colour ? null : colour));
+    area.appendChild(el);
+    dots.push(d);
   });
-  pop.appendChild(stage);
 
-  // Pointer push, and the blooms' proximity — the component's, without
-  // motion's springs: the dots' own transition carries them back.
-  stage.addEventListener('pointermove', (e) => {
-    const r = stage.getBoundingClientRect();
-    const px = e.clientX - r.left - r.width / 2;
-    const py = e.clientY - r.top - r.height / 2;
+  // The pointer is read wherever it is — the component tracks the window.
+  let pointer = null;
+  const aim = () => {
+    if (!pointer) return;
+    const r = area.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const px = pointer[0], py = pointer[1];
+    const inside = Math.hypot(px - cx, py - cy) <= r.width / 2;
     dots.forEach(d => {
-      const dist = Math.hypot(d.x - px, d.y - py);
-      let ox = 0, oy = 0;
-      if (dist < MCP_REACH && dist > 0) {
-        const f = (1 - dist / MCP_REACH) * MCP_PUSH;
-        ox = ((d.x - px) / dist) * f;
-        oy = ((d.y - py) / dist) * f;
-      }
-      d.el.style.transform = `translate(${d.x + ox}px, ${d.y + oy}px)`;
+      const dx = cx + d.bx - px, dy = cy + d.by - py, dist = Math.hypot(dx, dy);
+      if (!inside || dist >= MCP_REACH || dist === 0) { d.px.t = 0; d.py.t = 0; return; }
+      const f = (1 - dist / MCP_REACH) * MCP_PUSH, ang = Math.atan2(dy, dx);
+      d.px.t = Math.cos(ang) * f; d.py.t = Math.sin(ang) * f;
     });
     blooms.forEach(b => {
-      const near = Math.max(0, 1 - Math.hypot(b._p[0] - px, b._p[1] - py) / 100);
-      b.style.opacity = (0.15 + near * 0.2).toFixed(2);
-      b.style.transform = `translate(${b._p[0]}px, ${b._p[1]}px) scale(${(1 + near * 0.2).toFixed(2)})`;
+      const near = Math.max(0, 1 - Math.hypot(px - (cx + b.x), py - (cy + b.y)) / 100);
+      b.op.t = 0.15 + near * 0.2; b.sc.t = 1 + near * 0.2;
     });
-  });
-  stage.addEventListener('pointerleave', () => {
-    dots.forEach(d => { d.el.style.transform = `translate(${d.x}px, ${d.y}px)`; });
-    blooms.forEach(b => { b.style.opacity = '.15'; b.style.transform = `translate(${b._p[0]}px, ${b._p[1]}px)`; });
-  });
+  };
+  pop._onMove = (e) => { pointer = [e.clientX, e.clientY]; aim(); kick(); };
+  window.addEventListener('pointermove', pop._onMove);
+
+  let last = 0;
+  function frame(now) {
+    const dt = Math.min(0.032, last ? (now - last) / 1000 : 0.016);
+    last = now;
+    let busy = false;
+    const sub = 4, h = dt / sub;
+    for (let s = 0; s < sub; s++) {
+      dots.forEach(d => { if (d.px.step(h)) busy = true; if (d.py.step(h)) busy = true; if (d.sc.step(h)) busy = true; });
+      blooms.forEach(b => { if (b.op.step(h)) busy = true; if (b.sc.step(h)) busy = true; });
+      if (gradScale.step(h)) busy = true;
+      if (solidScale.step(h)) busy = true;
+    }
+    dots.forEach(d => {
+      d.el.style.transform = 'translate(' + (d.bx + d.px.x).toFixed(2) + 'px, ' + (d.by + d.py.x).toFixed(2) + 'px) scale(' + d.sc.x.toFixed(3) + ')';
+    });
+    blooms.forEach(b => {
+      b.el.style.transform = 'translate(' + b.x.toFixed(2) + 'px, ' + b.y.toFixed(2) + 'px) scale(' + b.sc.x.toFixed(3) + ')';
+      b.el.style.opacity = b.op.x.toFixed(3);
+    });
+    grad.style.transform = 'scale(' + gradScale.x.toFixed(4) + ')';
+    solid.style.transform = 'scale(' + solidScale.x.toFixed(4) + ')';
+    if (stopT < 1) {
+      stopT = Math.min(1, stopT + dt / 0.2);
+      const e = stopT < 0.5 ? 2 * stopT * stopT : 1 - Math.pow(-2 * stopT + 2, 2) / 2;
+      stops = stopFrom.map((c, i) => c.map((v, j) => v + (stopTo[i][j] - v) * e));
+      paintStops();
+      busy = true;
+    }
+    pop._raf = busy ? requestAnimationFrame(frame) : 0;
+    if (!busy) last = 0;
+  }
 
   // Typed hex, for the colours the wheel does not carry.
-  const field = document.createElement('input');
+  field = document.createElement('input');
   field.type = 'text';
   field.className = 'mcp-hex';
   field.maxLength = 7;
@@ -16945,20 +17007,20 @@ function openColorPicker(anchor, hex, onPick) {
     const v = _normalizeHex(field.value);
     if (!v) { field.value = (hex || '#000000').toUpperCase(); field.classList.remove('invalid'); return; }
     field.value = v.toUpperCase();
-    pick(v, true);
+    onPick(v, true);
   });
   field.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); field.blur(); } });
   pop.appendChild(field);
 
   document.body.appendChild(pop);
-  dots.forEach(d => d.el.classList.toggle('sel', d.hex.toLowerCase() === (hex || '').toLowerCase()));
+  frame(performance.now());   // first paint of every transform
 
   // Under the control, flipped above when there is no room, held inside
   // the window either way.
   const r = anchor.getBoundingClientRect();
   let top = r.bottom + 8;
   if (top + pop.offsetHeight > window.innerHeight - 8) top = Math.max(8, r.top - pop.offsetHeight - 8);
-  let left = Math.max(8, Math.min(r.left + r.width / 2 - pop.offsetWidth / 2, window.innerWidth - pop.offsetWidth - 8));
+  const left = Math.max(8, Math.min(r.left + r.width / 2 - pop.offsetWidth / 2, window.innerWidth - pop.offsetWidth - 8));
   pop.style.top = top + 'px';
   pop.style.left = left + 'px';
   _mcp = pop;
