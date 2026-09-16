@@ -59,12 +59,15 @@
       inset: 0;
       overflow-y: auto;
       overflow-x: clip;
-      padding: 48px 22px 112px;
+      /* The bottom padding clears the floating nav (fixed 50px up, about
+         60px tall) with room to spare. At 112px the last thing on a page
+         could only scroll as far as the nav's top edge, and sat under it. */
+      padding: 48px 22px 160px;
       background: #fff;
       display: none;
     }
     .view.active { display: block; }
-    #view-project { padding: 0 22px 112px; }
+    #view-project { padding: 0 22px 160px; }
     #view-home    { padding-top: 32px; }
 
     @keyframes slideInR  { from { transform:translateX(52px);  opacity:0 } to { transform:none; opacity:1 } }
