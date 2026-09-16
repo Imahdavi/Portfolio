@@ -4659,6 +4659,14 @@
       position:absolute; top:50%; left:50%; width:150px; height:150px; border-radius:50%;
       translate:-50% -50%; pointer-events:none; mix-blend-mode:color-burn; will-change:transform, opacity;
     }
+    .mcp-row { display:flex; align-items:center; gap:8px; }
+    .mcp-ink {
+      width:26px; height:26px; border-radius:50%; border:0; padding:0; cursor:pointer; flex:none;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);
+      transition:transform .15s cubic-bezier(.2,.8,.2,1);
+    }
+    .mcp-ink:hover { transform:scale(1.15); }
+    .mcp-ink:active { transform:scale(1.05); }
     .mcp-hex {
       width:96px; text-align:center; font-size:12px; letter-spacing:.04em;
       font-family:var(--font-name), monospace; text-transform:uppercase; color:#555;
@@ -17010,7 +17018,23 @@ function openColorPicker(anchor, hex, onPick) {
     onPick(v, true);
   });
   field.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); field.blur(); } });
-  pop.appendChild(field);
+
+  // Two inks the wheel has no place for — black, and the soft black the
+  // site uses — beside the field, drawn and picked like the wheel's dots.
+  const row = document.createElement('div');
+  row.className = 'mcp-row';
+  [['#0a0a0a', 'Black'], ['#313030', 'Soft black']].forEach(([colour, name]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'mcp-ink';
+    b.style.backgroundColor = colour;
+    b.title = name;
+    b.setAttribute('aria-label', name + ' ' + colour.toUpperCase());
+    b.addEventListener('click', () => pick(selected === colour ? null : colour));
+    row.appendChild(b);
+  });
+  row.appendChild(field);
+  pop.appendChild(row);
 
   document.body.appendChild(pop);
   frame(performance.now());   // first paint of every transform
