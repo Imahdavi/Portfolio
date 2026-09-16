@@ -3039,8 +3039,10 @@
     .tools-stack {
       display:grid; grid-template-areas:"stack"; place-items:center;
       width:100%; max-width:360px; margin:0 auto 20px;
-      /* One fan is 210px; each fan after it adds its own step (TOOLS_ROW_STEP). */
-      height:calc(210px + (var(--tool-rows, 1) - 1) * 38px);
+      /* One fan is 170px tall; each fan after it adds its own step
+         (TOOLS_ROW_STEP). It used to be 210, which left a band of empty
+         space between the heading and the cards. */
+      height:calc(170px + (var(--tool-rows, 1) - 1) * 38px);
       overflow:visible;
     }
     .tools-stack.tools-edit-on {
@@ -3648,7 +3650,7 @@
        hanging 8px off the right edge at 8px uppercase. Nothing is built
        around it — the component's card stands on the page as it is, with
        the name, the size and the two actions stacked under it. */
-    .rsv { width:100%; margin:34px auto 0; display:flex; flex-direction:column; align-items:center; }
+    .rsv { width:100%; margin:22px auto 0; display:flex; flex-direction:column; align-items:center; }
     .rsv-file { position:relative; }
     .rsv-sheet {
       position:relative; z-index:1;
@@ -3672,9 +3674,9 @@
     .rsv-acts { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; justify-content:center; }
     .rsv-btn {
       display:inline-flex; align-items:center; gap:6px;
-      height:36px; padding:0 14px; border-radius:12px; cursor:pointer; text-decoration:none;
+      height:32px; padding:0 12px; border-radius:10px; cursor:pointer; text-decoration:none;
       border:1px solid rgba(0,0,0,.10); background:rgba(0,0,0,.035); color:#1a1a1a;
-      font-family:inherit; font-size:13px; font-weight:500;
+      font-family:inherit; font-size:12.5px; font-weight:500;
       transition:background .15s, transform .1s;
     }
     .rsv-btn:hover { background:rgba(0,0,0,.07); }
@@ -5044,11 +5046,11 @@ one keyframe at a time</div>
 
       <div class="rsv-acts">
         <a class="rsv-btn rsv-btn-go" id="rsv-download" href="#" download>
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
           Download
         </a>
         <a class="rsv-btn" id="rsv-open" href="#" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-8.5 8.5"/><path d="M19 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1h5"/></svg>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-8.5 8.5"/><path d="M19 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1h5"/></svg>
           Open
         </a>
       </div>
