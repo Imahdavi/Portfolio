@@ -2138,9 +2138,6 @@
     #view-home.home-edit .card-add-btn { display:flex; }
 
     /* Add section button */
-    #home-add-sec-btn { display:none; margin-top:6px; padding:11px; border:1.5px dashed rgba(0,0,0,.13); border-radius:8px; background:none; font-size:13px; color:#bbb; cursor:pointer; transition:all .2s; width:100%; text-align:center; }
-    #home-add-sec-btn:hover { border-color:rgba(0,0,0,.28); color:#555; }
-    #view-home.home-edit #home-add-sec-btn { display:block; }
 
     /* Edit hint bar */
     .edit-hint {
@@ -4599,9 +4596,6 @@
     #lottie-picker-cancel:hover { background:rgba(0,0,0,.1); }
 
     /* ─────────────────── FONT PICKER ─────────────────── */
-    #home-fonts-btn { display:none; margin-top:6px; padding:11px; border:1.5px dashed rgba(0,0,0,.13); border-radius:8px; background:none; font-size:13px; color:#bbb; cursor:pointer; transition:all .2s; width:100%; text-align:center; }
-    #home-fonts-btn:hover { border-color:rgba(0,0,0,.28); color:#555; }
-    #view-home.home-edit #home-fonts-btn { display:block; }
 
     /* ── Site width slider (home edit only) ──
        Manual override for --site-width (consumed by #app's max-width,
@@ -4611,15 +4605,86 @@
        or is a repeating grid built to reflow instead of stretch (see
        .card-grid's auto-fill comment) or is the free-form block editor,
        which is meant to use extra room for user-placed content. */
-    .site-width-ctrl {
-      display:none; align-items:center; gap:10px;
-      margin-top:10px; padding:11px 14px;
-      background:none; border:1.5px dashed rgba(0,0,0,.13); border-radius:8px;
+    /* Page settings — see #homeEditPanel. The card, badge, icon squares
+       and tiles are 21st.dev's "Features Card" (@mokshithgujjeti) at its
+       own sizes: a 16px-cornered card with 24px of padding and a 1px
+       border that darkens on hover; an 8px-cornered badge, 12px semibold;
+       a bold title and a 12px muted line; and 8px-cornered tiles on a
+       step-darker ground with a 32px icon square (8px padding, its own
+       border). Its palette is zinc on near-black — dark mode takes that
+       exactly (950 / 900 / 800 / 700); light mode the same steps from the
+       light end. The old controls were four dashed boxes stacked down the
+       page. */
+    .efc {
+      display:none; margin-top:18px; padding:24px;
+      border-radius:16px; border:1px solid #e4e4e7; background:#fff;
+      transition:border-color .3s;
     }
-    #view-home.home-edit .site-width-ctrl { display:flex; }
-    .site-width-lbl { font-size:13px; color:#999; white-space:nowrap; flex-shrink:0; }
-    .site-width-slider { flex:1; height:3px; accent-color:#1a1a1a; cursor:pointer; touch-action:none; }
-    .site-width-val { font-size:12px; color:#555; width:56px; text-align:right; flex-shrink:0; font-variant-numeric:tabular-nums; }
+    .efc:hover { border-color:#d4d4d8; }
+    #view-home.home-edit .efc { display:block; animation:fadeUp .2s ease both; }
+    .efc-badge {
+      display:inline-flex; align-items:center; gap:8px; margin-bottom:16px;
+      padding:4px 12px; border-radius:8px;
+      background:#f4f4f5; border:1px solid #e4e4e7; color:#3f3f46;
+      font-size:12px; font-weight:600;
+    }
+    .efc-title { margin:0; font-size:22px; font-weight:700; letter-spacing:-.02em; color:#09090b; }
+    .efc-sub { margin:4px 0 16px; font-size:12px; color:#71717a; }
+    .efc-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .efc-tile {
+      display:flex; flex-direction:column; align-items:flex-start; gap:2px; text-align:left;
+      padding:16px; border-radius:12px; border:1px solid #e4e4e7; background:#fafafa;
+      font-family:inherit; color:#09090b; cursor:pointer;
+      transition:border-color .2s, background .2s;
+    }
+    .efc-tile:hover { border-color:#d4d4d8; background:#f4f4f5; }
+    .efc-wide { grid-column:1 / -1; flex-direction:row; align-items:center; gap:12px; cursor:default; }
+    .efc-wide:hover { background:#fafafa; }
+    .efc-icon {
+      display:inline-flex; align-items:center; justify-content:center; flex:none;
+      padding:7px; border-radius:8px; margin-bottom:10px;
+      background:#f4f4f5; border:1px solid #e4e4e7; color:#18181b;
+    }
+    .efc-wide .efc-icon { margin-bottom:0; }
+    .efc-text { display:flex; flex-direction:column; gap:2px; min-width:0; flex:none; }
+    .efc-name { font-size:14px; font-weight:700; color:#09090b; white-space:nowrap; }
+    .efc-note { font-size:11px; color:#71717a; white-space:nowrap; }
+    .site-width-slider { flex:1; min-width:60px; height:3px; accent-color:#18181b; cursor:pointer; touch-action:none; }
+    .site-width-val {
+      flex:none; font-size:12px; font-weight:600; color:#3f3f46; font-variant-numeric:tabular-nums;
+      padding:4px 8px; border-radius:8px; background:#f4f4f5; border:1px solid #e4e4e7;
+    }
+    .nav-color-input {
+      width:32px; height:32px; padding:0; margin-left:auto; flex:none;
+      border:1px solid #e4e4e7; border-radius:8px; cursor:pointer;
+    }
+    .nav-color-hex {
+      width:84px; flex:none; font-size:12px; color:#3f3f46; font-variant-numeric:tabular-nums;
+      font-family:var(--font-name), monospace; text-transform:uppercase;
+      border:1px solid #e4e4e7; border-radius:8px;
+      padding:6px 8px; background:#fff; outline:none;
+      transition:border-color .15s;
+    }
+    .nav-color-hex:focus { border-color:#a1a1aa; }
+    .nav-color-hex.invalid { border-color:#d64545; color:#d64545; }
+    @media (max-width:520px) {
+      .efc { padding:18px; }
+      .efc-wide { flex-wrap:wrap; }
+      .efc-wide .efc-note { display:none; }
+    }
+    body.dark .efc { background:#09090b; border-color:#27272a; }
+    body.dark .efc:hover { border-color:#3f3f46; }
+    body.dark .efc-badge { background:#27272a; border-color:#3f3f46; color:#d4d4d8; }
+    body.dark .efc-title, body.dark .efc-name { color:#fff; }
+    body.dark .efc-sub, body.dark .efc-note { color:#a1a1aa; }
+    body.dark .efc-tile { background:#18181b; border-color:#27272a; color:#fff; }
+    body.dark .efc-tile:hover { border-color:#3f3f46; }
+    body.dark .efc-wide:hover { background:#18181b; }
+    body.dark .efc-icon { background:#27272a; border-color:#3f3f46; color:#fff; }
+    body.dark .site-width-slider { accent-color:#fff; }
+    body.dark .site-width-val { background:#27272a; border-color:#3f3f46; color:#d4d4d8; }
+    body.dark .nav-color-input { border-color:#3f3f46; }
+    body.dark .nav-color-hex { background:#18181b; border-color:#3f3f46; color:#d4d4d8; }
 
     /* ── Colour picker ─────────────────────────────────────────────
        21st.dev's "Motion Color Picker" (@motiondotdev), at its own sizes
@@ -4680,31 +4745,6 @@
     body.dark .mcp-pop { background:#0d1111; border-color:var(--d-line); box-shadow:0 18px 50px rgba(0,0,0,.6); --mcp-layer:#13181a; }
     body.dark .mcp-hex { background:#13181a; border-color:#1e2427; color:#ededec; }
 
-    /* Nav glow color picker — same dashed-box treatment as the site
-       width control above, edits --nav-limelight-rgb only (the alpha
-       values that shape the glow stay put, see .nav-limelight). */
-    .nav-color-ctrl {
-      display:none; align-items:center; gap:10px;
-      margin-top:10px; padding:11px 14px;
-      background:none; border:1.5px dashed rgba(0,0,0,.13); border-radius:8px;
-    }
-    #view-home.home-edit .nav-color-ctrl { display:flex; }
-    .nav-color-lbl { font-size:13px; color:#999; white-space:nowrap; flex-shrink:0; }
-    .nav-color-input {
-      width:34px; height:34px; padding:0; border:1.5px solid rgba(0,0,0,.13);
-      border-radius:8px; cursor:pointer; background:none; flex-shrink:0;
-    }
-    .nav-color-input::-webkit-color-swatch-wrapper { padding:3px; }
-    .nav-color-input::-webkit-color-swatch { border:none; border-radius:5px; }
-    .nav-color-hex {
-      width:74px; font-size:12px; color:#555; font-variant-numeric:tabular-nums;
-      font-family:var(--font-name), monospace; text-transform:uppercase;
-      border:1.5px solid rgba(0,0,0,.13); border-radius:6px;
-      padding:6px 8px; background:#fff; outline:none;
-      transition:border-color .15s;
-    }
-    .nav-color-hex:focus { border-color:rgba(0,0,0,.35); }
-    .nav-color-hex.invalid { border-color:#d64545; color:#d64545; }
     #font-picker-overlay {
       display:none; position:fixed; inset:0; z-index:5200;
       background:rgba(0,0,0,.4); backdrop-filter:blur(6px);
@@ -4941,18 +4981,46 @@ one keyframe at a time</div>
     </div>
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
     <div id="home-sections" style="opacity:0;transition:opacity .3s ease"></div>
-    <button id="home-add-sec-btn" onclick="addHomeSection()">+ Add section</button>
-    <button id="home-fonts-btn" onclick="openFontPanel()">Aa &nbsp;Change fonts</button>
-    <div class="site-width-ctrl" id="siteWidthCtrl">
-      <span class="site-width-lbl">Site width</span>
-      <input type="range" class="site-width-slider" id="siteWidthSlider" min="540" max="900" step="10" value="540">
-      <span class="site-width-val" id="siteWidthVal">540px</span>
-    </div>
-    <div class="nav-color-ctrl" id="navColorCtrl">
-      <span class="nav-color-lbl">Nav glow color</span>
-      <button type="button" class="nav-color-input" id="navColorInput" aria-label="Choose the nav glow colour" style="background:#1a1a1a"></button>
-      <input type="text" class="nav-color-hex" id="navColorHex" value="#1a1a1a" maxlength="7" spellcheck="false" autocapitalize="off" autocomplete="off">
-    </div>
+    <!-- Page settings — laid out as 21st.dev's "Features Card"
+         (@mokshithgujjeti): a 16px-cornered card with a small badge, a
+         bold title over a muted line, and a grid of bordered tiles, each
+         with an icon in its own boxed square. Edit mode only. The controls
+         inside keep their ids, so the code behind them is unchanged. -->
+    <section class="efc" id="homeEditPanel" aria-label="Page settings">
+      <span class="efc-badge">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 17v4M17 19h4"/></svg>
+        Edit mode
+      </span>
+      <h3 class="efc-title">Page settings</h3>
+      <p class="efc-sub">Layout, type and colour for this page</p>
+
+      <div class="efc-grid">
+        <button type="button" class="efc-tile" id="home-add-sec-btn" onclick="addHomeSection()">
+          <span class="efc-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>
+          <span class="efc-name">Add section</span>
+          <span class="efc-note">A new row of boards</span>
+        </button>
+        <button type="button" class="efc-tile" id="home-fonts-btn" onclick="openFontPanel()">
+          <span class="efc-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l6-16 6 16M6.5 14h7"/><path d="M17 20v-6.5a2.5 2.5 0 015 0V20M17 16.5h5"/></svg></span>
+          <span class="efc-name">Change fonts</span>
+          <span class="efc-note">Headings and body</span>
+        </button>
+
+        <div class="efc-tile efc-wide site-width-ctrl" id="siteWidthCtrl">
+          <span class="efc-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg></span>
+          <span class="efc-text"><span class="efc-name site-width-lbl">Site width</span><span class="efc-note">How wide the column runs</span></span>
+          <input type="range" class="site-width-slider" id="siteWidthSlider" min="540" max="900" step="10" value="540">
+          <span class="site-width-val" id="siteWidthVal">540px</span>
+        </div>
+
+        <div class="efc-tile efc-wide nav-color-ctrl" id="navColorCtrl">
+          <span class="efc-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 100 18c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.4A5.6 5.6 0 0021 9c0-3.3-4-6-9-6z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg></span>
+          <span class="efc-text"><span class="efc-name nav-color-lbl">Nav glow colour</span><span class="efc-note">For the theme showing now</span></span>
+          <button type="button" class="nav-color-input" id="navColorInput" aria-label="Choose the nav glow colour" style="background:#1a1a1a"></button>
+          <input type="text" class="nav-color-hex" id="navColorHex" value="#1a1a1a" maxlength="7" spellcheck="false" autocapitalize="off" autocomplete="off">
+        </div>
+      </div>
+    </section>
   </div><!-- /view-home -->
 
 
