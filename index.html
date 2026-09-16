@@ -4745,64 +4745,110 @@
     body.dark .mcp-pop { background:#0d1111; border-color:var(--d-line); box-shadow:0 18px 50px rgba(0,0,0,.6); --mcp-layer:#13181a; }
     body.dark .mcp-hex { background:#13181a; border-color:#1e2427; color:#ededec; }
 
+    /* Fonts — the same Features Card treatment as the page settings panel
+       (see .efc): the sheet is the card, with its badge, bold title and
+       muted line; each font slot is a bordered tile with a boxed icon; and
+       the section names are small badges. Zinc on near-black in dark mode,
+       the same steps from the light end otherwise. */
     #font-picker-overlay {
       display:none; position:fixed; inset:0; z-index:5200;
-      background:rgba(0,0,0,.4); backdrop-filter:blur(6px);
+      background:rgba(9,9,11,.45); backdrop-filter:blur(6px);
       align-items:flex-end; justify-content:center;
     }
     #font-picker-overlay.show { display:flex; }
     #font-picker-sheet {
-      background:#fafaf9; border-radius:24px 24px 0 0;
-      padding:0 0 36px; width:100%; max-width:560px;
+      background:#fff; border:1px solid #e4e4e7; border-bottom:0;
+      border-radius:16px 16px 0 0;
+      padding:0 24px 32px; width:100%; max-width:560px; box-sizing:border-box;
       animation:slideInSheet .28s cubic-bezier(.25,.46,.45,.94) both;
       max-height:90vh; overflow-y:auto;
     }
-    #font-picker-drag { width:36px; height:4px; background:rgba(0,0,0,.13); border-radius:2px; margin:12px auto 0; }
+    #font-picker-drag { width:36px; height:4px; background:#e4e4e7; border-radius:2px; margin:12px auto 0; }
     #font-picker-header {
-      display:flex; align-items:center; justify-content:space-between;
-      padding:14px 18px 0;
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+      padding:18px 0 4px;
     }
-    #font-picker-header h3 {
-      font-size:17px; font-weight:700; color:#1a1a1a; letter-spacing:-.02em;
+    .fp-badge {
+      display:inline-flex; align-items:center; gap:8px; margin-bottom:12px;
+      padding:4px 12px; border-radius:8px;
+      background:#f4f4f5; border:1px solid #e4e4e7; color:#3f3f46;
+      font-size:12px; font-weight:600;
     }
+    #font-picker-header h3 { margin:0; font-size:22px; font-weight:700; color:#09090b; letter-spacing:-.02em; }
+    .fp-sub { margin:4px 0 0; font-size:12px; color:#71717a; }
     #font-picker-header-done {
-      padding:6px 14px; border:none; background:#1a1a1a; border-radius:20px;
+      flex:none; margin-top:2px; padding:7px 16px; border:1px solid #18181b; background:#18181b; border-radius:8px;
       font-size:13px; font-weight:600; color:#fff; cursor:pointer; transition:background .15s;
     }
     #font-picker-header-done:hover { background:#000; }
     .fp-section-lbl {
-      font-size:10px; font-weight:700; color:#b0b0b0; text-transform:uppercase;
-      letter-spacing:.09em; padding:18px 18px 8px;
+      display:inline-flex; align-items:center; margin:20px 0 10px;
+      padding:3px 10px; border-radius:8px;
+      background:#f4f4f5; border:1px solid #e4e4e7;
+      font-size:11px; font-weight:600; color:#52525b; letter-spacing:.02em;
     }
-    .fp-section-lbl:first-of-type { padding-top:16px; }
     .font-row {
-      margin:0 12px 8px;
-      background:#fff; border:1px solid rgba(0,0,0,.07);
-      border-radius:16px; padding:14px 14px 12px; overflow:hidden;
+      margin:0 0 10px;
+      background:#fafafa; border:1px solid #e4e4e7;
+      border-radius:12px; padding:16px; overflow:hidden;
+      transition:border-color .2s;
     }
-    .font-row-lbl { font-size:10.5px; font-weight:600; color:#999; letter-spacing:.04em; margin-bottom:6px; }
-    .font-row-preview { font-size:22px; color:#1a1a1a; margin-bottom:10px; min-height:28px; line-height:1.2; }
-    .font-row-controls { display:flex; gap:7px; }
+    .font-row:hover { border-color:#d4d4d8; }
+    .font-row-lbl {
+      display:flex; align-items:center; gap:10px;
+      font-size:14px; font-weight:700; color:#09090b; margin-bottom:12px;
+    }
+    .font-row-lbl::before {
+      content:'Aa'; flex:none; width:32px; height:32px; box-sizing:border-box;
+      display:inline-flex; align-items:center; justify-content:center;
+      border-radius:8px; background:#f4f4f5; border:1px solid #e4e4e7;
+      font-size:13px; font-weight:600; color:#18181b;
+    }
+    .font-row-preview {
+      font-size:22px; color:#09090b; margin-bottom:12px; min-height:28px; line-height:1.2;
+      padding:12px 14px; border-radius:8px; background:#fff; border:1px solid #e4e4e7;
+    }
+    .font-row-controls { display:flex; gap:8px; }
     .font-select {
-      flex:1; padding:9px 12px; border:1.5px solid rgba(0,0,0,.1); border-radius:10px;
-      background:#f5f5f3; font-size:13px; color:#333; cursor:pointer; outline:none;
+      flex:1; padding:9px 12px; border:1px solid #e4e4e7; border-radius:8px;
+      background:#fff; font-size:13px; color:#27272a; cursor:pointer; outline:none;
       font-family:inherit; -webkit-appearance:none; appearance:none;
-      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='3'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='3'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
       background-repeat:no-repeat; background-position:right 11px center; padding-right:32px;
     }
-    .font-select:focus { border-color:rgba(0,0,0,.28); background:#fff; }
+    .font-select:focus { border-color:#a1a1aa; }
     .font-custom {
-      flex:1; padding:9px 12px; border:1.5px solid rgba(0,0,0,.1); border-radius:10px;
-      background:#fff; font-size:13px; color:#333; outline:none; font-family:inherit;
+      flex:1; padding:9px 12px; border:1px solid #e4e4e7; border-radius:8px;
+      background:#fff; font-size:13px; color:#27272a; outline:none; font-family:inherit;
       box-sizing:border-box; min-width:0;
     }
-    .font-custom:focus { border-color:rgba(0,0,0,.28); }
-    .font-custom::placeholder { color:#c0c0c0; font-size:12px; }
-    .font-row-size { display:flex; align-items:center; gap:9px; margin-top:9px; }
-    .font-row-size-lbl { font-size:10.5px; font-weight:600; color:#bbb; white-space:nowrap; }
-    .font-size-range { flex:1; height:3px; accent-color:#1a1a1a; cursor:pointer; }
-    .font-size-val { font-size:12px; color:#888; min-width:32px; text-align:right; }
+    .font-custom:focus { border-color:#a1a1aa; }
+    .font-custom::placeholder { color:#a1a1aa; font-size:12px; }
+    .font-row-size { display:flex; align-items:center; gap:10px; margin-top:12px; }
+    .font-row-size-lbl { font-size:12px; font-weight:600; color:#71717a; white-space:nowrap; }
+    .font-size-range { flex:1; height:3px; accent-color:#18181b; cursor:pointer; }
+    .font-size-val {
+      font-size:12px; font-weight:600; color:#3f3f46; min-width:32px; text-align:center;
+      padding:3px 8px; border-radius:8px; background:#f4f4f5; border:1px solid #e4e4e7;
+      font-variant-numeric:tabular-nums;
+    }
     #font-picker-close { display:none; }
+    body.dark #font-picker-sheet { background:#09090b; border-color:#27272a; }
+    body.dark #font-picker-drag { background:#3f3f46; }
+    body.dark .fp-badge, body.dark .fp-section-lbl { background:#27272a; border-color:#3f3f46; color:#d4d4d8; }
+    body.dark #font-picker-header h3, body.dark .font-row-lbl, body.dark .font-row-preview { color:#fff; }
+    body.dark .fp-sub, body.dark .font-row-size-lbl { color:#a1a1aa; }
+    body.dark #font-picker-header-done { background:#fff; border-color:#fff; color:#09090b; }
+    body.dark #font-picker-header-done:hover { background:#e4e4e7; }
+    body.dark .font-row { background:#18181b; border-color:#27272a; }
+    body.dark .font-row:hover { border-color:#3f3f46; }
+    body.dark .font-row-lbl::before { background:#27272a; border-color:#3f3f46; color:#fff; }
+    body.dark .font-row-preview { background:#09090b; border-color:#27272a; }
+    body.dark .font-select, body.dark .font-custom { background-color:#09090b; border-color:#3f3f46; color:#e4e4e7; }
+    body.dark .font-select:focus, body.dark .font-custom:focus { border-color:#71717a; }
+    body.dark .font-custom::placeholder { color:#71717a; }
+    body.dark .font-size-range { accent-color:#fff; }
+    body.dark .font-size-val { background:#27272a; border-color:#3f3f46; color:#d4d4d8; }
 
     /* ─────────────────── CUSTOM CURSOR ─────────────────── */
     /* origin pinned to the arrow tip so rotate()/scale() spin around the
@@ -5612,7 +5658,14 @@ one keyframe at a time</div>
   <div id="font-picker-sheet">
     <div id="font-picker-drag"></div>
     <div id="font-picker-header">
-      <h3>Fonts</h3>
+      <div>
+        <span class="fp-badge">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l6-16 6 16M6.5 14h7"/><path d="M17 20v-6.5a2.5 2.5 0 015 0V20M17 16.5h5"/></svg>
+          Typography
+        </span>
+        <h3>Fonts</h3>
+        <p class="fp-sub">The type for each part of the page</p>
+      </div>
       <button id="font-picker-header-done" onclick="closeFontPanel()">Done</button>
     </div>
 
