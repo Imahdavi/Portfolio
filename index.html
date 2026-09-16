@@ -15053,20 +15053,13 @@ function initReachMe() {
     window.location.href = 'mailto:' + reachMeAddress() + '?subject=' + encodeURIComponent(subject);
   });
 
-  // The clock the component carries, in the reader's own time rather than
-  // mine — it is the "is he awake" glance, and that only reads if the two
-  // are compared. Mine is named beside it.
+  // The clock the component carries, in the reader's own time.
   const timeEl = document.getElementById('rm-time');
   const tick = () => {
     if (!timeEl) return;
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
-    const here = pad(now.getHours()) + ':' + pad(now.getMinutes());
-    let mine = '';
-    try {
-      mine = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tehran', hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
-    } catch (e) {}
-    timeEl.textContent = mine && mine !== here ? here + ' · Tehran ' + mine : here + ' Tehran';
+    timeEl.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes());
   };
   tick();
   setInterval(tick, 30000);
