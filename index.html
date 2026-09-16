@@ -8469,7 +8469,9 @@ function toolsBuildCard(t, i, tools, stack) {
     const rows = Math.ceil(tools.length / TOOLS_PER_ROW);
     card.style.setProperty('--tx', (off * 32 + (row - (rows - 1) / 2) * TOOLS_ROW_DX) + 'px');
     card.style.setProperty('--ty', (off * 26 + (row - (rows - 1) / 2) * TOOLS_ROW_STEP) + 'px');
-    card.style.setProperty('--z', i);
+    // Later fans sit behind, so the one that wraps underneath tucks in
+    // rather than covering the fan above it.
+    card.style.setProperty('--z', (rows - 1 - row) * TOOLS_PER_ROW + col);
   }
 
   const top = document.createElement('div');
