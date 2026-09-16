@@ -3040,7 +3040,7 @@
       display:grid; grid-template-areas:"stack"; place-items:center;
       width:100%; max-width:360px; margin:0 auto 20px;
       /* One fan is 210px; each fan after it adds its own step (TOOLS_ROW_STEP). */
-      height:calc(210px + (var(--tool-rows, 1) - 1) * 76px);
+      height:calc(210px + (var(--tool-rows, 1) - 1) * 52px);
       overflow:visible;
     }
     .tools-stack.tools-edit-on {
@@ -8270,7 +8270,8 @@ const DEFAULT_TOOLS = [
   { name:'Higgsfield',    sub:'AI video', badge:'H',  bg:'#111111', sizeW:139, sizeH:57 },
 ];
 const TOOLS_PER_ROW = 4;    // cards in one fan before it wraps
-const TOOLS_ROW_STEP = 76; // px between the fans, stacked
+const TOOLS_ROW_STEP = 52;  // px down to the next fan
+const TOOLS_ROW_DX = -24;   // and back to the left, so it tucks under the last one
 
 const TOOL_PALETTE = ['#00005B', '#111111', '#D97757', '#2563EB', '#059669', '#7C3AED', '#B91C1C'];
 
@@ -8466,7 +8467,7 @@ function toolsBuildCard(t, i, tools, stack) {
     const inRow = Math.min(TOOLS_PER_ROW, tools.length - row * TOOLS_PER_ROW);
     const off = col - (inRow - 1) / 2;
     const rows = Math.ceil(tools.length / TOOLS_PER_ROW);
-    card.style.setProperty('--tx', (off * 32) + 'px');
+    card.style.setProperty('--tx', (off * 32 + (row - (rows - 1) / 2) * TOOLS_ROW_DX) + 'px');
     card.style.setProperty('--ty', (off * 26 + (row - (rows - 1) / 2) * TOOLS_ROW_STEP) + 'px');
     card.style.setProperty('--z', i);
   }
