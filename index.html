@@ -3639,6 +3639,78 @@
        round avatar beside the name, then its two-up row of 48px rounded
        actions. The card is .pib's material (white, hairline, soft shadow,
        24px corners) so it reads as a pair with the composer above it. */
+    /* Résumé card — see the markup in #view-exp and initResume. The sheet
+       is the file card from 21st.dev's "File Card Collections"
+       (@urmauur), at its own size: 56x72 with a 6px radius, a 1px ring,
+       8px of padding, its ruled lines 2px high and rounded, and the
+       extension tab hanging 8px off the right edge at 8px uppercase. */
+    .rsv { width:100%; max-width:470px; margin:30px auto 0; }
+    .rsv-row {
+      display:flex; align-items:center; gap:16px;
+      padding:16px; border-radius:18px;
+      background:#fff; border:1px solid rgba(0,0,0,.08);
+      box-shadow:0 6px 22px rgba(0,0,0,.06);
+    }
+    .rsv-file { position:relative; flex:none; }
+    .rsv-sheet {
+      position:relative; z-index:1;
+      width:56px; height:72px; padding:8px; border-radius:6px;
+      display:flex; flex-direction:column; gap:6px;
+      background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.10);
+    }
+    .rsv-pair { display:flex; gap:4px; }
+    .rsv-l { height:2px; border-radius:999px; background:rgba(10,10,10,.10); }
+    .rsv-l.strong { background:rgba(10,10,10,.20); }
+    .rsv-l.w33 { width:33%; }
+    .rsv-l.w50 { width:50%; }
+    .rsv-ext {
+      position:absolute; right:-8px; bottom:6px; z-index:2;
+      padding:2px 6px; border-radius:4px;
+      background:#ef4444; color:#fff;
+      font-size:8px; font-weight:500; line-height:1.4; text-transform:uppercase; letter-spacing:.02em;
+    }
+    .rsv-meta { display:flex; flex-direction:column; gap:2px; min-width:0; }
+    .rsv-name { font-size:15px; font-weight:600; color:#1a1a1a; }
+    .rsv-sub { font-size:12.5px; color:#8a8480; }
+    .rsv-acts { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+    .rsv-btn {
+      display:inline-flex; align-items:center; gap:6px;
+      height:36px; padding:0 14px; border-radius:12px; cursor:pointer; text-decoration:none;
+      border:1px solid rgba(0,0,0,.10); background:rgba(0,0,0,.035); color:#1a1a1a;
+      font-family:inherit; font-size:13px; font-weight:500;
+      transition:background .15s, transform .1s;
+    }
+    .rsv-btn:hover { background:rgba(0,0,0,.07); }
+    .rsv-btn:active { transform:scale(.99); }
+    .rsv-btn-go { background:#1a1a1a; border-color:#1a1a1a; color:#fff; }
+    .rsv-btn-go:hover { background:#000; }
+    /* Attaching is the admin's, and only while editing. */
+    .rsv-edit { display:none; gap:8px; justify-content:center; margin-top:10px; }
+    #sg-exp.exp-edit-on ~ .rsv .rsv-edit { display:flex; }
+    .rsv-ebtn {
+      height:32px; padding:0 12px; border-radius:10px; cursor:pointer;
+      border:1px dashed rgba(0,0,0,.25); background:transparent; color:#6b6560;
+      font-family:inherit; font-size:12.5px; font-weight:500;
+    }
+    .rsv-ebtn:hover { border-color:rgba(0,0,0,.45); color:#1a1a1a; }
+    .rsv-ebtn-del:hover { border-color:#dc2626; color:#dc2626; }
+    /* With nothing attached the card is the admin's own placeholder — a
+       visitor is shown no empty slot. */
+    .rsv.empty .rsv-row { opacity:.5; }
+    .rsv.empty .rsv-acts { display:none; }
+    body.dark .rsv-row { background:var(--d-surface); border-color:var(--d-line); box-shadow:0 6px 22px rgba(0,0,0,.4); }
+    body.dark .rsv-sheet { background:var(--d-raised); box-shadow:0 0 0 1px rgba(255,255,255,.12); }
+    body.dark .rsv-l { background:rgba(255,255,255,.12); }
+    body.dark .rsv-l.strong { background:rgba(255,255,255,.24); }
+    body.dark .rsv-name { color:var(--d-text); }
+    body.dark .rsv-sub { color:var(--d-text-3); }
+    body.dark .rsv-btn { background:rgba(255,255,255,.06); border-color:var(--d-line); color:var(--d-text); }
+    body.dark .rsv-btn:hover { background:rgba(255,255,255,.12); }
+    body.dark .rsv-btn-go { background:var(--d-text); border-color:var(--d-text); color:var(--d-bg); }
+    body.dark .rsv-btn-go:hover { background:#fff; }
+    body.dark .rsv-ebtn { border-color:rgba(255,255,255,.22); color:var(--d-text-3); }
+    body.dark .rsv-ebtn:hover { border-color:rgba(255,255,255,.45); color:var(--d-text); }
+
     .rm { width:100%; max-width:470px; margin:26px auto 0; }
     .rm-card {
       background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:24px;
@@ -4825,6 +4897,50 @@ one keyframe at a time</div>
   <!-- ══════════════════════════════ WORK EXP ══════════════════════════════ -->
   <div class="view" id="view-exp">
     <div class="sg" id="sg-exp"></div>
+    <!-- Résumé — the file card from 21st.dev's "File Card Collections"
+         (@urmauur): a 56x72 sheet with a hairline ring and rounded
+         corners, the ruled lines of its default placeholder drawn inside
+         at 2px, and the extension on a tab that hangs off the lower right
+         (red for a PDF, its own colour). The collection's grid of them is
+         not needed — there is one file here — so it sits in a row beside
+         the name, the size and the ways to take it. -->
+    <section class="rsv" id="resumeCard" hidden>
+      <div class="rsv-row">
+        <div class="rsv-file" aria-hidden="true">
+          <div class="rsv-sheet">
+            <span class="rsv-l w50 strong"></span>
+            <span class="rsv-pair"><span class="rsv-l w33"></span><span class="rsv-l w33"></span></span>
+            <span class="rsv-pair"><span class="rsv-l w50"></span><span class="rsv-l w33"></span></span>
+            <span class="rsv-pair"><span class="rsv-l w33"></span><span class="rsv-l w33"></span></span>
+            <span class="rsv-pair"><span class="rsv-l w33"></span><span class="rsv-l w50"></span></span>
+            <span class="rsv-l w33"></span>
+          </div>
+          <span class="rsv-ext" id="rsv-ext">pdf</span>
+        </div>
+
+        <div class="rsv-meta">
+          <span class="rsv-name" id="rsv-name">Résumé</span>
+          <span class="rsv-sub" id="rsv-sub">PDF</span>
+          <div class="rsv-acts">
+            <a class="rsv-btn rsv-btn-go" id="rsv-download" href="#" download>
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+              Download
+            </a>
+            <a class="rsv-btn" id="rsv-open" href="#" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-8.5 8.5"/><path d="M19 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1h5"/></svg>
+              Open
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin only, and only in edit mode. -->
+      <div class="rsv-edit">
+        <button type="button" class="rsv-ebtn" id="rsv-pick">Attach a file</button>
+        <button type="button" class="rsv-ebtn rsv-ebtn-del" id="rsv-clear">Remove</button>
+        <input type="file" id="rsv-input" accept=".pdf,.doc,.docx,application/pdf" hidden>
+      </div>
+    </section>
     <div class="brand-grid-wrap">
       <div class="brand-grid-label-pill">
         <span class="brand-grid-star" aria-hidden="true">✨</span>
@@ -7781,6 +7897,7 @@ async function loadSettings() {
 
     // Name, photo and address on the Ticket page's card follow settings.
     { const rm = document.getElementById('reachMe'); if (rm && rm._paint) rm._paint(); }
+    if (typeof paintResume === 'function') paintResume();   // the résumé card follows settings too
 
     // profile
     if (s.profile) {
@@ -14969,6 +15086,100 @@ function openAddBlockMenu(anchorBtn, afterId) {
 // Scrolling the page would leave a fixed menu hanging off its trigger.
 window.addEventListener('scroll', closeAddBlockMenu, true);
 
+
+
+/* ─── Résumé file ──────────────────────────────────────────────────
+   The card on the Experience page (see .rsv). settings.resume holds the
+   one file: { url, name, size, ext }. The admin attaches it in edit mode
+   and it goes up the same way every other upload does; a visitor gets
+   Download, which saves it, and Open, which shows it in a tab — a PDF
+   most people would rather read first than keep.
+
+   With nothing attached the section is hidden outright for a visitor,
+   and shown to the admin as the slot to fill. */
+function resumeExt(name) {
+  const e = (name.split('.').pop() || '').toLowerCase();
+  return e && e.length <= 4 ? e : 'file';
+}
+
+function formatBytes(n) {
+  if (!n && n !== 0) return '';
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
+  return (n / (1024 * 1024)).toFixed(1).replace(/\.0$/, '') + ' MB';
+}
+
+function paintResume() {
+  const root = document.getElementById('resumeCard');
+  if (!root) return;
+  const r = (_cachedSettings && _cachedSettings.resume) || null;
+  const admin = document.body.classList.contains('is-admin');
+  root.hidden = !r && !admin;
+  root.classList.toggle('empty', !r);
+  const name = document.getElementById('rsv-name');
+  const sub = document.getElementById('rsv-sub');
+  const ext = document.getElementById('rsv-ext');
+  const dl = document.getElementById('rsv-download');
+  const open = document.getElementById('rsv-open');
+  if (!r) {
+    name.textContent = 'Résumé';
+    sub.textContent = 'Nothing attached yet';
+    ext.textContent = 'pdf';
+    return;
+  }
+  name.textContent = r.name || 'Résumé';
+  sub.textContent = [resumeExt(r.name || '').toUpperCase(), formatBytes(r.size)].filter(Boolean).join(' · ');
+  ext.textContent = resumeExt(r.name || '');
+  dl.href = r.url;
+  // The name the file is saved under, rather than the uploaded path's.
+  dl.setAttribute('download', r.name || 'resume.pdf');
+  open.href = r.url;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const root = document.getElementById('resumeCard');
+  if (!root) return;
+  const input = document.getElementById('rsv-input');
+  const pick = document.getElementById('rsv-pick');
+  const clear = document.getElementById('rsv-clear');
+
+  pick.addEventListener('click', () => input.click());
+
+  input.addEventListener('change', async function () {
+    const file = this.files[0];
+    this.value = '';
+    if (!file) return;
+    if (!document.body.classList.contains('is-admin')) return;
+    // The upload is one base64 request to the Worker, which commits it to
+    // the repo — a big file would be a big request and a big repo.
+    if (file.size > 8 * 1024 * 1024) { showUploadToast('That file is too large (max 8MB).', true); return; }
+    showUploadToast('Uploading…');
+    const ext = resumeExt(file.name);
+    const path = `uploads/resume_${Date.now()}_${uid()}.${ext}`;
+    try {
+      const url = await tusUpload(file, BUCKET_PORTFOLIO, path, () => {});
+      if (!_cachedSettings) _cachedSettings = {};
+      _cachedSettings.resume = { url, name: file.name, size: file.size, ext };
+      saveSettings();
+      paintResume();
+      showUploadToast('Saved ✓');
+    } catch (e) {
+      showUploadToast('Upload failed: ' + e.message, true);
+    }
+  });
+
+  clear.addEventListener('click', () => {
+    if (!_cachedSettings || !_cachedSettings.resume) return;
+    // The file itself stays where it is: it is a commit in the repo, and
+    // taking the card down is not a reason to rewrite history.
+    if (!confirm('Take the résumé off the page?')) return;
+    delete _cachedSettings.resume;
+    saveSettings();
+    paintResume();
+  });
+
+  paintResume();
+});
 
 /* ─── Reach me ─────────────────────────────────────────────────────
    The card under the note composer (see .rm). Three ways at the same
