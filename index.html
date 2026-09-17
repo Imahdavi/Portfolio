@@ -7506,13 +7506,16 @@ async function loadAnalytics(hours, btn) {
   // page views — the main tabs (project=null is Home; exp/note are special keys)
   // The stored key stays 'note' — renaming it would split the history in
   // two — only the label shown for it changed with the tab.
-  const PAGE_KEYS = { 'work-experience': 'Experience', 'note': 'Ticket' };
-  const pageMap = { 'Home': 0, 'Experience': 0, 'Ticket': 0 };
+  // 'brand' is Home's Brand view. 'taste' and 'game' were already being
+  // recorded but weren't listed here, so they fell through into Top
+  // projects below as if they were boards.
+  const PAGE_KEYS = { 'brand': 'Brand', 'work-experience': 'Experience', 'note': 'Ticket', 'taste': 'Taste', 'game': 'Game' };
+  const pageMap = { 'Home': 0, 'Brand': 0, 'Experience': 0, 'Ticket': 0, 'Taste': 0, 'Game': 0 };
   rows.forEach(r => {
     if (!r.project)                pageMap['Home']++;
     else if (PAGE_KEYS[r.project]) pageMap[PAGE_KEYS[r.project]]++;
   });
-  renderBreakdown('an-pages', pageMap, 3);
+  renderBreakdown('an-pages', pageMap, Object.keys(pageMap).length);
 
   // top projects — actual portfolio cards only (exclude the tab pages above)
   const projMap = {};
@@ -8980,6 +8983,12 @@ function setHomeView(view) {
   }
   if (homeView === view) return;
   homeView = view;
+  /* Brand is a view inside Home rather than a tab of its own, so goView
+     never saw it and the dashboard had no record of anyone opening it.
+     Counted here, past the early return: every call that merely re-syncs
+     the keys passes the view already showing, and Home always loads on
+     Category, so reaching this with 'list' means someone pressed Brand. */
+  if (view === 'list') trackView('brand');
   if (_lastHomeSections) renderHomeSections(_lastHomeSections);
 }
 
