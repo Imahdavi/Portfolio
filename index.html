@@ -16297,6 +16297,9 @@ let _spiderThreadLen = 0;
 // the drop-in entrance — later repositions (font size change, window
 // resize) just snap straight to the new length.
 let _spiderEntranceDone = false;
+// False while the spider is climbing, tucked or dropping (see the climb
+// and drop in the pendulum tick), so nothing measures it mid-move.
+let _spiderAtRest = true;
 
 // anchorOnly skips the thread-length assignment below — used by the
 // pendulum tick's periodic re-sync so it can keep the spider glued to
@@ -16427,7 +16430,9 @@ function clearSpiderOffTagline() {
     // Both sit inside .profile-header-wrap, so this distance is immune
     // to the entrance transform that moves the wrap as a whole.
     const short = (r.bottom + SPIDER_TEXT_CLEARANCE) - b.top;
-    if (short > 0) _spiderThreadLen += short;
+    // Only while it hangs at full length: mid-climb its body is up by the
+    // name, and measuring then would let out thread it does not need.
+    if (short > 0 && _spiderAtRest) _spiderThreadLen += short;
   }));
 }
 
@@ -16521,6 +16526,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const body = wrap && wrap.querySelector('.spider-body');
   if (!wrap || !rope || !body) return;
   let angle = 0, vel = 0;
+
+  /* Climb and drop — the spider in the IMG_2303 clip. It hangs a few
+     seconds, runs up its thread in about half a second to tuck in under
+     the letter, sits there a beat, then lets go: falls fast, overshoots
+     its resting length and bounces on the thread like a bungee before
+     settling and swinging. Then again, after a while.
+
+     It is all one number, `reel`, the share of the resting length let
+     out (1 is hanging where it always hung). The climb is an eased
+     tween; the drop is a spring started from the top with the fall's
+     speed already on it, which is what gives it the overshoot and the
+     bounce. _spiderThreadLen stays the resting length throughout, so
+     every bit of layout code that sets it is untouched. */
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let reel = 1, reelVel = 0;
+  let phase = 'hang', phaseT = 0, hangFor = 6;
+  const CLIMB = 0.5, TOP = 0.55;
+  const TUCK_PX = 6;              // thread left out while tucked under the M
+  // The bungee, per second: it falls the length in about 0.15s, stretches
+  // some 12% past it, and is settled within about 0.6s.
+  const DROP_K = 140, DROP_C = 13, DROP_V = 3.5;
   const damping = 0.92, stiffness = 0.02;
   let t = 0;
   let anchorFrame = 0;
@@ -16555,7 +16581,35 @@ document.addEventListener('DOMContentLoaded', () => {
     vel *= damping;
     angle += vel;
 
-    const fullLen = _spiderThreadLen;
+    // Climb and drop — see `reel` above. Waits for the entrance to finish.
+    if (!reduceMotion && _spiderEntranceDone && _spiderThreadLen > 40) {
+      phaseT += 0.016;
+      const tuck = Math.min(0.5, TUCK_PX / _spiderThreadLen);
+      if (phase === 'hang' && phaseT > hangFor) { phase = 'climb'; phaseT = 0; }
+      if (phase === 'climb') {
+        const p = Math.min(1, phaseT / CLIMB);
+        const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+        reel = 1 - (1 - tuck) * e;
+        if (p >= 1) { phase = 'top'; phaseT = 0; }
+      } else if (phase === 'top') {
+        reel = tuck;
+        if (phaseT > TOP) { phase = 'drop'; phaseT = 0; reelVel = DROP_V; }
+      } else if (phase === 'drop') {
+        const dt = 0.016 / 4;
+        for (let i = 0; i < 4; i++) {
+          reelVel += (-DROP_K * (reel - 1) - DROP_C * reelVel) * dt;
+          reel += reelVel * dt;
+        }
+        // The jolt at the bottom sets it swinging.
+        if (phaseT < 0.02) vel += (Math.random() < 0.5 ? -1 : 1) * (0.6 + Math.random() * 0.5);
+        if (phaseT > 1.2 && Math.abs(reel - 1) < 0.004 && Math.abs(reelVel) < 0.02) {
+          reel = 1; reelVel = 0; phase = 'hang'; phaseT = 0; hangFor = 5 + Math.random() * 4;
+        }
+      }
+      _spiderAtRest = phase === 'hang';
+    }
+
+    const fullLen = _spiderThreadLen * reel;
     wrap.style.height = fullLen + 'px';
 
     const h = Math.max(0, fullLen - BODY_TOP_GAP);
