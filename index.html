@@ -16548,6 +16548,11 @@ document.addEventListener('DOMContentLoaded', () => {
      legs are spread. _spiderThreadLen stays the resting length
      throughout, so every bit of layout code that sets it is untouched. */
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // spin: the body's own turn, in degrees. In the clip it tips over onto its
+  // side as it reaches the top, and on letting go swings back upright past
+  // true and settles — a twist rather than a straight fall.
+  let spin = 0, spinVel = 0;
+  const SPIN_TOP = -50, SPIN_K = 260, SPIN_C = 12, SPIN_V = 350;   // deg, per second
   let reel = 1, reelVel = 0, splay = 0;
   let phase = 'hang', phaseT = 0, hangFor = 5, topFor = 0.5;
   let spiderLastMs = 0;
@@ -16610,22 +16615,27 @@ document.addEventListener('DOMContentLoaded', () => {
         e += Math.sin(p * Math.PI * 7) * 0.018 * (1 - p);
         reel = 1 - (1 - tuck) * Math.min(1, Math.max(0, e));
         splay = Math.max(0, (p - 0.75) / 0.25);
+        const tip = Math.max(0, (p - 0.7) / 0.3);
+        spin = SPIN_TOP * tip * tip * (3 - 2 * tip);
         if (p >= 1) { phase = 'top'; phaseT = 0; topFor = 0.35 + Math.random() * 0.5; }
       } else if (phase === 'top') {
         reel = tuck;
         splay = 1;
-        if (phaseT > topFor) { phase = 'drop'; phaseT = 0; reelVel = DROP_V; }
+        spin = SPIN_TOP;
+        if (phaseT > topFor) { phase = 'drop'; phaseT = 0; reelVel = DROP_V; spinVel = SPIN_V; }
       } else if (phase === 'drop') {
         const h4 = dt / 4;
         for (let i = 0; i < 4; i++) {
           reelVel += (-DROP_K * (reel - 1) - DROP_C * reelVel) * h4;
           reel += reelVel * h4;
+          spinVel += (-SPIN_K * spin - SPIN_C * spinVel) * h4;
+          spin += spinVel * h4;
         }
         splay = Math.max(0, 1 - phaseT / 0.18);
         // The pull of the drop sets the thread swinging, gently.
         if (phaseT < 0.02) vel += (Math.random() < 0.5 ? -1 : 1) * (0.25 + Math.random() * 0.3);
         if (phaseT > 1.4 && Math.abs(reel - 1) < 0.003 && Math.abs(reelVel) < 0.02) {
-          reel = 1; reelVel = 0; phase = 'hang'; phaseT = 0; hangFor = 4 + Math.random() * 5;
+          reel = 1; reelVel = 0; spin = 0; spinVel = 0; phase = 'hang'; phaseT = 0; hangFor = 4 + Math.random() * 5;
         }
       }
       _spiderAtRest = phase === 'hang';
@@ -16641,7 +16651,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const endX = (10 + offsetX).toFixed(2);
     rope.setAttribute('d', `M10,0 Q${midX},${midY} ${endX},${h}`);
     // Legs splayed while tucked (see `splay`): wider and a touch flatter.
-    body.style.transform = `translateX(${offsetX.toFixed(2)}px) rotate(${(angle * 0.5).toFixed(2)}deg) scale(${(1 + 0.14 * splay).toFixed(3)}, ${(1 - 0.08 * splay).toFixed(3)})`;
+    body.style.transform = `translateX(${offsetX.toFixed(2)}px) rotate(${(angle * 0.5 + spin).toFixed(2)}deg) scale(${(1 + 0.14 * splay).toFixed(3)}, ${(1 - 0.08 * splay).toFixed(3)})`;
 
     requestAnimationFrame(tick);
   }
