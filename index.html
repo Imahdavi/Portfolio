@@ -16548,18 +16548,23 @@ document.addEventListener('DOMContentLoaded', () => {
      legs are spread. _spiderThreadLen stays the resting length
      throughout, so every bit of layout code that sets it is untouched. */
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // spin: the body's own turn, in degrees. In the clip it tips over onto its
-  // side as it reaches the top, and on letting go swings back upright past
-  // true and settles — a twist rather than a straight fall.
+  // spin: the body's own turn, in degrees. It tips over onto its right side
+  // as it reaches the top, and on letting go turns to the left — through
+  // upright and well past it — and swings back and forth on the thread a
+  // few times before it settles, the whole thread swinging with it (see
+  // SWING_KICK). Lightly damped, so it reads as a swing, not a snap.
   let spin = 0, spinVel = 0;
-  const SPIN_TOP = -50, SPIN_K = 260, SPIN_C = 12, SPIN_V = 350;   // deg, per second
+  const SPIN_TOP = 50, SPIN_K = 90, SPIN_C = 3.2, SPIN_V = -420;   // deg, per second
+  // The drop throws the thread out to the left, and while it swings the
+  // pendulum is damped less than at rest so the swing carries.
+  const SWING_KICK = -1.9, SWING_DAMP = 0.975, REST_DAMP = 0.92;
   let reel = 1, reelVel = 0, splay = 0;
   let phase = 'hang', phaseT = 0, hangFor = 5, topFor = 0.5;
   let spiderLastMs = 0;
   const CLIMB = 0.55;
   const TUCK_PX = 6;               // thread left out while tucked under the M
   const DROP_K = 50, DROP_C = 11, DROP_V = 8;   // per second
-  const damping = 0.92, stiffness = 0.02;
+  let damping = REST_DAMP; const stiffness = 0.02;
   let t = 0;
   let anchorFrame = 0;
   // Box height below the top of the head, where the thread attaches: the
@@ -16632,9 +16637,10 @@ document.addEventListener('DOMContentLoaded', () => {
           spin += spinVel * h4;
         }
         splay = Math.max(0, 1 - phaseT / 0.18);
-        // The pull of the drop sets the thread swinging, gently.
-        if (phaseT < 0.02) vel += (Math.random() < 0.5 ? -1 : 1) * (0.25 + Math.random() * 0.3);
-        if (phaseT > 1.4 && Math.abs(reel - 1) < 0.003 && Math.abs(reelVel) < 0.02) {
+        // The drop throws the thread out to the left and lets it swing.
+        if (phaseT < 0.02) { vel += SWING_KICK * (0.85 + Math.random() * 0.3); damping = SWING_DAMP; }
+        if (phaseT > 2.4 && Math.abs(reel - 1) < 0.003 && Math.abs(reelVel) < 0.02 && Math.abs(spin) < 1) {
+          damping = REST_DAMP;
           reel = 1; reelVel = 0; spin = 0; spinVel = 0; phase = 'hang'; phaseT = 0; hangFor = 4 + Math.random() * 5;
         }
       }
