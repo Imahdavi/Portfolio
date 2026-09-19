@@ -16527,26 +16527,33 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!wrap || !rope || !body) return;
   let angle = 0, vel = 0;
 
-  /* Climb and drop — the spider in the IMG_2303 clip. It hangs a few
-     seconds, runs up its thread in about half a second to tuck in under
-     the letter, sits there a beat, then lets go: falls fast, overshoots
-     its resting length and bounces on the thread like a bungee before
-     settling and swinging. Then again, after a while.
+  /* Climb and drop — the spider in the IMG_2303 clip, read frame by
+     frame at 20fps. Its moves, and the numbers taken from them:
+
+       hang    it never hangs dead still: the body bobs on the thread,
+               about 1.5px at roughly half a second each way, while the
+               thread sways
+       climb   it starts slowly and speeds up, hand over hand — a little
+               pulse in the pace every few frames — and is up in about
+               half a second, ending with a small hop into the tuck
+       top     tucked under the letter with its legs splayed out, for a
+               moment that is never quite the same length
+       drop    it lets go with a jump and then pays out thread at a
+               falling-off pace (the clip's spacing runs 42, 18, 17,
+               15px a frame), runs about 8% past where it hangs, and
+               eases back up to it — no bungee bounce
 
      It is all one number, `reel`, the share of the resting length let
-     out (1 is hanging where it always hung). The climb is an eased
-     tween; the drop is a spring started from the top with the fall's
-     speed already on it, which is what gives it the overshoot and the
-     bounce. _spiderThreadLen stays the resting length throughout, so
-     every bit of layout code that sets it is untouched. */
+     out (1 is hanging where it always hung), plus `splay`, how far the
+     legs are spread. _spiderThreadLen stays the resting length
+     throughout, so every bit of layout code that sets it is untouched. */
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let reel = 1, reelVel = 0;
-  let phase = 'hang', phaseT = 0, hangFor = 6;
-  const CLIMB = 0.5, TOP = 0.55;
-  const TUCK_PX = 6;              // thread left out while tucked under the M
-  // The bungee, per second: it falls the length in about 0.15s, stretches
-  // some 12% past it, and is settled within about 0.6s.
-  const DROP_K = 140, DROP_C = 13, DROP_V = 3.5;
+  let reel = 1, reelVel = 0, splay = 0;
+  let phase = 'hang', phaseT = 0, hangFor = 5, topFor = 0.5;
+  let spiderLastMs = 0;
+  const CLIMB = 0.55;
+  const TUCK_PX = 6;               // thread left out while tucked under the M
+  const DROP_K = 50, DROP_C = 11, DROP_V = 8;   // per second
   const damping = 0.92, stiffness = 0.02;
   let t = 0;
   let anchorFrame = 0;
@@ -16582,34 +16589,49 @@ document.addEventListener('DOMContentLoaded', () => {
     angle += vel;
 
     // Climb and drop — see `reel` above. Waits for the entrance to finish.
+    let bob = 0;
     if (!reduceMotion && _spiderEntranceDone && _spiderThreadLen > 40) {
-      phaseT += 0.016;
+      // Real elapsed time, capped, so the climb and drop take the same
+      // time on a 60Hz and a 120Hz screen (the sway above counts frames).
+      const nowMs = performance.now();
+      const dt = Math.min(0.05, spiderLastMs ? (nowMs - spiderLastMs) / 1000 : 0.016);
+      spiderLastMs = nowMs;
+      phaseT += dt;
       const tuck = Math.min(0.5, TUCK_PX / _spiderThreadLen);
-      if (phase === 'hang' && phaseT > hangFor) { phase = 'climb'; phaseT = 0; }
-      if (phase === 'climb') {
+      if (phase === 'hang') {
+        // A slow breath on the thread, two sines so it never quite repeats.
+        bob = Math.sin(t * 2.1) * 1.2 + Math.sin(t * 3.7 + 1) * 0.5;
+        if (phaseT > hangFor) { phase = 'climb'; phaseT = 0; }
+      } else if (phase === 'climb') {
         const p = Math.min(1, phaseT / CLIMB);
-        const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-        reel = 1 - (1 - tuck) * e;
-        if (p >= 1) { phase = 'top'; phaseT = 0; }
+        // Slow off the mark and quicker as it goes, with a pulse in the
+        // pace for each pull on the thread.
+        let e = p * p * (1.4 - 0.4 * p);
+        e += Math.sin(p * Math.PI * 7) * 0.018 * (1 - p);
+        reel = 1 - (1 - tuck) * Math.min(1, Math.max(0, e));
+        splay = Math.max(0, (p - 0.75) / 0.25);
+        if (p >= 1) { phase = 'top'; phaseT = 0; topFor = 0.35 + Math.random() * 0.5; }
       } else if (phase === 'top') {
         reel = tuck;
-        if (phaseT > TOP) { phase = 'drop'; phaseT = 0; reelVel = DROP_V; }
+        splay = 1;
+        if (phaseT > topFor) { phase = 'drop'; phaseT = 0; reelVel = DROP_V; }
       } else if (phase === 'drop') {
-        const dt = 0.016 / 4;
+        const h4 = dt / 4;
         for (let i = 0; i < 4; i++) {
-          reelVel += (-DROP_K * (reel - 1) - DROP_C * reelVel) * dt;
-          reel += reelVel * dt;
+          reelVel += (-DROP_K * (reel - 1) - DROP_C * reelVel) * h4;
+          reel += reelVel * h4;
         }
-        // The jolt at the bottom sets it swinging.
-        if (phaseT < 0.02) vel += (Math.random() < 0.5 ? -1 : 1) * (0.6 + Math.random() * 0.5);
-        if (phaseT > 1.2 && Math.abs(reel - 1) < 0.004 && Math.abs(reelVel) < 0.02) {
-          reel = 1; reelVel = 0; phase = 'hang'; phaseT = 0; hangFor = 5 + Math.random() * 4;
+        splay = Math.max(0, 1 - phaseT / 0.18);
+        // The pull of the drop sets the thread swinging, gently.
+        if (phaseT < 0.02) vel += (Math.random() < 0.5 ? -1 : 1) * (0.25 + Math.random() * 0.3);
+        if (phaseT > 1.4 && Math.abs(reel - 1) < 0.003 && Math.abs(reelVel) < 0.02) {
+          reel = 1; reelVel = 0; phase = 'hang'; phaseT = 0; hangFor = 4 + Math.random() * 5;
         }
       }
       _spiderAtRest = phase === 'hang';
     }
 
-    const fullLen = _spiderThreadLen * reel;
+    const fullLen = _spiderThreadLen * reel + bob;
     wrap.style.height = fullLen + 'px';
 
     const h = Math.max(0, fullLen - BODY_TOP_GAP);
@@ -16618,7 +16640,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const midY = (h * 0.5).toFixed(2);
     const endX = (10 + offsetX).toFixed(2);
     rope.setAttribute('d', `M10,0 Q${midX},${midY} ${endX},${h}`);
-    body.style.transform = `translateX(${offsetX.toFixed(2)}px) rotate(${(angle * 0.5).toFixed(2)}deg)`;
+    // Legs splayed while tucked (see `splay`): wider and a touch flatter.
+    body.style.transform = `translateX(${offsetX.toFixed(2)}px) rotate(${(angle * 0.5).toFixed(2)}deg) scale(${(1 + 0.14 * splay).toFixed(3)}, ${(1 - 0.08 * splay).toFixed(3)})`;
 
     requestAnimationFrame(tick);
   }
