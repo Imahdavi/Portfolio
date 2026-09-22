@@ -12782,7 +12782,16 @@ function pullInlineNeighbours(list, els) {
       ? e.querySelector('.tstack-head')
       : (e.querySelector('.avg-avatar') || e.querySelector('.avg-seg'));
     const r = el && el.getBoundingClientRect();
-    return r && r.height ? (r.top + r.bottom) / 2 : null;
+    if (!r || !r.height) return null;
+    /* Where the circle sits, not where it is drawn this instant. A hovered
+       avatar lifts 30% (see .avg-item:hover .avg-avatar), and a pass that
+       ran then — the tool stack beside it closing, say — measured the lift,
+       read the row as sitting high, and pushed the whole row down 13px to
+       compensate; it stayed there after the pointer left. */
+    let lift = 0;
+    const t = getComputedStyle(el).transform;
+    if (t && t !== 'none') { try { lift = new DOMMatrixReadOnly(t).m42; } catch (e) {} }
+    return (r.top + r.bottom) / 2 - lift;
   };
 
   const cands = els.map(e => ({ e, b: byId.get(e.dataset.id) }))
