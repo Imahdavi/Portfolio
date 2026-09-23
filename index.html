@@ -1793,166 +1793,6 @@
     .an-nav-btn { display:none !important; }
     body.is-admin .an-nav-btn { display:flex !important; }
 
-    /* Taste is admin-only for now, the same way Analytics is. The tab
-       opens on a Coming soon card, and a visitor has no use for a door
-       into an empty room — it comes back the moment TASTE_ALBUMS has
-       something in it. */
-    #nb-taste { display:none !important; }
-    body.is-admin #nb-taste { display:flex !important; }
-
-    /* Taste — the placeholder while the section is being filled. Set big
-       rather than as a caption: this is the whole view for now, and a
-       small grey word floating in an empty page reads as something that
-       failed to load. Two lines, stacked, so it holds the column at any
-       site width instead of stretching into a thin ribbon.
-
-       clamp() rather than a fixed size — the site width is a slider, and
-       a 27px word that suited a 540px column is lost in a 900px one. */
-    .taste-soon {
-      display:none;
-      flex-direction:column; align-items:center; justify-content:center;
-      gap:2px; padding:120px 0 140px;
-      font-family:var(--font-heading); font-weight:600;
-      font-size:clamp(38px, 9vw, 64px); line-height:1.02;
-      letter-spacing:-.02em; text-align:center;
-      color:#c9c3bc;
-    }
-    /* Only while there is nothing to list — renderTasteList sets this. */
-    #view-taste.taste-empty .taste-soon { display:flex; }
-    .taste-soon-big:last-child { color:#a7a099; }
-    body.dark .taste-soon { color:#3a3d40; }
-    body.dark .taste-soon-big:last-child { color:#4d5155; }
-
-    /* ── Music artwork, ported from 21st.dev's "Music Artwork"
-       (@diriktv). The source is a React component driven by an
-       isHovered state; the whole effect is reachable from :hover on the
-       group, so this is CSS with no state to keep.
-
-       Kept from the source: the record tucked behind the sleeve at
-       opacity 0, sliding out over 500ms ease-out while it spins; the
-       sleeve lifting to scale 1.05 with its own art going to 1.10
-       inside a clipped box; the play badge and the artist/title caption
-       fading in at the bottom; and the dark gradient washing up from the
-       bottom edge over 300ms.
-
-       Two departures.
-
-       The record slides out to the RIGHT here, where the source sends it
-       left. These sit in a list with the sleeve on the left of each row,
-       so leftward the record would swing into the page margin — and on
-       the narrow layout, off the page. Rightward it comes out into the
-       row's own text column, which is padded to receive it.
-
-       And the record is drawn rather than fetched. The source points an
-       <img> at a PNG on 21st's CDN; this file loads no third-party
-       assets, and a vinyl is concentric circles, so it is an inline SVG
-       that also takes the sleeve's own accent for its label. */
-    .taste-list { display:flex; flex-direction:column; gap:26px; margin-top:8px; }
-
-    .ta-row { display:flex; align-items:center; }
-    .ta-art {
-      --ta-cover:132px;
-      /* How far the record clears the sleeve's right edge. The source
-         protrudes 96px past a 256px sleeve; as a ratio that survives the
-         cover being resized. */
-      --ta-out:38%;
-      position:relative;
-      width:var(--ta-cover); height:var(--ta-cover);
-      flex:0 0 auto;
-    }
-
-    .ta-vinyl {
-      position:absolute; top:50%; left:0;
-      width:calc(var(--ta-cover) * 1.08); height:calc(var(--ta-cover) * 1.08);
-      /* Behind the sleeve, and out of the pointer's way so crossing the
-         emerging record never re-triggers or blocks the hover. */
-      z-index:0; pointer-events:none;
-      opacity:0;
-      transform:translate(0, -50%);
-      transition:opacity .5s ease-out, transform .5s ease-out;
-    }
-    .ta-art:hover .ta-vinyl {
-      opacity:1;
-      transform:translate(calc(var(--ta-cover) * 0.38), -50%);
-    }
-    /* The spin runs only while the record is out. Rotation lives on an
-       inner element so it composes with the slide instead of fighting it
-       for the same transform. */
-    .ta-vinyl-spin { width:100%; height:100%; }
-    .ta-art:hover .ta-vinyl-spin { animation:ta-spin 4s linear infinite; }
-    @keyframes ta-spin { to { transform:rotate(360deg); } }
-
-    .ta-cover {
-      position:relative; z-index:1;
-      width:100%; height:100%;
-      border-radius:8px; overflow:hidden;
-      background:var(--ta-accent, #d9d4cc);
-      box-shadow:0 18px 35px -12px rgba(0,0,0,.45);
-      cursor:pointer;
-      transition:transform .3s ease-out, box-shadow .3s ease-out;
-    }
-    .ta-art:hover .ta-cover {
-      transform:scale(1.05);
-      box-shadow:0 26px 50px -12px rgba(0,0,0,.55);
-    }
-    .ta-cover img {
-      width:100%; height:100%; object-fit:cover; display:block;
-      transition:transform .3s ease-out;
-    }
-    .ta-art:hover .ta-cover img { transform:scale(1.1); }
-    /* Stand-in sleeve until real art is dropped in — the accent colour
-       with the album's initial, rather than a grey box that reads as a
-       failed image. */
-    .ta-ph {
-      width:100%; height:100%; display:flex; align-items:center; justify-content:center;
-      font-family:var(--font-heading); font-size:34px; font-weight:600;
-      color:rgba(255,255,255,.9);
-      background:linear-gradient(145deg, var(--ta-accent, #cfc9c1), rgba(0,0,0,.35));
-    }
-
-    /* Washes up from the bottom edge, under the badge. */
-    .ta-shade {
-      position:absolute; inset:0; pointer-events:none;
-      background:linear-gradient(to top, rgba(0,0,0,.35), transparent 55%);
-      opacity:0; transition:opacity .3s ease-out;
-    }
-    .ta-art:hover .ta-shade { opacity:1; }
-
-    .ta-badge {
-      position:absolute; left:8px; bottom:8px;
-      display:flex; align-items:center; justify-content:center;
-      width:26px; height:26px; border-radius:999px;
-      background:rgba(0,0,0,.45); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
-      opacity:0; transition:opacity .3s ease-out;
-    }
-    .ta-art:hover .ta-badge { opacity:1; }
-    /* A triangle from borders, as in the source, so there is no second
-       svg for a shape this small. */
-    .ta-badge i {
-      display:block; width:0; height:0; margin-left:2px;
-      border-left:7px solid #fff;
-      border-top:5px solid transparent;
-      border-bottom:5px solid transparent;
-    }
-
-    /* Padded by the record's travel, so the record emerges into empty
-       space instead of across the type. */
-    .ta-meta { padding-left:calc(var(--ta-cover, 132px) * 0.38 + 20px); min-width:0; }
-    .ta-artist { font-size:15px; font-weight:600; color:#1a1a1a; }
-    .ta-title  { font-size:13px; color:#8a8480; margin-top:3px; }
-
-    body.dark .ta-artist { color:var(--d-text); }
-    body.dark .ta-title  { color:var(--d-text-3); }
-
-    @media (max-width:520px) {
-      .ta-art { --ta-cover:104px; }
-      .ta-meta { padding-left:calc(104px * 0.38 + 14px); }
-    }
-    @media (prefers-reduced-motion:reduce) {
-      .ta-vinyl, .ta-cover, .ta-cover img, .ta-shade, .ta-badge { transition-duration:.01ms; }
-      .ta-art:hover .ta-vinyl-spin { animation:none; }
-    }
-    .an-title  { font-family:var(--font-heading); font-size:27px; font-weight:600; text-align:center; margin-bottom:20px; }
     .an-range  { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:22px; }
     .an-range-btn { padding:6px 16px; border-radius:20px; border:1px solid rgba(0,0,0,.12); background:#fff; font-size:12.5px; font-weight:500; color:#666; cursor:pointer; transition:all .15s; }
     .an-range-btn.active { background:#1a1a1a; color:#fff; border-color:#1a1a1a; }
@@ -4585,16 +4425,16 @@
     .nav-btn:hover  { color:#444; transform:translateY(-2px); }
     .nav-btn:active { transform:scale(.86); }
 
-    /* Two tabs carry a Lottie instead of an inline svg — Experience's
-       star medal and Taste's music mark. Their paint is baked into the
-       file, so they used to sit outside the nav's colour entirely: the
+    /* One tab carries a Lottie instead of an inline svg — Experience's
+       star medal. Its paint is baked into the
+       file, so it used to sit outside the nav's colour entirely: the
        others are stroke:currentColor and follow .nav-btn from #6f6f6f to
        #111 when active, while these stayed whatever the file said and
        got a dark-mode override bolted on to stop them vanishing.
 
-       They take currentColor now, matched on the attribute lottie
-       actually wrote — the star is drawn in strokes and the music mark
-       in fills, and forcing a stroke onto a fill-only shape outlines it.
+       It takes currentColor now, matched on the attribute lottie
+       actually wrote — the star is drawn in strokes, and forcing a stroke
+       onto a fill-only shape would outline it.
        That earns the active, hover and dark states for free, and the
        dark-only rule is gone with it. */
     .nav-lottie-icon { width:25px; height:25px; pointer-events:none; --nav-lottie-scale:1; }
@@ -4631,7 +4471,6 @@
        drawing, which is what made them look out of place. Scaling the
        rendered SVG rather than the box leaves nav spacing untouched. */
     #nb-exp-star   { --nav-lottie-scale:1.12; }
-    #nb-taste-icon { --nav-lottie-scale:.9; }
     /* !important: lottie-web sets its own inline transform (a no-op
        translate3d(0,0,0)) on this svg every frame, which otherwise wins
        over a plain stylesheet rule regardless of selector weight. */
@@ -5505,11 +5344,6 @@ one keyframe at a time</div>
 
 
   <!-- ══════════════════════════════ GAME ══════════════════════════════ -->
-  <!-- ══════════════════════════════ TASTE ══════════════════════════════ -->
-  <div class="view" id="view-taste">
-    <div class="taste-soon"><span class="taste-soon-big">Coming</span><span class="taste-soon-big">soon</span></div>
-    <div class="taste-list" id="tasteList"></div>
-  </div><!-- /view-taste -->
 
 
   <div class="view" id="view-game">
@@ -5715,10 +5549,6 @@ one keyframe at a time</div>
     <svg viewBox="-0.25 0.75 24 24" fill="none">
       <path transform="translate(1 3)" fill="currentColor" stroke="currentColor" stroke-width=".5" stroke-linejoin="round" fill-rule="evenodd" d="M17.451,0.9997 C19.683,0.9997 21.499,2.7977 21.499,5.0067 L21.5,7.6007 C21.5,7.7987 21.421,7.9907 21.28,8.1307 C21.14,8.2717 20.949,8.3507 20.75,8.3507 C19.963,8.3507 19.323,8.9787 19.323,9.7507 C19.323,10.5227 19.963,11.1507 20.75,11.1507 C21.164,11.1507 21.5,11.4867 21.5,11.9007 L21.5,14.4927 C21.5,16.7017 19.684,18.4997 17.452,18.4997 L4.048,18.4997 C1.816,18.4997 0,16.7017 0,14.4927 L0,11.9007 C0,11.4867 0.336,11.1507 0.75,11.1507 C1.537,11.1507 2.177,10.5227 2.177,9.7507 C2.177,9.0007 1.563,8.4347 0.75,8.4347 C0.551,8.4347 0.36,8.3557 0.22,8.2147 C0.079,8.0747 0,7.8827 0,7.6847 L0.001,5.0067 C0.001,2.7977 1.817,0.9997 4.049,0.9997 L17.451,0.9997 Z M17.451,2.4997 L13.349,2.4997 L13.3496,4.4209 C13.3496,4.8349 13.0136,5.1709 12.5996,5.1709 C12.1856,5.1709 11.8496,4.8349 11.8496,4.4209 L11.849,2.4997 L4.049,2.4997 C2.644,2.4997 1.501,3.6247 1.501,5.0067 L1.5,7.0247 C2.767,7.3357 3.677,8.4217 3.677,9.7507 C3.677,11.0927 2.751,12.2247 1.5,12.5537 L1.5,14.4927 C1.5,15.8747 2.643,16.9997 4.048,16.9997 L11.849,16.9997 L11.8496,15.5112 C11.8496,15.0962 12.1856,14.7612 12.5996,14.7612 C13.0136,14.7612 13.3496,15.0962 13.3496,15.5112 L13.349,16.9997 L17.452,16.9997 C18.857,16.9997 20,15.8747 20,14.4927 L20,12.5537 C18.749,12.2247 17.823,11.0927 17.823,9.7507 C17.823,8.4077 18.748,7.2767 20,6.9477 L19.999,5.0067 C19.999,3.6247 18.856,2.4997 17.451,2.4997 Z M12.5996,6.5042 C13.0136,6.5042 13.3496,6.8402 13.3496,7.2542 L13.3496,12.0752 C13.3496,12.4892 13.0136,12.8252 12.5996,12.8252 C12.1856,12.8252 11.8496,12.4892 11.8496,12.0752 L11.8496,7.2542 C11.8496,6.8402 12.1856,6.5042 12.5996,6.5042 Z"/>
     </svg>
-  </button>
-  <button class="nav-btn" id="nb-taste" onclick="goView('view-taste',this)">
-    <span class="nav-tip">taste</span>
-    <div class="nav-lottie-icon" id="nb-taste-icon" aria-hidden="true"></div>
   </button>
   <button class="nav-btn" id="nb-game" onclick="goView('view-game',this)">
     <span class="nav-tip">Game</span>
@@ -11470,8 +11300,8 @@ const PROJECTS = {
 function uid() { return Math.random().toString(36).slice(2,9); }
 
 /* ─── View navigation ──────────────────────────────────── */
-const MAIN_VIEWS = ['view-home','view-exp','view-soon','view-taste','view-game','view-analytics'];
-const NAV_MAP    = { 'view-home':'nb-home', 'view-exp':'nb-exp', 'view-soon':'nb-soon', 'view-taste':'nb-taste', 'view-game':'nb-game', 'view-analytics':'nb-analytics' };
+const MAIN_VIEWS = ['view-home','view-exp','view-soon','view-game','view-analytics'];
+const NAV_MAP    = { 'view-home':'nb-home', 'view-exp':'nb-exp', 'view-soon':'nb-soon', 'view-game':'nb-game', 'view-analytics':'nb-analytics' };
 let current     = 'view-home';
 let prevMain    = 'view-home';
 let editMode    = false;
@@ -11561,7 +11391,7 @@ function goView(viewId, btn) {
   showView(viewId, anim);
   if (viewId === 'view-exp')       { trackView('work-experience'); playToolsLabelAnim(); }
   else if (viewId === 'view-soon') trackView('note');
-  else if (viewId === 'view-taste') { trackView('taste'); renderTasteList(); }
+
   else if (viewId === 'view-game') trackView('game');
 }
 
@@ -17031,116 +16861,6 @@ document.addEventListener('DOMContentLoaded', () => {
   btn.addEventListener('click', () => anim.goToAndPlay(0, true));
 })();
 
-
-/* ── Taste — music artwork ───────────────────────────────
-   The list this renders. One entry per album: `cover` is a URL (drop an
-   uploaded file's path in), or null to fall back to the accent-coloured
-   stand-in sleeve. `accent` also colours the record's centre label, so
-   each row reads as its own even before real art is in:
-
-     { artist: 'Name', title: 'Album', cover: '/media/…', accent: '#8a6a4f' }
-
-   Empty for now, which is what puts the tab on its Coming soon card —
-   see renderTasteList. Add a row here and the card steps aside on its
-   own; the component underneath is finished and waiting. */
-const TASTE_ALBUMS = [];
-
-/* The record, drawn rather than fetched — the source component points an
-   <img> at a PNG on a CDN, and nothing else on this page loads a
-   third-party asset. A vinyl is concentric circles: a dark disc, a few
-   groove rings, the label in the row's own accent, and the spindle hole.
-   Groove rings are stroked at low opacity so the spin is legible without
-   the disc turning into a moiré at this size. */
-function tasteVinylSVG(accent) {
-  const grooves = [40, 36, 32, 28].map(r =>
-    `<circle cx="50" cy="50" r="${r}" fill="none" stroke="rgba(255,255,255,.09)" stroke-width="1"/>`
-  ).join('');
-  return '<svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden="true">' +
-    '<circle cx="50" cy="50" r="49" fill="#141414"/>' +
-    '<circle cx="50" cy="50" r="49" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="1"/>' +
-    grooves +
-    `<circle cx="50" cy="50" r="17" fill="${accent || '#b9b2a8'}"/>` +
-    '<circle cx="50" cy="50" r="17" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="1"/>' +
-    // Off-centre highlight, so a spinning disc reads as spinning.
-    '<path d="M50 1a49 49 0 0 1 34.6 83.6" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="2"/>' +
-    '<circle cx="50" cy="50" r="3" fill="#faf8f5"/>' +
-  '</svg>';
-}
-
-function renderTasteList() {
-  const host = document.getElementById('tasteList');
-  if (!host) return;
-  host.innerHTML = '';
-  /* With nothing to show, the tab is the Coming soon card alone. Driven
-     off the data rather than a flag, so filling TASTE_ALBUMS is the only
-     thing needed to bring the section up — nothing to remember to
-     switch. */
-  const view = document.getElementById('view-taste');
-  if (view) view.classList.toggle('taste-empty', !TASTE_ALBUMS.length);
-  TASTE_ALBUMS.forEach(album => {
-    const row = document.createElement('div');
-    row.className = 'ta-row';
-
-    const art = document.createElement('div');
-    art.className = 'ta-art';
-    art.style.setProperty('--ta-accent', album.accent || '#cfc9c1');
-
-    const vinyl = document.createElement('div');
-    vinyl.className = 'ta-vinyl';
-    vinyl.innerHTML = '<div class="ta-vinyl-spin">' + tasteVinylSVG(album.accent) + '</div>';
-
-    const cover = document.createElement('div');
-    cover.className = 'ta-cover';
-    if (album.cover) {
-      const img = document.createElement('img');
-      img.loading = 'lazy';
-      img.alt = (album.artist || '') + ' — ' + (album.title || '');
-      img.src = album.cover;
-      cover.appendChild(img);
-    } else {
-      const ph = document.createElement('div');
-      ph.className = 'ta-ph';
-      ph.textContent = (album.title || album.artist || '?').trim().charAt(0).toUpperCase();
-      cover.appendChild(ph);
-    }
-    cover.insertAdjacentHTML('beforeend',
-      '<div class="ta-shade"></div><div class="ta-badge"><i></i></div>');
-
-    art.append(vinyl, cover);
-
-    const meta = document.createElement('div');
-    meta.className = 'ta-meta';
-    const artist = document.createElement('div');
-    artist.className = 'ta-artist';
-    artist.textContent = album.artist || '';
-    const title = document.createElement('div');
-    title.className = 'ta-title';
-    title.textContent = album.title || '';
-    meta.append(artist, title);
-
-    row.append(art, meta);
-    host.appendChild(row);
-  });
-}
-
-/* ── Taste tab icon ──────────────────────────────────────
-   Same treatment as the Experience star above: a Lottie in a
-   .nav-lottie-icon box, replayed on click. */
-(function () {
-  const el = document.getElementById('nb-taste-icon');
-  const btn = document.getElementById('nb-taste');
-  if (!el || !btn || typeof lottie === 'undefined') return;
-
-  const anim = lottie.loadAnimation({
-    container: el,
-    renderer: 'svg',
-    loop: false,
-    autoplay: true,
-    path: '/media/site/taste.json',
-  });
-
-  btn.addEventListener('click', () => anim.goToAndPlay(0, true));
-})();
 
 /* ── Avatar drag-to-reposition + size slider ─────────────
    Back to freehand dragging — the point-preset picker felt too
