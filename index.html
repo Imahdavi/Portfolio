@@ -599,9 +599,9 @@
        brings the heading and the write-up up in order.
 
        A phone has no room for a rail beside the rows, so this starts at
-       900px; see initBrandTimeline, which also sits it out under reduced
-       motion. */
-    @media (min-width:900px) {
+       760px — past any phone, and reached by a narrow desktop window; see
+       initBrandTimeline, which also sits it out under reduced motion. */
+    @media (min-width:760px) {
       #view-home .projects-list.pl-timeline { position:relative; padding-left:42px; }
       .pl-track {
         position:absolute; left:12px; top:8px; bottom:8px; width:1px;
@@ -10602,7 +10602,7 @@ let _pliRevealObs = null;
    Desktop only: a phone has no room for a rail beside the rows, and the
    media strips already fill the width. Reduced motion gets the spine
    filled and every dot in place, with nothing animating. */
-const PL_MIN_WIDTH = 900;
+const PL_MIN_WIDTH = 760;   // a phone never reaches this; a narrow desktop window does
 const PL_MARK = 0.72;      // the scroll's reach, down the viewport
 let _plOff = null;
 
