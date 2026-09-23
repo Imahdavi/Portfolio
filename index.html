@@ -607,42 +607,48 @@
        760px — past any phone, and reached by a narrow desktop window; see
        initBrandTimeline, which also sits it out under reduced motion. */
     @media (min-width:760px) {
-      #view-home .projects-list.pl-timeline { position:relative; padding-left:42px; }
+      #view-home .projects-list.pl-timeline { position:relative; padding-left:48px; }
       .pl-timeline .proj-list-item { position:relative; }
-      .pl-seg {
-        position:absolute; left:-30px; top:20px; bottom:20px; width:1px;
-        transform:scaleX(.6); transform-origin:left center;
-        background:rgba(0,0,0,.13); pointer-events:none; overflow:hidden;
+      /* The line is drawn rather than boxed, so its ends can bend in
+         towards the row: a quarter turn at the top and another at the
+         foot, like a bracket holding the section. Both the faint track and
+         the filled length are the same path, the fill dashed back to
+         wherever the scroll has reached (see initBrandTimeline). */
+      /* height rather than top+bottom: an <svg> with a viewBox and no
+         height of its own takes the box's ratio instead of stretching. */
+      .pl-seg { position:absolute; left:-36px; top:20px; height:calc(100% - 40px); width:14px; overflow:visible; pointer-events:none; }
+      .pl-seg path { fill:none; stroke-width:.6; stroke-linecap:round; vector-effect:non-scaling-stroke; }
+      .pl-seg .pl-seg-track { stroke:rgba(0,0,0,.14); }
+      .pl-seg .pl-seg-fill { stroke:rgba(0,0,0,.55); stroke-dasharray:1; stroke-dashoffset:1; }
+      /* The site's own sparkle (the star divider's mark), in place of a
+         plain dot. */
+      .pl-star {
+        position:absolute; left:-38px; top:0; width:17px; height:17px;
+        transform:scale(0) rotate(-25deg); transform-origin:50% 50%;
+        transition:transform .45s cubic-bezier(.34,1.56,.64,1);
       }
-      .pl-seg-fill {
-        position:absolute; left:0; top:0; width:100%; height:0;
-        background:rgba(0,0,0,.55);
-      }
-      .pl-dot {
-        position:absolute; left:-33px; top:4px; width:8px; height:8px; border-radius:50%;
-        background:#1a1a1a; transform:scale(0);
-        transition:transform .4s cubic-bezier(.34,1.56,.64,1);
-      }
+      .pl-star svg { display:block; width:100%; height:100%; }
+      .pl-star path { fill:#1a1a1a; }
       .pl-stem {
-        position:absolute; left:-23px; top:8px; width:16px; height:1px;
+        position:absolute; left:-22px; top:8px; width:15px; height:1px;
         transform:scaleX(0); transform-origin:left center;
         background:rgba(0,0,0,.18);
         transition:transform .35s cubic-bezier(.2,.8,.2,1) .05s;
       }
       /* Both go back as the scroll does, so nothing is lit ahead of the line. */
-      .proj-list-item.pl-on .pl-dot { transform:scale(1); }
+      .proj-list-item.pl-on .pl-star { transform:scale(1) rotate(0deg); }
       .proj-list-item.pl-on .pl-stem { transform:scaleX(1); }
-      body.dark .pl-seg { background:rgba(255,255,255,.16); }
-      body.dark .pl-seg-fill { background:rgba(255,255,255,.6); }
-      body.dark .pl-dot { background:var(--d-text); }
+      body.dark .pl-seg .pl-seg-track { stroke:rgba(255,255,255,.16); }
+      body.dark .pl-seg .pl-seg-fill { stroke:rgba(255,255,255,.6); }
+      body.dark .pl-star path { fill:var(--d-text); }
       body.dark .pl-stem { background:rgba(255,255,255,.22); }
-      /* Reorder mode collapses the rows to bars; a rail of dots beside
+      /* Reorder mode collapses the rows to bars; a rail of stars beside
          them would just be in the way of the dragging. */
       .projects-list.pli-compact .pl-seg,
-      .projects-list.pli-compact .pl-dot,
+      .projects-list.pli-compact .pl-star,
       .projects-list.pli-compact .pl-stem { display:none; }
       @media (prefers-reduced-motion:reduce) {
-        .pl-dot, .pl-stem { transition:none; }
+        .pl-star, .pl-stem { transition:none; }
       }
     }
     .proj-list-item {
@@ -10613,6 +10619,9 @@ let _pliRevealObs = null;
    filled and every dot in place, with nothing animating. */
 const PL_MIN_WIDTH = 760;   // a phone never reaches this; a narrow desktop window does
 const PL_MARK = 0.72;      // the scroll's reach, down the viewport
+// The site's own sparkle — the big star from the divider mark (see
+// starDividerSVG), on its own and squared up to sit on the line.
+const PL_STAR = '<svg viewBox="0 0 166.46 107.09" xmlns="http://www.w3.org/2000/svg"><path d="M161.24,53.35c-14.46,3.72-29.9,4.84-42.64,13.31-14.46,9.61-21.64,25.92-29.95,40.43,1.15-9.62,6.54-34.2-3.08-40.84-4.35-3-15.47-4.7-20.86-5.61-21.42-3.61-43.16-5.7-64.71-7.49,22.86-2.01,46.45-1.69,69.49-4.98,10.21-1.46,23.14-4.63,31.19-11.46,11.06-9.39,18.95-24.6,24.86-36.7-1.93,11.74-6.08,29.6,1.51,40,6.74,9.23,23.79,11.02,34.18,13.35Z"/></svg>';
 let _plOff = null;
 
 function initBrandTimeline(list) {
@@ -10624,7 +10633,7 @@ function initBrandTimeline(list) {
   // leaving one with nowhere to sit.
   const onWidth = () => { if (list.isConnected) initBrandTimeline(list); };
   const strip = () => {
-    list.querySelectorAll('.pl-seg, .pl-dot, .pl-stem').forEach(e => e.remove());
+    list.querySelectorAll('.pl-seg, .pl-star, .pl-stem').forEach(e => e.remove());
     list.querySelectorAll('.pl-on').forEach(e => e.classList.remove('pl-on'));
   };
   if (!wide.matches) {
@@ -10643,15 +10652,36 @@ function initBrandTimeline(list) {
   // sections sit apart with a gap between them.
   const segs = rows.map(row => {
     row.insertAdjacentHTML('afterbegin',
-      '<span class="pl-seg" aria-hidden="true"><span class="pl-seg-fill"></span></span>' +
-      '<span class="pl-stem" aria-hidden="true"></span><span class="pl-dot" aria-hidden="true"></span>');
-    return { row, seg: row.querySelector('.pl-seg'), fill: row.querySelector('.pl-seg-fill'),
-             dot: row.querySelector('.pl-dot') };
+      '<svg class="pl-seg" aria-hidden="true" viewBox="0 0 14 100">' +
+        '<path class="pl-seg-track" pathLength="1"/><path class="pl-seg-fill" pathLength="1"/>' +
+      '</svg>' +
+      '<span class="pl-stem" aria-hidden="true"></span>' +
+      '<span class="pl-star" aria-hidden="true">' + PL_STAR + '</span>');
+    return { row, seg: row.querySelector('.pl-seg'),
+             track: row.querySelector('.pl-seg-track'), fill: row.querySelector('.pl-seg-fill'),
+             star: row.querySelector('.pl-star'), h: 0 };
   });
+
+  // The line's own shape, for a height: down the middle of the 14-wide
+  // box, turning in towards the row at each end.
+  const shape = (s, h) => {
+    if (Math.abs(h - s.h) < 0.5) return;
+    s.h = h;
+    const r = Math.min(7, h / 2);
+    const d = `M13,0.6 Q6.5,0.6 6.5,${(0.6 + r).toFixed(1)} L6.5,${(h - 0.6 - r).toFixed(1)} Q6.5,${(h - 0.6).toFixed(1)} 13,${(h - 0.6).toFixed(1)}`;
+    s.seg.setAttribute('viewBox', '0 0 14 ' + h.toFixed(1));
+    s.track.setAttribute('d', d);
+    s.fill.setAttribute('d', d);
+  };
 
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduced) {
-    segs.forEach(s => { s.fill.style.height = '100%'; s.row.classList.add('pl-on'); });
+    segs.forEach(s => {
+      const r = s.seg.getBoundingClientRect();
+      if (r.height) shape(s, r.height);
+      s.fill.style.strokeDashoffset = '0';
+      s.row.classList.add('pl-on');
+    });
     wide.addEventListener('change', onWidth, { once: true });
     _plOff = () => wide.removeEventListener('change', onWidth);
     return;
@@ -10665,12 +10695,14 @@ function initBrandTimeline(list) {
     segs.forEach(s => {
       const r = s.seg.getBoundingClientRect();
       if (r.height) {
+        shape(s, r.height);
         // Straight off where the scroll is: back up the page it empties
-        // again, rather than staying filled behind you.
-        const pct = Math.max(0, Math.min(100, ((mark - r.top) / r.height) * 100));
-        s.fill.style.height = pct.toFixed(2) + '%';
+        // again, rather than staying drawn behind you. pathLength is 1, so
+        // the dash offset is simply what is left to draw.
+        const p = Math.max(0, Math.min(1, (mark - r.top) / r.height));
+        s.fill.style.strokeDashoffset = (1 - p).toFixed(3);
       }
-      const d = s.dot.getBoundingClientRect();
+      const d = s.star.getBoundingClientRect();
       // Lit only once the line has come down to it, and out again above.
       s.row.classList.toggle('pl-on', d.top <= mark);
     });
@@ -10679,9 +10711,22 @@ function initBrandTimeline(list) {
 
   (view || window).addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll);
+  /* The rows grow as their media lands, and a line measured before that
+     stops short of the row it belongs to. Only a real change in the list's
+     height repaints: the observer sees its own writes otherwise, and
+     paint → shape → observer → paint spins the main thread. */
+  let lastH = 0;
+  const ro = window.ResizeObserver ? new ResizeObserver(entries => {
+    const h = Math.round(entries[0].contentRect.height);
+    if (h === lastH) return;
+    lastH = h;
+    onScroll();
+  }) : null;
+  if (ro) ro.observe(list);
   paint();
   wide.addEventListener('change', onWidth, { once: true });
   _plOff = () => {
+    if (ro) ro.disconnect();
     (view || window).removeEventListener('scroll', onScroll);
     window.removeEventListener('resize', onScroll);
     wide.removeEventListener('change', onWidth);
