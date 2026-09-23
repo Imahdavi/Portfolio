@@ -1017,21 +1017,81 @@
       -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
     }
     #ml-close:hover { background:rgba(24,21,18,.82); }
-    /* Sits next to the close button, same chip. Hidden for stills. */
-    #ml-mute {
-      position:absolute; top:12px; right:58px;
-      width:38px; height:38px; padding:0; border:none; border-radius:50%;
-      background:rgba(24,21,18,.6); color:#fff; cursor:pointer;
-      display:none; align-items:center; justify-content:center;
-      -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+    /* The playback bar — 21st.dev's "Video Player" (@chetanverma16), at its
+       own numbers: a #111111 at 60% behind a medium blur, 16px of radius,
+       16px of padding and 8px in from the media's edges, held to a readable
+       width in the middle. It belongs to the clip, not the screen, so it is
+       positioned against #ml-frame.
+
+       It is there for video only, and only while the pointer is about: it
+       fades out a couple of seconds after the last move, and stays put
+       whenever the clip is paused or a control has focus, so it can't slip
+       away mid-scrub. */
+    #ml-controls {
+      position:absolute; left:0; right:0; bottom:8px; margin:0 auto;
+      box-sizing:border-box; width:calc(100% - 16px); max-width:520px;
+      display:none; align-items:center; gap:12px; padding:14px;
+      border-radius:16px; background:rgba(17,17,17,.6); color:#fff;
+      -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+      opacity:0; transform:translateY(6px); pointer-events:none;
+      transition:opacity .22s ease, transform .22s ease;
     }
-    #media-lightbox.has-audio #ml-mute { display:flex; }
-    #ml-mute:hover { background:rgba(24,21,18,.82); }
-    #ml-mute svg { width:19px; height:19px; }
+    #media-lightbox.has-audio #ml-controls { display:flex; }
+    #media-lightbox.ml-ui #ml-controls { opacity:1; transform:none; pointer-events:auto; }
+    #ml-controls button {
+      flex:none; width:30px; height:30px; padding:0; border:none; border-radius:9px;
+      background:transparent; color:#fff; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+    }
+    #ml-controls button:hover { background:rgba(255,255,255,.14); }
+    #ml-controls svg { display:block; }
+    #ml-play .ml-i-pause, #ml-play .ml-i-play { fill:currentColor; }
+    #ml-play .ml-i-play { display:none; }
+    #media-lightbox.ml-paused #ml-play .ml-i-pause { display:none; }
+    #media-lightbox.ml-paused #ml-play .ml-i-play { display:block; }
+    /* The scrub: a hairline that thickens under the pointer, the loaded
+       length behind the played one, and a knob that only appears once
+       there is something to grab. */
+    #ml-track {
+      position:relative; flex:1; height:16px; cursor:pointer; touch-action:none;
+      display:flex; align-items:center;
+    }
+    #ml-track::before {
+      content:''; position:absolute; left:0; right:0; height:4px; border-radius:2px;
+      background:rgba(255,255,255,.22);
+    }
+    #ml-buffered, #ml-played {
+      position:absolute; left:0; height:4px; border-radius:2px;
+      transform-origin:left center; width:100%; transform:scaleX(0);
+    }
+    #ml-buffered { background:rgba(255,255,255,.3); }
+    #ml-played { background:#fff; }
+    #ml-knob {
+      position:absolute; left:0; width:11px; height:11px; margin-left:-5.5px;
+      border-radius:50%; background:#fff; transform:scale(0);
+      transition:transform .18s cubic-bezier(.34,1.56,.64,1);
+      box-shadow:0 1px 3px rgba(0,0,0,.4);
+    }
+    #ml-track:hover #ml-knob, #ml-track:focus-visible #ml-knob,
+    #ml-controls.ml-scrub #ml-knob { transform:scale(1); }
+    #ml-track:focus-visible { outline:none; }
+    #ml-time {
+      flex:none; font-size:11.5px; font-variant-numeric:tabular-nums;
+      letter-spacing:.02em; color:rgba(255,255,255,.82); white-space:nowrap;
+    }
+    #ml-mute svg { width:18px; height:18px; }
     /* The site's mute icons are drawn near-black for a light chip; on this
-       dark one they have to follow currentColor instead. */
+       dark bar they have to follow currentColor instead. */
     #ml-mute svg [stroke] { stroke:currentColor; }
     #ml-mute svg [fill]:not([fill="none"]) { fill:currentColor; }
+    /* Nothing to show a bar over, and no room for one either. */
+    @media (max-width:520px) {
+      #ml-controls { gap:8px; padding:11px; }
+      #ml-time { font-size:10.5px; }
+    }
+    @media (prefers-reduced-motion:reduce) {
+      #ml-controls, #ml-knob { transition:none; }
+    }
     /* On the container, not the img/video: board media carries
        pointer-events:none (the tilt and the overlay controls are driven from
        the wrapper), so a cursor set on it would never be seen. Edit mode has
@@ -5652,8 +5712,26 @@ one keyframe at a time</div>
   <div id="ml-frame">
     <div id="ml-stage"></div>
     <button id="ml-close" type="button" aria-label="Close">&times;</button>
-    <!-- Video only. Mute alone, not a whole controls bar. -->
-    <button id="ml-mute" type="button" aria-label="Unmute"></button>
+    <!-- Playback, for video only — after 21st.dev's "Video Player"
+         (@chetanverma16): a blurred dark bar floating over the foot of the
+         clip, in from the edges and rounded, that fades in while the
+         pointer is on the media and out once it settles. -->
+    <div id="ml-controls" aria-hidden="true">
+      <button id="ml-play" type="button" aria-label="Pause">
+        <svg class="ml-i-pause" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M8 5h3v14H8zM13 5h3v14h-3z"/></svg>
+        <svg class="ml-i-play" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg>
+      </button>
+      <div id="ml-track" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <span id="ml-buffered"></span>
+        <span id="ml-played"></span>
+        <span id="ml-knob"></span>
+      </div>
+      <span id="ml-time">0:00 / 0:00</span>
+      <button id="ml-mute" type="button" aria-label="Unmute"></button>
+      <button id="ml-full" type="button" aria-label="Full screen">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M16 21h3a2 2 0 002-2v-3M8 21H5a2 2 0 01-2-2v-3"/></svg>
+      </button>
+    </div>
   </div>
 </div>
 
@@ -18839,11 +18917,11 @@ void main () {
    element.
 
    Videos carry their playback position across so the clip doesn't jump
-   back to zero on the way up, and inherit the tile's own sound state
-   rather than getting a controls bar: enlarging a clip is the same clip
-   seen bigger, so it should still be muted or not exactly as it was on
-   the page, and a second, differently-behaving audio surface is one more
-   thing to reason about for no gain. ── */
+   back to zero on the way up, and inherit the tile's own sound state:
+   enlarged is the same clip seen bigger, so it should still be muted or
+   not exactly as it was on the page. Here, and only here, it also gets a
+   bar to pause, scrub and go full screen with — on the board a clip is a
+   moving picture in a layout, but this is something you are watching. ── */
 (function () {
   const box = document.getElementById('media-lightbox');
   const stage = document.getElementById('ml-stage');
@@ -18882,6 +18960,148 @@ void main () {
     if (!v.muted && !v.volume) v.volume = 1;   // or unmuting is silent
     paintMute(v);
   });
+
+  /* ── The playback bar. Video only, and only in here: on the boards a clip
+     is a moving picture in a layout, and a row of controls over every tile
+     would be noise. Enlarged, it is something you are actually watching, so
+     it gets somewhere to pause, scrub and go full screen.
+
+     Everything reads off the borrowed <video> itself and follows its own
+     events, so the bar states what is true even when something else changes
+     it — the board's auto-mute, a keyboard shortcut, the browser. ── */
+  const frame = document.getElementById('ml-frame');
+  const bar = document.getElementById('ml-controls');
+  const playBtn = document.getElementById('ml-play');
+  const track = document.getElementById('ml-track');
+  const played = document.getElementById('ml-played');
+  const buffered = document.getElementById('ml-buffered');
+  const knob = document.getElementById('ml-knob');
+  const timeEl = document.getElementById('ml-time');
+  const fullBtn = document.getElementById('ml-full');
+  let uiTimer = 0, scrubbing = false;
+
+  const clock = (t) => {
+    if (!isFinite(t) || t < 0) t = 0;
+    const m = Math.floor(t / 60), s = Math.floor(t % 60);
+    return m + ':' + String(s).padStart(2, '0');
+  };
+  function vid() { return stage.querySelector('video'); }
+
+  // Held open while the clip is paused or a control has focus: a bar that
+  // faded out from under a paused frame, or mid-scrub, would be maddening.
+  function showUI(sticky) {
+    box.classList.add('ml-ui');
+    clearTimeout(uiTimer);
+    if (sticky) return;
+    uiTimer = setTimeout(() => {
+      const v = vid();
+      // Keyboard focus holds it open — arrow-seeking a bar you can't see is
+      // no good — but a mouse click leaves focus on the button it hit, which
+      // is no reason to pin the bar there for ever.
+      if (scrubbing || (v && v.paused) || (bar && bar.querySelector(':focus-visible'))) return;
+      box.classList.remove('ml-ui');
+    }, 2400);
+  }
+
+  function paintTime(v) {
+    if (!v) return;
+    const d = isFinite(v.duration) ? v.duration : 0;
+    const p = d ? Math.min(1, v.currentTime / d) : 0;
+    if (!scrubbing) {
+      played.style.transform = 'scaleX(' + p.toFixed(4) + ')';
+      knob.style.left = (p * 100).toFixed(2) + '%';
+      track.setAttribute('aria-valuenow', Math.round(p * 100));
+    }
+    timeEl.textContent = clock(v.currentTime) + ' / ' + clock(d);
+    let b = 0;
+    try { if (v.buffered.length) b = v.buffered.end(v.buffered.length - 1); } catch (e) {}
+    buffered.style.transform = 'scaleX(' + (d ? Math.min(1, b / d) : 0).toFixed(4) + ')';
+  }
+  function paintPlay(v) {
+    box.classList.toggle('ml-paused', !v || v.paused);
+    if (playBtn) playBtn.setAttribute('aria-label', v && !v.paused ? 'Pause' : 'Play');
+  }
+  // A fresh open has no position, no length and no icon state until the
+  // element reports one, so the bar is dressed from the element on the way in.
+  function paintBar(v) {
+    paintPlay(v); paintTime(v);
+    if (!v) return;
+    scrubbing = false;
+    bar.classList.remove('ml-scrub');
+  }
+
+  ['timeupdate', 'progress', 'durationchange', 'loadedmetadata', 'seeking', 'seeked']
+    .forEach(t => stage.addEventListener(t, (e) => {
+      if (e.target && e.target.tagName === 'VIDEO') paintTime(e.target);
+    }, true));
+  ['play', 'pause', 'ended'].forEach(t => stage.addEventListener(t, (e) => {
+    if (e.target && e.target.tagName === 'VIDEO') { paintPlay(e.target); showUI(e.target.paused); }
+  }, true));
+
+  if (playBtn) playBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const v = vid(); if (!v) return;
+    if (v.paused) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
+    else v.pause();
+  });
+
+  // Scrubbing takes the pointer, so a drag that leaves the track still seeks
+  // and still ends cleanly — and the bar can't fade out underneath it.
+  function seekTo(e) {
+    const v = vid(); if (!v || !isFinite(v.duration)) return;
+    const r = track.getBoundingClientRect();
+    const p = Math.max(0, Math.min(1, (e.clientX - r.left) / (r.width || 1)));
+    played.style.transform = 'scaleX(' + p.toFixed(4) + ')';
+    knob.style.left = (p * 100).toFixed(2) + '%';
+    track.setAttribute('aria-valuenow', Math.round(p * 100));
+    v.currentTime = p * v.duration;
+    timeEl.textContent = clock(v.currentTime) + ' / ' + clock(v.duration);
+  }
+  if (track) {
+    track.addEventListener('pointerdown', (e) => {
+      e.stopPropagation(); e.preventDefault();
+      if (!vid()) return;
+      scrubbing = true; bar.classList.add('ml-scrub');
+      track.setPointerCapture(e.pointerId);
+      showUI(true);
+      seekTo(e);
+    });
+    track.addEventListener('pointermove', (e) => { if (scrubbing) seekTo(e); });
+    const endScrub = (e) => {
+      if (!scrubbing) return;
+      scrubbing = false; bar.classList.remove('ml-scrub');
+      try { track.releasePointerCapture(e.pointerId); } catch (err) {}
+      showUI();
+    };
+    track.addEventListener('pointerup', endScrub);
+    track.addEventListener('pointercancel', endScrub);
+    track.addEventListener('click', (e) => e.stopPropagation());
+    track.addEventListener('keydown', (e) => {
+      const v = vid(); if (!v || !isFinite(v.duration)) return;
+      const step = e.shiftKey ? 10 : 5;
+      if (e.key === 'ArrowRight') v.currentTime = Math.min(v.duration, v.currentTime + step);
+      else if (e.key === 'ArrowLeft') v.currentTime = Math.max(0, v.currentTime - step);
+      else if (e.key === 'Home') v.currentTime = 0;
+      else return;
+      e.preventDefault(); e.stopPropagation(); showUI(true);
+    });
+  }
+
+  // Full screen is taken on the frame rather than the video, so the bar goes
+  // with it instead of handing the clip to the browser's own controls.
+  if (fullBtn) fullBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const el = frame;
+    if (document.fullscreenElement) { document.exitFullscreen(); return; }
+    const r = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (r) { const p = r.call(el); if (p && p.catch) p.catch(() => {}); }
+    else { const v = vid(); if (v && v.webkitEnterFullscreen) v.webkitEnterFullscreen(); }
+  });
+
+  // The pointer is hidden while this is open (the OS arrow is handed back),
+  // so a move is the only hint that someone is still watching.
+  box.addEventListener('pointermove', () => { if (isOpen()) showUI(); });
+  box.addEventListener('pointerdown', () => { if (isOpen()) showUI(); });
 
   // Matched on the wrapper rather than the img/video itself: board media is
   // pointer-events:none (the tilt and the overlay buttons are driven from the
@@ -18938,7 +19158,7 @@ void main () {
       const p = el.play(); if (p && p.catch) p.catch(() => {});
     }
     box.classList.toggle('has-audio', el.tagName === 'VIDEO');
-    if (el.tagName === 'VIDEO') paintMute(el);
+    if (el.tagName === 'VIDEO') { paintMute(el); paintBar(el); }
     // Hand the pointer back to the OS for as long as this is open.
     document.documentElement.classList.add('cursor-off');
     document.documentElement.classList.remove('pf-cursor-on');
@@ -18951,12 +19171,17 @@ void main () {
     stage.style.animation = '';
     box.classList.add('show');
     box.setAttribute('aria-hidden', 'false');
+    // The bar is there to be noticed on the way in, then gets out of the way.
+    if (el.tagName === 'VIDEO') showUI();
   }
 
   function close() {
     box.classList.remove('show');
     box.setAttribute('aria-hidden', 'true');
-    box.classList.remove('has-audio');
+    box.classList.remove('has-audio', 'ml-ui', 'ml-paused');
+    clearTimeout(uiTimer);
+    scrubbing = false;
+    if (document.fullscreenElement) { const p = document.exitFullscreen(); if (p && p.catch) p.catch(() => {}); }
     // The drawn arrow takes over again on the next pointer move, which is
     // what re-adds pf-cursor-on and fades it back in.
     document.documentElement.classList.remove('cursor-off');
