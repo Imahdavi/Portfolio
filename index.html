@@ -1469,20 +1469,72 @@
        Wrapped in the demo's own pill badge (rounded-full border +
        tinted bg) with its "✨" left as-is (fixed, not part of the
        editable text) and the label itself editable in edit mode. */
+    /* The "trusted by" key — 21st.dev's "Motion Button" (@radiumcoders),
+       at its own numbers: a hatch of 1px lines at 315° every 7px, a
+       bracket 8px on a side at each corner, 40px/12px of padding and the
+       writing in caps. Hovered, each bracket steps 3px out from the
+       middle, a dark wipe runs across from the left, and the writing turns
+       white; pressed, the brackets come 2px back in. Its springs are
+       stiffness 300 / damping 20 for the brackets and 220 / 22 for the
+       wipe — here an overshooting ease of about the same weight.
+
+       Editing keeps its hands off all of it: the label inside is
+       contenteditable, and a wipe running under the caret is no help. */
     .brand-grid-label-pill {
-      display:inline-flex; align-items:center; gap:7px;
-      margin:0 auto var(--trusted-gap, 22px); padding:7px 18px;
-      border-radius:999px; border:1px solid rgba(0,0,0,.08);
-      background:rgba(0,0,0,.035);
-      width:fit-content;
-      transition:background .2s ease;
+      position:relative; display:inline-flex; align-items:center;
+      margin:0 auto var(--trusted-gap, 22px);
+      padding:11px 32px; width:fit-content; overflow:visible;
+      --bgp-pattern:rgba(0,0,0,.12);
+      --bgp-ink:#262626;
+      --bgp-fill:#171717;
     }
-    /* Demo's own hover states (hover:bg-neutral-200 on the pill,
-       hover:text-neutral-600 on the shiny text) — the pill tints darker
-       and the label's base color deepens, exactly what was missing:
-       hovering it didn't change anything before. */
-    .brand-grid-label-pill:hover { background:rgba(0,0,0,.07); }
-    .brand-grid-label-pill:hover .brand-grid-label { color:rgba(38,38,38,.85); }
+    .bgp-hatch {
+      position:absolute; inset:0; z-index:0;
+      background:repeating-linear-gradient(315deg, var(--bgp-pattern) 0, var(--bgp-pattern) 1px, transparent 0, transparent 50%);
+      background-size:7px 7px;
+    }
+    .bgp-wipe {
+      position:absolute; inset:0; z-index:1; background:var(--bgp-fill);
+      transform:scaleX(0); transform-origin:left center;
+      transition:transform .42s cubic-bezier(.2,.9,.25,1);
+    }
+    .bgp-text { position:relative; z-index:2; display:inline-flex; align-items:center; gap:8px; }
+    .bgp-corner {
+      position:absolute; width:8px; height:8px; z-index:3; border:0 solid var(--bgp-ink);
+      transition:transform .35s cubic-bezier(.34,1.4,.64,1), border-color .2s;
+    }
+    .bgp-tl { top:0; left:0; border-top-width:1px; border-left-width:1px; }
+    .bgp-tr { top:0; right:0; border-top-width:1px; border-right-width:1px; }
+    .bgp-bl { bottom:0; left:0; border-bottom-width:1px; border-left-width:1px; }
+    .bgp-br { bottom:0; right:0; border-bottom-width:1px; border-right-width:1px; }
+    .brand-grid-label-pill:hover .bgp-tl { transform:translate(-3px, -3px); }
+    .brand-grid-label-pill:hover .bgp-tr { transform:translate(3px, -3px); }
+    .brand-grid-label-pill:hover .bgp-bl { transform:translate(-3px, 3px); }
+    .brand-grid-label-pill:hover .bgp-br { transform:translate(3px, 3px); }
+    .brand-grid-label-pill:active .bgp-tl { transform:translate(2px, 2px); }
+    .brand-grid-label-pill:active .bgp-tr { transform:translate(-2px, 2px); }
+    .brand-grid-label-pill:active .bgp-bl { transform:translate(2px, -2px); }
+    .brand-grid-label-pill:active .bgp-br { transform:translate(-2px, -2px); }
+    .brand-grid-label-pill:hover .bgp-wipe { transform:scaleX(1); }
+    .brand-grid-count {
+      font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+      color:rgba(82,82,82,.7); transition:color .3s ease; white-space:nowrap;
+    }
+    .brand-grid-count:empty { display:none; }
+    .brand-grid-label-pill:hover .brand-grid-label,
+    .brand-grid-label-pill:hover .brand-grid-count { color:#fff; }
+    .brand-grid-label-pill:hover .brand-grid-star { filter:grayscale(1) brightness(3); }
+    body.dark .brand-grid-label-pill { --bgp-pattern:rgba(255,255,255,.14); --bgp-ink:#d4d4d4; --bgp-fill:#ededed; }
+    body.dark .brand-grid-count { color:rgba(255,255,255,.5); }
+    body.dark .brand-grid-label-pill:hover .brand-grid-label,
+    body.dark .brand-grid-label-pill:hover .brand-grid-count { color:#0a0a0a; }
+    body.dark .brand-grid-label-pill:hover .brand-grid-star { filter:grayscale(1) brightness(.2); }
+    /* Nothing moves while the wall is being edited. */
+    #sg-exp.exp-edit-on ~ .brand-grid-wrap .bgp-wipe { display:none; }
+    #sg-exp.exp-edit-on ~ .brand-grid-wrap .bgp-corner { transform:none !important; }
+    @media (prefers-reduced-motion:reduce) {
+      .bgp-wipe, .bgp-corner { transition:none; }
+    }
     .brand-grid-star { font-size:14px; line-height:1; user-select:none; }
     .brand-grid-label {
       --shiny-width: 100px;
@@ -4352,10 +4404,6 @@
     body.dark .social-btn:hover   { color:#fff; }
     body.dark .sb-tip { background:#fff; color:#141516; }
 
-    /* The "trusted by" label's shine sweep is painted with black through
-       background-clip:text, which is invisible on a dark page. */
-    body.dark .brand-grid-label-pill:hover { background:rgba(255,255,255,.07); }
-    body.dark .brand-grid-label-pill:hover .brand-grid-label { color:rgba(255,255,255,.9); }
 
     /* Dashed "add" affordances */
     body.dark .card-add-btn, body.dark .tools-add-btn, body.dark .pli-add-row,
@@ -5208,9 +5256,24 @@ one keyframe at a time</div>
     <div class="sg" id="sg-exp"></div>
     <div class="sec-gap sec-gap-tight" aria-hidden="true"></div>
     <div class="brand-grid-wrap">
+      <!-- The "trusted by" key, as 21st.dev's "Motion Button"
+           (@radiumcoders): a hatched panel with a bracket at each corner
+           that steps outwards on hover while a dark wipe runs across it
+           from the left and the writing turns white. The count beside the
+           label is written by buildCells, so it is however many logos the
+           wall actually holds. -->
       <div class="brand-grid-label-pill">
-        <span class="brand-grid-star" aria-hidden="true">✨</span>
-        <div class="brand-grid-label" data-ph="trusted by">trusted by</div>
+        <span class="bgp-corner bgp-tl" aria-hidden="true"></span>
+        <span class="bgp-corner bgp-tr" aria-hidden="true"></span>
+        <span class="bgp-corner bgp-bl" aria-hidden="true"></span>
+        <span class="bgp-corner bgp-br" aria-hidden="true"></span>
+        <span class="bgp-hatch" aria-hidden="true"></span>
+        <span class="bgp-wipe" aria-hidden="true"></span>
+        <span class="bgp-text">
+          <span class="brand-grid-star" aria-hidden="true">✨</span>
+          <div class="brand-grid-label" data-ph="trusted by">trusted by</div>
+          <span class="brand-grid-count" id="brandCount"></span>
+        </span>
       </div>
       <div class="trusted-gap-handle" id="trustedGapHandle" title="Drag to adjust spacing">
         <svg viewBox="0 0 24 8"><line x1="2" y1="2" x2="22" y2="2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="2" y1="6" x2="22" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -8397,6 +8460,10 @@ function renderWorkExp(items) {
     // Exposed so the Avatar Group block's image picker (Experience page)
     // can offer these same logos without re-uploading them.
     window.SITE_BRAND_LOGOS = list.map(b => ({ name: b.name, src: b.svg ? su(b.svg) : b.img })).filter(b => b.src);
+    // However many the wall actually holds, beside the label (see
+    // .brand-grid-count) — so adding or hiding a logo keeps it honest.
+    const count = document.getElementById('brandCount');
+    if (count) count.textContent = list.length ? '+' + list.length + ' brands' : '';
     grid.innerHTML = '';
     list.forEach(b => {
     const cell = document.createElement('div');
