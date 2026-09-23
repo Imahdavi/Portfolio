@@ -3731,7 +3731,7 @@
     }
     .rsv-book:focus-visible { outline:2px solid #1a1a1a; outline-offset:6px; }
     .rsv-book-3d {
-      --rsv-bw:164px;            /* the book's width; everything else follows it */
+      --rsv-bw:132px;            /* the book's width; everything else follows it */
       --rsv-pg:calc(var(--rsv-bw) * .29);   /* the page block, the component's 29cqw */
       position:relative; display:block; width:var(--rsv-bw); aspect-ratio:49/60;
       transform-style:preserve-3d; transform:rotate(0deg);
@@ -3768,10 +3768,10 @@
       width:100%; padding:6.1%; padding-left:14.3%;
     }
     .rsv-book-title {
-      font-family:var(--font-title, inherit); font-size:17px; font-weight:600;
+      font-family:var(--font-title, inherit); font-size:14px; font-weight:600;
       line-height:1.25; letter-spacing:-.02em; color:#1a1a1a;
     }
-    .rsv-book-mark { fill:#1a1a1a; margin:0 0 -2px -3px; transform:scale(.75); transform-origin:left bottom; }
+    .rsv-book-mark { fill:#1a1a1a; margin:0 0 -2px -3px; transform:scale(.62); transform-origin:left bottom; }
     /* The pages, standing at the cover's right edge, and the back board. */
     .rsv-pages {
       position:absolute; top:3px; left:0; height:calc(100% - 6px); width:calc(var(--rsv-pg) - 2px);
