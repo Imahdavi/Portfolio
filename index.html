@@ -2831,16 +2831,15 @@
     @media (min-width:760px) {
       .tools-wrap { display:flex; align-items:center; justify-content:center; gap:10px; }
       .tools-wrap > .dot-border { flex:none; margin-bottom:0; }
-      /* Beats .dot-border .tools-label's white-space:pre, which is there for
-         the scramble animation and would keep this on one line. */
+      /* Beats .dot-border .tools-label's white-space:pre, which would keep
+         this on one line. */
       .tools-wrap .dot-border .tools-label { white-space:normal; max-width:150px; text-align:left; line-height:1.55; }
       /* The fan is drawn centred in a 360px box, most of it empty; narrowed
          here so the icons sit near the heading rather than a column away. */
       .tools-wrap .tools-stack { flex:none; margin:0; width:210px; }
     }
-    /* monospace so each character keeps the same width while the
-       scramble animation swaps glyphs in and out — a proportional font
-       would make the label jitter width every tick. */
+    /* Monospace, from when the label revealed itself character by
+       character and a proportional font made it jitter. */
     .tools-label {
       font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:rgba(82,82,82,.7); margin-bottom:44px;
       font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight:600;
@@ -3000,10 +2999,6 @@
     .dot-border:hover .db-line.bottom { transition-delay:calc(var(--animation-speed) * 2); }
     .dot-border:hover .db-line.left   { transition-delay:calc(var(--animation-speed) * 2.4); }
 
-    /* The scramble animation fills the label with a run of spaces on its
-       first frame. In a block box that collapses to zero width, which was
-       invisible before but would now snap the drawn border shut every
-       time the Experience view opens. pre holds the width. */
     .dot-border .tools-label { margin-bottom:0; white-space:pre; position:relative; z-index:1; }
 
     @media (prefers-reduced-motion:reduce) {
@@ -8502,91 +8497,6 @@ const TOOL_PALETTE = ['#00005B', '#111111', '#D97757', '#2563EB', '#059669', '#7
 // drag-reorder already trigger; cleared whenever edit mode closes.
 let toolsSelection = new Set();
 
-/* Scramble-reveal text (ported from 21st.dev's "SpecialText" React
-   component — no React/framer-motion here, so this is a plain
-   setInterval doing the same two-phase logic: phase 1 grows a run of
-   random characters up to the full length then flickers it a while
-   longer, phase 2 sweeps a "_" cursor left to right revealing the real
-   characters behind it). Runs only outside edit mode — the interval
-   overwriting textContent every tick would fight contentEditable. */
-const TOOLS_LABEL_SCRAMBLE_CHARS = '_!X$0-+*#';
-let _toolsLabelAnimTimer = null;
-let _toolsLabelAnimStartTO = null;
-// Last text actually handed to playToolsLabelAnim — the DOM itself
-// can't be trusted as "the real text" since for most of a run it's
-// showing scrambled placeholder characters, not the real label.
-let _toolsLabelCurrentText = null;
-
-function _toolsLabelRandomChar(prevChar) {
-  let c;
-  do { c = TOOLS_LABEL_SCRAMBLE_CHARS[Math.floor(Math.random() * TOOLS_LABEL_SCRAMBLE_CHARS.length)]; }
-  while (c === prevChar);
-  return c;
-}
-
-
-function playToolsLabelAnim(speed = 25, delay = 150) {
-  const el = document.querySelector('.tools-label');
-  if (!el || editMode) return;
-  // While a previous run is still in flight (pending start-delay or an
-  // active interval), the DOM is mid-scramble, not real text — trust
-  // the last known-good text instead of re-reading garbage off the
-  // element. Once nothing is in flight the DOM is plain/settled again
-  // (e.g. right after a real edit was saved), so it's the correct
-  // source once more.
-  const animInFlight = !!(_toolsLabelAnimTimer || _toolsLabelAnimStartTO);
-  const text = (animInFlight && _toolsLabelCurrentText) ? _toolsLabelCurrentText : el.textContent.trim();
-  if (!text) return;
-  // Cancel BOTH a running interval and a not-yet-started delay from any
-  // earlier call — clearing only the interval left a pending setTimeout
-  // free to fire later and spin up a second, independent tick loop
-  // racing the first one, each overwriting textContent out of sync
-  // with the other and never settling on the real text.
-  if (_toolsLabelAnimTimer) { clearInterval(_toolsLabelAnimTimer); _toolsLabelAnimTimer = null; }
-  if (_toolsLabelAnimStartTO) { clearTimeout(_toolsLabelAnimStartTO); _toolsLabelAnimStartTO = null; }
-  _toolsLabelCurrentText = text;
-
-  el.textContent = ' '.repeat(text.length);
-  let phase = 1;
-  let step = 0;
-
-  const tick = () => {
-    if (phase === 1) {
-      const maxSteps = text.length * 2;
-      const currentLength = Math.min(step + 1, text.length);
-      const chars = [];
-      for (let i = 0; i < currentLength; i++) chars.push(_toolsLabelRandomChar(chars[i - 1]));
-      for (let i = currentLength; i < text.length; i++) chars.push(' ');
-      el.textContent = chars.join('');
-      if (step < maxSteps - 1) step++;
-      else { phase = 2; step = 0; }
-    } else {
-      const revealedCount = Math.floor(step / 2);
-      const chars = [];
-      for (let i = 0; i < revealedCount && i < text.length; i++) chars.push(text[i]);
-      if (revealedCount < text.length) chars.push(step % 2 === 0 ? '_' : _toolsLabelRandomChar());
-      for (let i = chars.length; i < text.length; i++) chars.push(_toolsLabelRandomChar());
-      el.textContent = chars.join('');
-      if (step < text.length * 2 - 1) step++;
-      else {
-        el.textContent = text;
-        clearInterval(_toolsLabelAnimTimer);
-        _toolsLabelAnimTimer = null;
-      }
-    }
-  };
-
-  _toolsLabelAnimStartTO = setTimeout(() => {
-    _toolsLabelAnimStartTO = null;
-    if (editMode) { el.textContent = text; return; }
-    _toolsLabelAnimTimer = setInterval(tick, speed);
-  }, delay);
-}
-
-function stopToolsLabelAnim() {
-  if (_toolsLabelAnimTimer) { clearInterval(_toolsLabelAnimTimer); _toolsLabelAnimTimer = null; }
-  if (_toolsLabelAnimStartTO) { clearTimeout(_toolsLabelAnimStartTO); _toolsLabelAnimStartTO = null; }
-}
 
 function getToolsData() {
   if (!_cachedSettings) _cachedSettings = {};
@@ -11388,7 +11298,7 @@ function goView(viewId, btn) {
   setNavActive(btn);
   prevMain = viewId;
   showView(viewId, anim);
-  if (viewId === 'view-exp')       { trackView('work-experience'); playToolsLabelAnim(); }
+  if (viewId === 'view-exp')       { trackView('work-experience'); }
   else if (viewId === 'view-soon') trackView('note');
 
   else if (viewId === 'view-game') trackView('game');
@@ -11636,18 +11546,7 @@ function updateExpEditUI() {
   const brandLabel = document.querySelector('.brand-grid-label');
   if (brandLabel) brandLabel.contentEditable = editMode ? 'true' : 'false';
   const toolsLabel = document.querySelector('.tools-label');
-  if (toolsLabel) {
-    toolsLabel.contentEditable = editMode ? 'true' : 'false';
-    if (editMode) {
-      // Editing needs the plain final text, not whatever the scramble
-      // was mid-flight showing when Edit got clicked — the DOM itself
-      // can't be trusted here since for most of a run it's scrambled
-      // placeholder characters, not the real label, so restore from
-      // the last text actually handed to the animation instead.
-      stopToolsLabelAnim();
-      toolsLabel.textContent = _toolsLabelCurrentText || toolsLabel.textContent.trim();
-    }
-  }
+  if (toolsLabel) toolsLabel.contentEditable = editMode ? 'true' : 'false';
   if (!editMode) toolsSelection.clear();
   renderToolsStack();
   if (editMode) {
@@ -11655,7 +11554,6 @@ function updateExpEditUI() {
   } else {
     saveExpEdits();
     saveToolsEdits();
-    playToolsLabelAnim();
   }
 }
 
