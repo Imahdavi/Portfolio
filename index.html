@@ -2937,12 +2937,14 @@
        the fan, broken over two lines so it sits as a block rather than a
        long strip. A phone keeps it stacked, where there is no room beside. */
     @media (min-width:760px) {
-      .tools-wrap { display:flex; align-items:center; justify-content:center; gap:28px; }
+      .tools-wrap { display:flex; align-items:center; justify-content:center; gap:10px; }
       .tools-wrap > .dot-border { flex:none; margin-bottom:0; }
       /* Beats .dot-border .tools-label's white-space:pre, which is there for
          the scramble animation and would keep this on one line. */
       .tools-wrap .dot-border .tools-label { white-space:normal; max-width:150px; text-align:left; line-height:1.55; }
-      .tools-wrap .tools-stack { flex:none; margin:0; }
+      /* The fan is drawn centred in a 360px box, most of it empty; narrowed
+         here so the icons sit near the heading rather than a column away. */
+      .tools-wrap .tools-stack { flex:none; margin:0; width:210px; }
     }
     /* monospace so each character keeps the same width while the
        scramble animation swaps glyphs in and out — a proportional font
