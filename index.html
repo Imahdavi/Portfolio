@@ -1490,7 +1490,9 @@
     }
     .bgp-hatch {
       position:absolute; inset:0; z-index:0;
-      background:repeating-linear-gradient(315deg, var(--bgp-pattern) 0, var(--bgp-pattern) 1px, transparent 0, transparent 50%);
+      /* Half a pixel of line rather than the component's whole one: at 1px
+         the hatch read heavier than the rules around it. */
+      background:repeating-linear-gradient(315deg, var(--bgp-pattern) 0, var(--bgp-pattern) .5px, transparent 0, transparent 50%);
       background-size:7px 7px;
     }
     .bgp-wipe {
