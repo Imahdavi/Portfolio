@@ -2933,6 +2933,17 @@
        the hover lift uses a plain ease-out with no overshoot, so the
        rise reads as continuous instead of snapping/popping. */
     .tools-wrap { margin-top:var(--tools-gap, 48px); padding-top:8px; text-align:center; overflow:visible; }
+    /* Desktop reads it as one line: the heading standing to the left of
+       the fan, broken over two lines so it sits as a block rather than a
+       long strip. A phone keeps it stacked, where there is no room beside. */
+    @media (min-width:760px) {
+      .tools-wrap { display:flex; align-items:center; justify-content:center; gap:28px; }
+      .tools-wrap > .dot-border { flex:none; margin-bottom:0; }
+      /* Beats .dot-border .tools-label's white-space:pre, which is there for
+         the scramble animation and would keep this on one line. */
+      .tools-wrap .dot-border .tools-label { white-space:normal; max-width:150px; text-align:left; line-height:1.55; }
+      .tools-wrap .tools-stack { flex:none; margin:0; }
+    }
     /* monospace so each character keeps the same width while the
        scramble animation swaps glyphs in and out — a proportional font
        would make the label jitter width every tick. */
