@@ -592,44 +592,53 @@
     /* Brand as a timeline, on a desktop screen — after 21st.dev's
        "Timeline" (Hyperiux Vault). That component pins a section and
        slides a track sideways; the brands here are tall rows with their
-       own media, so what is taken is the timeline itself: a hairline
-       spine beside them whose filled length follows the scroll, a dot per
-       brand that pops in as the scroll reaches it, and a stem out to the
-       row. The rows' own reveal (see setupProjectsListReveal) still
-       brings the heading and the write-up up in order.
+       own media, so what is taken is the timeline itself: a hairline beside
+       them that fills as the scroll reaches it, a dot per brand that pops
+       in as its own piece is reached, and a stem out to the row. The rows'
+       own reveal (see setupProjectsListReveal) still brings the heading
+       and the write-up up in order.
+
+       One piece of line per brand with a gap between them, rather than one
+       spine down the page, so the sections read as separate stretches. The
+       line is a hairline scaled thinner still; at a device pixel it was
+       heavier than the rules between the rows.
 
        A phone has no room for a rail beside the rows, so this starts at
        760px — past any phone, and reached by a narrow desktop window; see
        initBrandTimeline, which also sits it out under reduced motion. */
     @media (min-width:760px) {
       #view-home .projects-list.pl-timeline { position:relative; padding-left:42px; }
-      .pl-track {
-        position:absolute; left:12px; top:8px; bottom:8px; width:1px;
-        background:rgba(0,0,0,.12); pointer-events:none;
-      }
-      .pl-fill {
-        position:absolute; left:0; top:0; width:100%; height:0;
-        background:#1a1a1a; border-radius:1px;
-      }
       .pl-timeline .proj-list-item { position:relative; }
+      .pl-seg {
+        position:absolute; left:-30px; top:20px; bottom:20px; width:1px;
+        transform:scaleX(.6); transform-origin:left center;
+        background:rgba(0,0,0,.13); pointer-events:none; overflow:hidden;
+      }
+      .pl-seg-fill {
+        position:absolute; left:0; top:0; width:100%; height:0;
+        background:rgba(0,0,0,.55);
+      }
       .pl-dot {
-        position:absolute; left:-35px; top:4px; width:11px; height:11px; border-radius:50%;
+        position:absolute; left:-33px; top:4px; width:8px; height:8px; border-radius:50%;
         background:#1a1a1a; transform:scale(0);
-        transition:transform .45s cubic-bezier(.34,1.56,.64,1);
+        transition:transform .4s cubic-bezier(.34,1.56,.64,1);
       }
       .pl-stem {
-        position:absolute; left:-24px; top:9px; width:18px; height:1px;
-        background:rgba(0,0,0,.18); transform:scaleX(0); transform-origin:left center;
-        transition:transform .4s cubic-bezier(.2,.8,.2,1) .06s;
+        position:absolute; left:-23px; top:8px; width:16px; height:1px;
+        transform:scaleX(0); transform-origin:left center;
+        background:rgba(0,0,0,.18);
+        transition:transform .35s cubic-bezier(.2,.8,.2,1) .05s;
       }
+      /* Both go back as the scroll does, so nothing is lit ahead of the line. */
       .proj-list-item.pl-on .pl-dot { transform:scale(1); }
       .proj-list-item.pl-on .pl-stem { transform:scaleX(1); }
-      body.dark .pl-track { background:rgba(255,255,255,.14); }
-      body.dark .pl-fill, body.dark .pl-dot { background:var(--d-text); }
+      body.dark .pl-seg { background:rgba(255,255,255,.16); }
+      body.dark .pl-seg-fill { background:rgba(255,255,255,.6); }
+      body.dark .pl-dot { background:var(--d-text); }
       body.dark .pl-stem { background:rgba(255,255,255,.22); }
-      /* Reorder mode collapses the rows to bars; a spine of dots beside
+      /* Reorder mode collapses the rows to bars; a rail of dots beside
          them would just be in the way of the dragging. */
-      .projects-list.pli-compact .pl-track,
+      .projects-list.pli-compact .pl-seg,
       .projects-list.pli-compact .pl-dot,
       .projects-list.pli-compact .pl-stem { display:none; }
       @media (prefers-reduced-motion:reduce) {
@@ -10600,7 +10609,7 @@ let _pliRevealObs = null;
    rather than the pinned sideways track of the component it comes from.
 
    Desktop only: a phone has no room for a rail beside the rows, and the
-   media strips already fill the width. Reduced motion gets the spine
+   media strips already fill the width. Reduced motion gets every piece
    filled and every dot in place, with nothing animating. */
 const PL_MIN_WIDTH = 760;   // a phone never reaches this; a narrow desktop window does
 const PL_MARK = 0.72;      // the scroll's reach, down the viewport
@@ -10611,37 +10620,38 @@ function initBrandTimeline(list) {
   if (!list) return;
   const wide = matchMedia(`(min-width:${PL_MIN_WIDTH}px)`);
   // Built and taken down as the window crosses the width, so a desktop
-  // browser dragged narrow loses the spine (and its listeners) rather than
-  // leaving a rail with nowhere to sit.
+  // browser dragged narrow loses the rail (and its listeners) rather than
+  // leaving one with nowhere to sit.
   const onWidth = () => { if (list.isConnected) initBrandTimeline(list); };
+  const strip = () => {
+    list.querySelectorAll('.pl-seg, .pl-dot, .pl-stem').forEach(e => e.remove());
+    list.querySelectorAll('.pl-on').forEach(e => e.classList.remove('pl-on'));
+  };
   if (!wide.matches) {
     list.classList.remove('pl-timeline');
-    list.querySelectorAll('.pl-track, .pl-dot, .pl-stem').forEach(e => e.remove());
-    list.querySelectorAll('.pl-on').forEach(e => e.classList.remove('pl-on'));
+    strip();
     wide.addEventListener('change', onWidth, { once: true });
     _plOff = () => wide.removeEventListener('change', onWidth);
     return;
   }
   const rows = [...list.querySelectorAll(':scope > .proj-list-item')];
   if (!rows.length) return;
-  list.querySelectorAll('.pl-track, .pl-dot, .pl-stem').forEach(e => e.remove());
+  strip();
 
   list.classList.add('pl-timeline');
-  const track = document.createElement('div');
-  track.className = 'pl-track';
-  const fill = document.createElement('div');
-  fill.className = 'pl-fill';
-  track.appendChild(fill);
-  list.appendChild(track);
-  rows.forEach(row => {
+  // A piece of line per brand rather than one down the whole list, so the
+  // sections sit apart with a gap between them.
+  const segs = rows.map(row => {
     row.insertAdjacentHTML('afterbegin',
+      '<span class="pl-seg" aria-hidden="true"><span class="pl-seg-fill"></span></span>' +
       '<span class="pl-stem" aria-hidden="true"></span><span class="pl-dot" aria-hidden="true"></span>');
+    return { row, seg: row.querySelector('.pl-seg'), fill: row.querySelector('.pl-seg-fill'),
+             dot: row.querySelector('.pl-dot') };
   });
 
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduced) {
-    fill.style.height = '100%';
-    rows.forEach(row => row.classList.add('pl-on'));
+    segs.forEach(s => { s.fill.style.height = '100%'; s.row.classList.add('pl-on'); });
     wide.addEventListener('change', onWidth, { once: true });
     _plOff = () => wide.removeEventListener('change', onWidth);
     return;
@@ -10651,19 +10661,18 @@ function initBrandTimeline(list) {
   let raf = 0;
   const paint = () => {
     raf = 0;
-    const tr = track.getBoundingClientRect();
-    if (!tr.height) return;
     const mark = window.innerHeight * PL_MARK;
-    // Only ever forward: a timeline that unfilled itself on the way back
-    // up would read as undoing the visit rather than recording it.
-    const reached = Math.max(parseFloat(fill.style.height) || 0,
-                             Math.min(100, ((mark - tr.top) / tr.height) * 100));
-    fill.style.height = reached.toFixed(2) + '%';
-    rows.forEach(row => {
-      if (row.classList.contains('pl-on')) return;
-      const dot = row.querySelector('.pl-dot');
-      const r = (dot || row).getBoundingClientRect();
-      if (r.top <= mark) row.classList.add('pl-on');
+    segs.forEach(s => {
+      const r = s.seg.getBoundingClientRect();
+      if (r.height) {
+        // Straight off where the scroll is: back up the page it empties
+        // again, rather than staying filled behind you.
+        const pct = Math.max(0, Math.min(100, ((mark - r.top) / r.height) * 100));
+        s.fill.style.height = pct.toFixed(2) + '%';
+      }
+      const d = s.dot.getBoundingClientRect();
+      // Lit only once the line has come down to it, and out again above.
+      s.row.classList.toggle('pl-on', d.top <= mark);
     });
   };
   const onScroll = () => { if (!raf) raf = requestAnimationFrame(paint); };
