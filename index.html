@@ -3751,7 +3751,22 @@
     }
     /* The band of colour across the top, and the page-coloured face under
        it that carries the title. */
-    .rsv-cover-top { position:relative; height:44%; background:var(--rsv-cover, #1f1f1f); }
+    /* The cover's picture half — the component's illustration slot, with
+       the site's own doodle on it. The drawing is black ink on white, so
+       it is multiplied onto the paper tone rather than sat on it as a
+       white square; dark mode inverts it first and screens it instead. */
+    .rsv-cover-top {
+      position:relative; height:46%; overflow:hidden;
+      background:var(--rsv-cover, #efece5);
+      display:flex; align-items:center; justify-content:center;
+    }
+    .rsv-cover-art {
+      width:100%; height:100%; object-fit:contain;
+      /* The drawing sits in a wide white margin of its own; scaled up so
+         the head fills the cover's picture half rather than floating in it. */
+      transform:scale(1.6);
+      mix-blend-mode:multiply; user-select:none;
+    }
     .rsv-cover-face { position:relative; flex:1; display:flex; background:#fafafa; }
     /* The spine: the component's two gradients, the light one laid over
        the colour and a soft copy of it over the page side. */
@@ -3784,6 +3799,8 @@
       transform:translateZ(calc(-1 * var(--rsv-pg)));
     }
     body.dark .rsv-cover, body.dark .rsv-cover-face { background:#1f1f1f; }
+    body.dark .rsv-cover-top { background:#141414; }
+    body.dark .rsv-cover-art { mix-blend-mode:screen; filter:invert(1); }
     body.dark .rsv-cover::after { border-color:rgba(255,255,255,.14); }
     body.dark .rsv-book-title { color:var(--d-text); }
     body.dark .rsv-book-mark { fill:var(--d-text); }
@@ -5251,7 +5268,10 @@ one keyframe at a time</div>
       <a class="rsv-book" id="rsv-download" href="#" download aria-label="Download the résumé">
         <span class="rsv-book-3d">
           <span class="rsv-cover">
-            <span class="rsv-cover-top"><i class="rsv-bind"></i></span>
+            <span class="rsv-cover-top">
+              <img class="rsv-cover-art" src="/media/site/avatar-doodle.webp" alt="" draggable="false" decoding="async">
+              <i class="rsv-bind"></i>
+            </span>
             <span class="rsv-cover-face">
               <i class="rsv-bind rsv-bind-soft"></i>
               <span class="rsv-cover-text">
