@@ -3713,46 +3713,91 @@
        round avatar beside the name, then its two-up row of 48px rounded
        actions. The card is .pib's material (white, hairline, soft shadow,
        24px corners) so it reads as a pair with the composer above it. */
-    /* Résumé — see the markup at the foot of #view-exp and initResume.
-       The sheet is the file card from 21st.dev's "File Card Collections"
-       (@urmauur) at its own size: 56x72, a 6px radius, a 1px ring, 8px of
-       padding, ruled lines 2px high and rounded, and the extension tab
-       hanging 8px off the right edge at 8px uppercase. Nothing is built
-       around it — the component's card stands on the page as it is, with
-       the name, the size and the two actions stacked under it. */
+    /* Résumé, as a book — 21st.dev's "Book" (@shugar), at its own
+       proportions and numbers: a 49/60 cover, the spine a pair of
+       gradients over the left 8.2% of it, 6.1% of padding with 14.3% down
+       the spine side, the page block 29% of the width standing at the
+       right edge, and the back board that far behind. Hover turns it
+       -20deg about its spine, slides it 8px and scales it 1.066 over
+       250ms, all inside a 900px perspective.
+
+       Pressing the book downloads the file — that is the whole point of
+       it here — so it is a link, and Open underneath shows the file in a
+       tab instead. */
     .rsv { width:100%; margin:22px auto 0; display:flex; flex-direction:column; align-items:center; }
-    .rsv-file { position:relative; }
-    .rsv-sheet {
-      position:relative; z-index:1;
-      width:56px; height:72px; padding:8px; border-radius:6px;
-      display:flex; flex-direction:column; gap:6px;
-      background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.10);
+    .rsv-book {
+      display:block; perspective:900px; text-decoration:none; border-radius:8px;
+      -webkit-tap-highlight-color:transparent;
     }
-    .rsv-pair { display:flex; gap:4px; }
-    .rsv-l { height:2px; border-radius:999px; background:rgba(10,10,10,.10); }
-    .rsv-l.strong { background:rgba(10,10,10,.20); }
-    .rsv-l.w33 { width:33%; }
-    .rsv-l.w50 { width:50%; }
-    .rsv-ext {
-      position:absolute; right:-8px; bottom:6px; z-index:2;
-      padding:2px 6px; border-radius:4px;
-      background:#ef4444; color:#fff;
-      font-size:8px; font-weight:500; line-height:1.4; text-transform:uppercase; letter-spacing:.02em;
+    .rsv-book:focus-visible { outline:2px solid #1a1a1a; outline-offset:6px; }
+    .rsv-book-3d {
+      --rsv-bw:164px;            /* the book's width; everything else follows it */
+      --rsv-pg:calc(var(--rsv-bw) * .29);   /* the page block, the component's 29cqw */
+      position:relative; display:block; width:var(--rsv-bw); aspect-ratio:49/60;
+      transform-style:preserve-3d; transform:rotate(0deg);
+      transition:transform .25s ease;
     }
-    .rsv-name { margin-top:14px; font-size:14px; font-weight:600; color:#1a1a1a; text-align:center; }
+    .rsv-book:hover .rsv-book-3d,
+    .rsv-book:focus-visible .rsv-book-3d { transform:rotateY(-20deg) translateX(-8px) scale(1.066); }
+    .rsv-cover {
+      position:relative; z-index:2; display:flex; flex-direction:column; height:100%; overflow:hidden;
+      border-radius:6px 4px 4px 6px; background:#fafafa;
+      box-shadow:0 1px 1px rgba(0,0,0,.02), 0 4px 8px -4px rgba(0,0,0,.10), 0 16px 24px -8px rgba(0,0,0,.03);
+    }
+    .rsv-cover::after {
+      content:''; position:absolute; inset:0; border-radius:inherit;
+      border:1px solid rgba(0,0,0,.08); box-shadow:inset 0 1px 2px rgba(255,255,255,.3);
+      pointer-events:none;
+    }
+    /* The band of colour across the top, and the page-coloured face under
+       it that carries the title. */
+    .rsv-cover-top { position:relative; height:44%; background:var(--rsv-cover, #1f1f1f); }
+    .rsv-cover-face { position:relative; flex:1; display:flex; background:#fafafa; }
+    /* The spine: the component's two gradients, the light one laid over
+       the colour and a soft copy of it over the page side. */
+    .rsv-bind {
+      position:absolute; top:0; left:0; height:100%; width:8.2%; pointer-events:none;
+      mix-blend-mode:overlay;
+      background:
+        linear-gradient(90deg, transparent, transparent 12%, rgba(255,255,255,.25) 29.25%, transparent 50.5%, transparent 75.25%, rgba(255,255,255,.25) 91%, transparent),
+        linear-gradient(90deg, rgba(0,0,0,.03), rgba(0,0,0,.10) 12%, transparent 30%, rgba(0,0,0,.02) 50%, rgba(0,0,0,.2) 73.5%, rgba(0,0,0,.5) 75.25%, rgba(0,0,0,.15) 85.25%, transparent);
+    }
+    .rsv-bind-soft { mix-blend-mode:normal; opacity:.2; }
+    .rsv-cover-text {
+      display:flex; flex-direction:column; justify-content:space-between;
+      width:100%; padding:6.1%; padding-left:14.3%;
+    }
+    .rsv-book-title {
+      font-family:var(--font-title, inherit); font-size:17px; font-weight:600;
+      line-height:1.25; letter-spacing:-.02em; color:#1a1a1a;
+    }
+    .rsv-book-mark { fill:#1a1a1a; margin:0 0 -2px -3px; transform:scale(.75); transform-origin:left bottom; }
+    /* The pages, standing at the cover's right edge, and the back board. */
+    .rsv-pages {
+      position:absolute; top:3px; left:0; height:calc(100% - 6px); width:calc(var(--rsv-pg) - 2px);
+      background:linear-gradient(90deg, #eaeaea, transparent 70%), linear-gradient(#fff, #fafafa);
+      transform:translateX(calc(var(--rsv-bw) - var(--rsv-pg) / 2 - 3px)) rotateY(90deg) translateX(calc(var(--rsv-pg) / 2));
+    }
+    .rsv-back {
+      position:absolute; left:0; top:0; height:100%; width:var(--rsv-bw);
+      border-radius:6px 4px 4px 6px; background:#ebebeb;
+      transform:translateZ(calc(-1 * var(--rsv-pg)));
+    }
+    body.dark .rsv-cover, body.dark .rsv-cover-face { background:#1f1f1f; }
+    body.dark .rsv-cover::after { border-color:rgba(255,255,255,.14); }
+    body.dark .rsv-book-title { color:var(--d-text); }
+    body.dark .rsv-book-mark { fill:var(--d-text); }
+    body.dark .rsv-pages { background:linear-gradient(90deg, #2a2a2a, transparent 70%), linear-gradient(#1f1f1f, #191919); }
+    body.dark .rsv-back { background:#141414; }
+    body.dark .rsv-book:focus-visible { outline-color:var(--d-text); }
+
+    .rsv-name { margin-top:18px; font-size:14px; font-weight:600; color:#1a1a1a; text-align:center; }
     .rsv-sub { margin-top:2px; font-size:12px; color:#8a8480; }
-    .rsv-acts { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; justify-content:center; }
-    .rsv-btn {
-      display:inline-flex; align-items:center; gap:6px;
-      height:32px; padding:0 12px; border-radius:10px; cursor:pointer; text-decoration:none;
-      border:1px solid rgba(0,0,0,.10); background:rgba(0,0,0,.035); color:#1a1a1a;
-      font-family:inherit; font-size:12.5px; font-weight:500;
-      transition:background .15s, transform .1s;
+    .rsv-open {
+      display:inline-flex; align-items:center; gap:6px; margin-top:10px;
+      font-size:12.5px; color:#8a8480; text-decoration:none;
     }
-    .rsv-btn:hover { background:rgba(0,0,0,.07); }
-    .rsv-btn:active { transform:scale(.99); }
-    .rsv-btn-go { background:#1a1a1a; border-color:#1a1a1a; color:#fff; }
-    .rsv-btn-go:hover { background:#000; }
+    .rsv-open:hover { color:#1a1a1a; text-decoration:underline; }
     /* Attaching is the admin's, and only while editing. */
     .rsv-edit { display:none; gap:8px; justify-content:center; margin-top:12px; }
     #sg-exp.exp-edit-on ~ .rsv .rsv-edit { display:flex; }
@@ -3763,21 +3808,16 @@
     }
     .rsv-ebtn:hover { border-color:rgba(0,0,0,.45); color:#1a1a1a; }
     .rsv-ebtn-del:hover { border-color:#dc2626; color:#dc2626; }
-    /* With nothing attached the sheet is the admin's own slot; a visitor
+    /* With nothing attached the book is the admin's own slot; a visitor
        is shown nothing at all (see paintResume). */
-    .rsv.empty .rsv-file, .rsv.empty .rsv-name, .rsv.empty .rsv-sub { opacity:.45; }
-    .rsv.empty .rsv-acts { display:none; }
-    body.dark .rsv-sheet { background:var(--d-raised); box-shadow:0 0 0 1px rgba(255,255,255,.12); }
-    body.dark .rsv-l { background:rgba(255,255,255,.12); }
-    body.dark .rsv-l.strong { background:rgba(255,255,255,.24); }
+    .rsv.empty .rsv-book, .rsv.empty .rsv-name, .rsv.empty .rsv-sub { opacity:.45; }
+    .rsv.empty .rsv-open { display:none; }
     body.dark .rsv-name { color:var(--d-text); }
-    body.dark .rsv-sub { color:var(--d-text-3); }
-    body.dark .rsv-btn { background:rgba(255,255,255,.06); border-color:var(--d-line); color:var(--d-text); }
-    body.dark .rsv-btn:hover { background:rgba(255,255,255,.12); }
-    body.dark .rsv-btn-go { background:var(--d-text); border-color:var(--d-text); color:var(--d-bg); }
-    body.dark .rsv-btn-go:hover { background:#fff; }
+    body.dark .rsv-sub, body.dark .rsv-open { color:var(--d-text-3); }
+    body.dark .rsv-open:hover { color:var(--d-text); }
     body.dark .rsv-ebtn { border-color:rgba(255,255,255,.22); color:var(--d-text-3); }
     body.dark .rsv-ebtn:hover { border-color:rgba(255,255,255,.45); color:var(--d-text); }
+    @media (prefers-reduced-motion:reduce) { .rsv-book-3d { transition:none; } }
 
     .rm { width:100%; max-width:470px; margin:26px auto 0; }
     .rm-card {
@@ -5202,39 +5242,36 @@ one keyframe at a time</div>
       <div class="tools-stack" id="tools-stack"></div>
     </div>
     <div class="sec-gap" aria-hidden="true"></div>
-    <!-- Résumé — the file card from 21st.dev's "File Card Collections"
-         (@urmauur), used as the component draws it: a 56x72 sheet with a
-         hairline ring and rounded corners, the ruled lines of its default
-         placeholder inside at 2px, and the extension on a tab hanging off
-         the lower right (red, its own colour for a PDF). No card around
-         it — the sheet IS the card. The name and size sit under it and
-         the two ways to take the file under those. -->
+    <!-- Résumé — 21st.dev's "Book" (@shugar): a cover standing in
+         perspective, its spine shading down the left edge, the page block
+         showing along the right, and a turn of the cover towards you on
+         hover. The whole book is the download; Open, under it, shows the
+         file in a tab instead. -->
     <section class="rsv" id="resumeCard" hidden>
-      <div class="rsv-file" aria-hidden="true">
-        <div class="rsv-sheet">
-          <span class="rsv-l w50 strong"></span>
-          <span class="rsv-pair"><span class="rsv-l w33"></span><span class="rsv-l w33"></span></span>
-          <span class="rsv-pair"><span class="rsv-l w50"></span><span class="rsv-l w33"></span></span>
-          <span class="rsv-pair"><span class="rsv-l w33"></span><span class="rsv-l w33"></span></span>
-          <span class="rsv-pair"><span class="rsv-l w33"></span><span class="rsv-l w50"></span></span>
-          <span class="rsv-l w33"></span>
-        </div>
-        <span class="rsv-ext" id="rsv-ext">pdf</span>
-      </div>
+      <a class="rsv-book" id="rsv-download" href="#" download aria-label="Download the résumé">
+        <span class="rsv-book-3d">
+          <span class="rsv-cover">
+            <span class="rsv-cover-top"><i class="rsv-bind"></i></span>
+            <span class="rsv-cover-face">
+              <i class="rsv-bind rsv-bind-soft"></i>
+              <span class="rsv-cover-text">
+                <span class="rsv-book-title">Résumé</span>
+                <svg class="rsv-book-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M21 21H3L12 3Z"/></svg>
+              </span>
+            </span>
+          </span>
+          <span class="rsv-pages" aria-hidden="true"></span>
+          <span class="rsv-back" aria-hidden="true"></span>
+        </span>
+      </a>
 
       <span class="rsv-name" id="rsv-name">Résumé</span>
       <span class="rsv-sub" id="rsv-sub">PDF</span>
 
-      <div class="rsv-acts">
-        <a class="rsv-btn rsv-btn-go" id="rsv-download" href="#" download>
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-          Download
-        </a>
-        <a class="rsv-btn" id="rsv-open" href="#" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-8.5 8.5"/><path d="M19 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1h5"/></svg>
-          Open
-        </a>
-      </div>
+      <a class="rsv-open" id="rsv-open" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-8.5 8.5"/><path d="M19 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1h5"/></svg>
+        Open in a tab
+      </a>
 
       <!-- Admin only, and only in edit mode. -->
       <div class="rsv-edit">
@@ -15524,18 +15561,17 @@ function paintResume() {
   root.classList.toggle('empty', !r);
   const name = document.getElementById('rsv-name');
   const sub = document.getElementById('rsv-sub');
-  const ext = document.getElementById('rsv-ext');
   const dl = document.getElementById('rsv-download');
   const open = document.getElementById('rsv-open');
   if (!r) {
     name.textContent = 'Résumé';
     sub.textContent = 'Nothing attached yet';
-    ext.textContent = 'pdf';
+    dl.removeAttribute('href');
+    open.removeAttribute('href');
     return;
   }
   name.textContent = r.name || 'Résumé';
   sub.textContent = [resumeExt(r.name || '').toUpperCase(), formatBytes(r.size)].filter(Boolean).join(' · ');
-  ext.textContent = resumeExt(r.name || '');
   dl.href = r.url;
   // The name the file is saved under, rather than the uploaded path's.
   dl.setAttribute('download', r.name || 'resume.pdf');
