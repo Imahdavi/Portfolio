@@ -3799,8 +3799,9 @@
       transform:translateZ(calc(-1 * var(--rsv-pg)));
     }
     body.dark .rsv-cover, body.dark .rsv-cover-face { background:#1f1f1f; }
-    body.dark .rsv-cover-top { background:#141414; }
-    body.dark .rsv-cover-art { mix-blend-mode:screen; filter:invert(1); }
+    /* The picture half stays paper in dark mode too: inverted, the drawing
+       read as a white scribble rather than as ink. */
+    body.dark .rsv-cover-top { background:#e9e5dd; }
     body.dark .rsv-cover::after { border-color:rgba(255,255,255,.14); }
     body.dark .rsv-book-title { color:var(--d-text); }
     body.dark .rsv-book-mark { fill:var(--d-text); }
