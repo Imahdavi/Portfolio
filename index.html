@@ -1029,8 +1029,8 @@
        away mid-scrub. */
     #ml-controls {
       position:absolute; left:0; right:0; bottom:8px; margin:0 auto;
-      box-sizing:border-box; width:calc(100% - 16px); max-width:520px;
-      display:none; align-items:center; gap:12px; padding:14px;
+      box-sizing:border-box; width:calc(100% - 16px); max-width:560px;
+      display:none; flex-direction:column; gap:12px; padding:14px 16px 13px;
       border-radius:16px; background:rgba(17,17,17,.6); color:#fff;
       -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
       opacity:0; transform:translateY(6px); pointer-events:none;
@@ -1038,34 +1038,49 @@
     }
     #media-lightbox.has-audio #ml-controls { display:flex; }
     #media-lightbox.ml-ui #ml-controls { opacity:1; transform:none; pointer-events:auto; }
+    .ml-row { display:flex; align-items:center; gap:12px; }
+    .ml-row-main { gap:10px; }
+    #ml-rates { margin-left:auto; display:flex; align-items:center; gap:2px; }
     #ml-controls button {
-      flex:none; width:30px; height:30px; padding:0; border:none; border-radius:9px;
+      flex:none; width:32px; height:32px; padding:0; border:none; border-radius:9px;
       background:transparent; color:#fff; cursor:pointer;
       display:flex; align-items:center; justify-content:center;
+      font-family:inherit; transition:background .18s ease, color .18s ease;
     }
     #ml-controls button:hover { background:rgba(255,255,255,.14); }
     #ml-controls svg { display:block; }
-    #ml-play .ml-i-pause, #ml-play .ml-i-play { fill:currentColor; }
+    #ml-play .ml-i-pause { fill:currentColor; }
     #ml-play .ml-i-play { display:none; }
     #media-lightbox.ml-paused #ml-play .ml-i-pause { display:none; }
     #media-lightbox.ml-paused #ml-play .ml-i-play { display:block; }
-    /* The scrub: a hairline that thickens under the pointer, the loaded
-       length behind the played one, and a knob that only appears once
-       there is something to grab. */
-    #ml-track {
-      position:relative; flex:1; height:16px; cursor:pointer; touch-action:none;
+    /* The speeds, as the component has them: four chips, the chosen one
+       filled. Wide enough for "0.5x", so they don't shuffle as it changes. */
+    #ml-controls .ml-rate {
+      width:auto; min-width:40px; height:28px; padding:0 8px;
+      font-size:12px; font-weight:600; letter-spacing:.01em;
+      color:rgba(255,255,255,.62); border-radius:8px;
+    }
+    #ml-controls .ml-rate:hover { color:#fff; }
+    #ml-controls .ml-rate.on { background:rgba(255,255,255,.16); color:#fff; }
+    /* The scrub: a hairline with the loaded length behind the played one,
+       and a knob that only appears once there is something to grab. The
+       volume slider is the same thing at a quarter of the width. */
+    #ml-track, #ml-vol {
+      position:relative; height:16px; cursor:pointer; touch-action:none;
       display:flex; align-items:center;
     }
-    #ml-track::before {
+    #ml-track { flex:1; }
+    #ml-vol { flex:none; width:96px; }
+    #ml-track::before, #ml-vol::before {
       content:''; position:absolute; left:0; right:0; height:4px; border-radius:2px;
       background:rgba(255,255,255,.22);
     }
-    #ml-buffered, #ml-played {
+    #ml-buffered, #ml-played, #ml-vol-fill {
       position:absolute; left:0; height:4px; border-radius:2px;
       transform-origin:left center; width:100%; transform:scaleX(0);
     }
     #ml-buffered { background:rgba(255,255,255,.3); }
-    #ml-played { background:#fff; }
+    #ml-played, #ml-vol-fill { background:#fff; }
     #ml-knob {
       position:absolute; left:0; width:11px; height:11px; margin-left:-5.5px;
       border-radius:50%; background:#fff; transform:scale(0);
@@ -1074,8 +1089,11 @@
     }
     #ml-track:hover #ml-knob, #ml-track:focus-visible #ml-knob,
     #ml-controls.ml-scrub #ml-knob { transform:scale(1); }
-    #ml-track:focus-visible { outline:none; }
-    #ml-time {
+    #ml-track:focus-visible, #ml-vol:focus-visible { outline:none; }
+    #ml-track:focus-visible::before, #ml-vol:focus-visible::before {
+      box-shadow:0 0 0 2px rgba(255,255,255,.5);
+    }
+    .ml-t {
       flex:none; font-size:11.5px; font-variant-numeric:tabular-nums;
       letter-spacing:.02em; color:rgba(255,255,255,.82); white-space:nowrap;
     }
@@ -1084,13 +1102,20 @@
        dark bar they have to follow currentColor instead. */
     #ml-mute svg [stroke] { stroke:currentColor; }
     #ml-mute svg [fill]:not([fill="none"]) { fill:currentColor; }
-    /* Nothing to show a bar over, and no room for one either. */
-    @media (max-width:520px) {
-      #ml-controls { gap:8px; padding:11px; }
-      #ml-time { font-size:10.5px; }
+    /* Narrow enough that the speeds and a full-length volume slider cannot
+       share a line: the slider gives up its width first. */
+    @media (max-width:560px) {
+      #ml-controls { gap:9px; padding:11px 12px 10px; }
+      .ml-row, .ml-row-main { gap:7px; }
+      #ml-vol { width:56px; }
+      #ml-controls .ml-rate { min-width:34px; padding:0 5px; font-size:11px; }
+      .ml-t { font-size:10.5px; }
+    }
+    @media (max-width:430px) {
+      #ml-vol, #ml-full { display:none; }
     }
     @media (prefers-reduced-motion:reduce) {
-      #ml-controls, #ml-knob { transition:none; }
+      #ml-controls, #ml-knob, #ml-controls button { transition:none; }
     }
     /* On the container, not the img/video: board media carries
        pointer-events:none (the tilt and the overlay controls are driven from
@@ -5715,22 +5740,38 @@ one keyframe at a time</div>
     <!-- Playback, for video only — after 21st.dev's "Video Player"
          (@chetanverma16): a blurred dark bar floating over the foot of the
          clip, in from the edges and rounded, that fades in while the
-         pointer is on the media and out once it settles. -->
+         pointer is on the media and out once it settles. Laid out as the
+         component does: the times either side of the scrub on top, then
+         play, sound and the speeds underneath. -->
     <div id="ml-controls" aria-hidden="true">
-      <button id="ml-play" type="button" aria-label="Pause">
-        <svg class="ml-i-pause" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M8 5h3v14H8zM13 5h3v14h-3z"/></svg>
-        <svg class="ml-i-play" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg>
-      </button>
-      <div id="ml-track" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-        <span id="ml-buffered"></span>
-        <span id="ml-played"></span>
-        <span id="ml-knob"></span>
+      <div class="ml-row ml-row-seek">
+        <span class="ml-t" id="ml-at">0:00</span>
+        <div id="ml-track" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span id="ml-buffered"></span>
+          <span id="ml-played"></span>
+          <span id="ml-knob"></span>
+        </div>
+        <span class="ml-t" id="ml-dur">0:00</span>
       </div>
-      <span id="ml-time">0:00 / 0:00</span>
-      <button id="ml-mute" type="button" aria-label="Unmute"></button>
-      <button id="ml-full" type="button" aria-label="Full screen">
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M16 21h3a2 2 0 002-2v-3M8 21H5a2 2 0 01-2-2v-3"/></svg>
-      </button>
+      <div class="ml-row ml-row-main">
+        <button id="ml-play" type="button" aria-label="Pause">
+          <svg class="ml-i-pause" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M8 5h3v14H8zM13 5h3v14h-3z"/></svg>
+          <svg class="ml-i-play" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M8 5.5l10 6.5-10 6.5z"/></svg>
+        </button>
+        <button id="ml-mute" type="button" aria-label="Unmute"></button>
+        <div id="ml-vol" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+          <span id="ml-vol-fill"></span>
+        </div>
+        <div id="ml-rates" role="group" aria-label="Speed">
+          <button type="button" class="ml-rate" data-rate="0.5">0.5x</button>
+          <button type="button" class="ml-rate" data-rate="1">1x</button>
+          <button type="button" class="ml-rate" data-rate="1.5">1.5x</button>
+          <button type="button" class="ml-rate" data-rate="2">2x</button>
+        </div>
+        <button id="ml-full" type="button" aria-label="Full screen">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M16 21h3a2 2 0 002-2v-3M8 21H5a2 2 0 01-2-2v-3"/></svg>
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -18950,7 +18991,7 @@ void main () {
   // event means the icon states what is true rather than what was true when
   // it opened.
   stage.addEventListener('volumechange', (e) => {
-    if (e.target && e.target.tagName === 'VIDEO') paintMute(e.target);
+    if (e.target && e.target.tagName === 'VIDEO') { paintMute(e.target); paintVol(e.target); }
   }, true);
   if (muteBtn) muteBtn.addEventListener('click', (e) => {
     e.stopPropagation();                       // don't reach the close-on-backdrop
@@ -18958,13 +18999,14 @@ void main () {
     if (!v) return;
     v.muted = !v.muted;
     if (!v.muted && !v.volume) v.volume = 1;   // or unmuting is silent
-    paintMute(v);
+    paintMute(v); paintVol(v);
   });
 
   /* ── The playback bar. Video only, and only in here: on the boards a clip
      is a moving picture in a layout, and a row of controls over every tile
      would be noise. Enlarged, it is something you are actually watching, so
-     it gets somewhere to pause, scrub and go full screen.
+     it gets somewhere to pause, scrub, set the sound and the speed, and go
+     full screen.
 
      Everything reads off the borrowed <video> itself and follows its own
      events, so the bar states what is true even when something else changes
@@ -18976,7 +19018,11 @@ void main () {
   const played = document.getElementById('ml-played');
   const buffered = document.getElementById('ml-buffered');
   const knob = document.getElementById('ml-knob');
-  const timeEl = document.getElementById('ml-time');
+  const atEl = document.getElementById('ml-at');
+  const durEl = document.getElementById('ml-dur');
+  const vol = document.getElementById('ml-vol');
+  const volFill = document.getElementById('ml-vol-fill');
+  const rates = [...document.querySelectorAll('.ml-rate')];
   const fullBtn = document.getElementById('ml-full');
   let uiTimer = 0, scrubbing = false;
 
@@ -19012,7 +19058,8 @@ void main () {
       knob.style.left = (p * 100).toFixed(2) + '%';
       track.setAttribute('aria-valuenow', Math.round(p * 100));
     }
-    timeEl.textContent = clock(v.currentTime) + ' / ' + clock(d);
+    atEl.textContent = clock(v.currentTime);
+    durEl.textContent = clock(d);
     let b = 0;
     try { if (v.buffered.length) b = v.buffered.end(v.buffered.length - 1); } catch (e) {}
     buffered.style.transform = 'scaleX(' + (d ? Math.min(1, b / d) : 0).toFixed(4) + ')';
@@ -19024,7 +19071,7 @@ void main () {
   // A fresh open has no position, no length and no icon state until the
   // element reports one, so the bar is dressed from the element on the way in.
   function paintBar(v) {
-    paintPlay(v); paintTime(v);
+    paintPlay(v); paintTime(v); paintVol(v); paintRate(v);
     if (!v) return;
     scrubbing = false;
     bar.classList.remove('ml-scrub');
@@ -19055,7 +19102,7 @@ void main () {
     knob.style.left = (p * 100).toFixed(2) + '%';
     track.setAttribute('aria-valuenow', Math.round(p * 100));
     v.currentTime = p * v.duration;
-    timeEl.textContent = clock(v.currentTime) + ' / ' + clock(v.duration);
+    atEl.textContent = clock(v.currentTime);
   }
   if (track) {
     track.addEventListener('pointerdown', (e) => {
@@ -19086,6 +19133,70 @@ void main () {
       e.preventDefault(); e.stopPropagation(); showUI(true);
     });
   }
+
+  /* Sound, as a level rather than only on-or-off: the icon still toggles
+     mute, and the slider beside it sets how loud. Muting is left alone
+     while it slides — a clip dragged back up from zero should come back
+     unmuted, and one dragged to zero reads as muted without having to be
+     told twice. */
+  function paintVol(v) {
+    if (!vol) return;
+    const g = !v || v.muted ? 0 : v.volume;
+    volFill.style.transform = 'scaleX(' + g.toFixed(4) + ')';
+    vol.setAttribute('aria-valuenow', Math.round(g * 100));
+  }
+  function setVol(e) {
+    const v = vid(); if (!v) return;
+    const r = vol.getBoundingClientRect();
+    const g = Math.max(0, Math.min(1, (e.clientX - r.left) / (r.width || 1)));
+    v.volume = g;
+    v.muted = g === 0;
+    paintVol(v); paintMute(v);
+  }
+  if (vol) {
+    let sliding = false;
+    vol.addEventListener('pointerdown', (e) => {
+      e.stopPropagation(); e.preventDefault();
+      if (!vid()) return;
+      sliding = true; vol.setPointerCapture(e.pointerId); showUI(true); setVol(e);
+    });
+    vol.addEventListener('pointermove', (e) => { if (sliding) setVol(e); });
+    const endSlide = (e) => {
+      if (!sliding) return;
+      sliding = false;
+      try { vol.releasePointerCapture(e.pointerId); } catch (err) {}
+      showUI();
+    };
+    vol.addEventListener('pointerup', endSlide);
+    vol.addEventListener('pointercancel', endSlide);
+    vol.addEventListener('click', (e) => e.stopPropagation());
+    vol.addEventListener('keydown', (e) => {
+      const v = vid(); if (!v) return;
+      const step = .1;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowUp') v.volume = Math.min(1, v.volume + step);
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') v.volume = Math.max(0, v.volume - step);
+      else return;
+      v.muted = v.volume === 0;
+      paintVol(v); paintMute(v);
+      e.preventDefault(); e.stopPropagation(); showUI(true);
+    });
+  }
+
+  // Speed. The chosen one is filled; the rate is the element's own, so it
+  // goes back to normal with the clip when it is handed back to the board.
+  function paintRate(v) {
+    const r = v ? v.playbackRate : 1;
+    rates.forEach(b => b.classList.toggle('on', Math.abs(parseFloat(b.dataset.rate) - r) < .001));
+  }
+  rates.forEach(b => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const v = vid(); if (!v) return;
+    v.playbackRate = parseFloat(b.dataset.rate);
+    paintRate(v); showUI();
+  }));
+  stage.addEventListener('ratechange', (e) => {
+    if (e.target && e.target.tagName === 'VIDEO') paintRate(e.target);
+  }, true);
 
   // Full screen is taken on the frame rather than the video, so the bar goes
   // with it instead of handing the clip to the browser's own controls.
@@ -19134,7 +19245,7 @@ void main () {
       // unmuting to watch a clip would otherwise leave it unmuted back on the
       // page, still audible after the enlarged view was closed.
       borrowed = { node: src, holder, transform: src.style.transform,
-                   muted: src.muted, volume: src.volume };
+                   muted: src.muted, volume: src.volume, rate: src.playbackRate };
       src.style.transform = '';
       el = src;
     } else {
@@ -19192,6 +19303,8 @@ void main () {
       // Handed back exactly as it was lent, sound included.
       borrowed.node.muted = borrowed.muted;
       borrowed.node.volume = borrowed.volume;
+      // Speed is the enlarged view's business; the tile goes back at its own.
+      borrowed.node.playbackRate = borrowed.rate || 1;
       borrowed.holder.parentNode.replaceChild(borrowed.node, borrowed.holder);
       borrowed = null;
     }
