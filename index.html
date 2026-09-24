@@ -15892,10 +15892,16 @@ document.getElementById('avatarInput').addEventListener('change', async function
   const imgEl = document.querySelector('.pbc-avatar img');
   showUploadToast('Uploading…');
 
-  const ext  = file.name.split('.').pop().toLowerCase();
+  /* Through the same shrinker as card thumbnails. This path used to upload
+     the file as picked, which is how an 868KB PNG came to be drawn in a 46px
+     circle on every visit. 512px covers the avatar at its largest edit-mode
+     scale on a 2x screen; the higher quality keeps a flat white field clean
+     for the dark-mode white-key. */
+  const small = await shrinkThumb(file, 512, 0.9);
+  const ext  = (small.name.split('.').pop() || 'jpg').toLowerCase();
   const path = `uploads/avatar_${Date.now()}_${uid()}.${ext}`;
   try {
-    const url = await tusUpload(file, BUCKET_PORTFOLIO, path, () => {});
+    const url = await tusUpload(small, BUCKET_PORTFOLIO, path, () => {});
     if (imgEl) imgEl.src = url;
     if (!_cachedSettings) _cachedSettings = {};
     if (!_cachedSettings.profile) _cachedSettings.profile = {};
