@@ -7625,6 +7625,10 @@ function _getBrowser() {
 
 async function trackView(project = null) {
   if (document.body.classList.contains('is-admin')) return;
+  // A local preview posts to the same live Worker, so every test run on
+  // localhost used to land in the real numbers — ten "about" views on 14 Sep
+  // were a page being built locally, not visitors.
+  if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
   const country = await _getCountry();
   // Recorded through the Worker into D1. This used to POST straight to
   // Supabase, whose project is dead — so every visit threw an uncaught
@@ -7745,7 +7749,10 @@ async function loadAnalytics(hours, btn) {
 
   // top projects — actual portfolio cards only (exclude the tab pages above)
   const projMap = {};
-  rows.filter(r => r.project && !PAGE_KEYS[r.project]).forEach(r => { projMap[r.project] = (projMap[r.project]||0)+1; });
+  // Boards that exist only: a key no longer in PROJECTS (a removed board, a
+  // page that was only ever a test) would otherwise list under its raw key.
+  rows.filter(r => r.project && !PAGE_KEYS[r.project] && PROJECTS[r.project])
+    .forEach(r => { projMap[r.project] = (projMap[r.project]||0)+1; });
   const topProj = Object.entries(projMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
   document.getElementById('an-projects').innerHTML = topProj.length
     ? topProj.map(([k,v],i) => `<div class="an-proj-item"><div class="an-proj-num">${i+1}</div><div class="an-proj-name" title="${PROJECTS[k]?.name||k}">${PROJECTS[k]?.name||k}</div><div class="an-proj-cnt">${v} views</div></div>`).join('')
