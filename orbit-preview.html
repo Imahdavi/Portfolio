@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orbits — preview</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: #07040a;
+    color: #cfc7d4;
+    font: 400 13px/1.6 ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; padding: 24px;
+  }
+  /* The piece itself: a square stage that carries its own background, so it
+     can be dropped into the site as a block without the page around it
+     having to be dark. */
+  .orb {
+    position: relative; width: min(560px, 92vw); aspect-ratio: 1.1 / 1;
+    border-radius: 18px; overflow: hidden; cursor: crosshair;
+    background:
+      radial-gradient(120% 95% at 50% 55%, #150610 0%, #0a030b 44%, #060208 76%, #030105 100%);
+    box-shadow: 0 30px 80px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.05);
+  }
+  .orb canvas { display: block; width: 100%; height: 100%; }
+  /* A touch of grain over the gradient, or the dark falls off in bands. */
+  .orb::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.055'/%3E%3C/svg%3E");
+  }
+  .note { max-width: 560px; text-align: center; color: #7b7184; }
+  .note b { color: #c9bfd0; font-weight: 600; }
+  kbd {
+    font: inherit; font-size: 11.5px; padding: 1px 6px; border-radius: 6px;
+    background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1);
+  }
+</style>
+</head>
+<body>
+
+<div class="orb" id="orb"><canvas id="c"></canvas></div>
+<p class="note">
+  Three tilted orbits around a bright core, one of them carrying a comet whose
+  tail runs from <b>white</b> through <b>amber</b> into <b>crimson</b>.
+  Move the pointer to tip the whole system; it drifts back on its own.
+</p>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════
+   Orbits.
+
+   The orbits are real circles in 3D — a radius, an inclination and a
+   longitude — projected flat, rather than 2D ellipses drawn to look
+   tilted. That is what lets the far half of each ring dim as it passes
+   behind the core, and what lets the pointer tip the whole system as one
+   thing instead of skewing three separate shapes.
+
+   Everything is drawn additively (globalCompositeOperation 'lighter'),
+   which is what gives the crossings and the comet head their bloom
+   without a blur filter over the whole canvas every frame.
+   ══════════════════════════════════════════════════════════════════════ */
+(function () {
+  const wrap = document.getElementById('orb');
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  const TAU = Math.PI * 2;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let W = 0, H = 0, S = 0;              // css pixels, and the short side
+  function resize() {
+    const r = wrap.getBoundingClientRect();
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    W = r.width; H = r.height; S = Math.min(W, H);
+    cv.width = Math.round(W * dpr);
+    cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  new ResizeObserver(resize).observe(wrap);
+  resize();
+
+  /* Each orbit: radius (as a share of the short side), inclination, the
+     angle its tilt axis is turned to, how fast it spins about its own
+     axis, and how brightly it is drawn. The lit one carries the comet. */
+  const ORBITS = [
+    { r: .40, inc: 1.02, node: -0.62, spin: .045, alpha: .40, lit: true },
+    { r: .34, inc: 1.30, node:  0.75, spin: -.031, alpha: .16 },
+    { r: .27, inc: 1.15, node:  2.05, spin: .024, alpha: .13 },
+  ];
+
+  // A circle in the orbit's own plane, tilted by inc, turned by node, then
+  // dropped flat. z survives the projection and is only used for depth.
+  function point(o, th, tilt) {
+    const cx = Math.cos(th) * o.r, cy = Math.sin(th) * o.r;
+    const ci = Math.cos(o.inc + tilt.x), si = Math.sin(o.inc + tilt.x);
+    let x = cx, y = cy * ci, z = cy * si;
+    const cn = Math.cos(o.node + tilt.y), sn = Math.sin(o.node + tilt.y);
+    const rx = x * cn - y * sn, ry = x * sn + y * cn;
+    return { x: W / 2 + rx * S, y: H / 2 + ry * S * .92, z };
+  }
+
+  // Scattered stars — a few bright four-pointed ones, the rest specks.
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const STARS = Array.from({ length: 46 }, () => ({
+    x: Math.random(), y: Math.random(),
+    s: rand(.6, 1.9), big: Math.random() < .13,
+    ph: Math.random() * TAU, sp: rand(.4, 1.5),
+  }));
+
+  function spark(x, y, s, a) {
+    ctx.globalAlpha = a;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();                       // a four-pointed star, drawn as
+    ctx.moveTo(x, y - s * 3.2);            // two crossing tapers
+    ctx.quadraticCurveTo(x + s * .5, y - s * .5, x + s * 3.2, y);
+    ctx.quadraticCurveTo(x + s * .5, y + s * .5, x, y + s * 3.2);
+    ctx.quadraticCurveTo(x - s * .5, y + s * .5, x - s * 3.2, y);
+    ctx.quadraticCurveTo(x - s * .5, y - s * .5, x, y - s * 3.2);
+    ctx.fill();
+  }
+
+  // Pointer tips the system; it eases back to nothing when the pointer
+  // leaves, so the piece never sits stuck at an angle nobody chose.
+  const tilt = { x: 0, y: 0, tx: 0, ty: 0 };
+  wrap.addEventListener('pointermove', (e) => {
+    const r = wrap.getBoundingClientRect();
+    tilt.tx = ((e.clientY - r.top) / r.height - .5) * .55;
+    tilt.ty = ((e.clientX - r.left) / r.width - .5) * .7;
+  });
+  wrap.addEventListener('pointerleave', () => { tilt.tx = 0; tilt.ty = 0; });
+
+  const TAIL = 3.1;          // how far the comet's tail reaches, in radians
+  const SEGS = 96;           // segments it is drawn in
+  let t0 = performance.now(), t = 0;
+
+  function frame(now) {
+    const dt = Math.min((now - t0) / 1000, .05);   // a stalled tab must not
+    t0 = now; t += dt;                             // teleport the comet
+    tilt.x += (tilt.tx - tilt.x) * Math.min(1, dt * 4);
+    tilt.y += (tilt.ty - tilt.y) * Math.min(1, dt * 4);
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'lighter';
+
+    // Stars first, so everything else sits over them.
+    for (const st of STARS) {
+      const tw = .45 + .55 * (.5 + .5 * Math.sin(t * st.sp + st.ph));
+      const x = st.x * W, y = st.y * H;
+      if (st.big) spark(x, y, st.s * .9, .55 * tw);
+      else {
+        ctx.globalAlpha = .5 * tw;
+        ctx.fillStyle = '#e9dff2';
+        ctx.fillRect(x, y, st.s, st.s);
+      }
+    }
+
+    // The rings. Each is walked as a polyline so the alpha can follow z —
+    // the half behind the core fades, the half in front does not.
+    for (const o of ORBITS) {
+      const spin = t * o.spin * TAU;
+      ctx.lineWidth = o.lit ? 1.15 : .9;
+      ctx.lineCap = 'round';
+      const N = 150;
+      for (let i = 0; i < N; i++) {
+        const a = point(o, spin + (i / N) * TAU, tilt);
+        const b = point(o, spin + ((i + 1) / N) * TAU, tilt);
+        const depth = .5 + .5 * ((a.z + b.z) / 2) / o.r;   // 0 behind, 1 in front
+        ctx.globalAlpha = o.alpha * (.22 + .78 * depth);
+        ctx.strokeStyle = o.lit ? '#e8d7e6' : '#cfc3d8';
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+    }
+
+    // The comet: the lit orbit re-drawn over a stretch behind the head,
+    // white at the head, through amber, into crimson as it thins out.
+    const lit = ORBITS[0];
+    const head = t * .42 * TAU;
+    const spin = t * lit.spin * TAU;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < SEGS; i++) {
+      const u0 = i / SEGS, u1 = (i + 1) / SEGS;          // 0 at head, 1 at tail
+      const a = point(lit, spin + head - u0 * TAIL, tilt);
+      const b = point(lit, spin + head - u1 * TAIL, tilt);
+      const fade = Math.pow(1 - u0, 1.7);                // brightness along it
+      const depth = .5 + .5 * ((a.z + b.z) / 2) / lit.r;
+      /* The colour walks back from the head: a short pale lead, then
+         amber, then crimson for the length of the tail. Amber sits in the
+         first third because that is where the eye reads "hot" — a longer
+         one turns the whole arc orange and loses the pink. */
+      const col = u0 < .045
+        ? [255, 244, 226]
+        : u0 < .28
+          ? [253, 190 - (u0 - .045) * 560, 104 - (u0 - .045) * 200]
+          : [246, 38, 94];
+      ctx.strokeStyle = 'rgb(' + col.map(Math.round).join(',') + ')';
+      ctx.globalAlpha = (.1 + .9 * fade) * (.35 + .65 * depth) * .85;
+      ctx.lineWidth = .7 + 1.7 * fade;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      // A wider, fainter copy of the same stroke is the glow around it —
+      // cheaper and steadier than a blur over the whole canvas.
+      ctx.globalAlpha = (.03 + .15 * fade) * (.3 + .7 * depth);
+      ctx.lineWidth = 3 + 7 * fade;
+      ctx.stroke();
+    }
+
+    // The head, and the core at the middle of it all.
+    const hp = point(lit, spin + head, tilt);
+    glow(hp.x, hp.y, S * .017, 'rgba(255,240,222,.6)');
+
+    const cx = W / 2, cy = H / 2;
+    glow(cx, cy, S * .12, 'rgba(255,228,240,.34)');
+    glow(cx, cy, S * .045, 'rgba(255,255,255,.9)');
+    spark(cx, cy, S * .0075, 1);
+
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    if (!reduce) requestAnimationFrame(frame);
+  }
+
+  function glow(x, y, r, colour) {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, colour);
+    g.addColorStop(.35, colour.replace(/[\d.]+\)$/, '.18)'));
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.globalAlpha = 1; ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

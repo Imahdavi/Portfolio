@@ -180,6 +180,28 @@
        at the top of the page instead of full-viewport, and the avatar
        kept as the site's rounded-square (not the original's oval
        crop), just smaller so it doesn't dominate sitting on the text. ── */
+    /* ── Header orbits ──────────────────────────────────────────────────
+       A slow orrery behind the name: three tilted rings with a comet
+       running one of them. It sits at z-index:-1 inside the header's own
+       stacking context, which puts it under the photo, the name and the
+       spider but still over the page's background.
+
+       It bleeds past the column on both sides and is masked to nothing at
+       its edges, so it reads as light falling behind the header rather
+       than a picture in a box. The drawing itself is theme-aware (see the
+       script): bright and additive on the dark page, dark ink at low
+       opacity on the light one. */
+    .hdr-orbits {
+      position:absolute; z-index:-1; pointer-events:none;
+      left:-22%; top:-18px; width:144%; height:calc(100% + 26px);
+      opacity:.85;
+      -webkit-mask-image:radial-gradient(72% 62% at 50% 48%, #000 34%, transparent 78%);
+      mask-image:radial-gradient(72% 62% at 50% 48%, #000 34%, transparent 78%);
+    }
+    body.dark .hdr-orbits { opacity:1; }
+    /* Editing the header is fiddly enough without something moving under
+       the thing being dragged. */
+    #view-home.home-edit .hdr-orbits { opacity:.25; }
     .profile-header-wrap {
       position:relative;
       display:flex; flex-direction:column; align-items:center;
@@ -5102,6 +5124,9 @@
   <div class="view active" id="view-home">
 
     <div class="profile-header-wrap">
+      <!-- The orbits behind the name (see "Header orbits" near the foot of
+           the file). Purely decorative, sized and painted from script. -->
+      <canvas class="hdr-orbits" id="hdrOrbits" aria-hidden="true"></canvas>
       <div class="site-spider" aria-hidden="true">
         <svg class="spider-rope" overflow="visible">
           <path class="rope-path" d="M10,0 L10,30"/>
@@ -18919,6 +18944,228 @@ void main () {
   // the element under it has to either follow or give up.
   window.addEventListener('scroll', () => { if (activeEl) { pointer.target = 0; kick(); } }, true);
   window.addEventListener('resize', () => { if (activeEl) stop(); });
+})();
+
+
+/* ══ Header orbits ═══════════════════════════════════════════════════════
+   A small orrery behind the name: three rings with a comet running one of
+   them. The canvas is .hdr-orbits, sized to the header and masked to
+   nothing at its edges (see the CSS).
+
+   The rings are real circles in 3D — a radius, an inclination and a
+   longitude, projected flat — rather than 2D ellipses drawn to look
+   tilted. That is what lets each ring dim as it passes behind the middle,
+   and what lets the whole system tip together when the pointer moves
+   across the header instead of three shapes skewing separately.
+
+   Both themes are drawn from the same geometry but not the same way. Dark
+   is additive: strokes pile into light where they cross, which is where
+   the glow comes from and why no blur filter is needed. Light cannot work
+   that way — adding light to white paper gives white — so there it is
+   drawn as ordinary ink: thin grey rings and a warm comet, at an opacity
+   that keeps it behind the writing.
+
+   It runs only while Home is the open view and the tab is in front: a
+   header nobody is looking at should not be animating. ══════════════ */
+(function () {
+  const cv = document.getElementById('hdrOrbits');
+  if (!cv || !cv.getContext) return;
+  const ctx = cv.getContext('2d');
+  const host = cv.parentElement;
+  const TAU = Math.PI * 2;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let W = 0, H = 0, S = 0;
+  function resize() {
+    const r = cv.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // The rings are sized to the header's height rather than its width, so
+    // the whole system fits inside the canvas instead of being cut off at
+    // the top and bottom on a wide screen.
+    W = r.width; H = r.height; S = Math.min(W, H * 1.08);
+    cv.width = Math.round(W * dpr);
+    cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(cv);
+  window.addEventListener('resize', resize);
+
+  /* Radius as a share of the short side, inclination, the angle the tilt
+     is turned to, how fast it turns on its own axis, how brightly it is
+     drawn. The first one carries the comet. */
+  const ORBITS = [
+    { r: .40, inc: 1.02, node: -0.62, spin:  .045, alpha: .40, lit: true },
+    { r: .34, inc: 1.30, node:  0.75, spin: -.031, alpha: .16 },
+    { r: .27, inc: 1.15, node:  2.05, spin:  .024, alpha: .13 },
+  ];
+
+  function point(o, th, tx, ty) {
+    const cx = Math.cos(th) * o.r, cy = Math.sin(th) * o.r;
+    const ci = Math.cos(o.inc + tx), si = Math.sin(o.inc + tx);
+    const x = cx, y = cy * ci, z = cy * si;
+    const cn = Math.cos(o.node + ty), sn = Math.sin(o.node + ty);
+    return { x: W / 2 + (x * cn - y * sn) * S,
+             y: H / 2 + (x * sn + y * cn) * S * .92,
+             z };
+  }
+
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const STARS = Array.from({ length: 26 }, () => ({
+    x: Math.random(), y: Math.random(),
+    s: rand(.6, 1.7), big: Math.random() < .14,
+    ph: Math.random() * TAU, sp: rand(.4, 1.4),
+  }));
+
+  // A four-pointed star, drawn as two crossing tapers.
+  function spark(x, y, s, a, ink) {
+    ctx.globalAlpha = a;
+    ctx.fillStyle = ink;
+    ctx.beginPath();
+    ctx.moveTo(x, y - s * 3.2);
+    ctx.quadraticCurveTo(x + s * .5, y - s * .5, x + s * 3.2, y);
+    ctx.quadraticCurveTo(x + s * .5, y + s * .5, x, y + s * 3.2);
+    ctx.quadraticCurveTo(x - s * .5, y + s * .5, x - s * 3.2, y);
+    ctx.quadraticCurveTo(x - s * .5, y - s * .5, x, y - s * 3.2);
+    ctx.fill();
+  }
+  function glow(x, y, r, colour) {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, colour);
+    g.addColorStop(.35, colour.replace(/[\d.]+\)$/, '.16)'));
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.globalAlpha = 1; ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  }
+
+  /* The pointer tips the system while it is over the header, and it eases
+     back to level when the pointer leaves — the piece should never be left
+     stuck at an angle nobody chose. */
+  let tx = 0, ty = 0, tgx = 0, tgy = 0;
+  host.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    const r = host.getBoundingClientRect();
+    tgx = ((e.clientY - r.top) / r.height - .5) * .34;
+    tgy = ((e.clientX - r.left) / r.width - .5) * .5;
+  });
+  host.addEventListener('pointerleave', () => { tgx = 0; tgy = 0; });
+
+  const TAIL = 3.1, SEGS = 84;
+  let t = 0, last = performance.now(), running = false;
+
+  function draw(dt) {
+    t += dt;
+    tx += (tgx - tx) * Math.min(1, dt * 4);
+    ty += (tgy - ty) * Math.min(1, dt * 4);
+    const dark = document.body.classList.contains('dark');
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+    ctx.lineCap = 'round';
+
+    for (const st of STARS) {
+      const tw = .45 + .55 * (.5 + .5 * Math.sin(t * st.sp + st.ph));
+      const x = st.x * W, y = st.y * H;
+      if (dark && st.big) spark(x, y, st.s * .9, .5 * tw, '#fff');
+      else {
+        ctx.globalAlpha = (dark ? .45 : .18) * tw;
+        ctx.fillStyle = dark ? '#e9dff2' : '#6b6560';
+        ctx.fillRect(x, y, st.s, st.s);
+      }
+    }
+
+    for (const o of ORBITS) {
+      const spin = t * o.spin * TAU;
+      ctx.lineWidth = o.lit ? 1.05 : .85;
+      const N = 132;
+      for (let i = 0; i < N; i++) {
+        const a = point(o, spin + (i / N) * TAU, tx, ty);
+        const b = point(o, spin + ((i + 1) / N) * TAU, tx, ty);
+        const depth = .5 + .5 * ((a.z + b.z) / 2) / o.r;   // 0 behind, 1 in front
+        ctx.globalAlpha = o.alpha * (dark ? 1 : .9) * (.22 + .78 * depth);
+        ctx.strokeStyle = dark ? '#e8d7e6' : '#38323a';
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+    }
+
+    // The comet: the lit ring drawn again over a stretch behind the head,
+    // the colour walking back from a pale lead through amber into crimson.
+    const lit = ORBITS[0];
+    const head = t * .42 * TAU, spin = t * lit.spin * TAU;
+    for (let i = 0; i < SEGS; i++) {
+      const u = i / SEGS;
+      const a = point(lit, spin + head - u * TAIL, tx, ty);
+      const b = point(lit, spin + head - ((i + 1) / SEGS) * TAIL, tx, ty);
+      const fade = Math.pow(1 - u, 1.7);
+      const depth = .5 + .5 * ((a.z + b.z) / 2) / lit.r;
+      const col = u < .045
+        ? (dark ? [255, 244, 226] : [255, 170, 90])
+        : u < .28
+          ? [253, 190 - (u - .045) * 560, 104 - (u - .045) * 200]
+          : [246, 38, 94];
+      ctx.strokeStyle = 'rgb(' + col.map(Math.round).join(',') + ')';
+      ctx.globalAlpha = (.1 + .9 * fade) * (.35 + .65 * depth) * (dark ? .85 : .88);
+      ctx.lineWidth = .7 + 1.7 * fade;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      // A wider, fainter copy of the same stroke is the glow around it,
+      // which costs far less than blurring the canvas every frame.
+      ctx.globalAlpha = (.03 + .15 * fade) * (.3 + .7 * depth) * (dark ? 1 : .5);
+      ctx.lineWidth = 3 + 7 * fade;
+      ctx.stroke();
+    }
+
+    const hp = point(lit, spin + head, tx, ty);
+    glow(hp.x, hp.y, S * .017, dark ? 'rgba(255,240,222,.6)' : 'rgba(255,168,96,.5)');
+
+    const cx = W / 2, cy = H / 2;
+    if (dark) {
+      glow(cx, cy, S * .11, 'rgba(255,228,240,.3)');
+      glow(cx, cy, S * .04, 'rgba(255,255,255,.85)');
+      spark(cx, cy, S * .007, 1, '#fff');
+    } else {
+      glow(cx, cy, S * .07, 'rgba(255,190,140,.35)');
+      spark(cx, cy, S * .0055, .5, '#3a3338');
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function alive() {
+    return !document.hidden && isHomeVisible();
+  }
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, .05);  // a backgrounded tab must
+    last = now;                                     // not teleport the comet
+    if (!alive()) { running = false; return; }
+    draw(dt);
+    requestAnimationFrame(frame);
+  }
+  function start() {
+    if (running || reduce) return;
+    if (!W) resize();
+    if (!alive()) return;
+    running = true; last = performance.now();
+    requestAnimationFrame(frame);
+  }
+  /* Nothing drives the loop while Home is closed or the tab is away, so it
+     has to be woken by whatever brings the page back: the tab returning,
+     the theme or edit mode flipping a class on <body>, or Home becoming
+     the open view again — which is a class on the view itself, however it
+     was reached (the nav, the back button, a link). */
+  document.addEventListener('visibilitychange', start);
+  window.addEventListener('focus', start);
+  const wake = () => { if (reduce) { resize(); draw(0); } else start(); };
+  new MutationObserver(wake).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  const home = document.getElementById('view-home');
+  if (home) new MutationObserver(() => setTimeout(wake, 40))
+    .observe(home, { attributes: true, attributeFilter: ['class'] });
+
+  resize();
+  if (reduce) draw(0); else start();
+  // The header slides in on load, so measure again once that has settled
+  // or the canvas keeps the size it had halfway through the animation.
+  setTimeout(() => { resize(); start(); }, 700);
 })();
 
 /* ── Click-to-enlarge ──────────────────────────────────────
