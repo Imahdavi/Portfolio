@@ -6816,7 +6816,9 @@ const UI_SOUND_MAP = [
      Clicks stay where they already were: the pill and the icons do
      nothing on click, and the book has the browser's download. */
   { sel: '.brand-grid-label-pill', hover: 'release', click: null, vol: UI_SOUND_QUIET },
-  { sel: '.tool-card',             hover: 'toggle',  click: null, vol: UI_SOUND_QUIET },
+  // The icons clack a step quieter again (0.2): there is a fan of them,
+  // so the cursor crosses several on the way to one.
+  { sel: '.tool-card',             hover: 'toggle',  click: null, vol: 0.5 },
   { sel: '.rsv-book',              hover: 'tick',    click: null, vol: UI_SOUND_QUIET },
   // The Grid/Projects switch. A tab, so it clacks like one.
   { sel: '.vsw-opt',          hover: 'tick', click: 'toggle'  },
