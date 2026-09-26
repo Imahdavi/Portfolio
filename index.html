@@ -193,7 +193,7 @@
        opacity on the light one. */
     .hdr-orbits {
       position:absolute; z-index:-1; pointer-events:none;
-      left:-22%; top:-18px; width:144%; height:calc(100% + 26px);
+      left:-22%; top:-38px; width:144%; height:calc(100% + 76px);
       opacity:.85;
       -webkit-mask-image:radial-gradient(72% 62% at 50% 48%, #000 34%, transparent 78%);
       mask-image:radial-gradient(72% 62% at 50% 48%, #000 34%, transparent 78%);
@@ -18975,20 +18975,43 @@ void main () {
   const TAU = Math.PI * 2;
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  let W = 0, H = 0, S = 0;
+  /* The system is centred on the name and sized from it, so the title
+     reads as the thing being orbited rather than something with a
+     decoration above it. The rings are then squashed vertically: at their
+     true proportion, a circle wide enough to pass outside the name would
+     be about as tall as the whole page above the works. */
+  let W = 0, H = 0, S = 0, CX = 0, CY = 0;
+  const VSQ = .46;
   function resize() {
     const r = cv.getBoundingClientRect();
     if (!r.width || !r.height) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    // The rings are sized to the header's height rather than its width, so
-    // the whole system fits inside the canvas instead of being cut off at
-    // the top and bottom on a wide screen.
-    W = r.width; H = r.height; S = Math.min(W, H * 1.08);
+    W = r.width; H = r.height;
+    // The visible title is the display copy — .profile-name itself is the
+    // editable original and is display:none while the page is being read.
+    const name = host.querySelector('.profile-name-display') || host.querySelector('.profile-name-block');
+    const n = name && name.getBoundingClientRect();
+    if (n && n.width) {
+      CX = n.left + n.width / 2 - r.left;
+      CY = n.top + n.height / 2 - r.top;
+      // r = .40 on the widest ring, so this is a ring half as wide again
+      // as the name it goes round.
+      S = Math.max(260, Math.min(W * .92, n.width * 1.9));
+    } else {
+      CX = W / 2; CY = H / 2; S = Math.min(W, H * 1.08);
+    }
     cv.width = Math.round(W * dpr);
     cv.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-  if (window.ResizeObserver) new ResizeObserver(resize).observe(cv);
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(resize);
+    ro.observe(cv);
+    // The name arrives from the backend seconds after first paint and can
+    // be a different length, which moves the middle of the system.
+    const nm = host.querySelector('.profile-name-display');
+    if (nm) ro.observe(nm);
+  }
   window.addEventListener('resize', resize);
 
   /* Radius as a share of the short side, inclination, the angle the tilt
@@ -19005,8 +19028,8 @@ void main () {
     const ci = Math.cos(o.inc + tx), si = Math.sin(o.inc + tx);
     const x = cx, y = cy * ci, z = cy * si;
     const cn = Math.cos(o.node + ty), sn = Math.sin(o.node + ty);
-    return { x: W / 2 + (x * cn - y * sn) * S,
-             y: H / 2 + (x * sn + y * cn) * S * .92,
+    return { x: CX + (x * cn - y * sn) * S,
+             y: CY + (x * sn + y * cn) * S * VSQ,
              z };
   }
 
@@ -19117,15 +19140,11 @@ void main () {
     const hp = point(lit, spin + head, tx, ty);
     glow(hp.x, hp.y, S * .017, dark ? 'rgba(255,240,222,.6)' : 'rgba(255,168,96,.5)');
 
-    const cx = W / 2, cy = H / 2;
-    if (dark) {
-      glow(cx, cy, S * .11, 'rgba(255,228,240,.3)');
-      glow(cx, cy, S * .04, 'rgba(255,255,255,.85)');
-      spark(cx, cy, S * .007, 1, '#fff');
-    } else {
-      glow(cx, cy, S * .07, 'rgba(255,190,140,.35)');
-      spark(cx, cy, S * .0055, .5, '#3a3338');
-    }
+    /* No bright core any more: the name is what sits at the middle now, so
+       this is only the light it would be standing in — a wide, soft bloom
+       behind the letters, and nothing sharp enough to read through them. */
+    if (dark) glow(CX, CY, S * .17, 'rgba(255,224,238,.17)');
+    else glow(CX, CY, S * .15, 'rgba(255,186,138,.16)');
 
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
