@@ -6795,6 +6795,10 @@ function bind(root) {
    on hover; everything else waits for a click. Sounds are chosen for
    what the element does — the nav knocks, toggles clack, entering a project
    turns a page, going back is a droplet. */
+/* Cuelume's UI recipes all sit at masterGain 0.4, so this is what a 0.3
+   sound costs: a multiplier, applied per entry, rather than editing a
+   recipe that other elements share. */
+const UI_SOUND_QUIET = 0.75;
 const UI_SOUND_MAP = [
   // Click deliberately omitted — this button flips which sound world is
   // live, so toggleWebSound() plays its own click at the point in that
@@ -6804,6 +6808,16 @@ const UI_SOUND_MAP = [
   // Hovering the bottom nav knocks rather than ticks: a duller, lower
   // sound to sweep a row of buttons with.
   { sel: '.nav-btn',          hover: 'press', click: 'scan'   },
+  /* The Experience page, which is three things to hover rather than a row
+     of controls: the wall's own heading, the apps I work in, and the
+     résumé. They speak at 0.3 against the nav's 0.4 — a page you are
+     reading down should be quieter than the bar you steer with. The
+     multiplier gets there from each recipe's own 0.4 (see UI_SOUND_QUIET).
+     Clicks stay where they already were: the pill and the icons do
+     nothing on click, and the book has the browser's download. */
+  { sel: '.brand-grid-label-pill', hover: 'release', click: null, vol: UI_SOUND_QUIET },
+  { sel: '.tool-card',             hover: 'toggle',  click: null, vol: UI_SOUND_QUIET },
+  { sel: '.rsv-book',              hover: 'tick',    click: null, vol: UI_SOUND_QUIET },
   // The Grid/Projects switch. A tab, so it clacks like one.
   { sel: '.vsw-opt',          hover: 'tick', click: 'toggle'  },
   { sel: '.social-btn',       hover: 'tick', click: 'pulse'   },
@@ -6868,7 +6882,7 @@ const UI_SOUND_HOVER_GAP = 150;
     const now = performance.now();
     if (now - lastHover < UI_SOUND_HOVER_GAP) return;
     lastHover = now;
-    window.Cuelume.play(entry.hover);
+    window.Cuelume.play(entry.hover, entry.vol ? { volume: entry.vol } : undefined);
   }, { passive: true });
 
   /* Click sounds fire at different moments per input type, because
@@ -6889,8 +6903,8 @@ const UI_SOUND_HOVER_GAP = 150;
     if (silenced() || !window.Cuelume) return;
     const entry = entryFor(e.target);
     if (!entry || !entry.click) { tap = null; return; }
-    if (e.pointerType === 'mouse') { tap = null; window.Cuelume.play(entry.click); return; }
-    tap = { id: e.pointerId, x: e.clientX, y: e.clientY, sound: entry.click };
+    if (e.pointerType === 'mouse') { tap = null; window.Cuelume.play(entry.click, entry.vol ? { volume: entry.vol } : undefined); return; }
+    tap = { id: e.pointerId, x: e.clientX, y: e.clientY, sound: entry.click, vol: entry.vol };
   }, { passive: true });
 
   document.addEventListener('pointerup', e => {
@@ -6900,7 +6914,7 @@ const UI_SOUND_HOVER_GAP = 150;
     if (silenced() || !window.Cuelume) return;
     const dx = e.clientX - pending.x, dy = e.clientY - pending.y;
     if (dx * dx + dy * dy > TAP_SLOP_PX * TAP_SLOP_PX) return;
-    window.Cuelume.play(pending.sound);
+    window.Cuelume.play(pending.sound, pending.vol ? { volume: pending.vol } : undefined);
   }, { passive: true });
 
   // Fired when the browser takes the gesture over for scrolling, which
