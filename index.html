@@ -6793,7 +6793,7 @@ function bind(root) {
    Second, the palette is deliberately thin. A hover sound on everything
    is exhausting within a minute, so only navigation-shaped things speak
    on hover; everything else waits for a click. Sounds are chosen for
-   what the element does — nav ticks, toggles clack, entering a project
+   what the element does — the nav knocks, toggles clack, entering a project
    turns a page, going back is a droplet. */
 const UI_SOUND_MAP = [
   // Click deliberately omitted — this button flips which sound world is
@@ -6801,7 +6801,9 @@ const UI_SOUND_MAP = [
   // flip where the sound can actually be heard.
   { sel: '#sound-toggle-btn', hover: 'tick', click: null      },
   { sel: '#bg-toggle-btn',    hover: 'tick', click: 'toggle'  },
-  { sel: '.nav-btn',          hover: 'tick', click: 'scan'    },
+  // Hovering the bottom nav knocks rather than ticks: a duller, lower
+  // sound to sweep a row of buttons with.
+  { sel: '.nav-btn',          hover: 'press', click: 'scan'   },
   // The Grid/Projects switch. A tab, so it clacks like one.
   { sel: '.vsw-opt',          hover: 'tick', click: 'toggle'  },
   { sel: '.social-btn',       hover: 'tick', click: 'pulse'   },
