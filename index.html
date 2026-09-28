@@ -211,9 +211,10 @@
     /* Above the name block (z-index 2) and the avatar inside it. */
     .hdr-orbits-front { z-index:3; }
     body.dark .hdr-orbits { opacity:1; }
-    /* Editing the header is fiddly enough without something moving under
-       the thing being dragged. */
-    #view-home.home-edit .hdr-orbits { opacity:.25; }
+    /* Quieter while the header is being edited — something moving under
+       the thing being dragged is a nuisance — but not so quiet that the
+       colour picker in that same panel has nothing to show. */
+    #view-home.home-edit .hdr-orbits { opacity:.6; }
     .profile-header-wrap {
       position:relative;
       display:flex; flex-direction:column; align-items:center;
@@ -4860,6 +4861,10 @@
       width:32px; height:32px; padding:0; margin-left:auto; flex:none;
       border:1px solid #e4e4e7; border-radius:8px; cursor:pointer;
     }
+    /* Two swatches where the nav row has one, side by side at its right
+       edge — the picker carries its own hex field, so neither needs one. */
+    .orb-color-pair { margin-left:auto; flex:none; display:flex; gap:8px; }
+    .orb-color-pair .nav-color-input { margin-left:0; }
     .nav-color-hex {
       width:84px; flex:none; font-size:12px; color:#3f3f46; font-variant-numeric:tabular-nums;
       font-family:var(--font-name), monospace; text-transform:uppercase;
@@ -5270,6 +5275,16 @@ one keyframe at a time</div>
           <span class="efc-text"><span class="efc-name nav-color-lbl">Nav glow colour</span><span class="efc-note">For the theme showing now</span></span>
           <button type="button" class="nav-color-input" id="navColorInput" aria-label="Choose the nav glow colour" style="background:#1a1a1a"></button>
           <input type="text" class="nav-color-hex" id="navColorHex" value="#1a1a1a" maxlength="7" spellcheck="false" autocapitalize="off" autocomplete="off">
+        </div>
+        <!-- The header orbits, in whatever two colours you like: the ring
+             ink and the comet. Per theme, like the nav glow above. -->
+        <div class="efc-tile efc-wide nav-color-ctrl" id="orbitColorCtrl">
+          <span class="efc-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(-25 12 12)"/><circle cx="12" cy="12" r="3"/></svg></span>
+          <span class="efc-text"><span class="efc-name nav-color-lbl">Orbit colours</span><span class="efc-note">Comet and rings, for the theme showing now</span></span>
+          <span class="orb-color-pair">
+            <button type="button" class="nav-color-input" id="orbitCometInput" title="Comet" aria-label="Choose the comet colour"></button>
+            <button type="button" class="nav-color-input" id="orbitRingInput" title="Rings" aria-label="Choose the ring colour"></button>
+          </span>
         </div>
       </div>
     </section>
@@ -7001,6 +7016,7 @@ function toggleDarkMode() {
     const on = !document.body.classList.contains('dark');
     document.body.classList.toggle('dark', on);
     if (typeof applyNavGlowColor === 'function') applyNavGlowColor();   // each theme has its own glow colour
+    if (typeof applyOrbitColours === 'function') applyOrbitColours();   // and its own orbit colours
     try { localStorage.setItem('pf_theme', on ? 'dark' : 'light'); } catch (e) {}
   };
   const btn = document.getElementById('bg-toggle-btn');
@@ -8377,6 +8393,7 @@ async function loadSettings() {
 
     // Nav glow colour, per theme — see applyNavGlowColor.
     applyNavGlowColor();
+    if (typeof applyOrbitColours === 'function') applyOrbitColours();
 
     // Name, photo and address on the Ticket page's card follow settings.
     { const rm = document.getElementById('reachMe'); if (rm && rm._paint) rm._paint(); }
@@ -17392,6 +17409,59 @@ function applyNavGlowColor() {
   if (cHex) { cHex.value = hex; cHex.classList.remove('invalid'); }
 }
 
+
+/* ── The header orbits' two colours ──────────────────────────────────────
+   The comet and the ring ink, each stored per theme like the nav glow
+   above: what suits the dark page is rarely what suits the light one.
+
+   _orbitPreview holds whatever the wheel is currently showing, so the
+   drawing follows the pointer around the picker and falls back to the
+   saved value the moment the picker closes. ── */
+const ORBIT_DEFAULT = {
+  comet: { light: '#f6265e', dark: '#f6265e' },
+  ring:  { light: '#38323a', dark: '#e8d7e6' },
+};
+const _orbitPreview = { comet: null, ring: null };
+function orbitKey(which) {
+  const dark = document.body.classList.contains('dark');
+  return which === 'comet'
+    ? (dark ? 'orbitCometColorDark' : 'orbitCometColor')
+    : (dark ? 'orbitRingColorDark' : 'orbitRingColor');
+}
+function orbitColor(which) {
+  if (_orbitPreview[which]) return _orbitPreview[which];
+  const s = _cachedSettings || {};
+  const dark = document.body.classList.contains('dark');
+  return s[orbitKey(which)] || ORBIT_DEFAULT[which][dark ? 'dark' : 'light'];
+}
+// Keeps the two swatches showing what is actually in force — including
+// after a theme flip, which changes which pair of settings is in use.
+function applyOrbitColours() {
+  const c = document.getElementById('orbitCometInput');
+  const r = document.getElementById('orbitRingInput');
+  if (c) c.style.background = orbitColor('comet');
+  if (r) r.style.background = orbitColor('ring');
+}
+document.addEventListener('DOMContentLoaded', () => {
+  [['comet', 'orbitCometInput'], ['ring', 'orbitRingInput']].forEach(([which, id]) => {
+    const swatch = document.getElementById(id);
+    if (!swatch) return;
+    swatch.addEventListener('pointerdown', (e) => e.stopPropagation());
+    swatch.addEventListener('click', () => {
+      openColorPicker(swatch, orbitColor(which), (hex, committed) => {
+        _orbitPreview[which] = hex;          // the drawing follows the wheel
+        swatch.style.background = hex;
+        if (!committed) return;
+        if (!_cachedSettings) _cachedSettings = {};
+        _cachedSettings[orbitKey(which)] = hex;
+        _orbitPreview[which] = null;         // saved; back to reading settings
+        saveSettings();
+      });
+    });
+  });
+  applyOrbitColours();
+});
+
 function _hexToRgbTriplet(hex) {
   const h = hex.replace('#', '');
   const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
@@ -19101,6 +19171,35 @@ void main () {
   });
   host.addEventListener('pointerleave', () => { tgx = 0; tgy = 0; });
 
+  /* The two colours the piece is drawn in, and the comet's ramp built
+     from one of them: near-white at the head, a tint of the colour
+     through the middle, the colour itself down the tail. Rebuilt only
+     when the colour or the theme actually changes — this is read once per
+     segment, 84 times a frame. */
+  let ink = null, inkKey = '';
+  const hexRgb = (h) => {
+    const s = h.replace('#', '');
+    return [parseInt(s.slice(0, 2), 16), parseInt(s.slice(2, 4), 16), parseInt(s.slice(4, 6), 16)];
+  };
+  const mix = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+  function inks(dark) {
+    const comet = typeof orbitColor === 'function' ? orbitColor('comet') : '#f6265e';
+    const ring = typeof orbitColor === 'function' ? orbitColor('ring') : (dark ? '#e8d7e6' : '#38323a');
+    const key = comet + ring + dark;
+    if (key === inkKey) return ink;
+    inkKey = key;
+    const tail = hexRgb(comet);
+    const white = [255, 252, 246];
+    ink = { ring, tail, mid: mix(tail, white, .5), head: mix(tail, white, .9) };
+    return ink;
+  }
+  function cometColour(k, u) {
+    const c = u < .05 ? k.head
+      : u < .3 ? mix(k.head, k.mid, (u - .05) / .25)
+      : mix(k.mid, k.tail, Math.min(1, (u - .3) / .25));
+    return 'rgb(' + Math.round(c[0]) + ',' + Math.round(c[1]) + ',' + Math.round(c[2]) + ')';
+  }
+
   const TAIL = 3.1, SEGS = 84;
   let t = 0, last = performance.now(), running = false;
 
@@ -19109,6 +19208,7 @@ void main () {
     tx += (tgx - tx) * Math.min(1, dt * 4);
     ty += (tgy - ty) * Math.min(1, dt * 4);
     const dark = document.body.classList.contains('dark');
+    const k = inks(dark);
 
     for (const g of both) {
       g.clearRect(0, 0, W, H);
@@ -19141,7 +19241,7 @@ void main () {
         const depth = .5 + .5 * mz / o.r;           // 0 behind, 1 in front
         g.lineWidth = o.lit ? 1.05 : .85;
         g.globalAlpha = o.alpha * (dark ? 1 : .9) * (.22 + .78 * depth);
-        g.strokeStyle = dark ? '#e8d7e6' : '#38323a';
+        g.strokeStyle = k.ring;
         g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
       }
     }
@@ -19158,12 +19258,7 @@ void main () {
       const g = mz < 0 ? back : front;
       const fade = Math.pow(1 - u, 1.7);
       const depth = .5 + .5 * mz / lit.r;
-      const col = u < .045
-        ? (dark ? [255, 244, 226] : [255, 170, 90])
-        : u < .28
-          ? [253, 190 - (u - .045) * 560, 104 - (u - .045) * 200]
-          : [246, 38, 94];
-      g.strokeStyle = 'rgb(' + col.map(Math.round).join(',') + ')';
+      g.strokeStyle = cometColour(k, u);
       g.globalAlpha = (.1 + .9 * fade) * (.35 + .65 * depth) * (dark ? .85 : .88);
       g.lineWidth = .7 + 1.7 * fade;
       g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
@@ -19176,11 +19271,11 @@ void main () {
 
     const hp = point(lit, spin + head, tx, ty);
     glow(hp.z < 0 ? back : front, hp.x, hp.y, S * .017,
-         dark ? 'rgba(255,240,222,.6)' : 'rgba(255,168,96,.5)');
+         'rgba(' + k.head.map(Math.round).join(',') + ',' + (dark ? .6 : .5) + ')');
 
     /* The light the photo stands in — on the back layer only, so it never
        washes over the picture or the letters it overlaps. */
-    glow(back, CX, CY, S * .34, dark ? 'rgba(255,224,238,.15)' : 'rgba(255,186,138,.15)');
+    glow(back, CX, CY, S * .34, 'rgba(' + k.mid.map(Math.round).join(',') + ',.15)');
 
     for (const g of both) {
       g.globalAlpha = 1;
