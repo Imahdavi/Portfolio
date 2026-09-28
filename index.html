@@ -359,32 +359,6 @@
     #view-home.home-edit .pbc-avatar { cursor:grab; touch-action:none; }
     #view-home.home-edit .pbc-avatar:active { cursor:grabbing; }
     .pbc-avatar img { width:100%; height:100%; object-fit:cover; display:block; color:transparent; font-size:0; opacity:.9; }
-    /* Dark-mode copy of the avatar with its white field keyed out — see
-       avatarWhiteKey() in the JS. It is a separate layer rather than a new
-       src on the <img>, because saveSettings() reads that src back and
-       stores it as profile.photo_url; swapping it would write a data URL
-       into the site's settings. */
-    /* Scoped to the parent so it outranks `.pbc-avatar img` above, which the
-       layer also matches — a bare `.pbc-avatar-key` loses on specificity and
-       the keyed copy would sit over the original in light mode too. */
-    .pbc-avatar > .pbc-avatar-key {
-      position:absolute; inset:0; width:100%; height:100%;
-      object-fit:cover; display:none; opacity:.9; pointer-events:none;
-    }
-    /* :not() because the keyed copy is an <img> too, and a bare `> img`
-       hid it along with the original — which is how the whole picture
-       vanished in dark mode rather than being replaced. */
-    body.dark .pbc-avatar.keyed > img:not(.pbc-avatar-key) { visibility:hidden; }
-    body.dark .pbc-avatar.keyed > .pbc-avatar-key { display:block; visibility:visible; }
-    /* A line drawing in black ink loses its white field in dark mode and
-       then has nothing left to read against — the plate behind it is dark
-       glass. So dark ink is flipped to light: invert turns the black to
-       white, and the hue rotation after it puts any colour in the artwork
-       back where it started. Light or colourful marks are left alone (see
-       darkInk in avatarWhiteKey). */
-    body.dark .pbc-avatar.keyed.key-ink-dark > .pbc-avatar-key {
-      filter:invert(1) hue-rotate(180deg);
-    }
     .avatar-edit-btn {
       position:absolute; inset:0; z-index:2; align-items:center; justify-content:center;
       display:none;
@@ -7047,99 +7021,6 @@ function toggleDarkMode() {
   setTimeout(flip, 170);
 }
 
-/* ─── Avatar white-key ───────────────────────────────────
-   The avatar is a logo sitting on a solid white field, stored as a JPEG,
-   which cannot carry transparency. The plate behind it is already dark
-   glass in dark mode, but the image covers the plate completely, so the
-   white field read as a lit tile stuck to the type.
-
-   So a keyed copy is built once and shown only in dark mode. Two things
-   this deliberately does not do: it never touches the <img>'s src, because
-   saveSettings() reads that back into profile.photo_url; and it only fires
-   when the picture really is a mark on a flat white field, judged from its
-   border ring, so a photograph is left exactly as it is. */
-(function avatarWhiteKey() {
-  const wrap = document.querySelector('.pbc-avatar');
-  const img  = wrap && wrap.querySelector('img');
-  if (!wrap || !img) return;
-
-  let layer = null, builtFor = null;
-
-  function build() {
-    const w = img.naturalWidth, h = img.naturalHeight;
-    if (!w || !h) return null;
-    const c = document.createElement('canvas');
-    c.width = w; c.height = h;
-    const g = c.getContext('2d', { willReadFrequently: true });
-    if (!g) return null;
-    let d;
-    try {
-      g.drawImage(img, 0, 0);
-      d = g.getImageData(0, 0, w, h);          // throws on a cross-origin source
-    } catch (e) { return null; }
-    const p = d.data, at = (x, y) => ((y * w) + x) * 4;
-    const near = i => p[i] > 238 && p[i + 1] > 238 && p[i + 2] > 238;
-
-    /* Two tests, both of which a photograph fails by a mile. Most of the
-       picture has to be the white field, and most of its edges have to be
-       nothing but that field. Three edges rather than four, because a mark
-       is often set low or bleeds off one side — the current avatar's bottom
-       edge is only 22% white while the other three are 100%. Measured on
-       these two images: the logo is 66% white with 3 clean edges, the stock
-       photo 1% with 0. */
-    const edge = (f, n) => { let k = 0; for (let i = 0; i < n; i++) if (near(f(i))) k++; return k / n; };
-    const clean = [edge(i => at(i, 0), w), edge(i => at(i, h - 1), w),
-                   edge(i => at(0, i), h), edge(i => at(w - 1, i), h)]
-                  .filter(v => v >= 0.9).length;
-    let white = 0;
-    for (let i = 0; i < p.length; i += 4) if (near(i)) white++;
-    if (white / (w * h) < 0.55 || clean < 3) return null;
-
-    // A ramp rather than a hard cut: JPEG ringing around the glyph would
-    // otherwise leave a bright fringe exactly where the key should be clean.
-    const HI = 250, LO = 228;
-    let inkSum = 0, inkN = 0;
-    for (let i = 0; i < p.length; i += 4) {
-      const m = Math.min(p[i], p[i + 1], p[i + 2]);
-      if (m >= HI) p[i + 3] = 0;
-      else if (m > LO) p[i + 3] = Math.round(p[i + 3] * (HI - m) / (HI - LO));
-      // How light what is left actually is. Keying the white out of a
-      // black line drawing leaves black ink on a dark plate, which is how
-      // a profile picture disappears into the page — so the ink gets
-      // measured here and, if it is dark, flipped in the CSS.
-      if (p[i + 3] > 128) {
-        inkSum += .2126 * p[i] + .7152 * p[i + 1] + .0722 * p[i + 2];
-        inkN++;
-      }
-    }
-    g.putImageData(d, 0, 0);
-    try { return { url: c.toDataURL('image/png'), darkInk: inkN > 0 && inkSum / inkN < 110 }; }
-    catch (e) { return null; }
-  }
-
-  function sync() {
-    if (!img.complete || !img.naturalWidth) return;
-    if (builtFor === img.src) return;
-    builtFor = img.src;
-    const built = build();
-    if (!built) { wrap.classList.remove('keyed', 'key-ink-dark'); if (layer) layer.remove(); layer = null; return; }
-    if (!layer) {
-      layer = document.createElement('img');
-      layer.className = 'pbc-avatar-key';
-      layer.alt = '';
-      layer.setAttribute('aria-hidden', 'true');
-      img.insertAdjacentElement('afterend', layer);
-    }
-    layer.src = built.url;
-    wrap.classList.add('keyed');
-    wrap.classList.toggle('key-ink-dark', built.darkInk);
-  }
-
-  img.addEventListener('load', sync);
-  // The photo can be replaced from settings or by an admin upload.
-  new MutationObserver(sync).observe(img, { attributes: true, attributeFilter: ['src'] });
-  sync();
-})();
 
 /* ─── Spider web catch SVG — dense, realistic cobweb drawn on click ───── */
 
