@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orbits round a photo — preview</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: #07040a;
+    color: #cfc7d4;
+    font: 400 13px/1.6 ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; padding: 24px;
+  }
+  .stage {
+    position: relative; width: min(560px, 92vw); aspect-ratio: 1.1 / 1;
+    border-radius: 18px; overflow: hidden; cursor: crosshair;
+    background: radial-gradient(120% 95% at 50% 52%, #150610 0%, #0a030b 44%, #060208 76%, #030105 100%);
+    box-shadow: 0 30px 80px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.05);
+    display: grid; place-items: center;
+  }
+  /* Three layers in one grid cell: the half of each orbit that is behind
+     the photo, the photo, and the half in front. That is the whole trick —
+     the comet passes behind the picture and comes back out in front of it,
+     which is what makes the photo sit inside the system rather than on top
+     of a drawing of one. */
+  .stage > * { grid-area: 1 / 1; }
+  canvas { width: 100%; height: 100%; pointer-events: none; }
+  #front { z-index: 3; }
+  #back { z-index: 1; }
+
+  .shot {
+    position: relative; z-index: 2;
+    width: 44%; aspect-ratio: 1 / 1; border-radius: 50%; overflow: hidden;
+    display: grid; place-items: center; text-align: center; padding: 18px;
+    background: rgba(255,255,255,.05); color: #9a8fa3; font-size: 12px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.12), 0 18px 50px rgba(0,0,0,.5);
+    transition: box-shadow .3s ease;
+  }
+  .shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .shot.has { box-shadow: 0 0 0 1px rgba(255,255,255,.18), 0 0 46px rgba(255,140,170,.18), 0 18px 50px rgba(0,0,0,.55); }
+  .stage.square .shot { border-radius: 16%; }
+  .stage.drag { outline: 1px dashed rgba(255,255,255,.35); outline-offset: -8px; }
+
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  button, label.btn {
+    font: inherit; font-size: 12.5px; color: #cfc7d4; cursor: pointer;
+    padding: 7px 13px; border-radius: 10px;
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
+  }
+  button:hover, label.btn:hover { background: rgba(255,255,255,.12); }
+  .note { max-width: 560px; text-align: center; color: #7b7184; }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage">
+  <canvas id="back"></canvas>
+  <div class="shot" id="shot">Drop a photo here<br>or use the button below</div>
+  <canvas id="front"></canvas>
+</div>
+
+<div class="bar">
+  <label class="btn">Choose a photo<input type="file" id="file" accept="image/*" hidden></label>
+  <button id="shape" type="button">Rounded square</button>
+  <button id="theme" type="button">Light</button>
+  <button id="speed" type="button">Faster</button>
+</div>
+<p class="note">The comet runs behind the photo and comes back out in front of it. Move the pointer to tip the whole system.</p>
+
+<script>
+/* Orbits round a photo — the same 3D rings as the header piece, split
+   across two canvases so the picture sits inside the system: whichever
+   half of a ring is on the far side of the middle is drawn on the canvas
+   under the photo, the near half on the canvas over it. */
+(function () {
+  const stage = document.getElementById('stage');
+  const shot = document.getElementById('shot');
+  const back = document.getElementById('back').getContext('2d');
+  const front = document.getElementById('front').getContext('2d');
+  const TAU = Math.PI * 2;
+
+  let W = 0, H = 0, S = 0, CX = 0, CY = 0;
+  const VSQ = .58;                     // how flat the rings are drawn
+  function resize() {
+    const r = stage.getBoundingClientRect();
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    W = r.width; H = r.height;
+    const p = shot.getBoundingClientRect();
+    CX = p.left + p.width / 2 - r.left;
+    CY = p.top + p.height / 2 - r.top;
+    // The widest ring is r = .40, so this keeps it clear of the photo.
+    S = Math.min(W * .95, p.width * 1.85);
+    for (const c of [back.canvas, front.canvas]) {
+      c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
+      c.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+  }
+  new ResizeObserver(resize).observe(stage);
+
+  const ORBITS = [
+    { r: .40, inc: 1.02, node: -0.62, spin:  .045, alpha: .40, lit: true },
+    { r: .34, inc: 1.30, node:  0.75, spin: -.031, alpha: .16 },
+    { r: .27, inc: 1.15, node:  2.05, spin:  .024, alpha: .13 },
+  ];
+  function point(o, th, tx, ty) {
+    const cx = Math.cos(th) * o.r, cy = Math.sin(th) * o.r;
+    const ci = Math.cos(o.inc + tx), si = Math.sin(o.inc + tx);
+    const x = cx, y = cy * ci, z = cy * si;
+    const cn = Math.cos(o.node + ty), sn = Math.sin(o.node + ty);
+    return { x: CX + (x * cn - y * sn) * S, y: CY + (x * sn + y * cn) * S * VSQ, z };
+  }
+
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const STARS = Array.from({ length: 40 }, () => ({
+    x: Math.random(), y: Math.random(), s: rand(.6, 1.8),
+    big: Math.random() < .13, ph: Math.random() * TAU, sp: rand(.4, 1.5),
+  }));
+
+  function spark(g, x, y, s, a, ink) {
+    g.globalAlpha = a; g.fillStyle = ink;
+    g.beginPath();
+    g.moveTo(x, y - s * 3.2);
+    g.quadraticCurveTo(x + s * .5, y - s * .5, x + s * 3.2, y);
+    g.quadraticCurveTo(x + s * .5, y + s * .5, x, y + s * 3.2);
+    g.quadraticCurveTo(x - s * .5, y + s * .5, x - s * 3.2, y);
+    g.quadraticCurveTo(x - s * .5, y - s * .5, x, y - s * 3.2);
+    g.fill();
+  }
+  function glow(g, x, y, r, colour) {
+    const gr = g.createRadialGradient(x, y, 0, x, y, r);
+    gr.addColorStop(0, colour);
+    gr.addColorStop(.35, colour.replace(/[\d.]+\)$/, '.16)'));
+    gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.globalAlpha = 1; g.fillStyle = gr;
+    g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+  }
+
+  let tx = 0, ty = 0, tgx = 0, tgy = 0;
+  stage.addEventListener('pointermove', (e) => {
+    const r = stage.getBoundingClientRect();
+    tgx = ((e.clientY - r.top) / r.height - .5) * .5;
+    tgy = ((e.clientX - r.left) / r.width - .5) * .7;
+  });
+  stage.addEventListener('pointerleave', () => { tgx = 0; tgy = 0; });
+
+  let dark = true, rate = 1;
+  const TAIL = 3.1, SEGS = 96;
+  let t = 0, last = performance.now();
+
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, .05) * rate;
+    last = now; t += dt;
+    tx += (tgx - tx) * Math.min(1, dt * 4);
+    ty += (tgy - ty) * Math.min(1, dt * 4);
+    if (!W) resize();
+
+    for (const g of [back, front]) {
+      g.clearRect(0, 0, W, H);
+      g.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+      g.lineCap = 'round';
+    }
+
+    for (const st of STARS) {
+      const tw = .45 + .55 * (.5 + .5 * Math.sin(t * st.sp + st.ph));
+      const x = st.x * W, y = st.y * H;
+      if (dark && st.big) spark(back, x, y, st.s * .9, .5 * tw, '#fff');
+      else {
+        back.globalAlpha = (dark ? .45 : .16) * tw;
+        back.fillStyle = dark ? '#e9dff2' : '#6b6560';
+        back.fillRect(x, y, st.s, st.s);
+      }
+    }
+
+    // z decides the canvas: negative is the far side of the middle, which
+    // is the half that belongs under the photo.
+    for (const o of ORBITS) {
+      const spin = t * o.spin * TAU, N = 150;
+      for (let i = 0; i < N; i++) {
+        const a = point(o, spin + (i / N) * TAU, tx, ty);
+        const b = point(o, spin + ((i + 1) / N) * TAU, tx, ty);
+        const mz = (a.z + b.z) / 2;
+        const g = mz < 0 ? back : front;
+        const depth = .5 + .5 * mz / o.r;
+        g.lineWidth = o.lit ? 1.15 : .9;
+        g.globalAlpha = o.alpha * (dark ? 1 : .85) * (.22 + .78 * depth);
+        g.strokeStyle = dark ? '#e8d7e6' : '#38323a';
+        g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+      }
+    }
+
+    const lit = ORBITS[0];
+    const head = t * .42 * TAU, spin = t * lit.spin * TAU;
+    for (let i = 0; i < SEGS; i++) {
+      const u = i / SEGS;
+      const a = point(lit, spin + head - u * TAIL, tx, ty);
+      const b = point(lit, spin + head - ((i + 1) / SEGS) * TAIL, tx, ty);
+      const mz = (a.z + b.z) / 2;
+      const g = mz < 0 ? back : front;
+      const fade = Math.pow(1 - u, 1.7);
+      const depth = .5 + .5 * mz / lit.r;
+      const col = u < .045
+        ? (dark ? [255, 244, 226] : [255, 170, 90])
+        : u < .28
+          ? [253, 190 - (u - .045) * 560, 104 - (u - .045) * 200]
+          : [246, 38, 94];
+      g.strokeStyle = 'rgb(' + col.map(Math.round).join(',') + ')';
+      g.globalAlpha = (.1 + .9 * fade) * (.35 + .65 * depth) * (dark ? .85 : .88);
+      g.lineWidth = .7 + 2 * fade;
+      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+      g.globalAlpha = (.03 + .16 * fade) * (.3 + .7 * depth) * (dark ? 1 : .5);
+      g.lineWidth = 3 + 8 * fade;
+      g.stroke();
+    }
+
+    const hp = point(lit, spin + head, tx, ty);
+    glow(hp.z < 0 ? back : front, hp.x, hp.y, S * .022,
+         dark ? 'rgba(255,240,222,.6)' : 'rgba(255,168,96,.5)');
+
+    // The light the photo stands in — under it, never over it.
+    glow(back, CX, CY, S * .38, dark ? 'rgba(255,224,238,.14)' : 'rgba(255,186,138,.14)');
+
+    for (const g of [back, front]) {
+      g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // Dropping or picking a photo. Nothing leaves the page — the file is
+  // read straight into an object URL.
+  function show(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    const img = new Image();
+    img.onload = () => resize();
+    img.src = URL.createObjectURL(file);
+    shot.innerHTML = ''; shot.appendChild(img); shot.classList.add('has');
+  }
+  document.getElementById('file').addEventListener('change', e => show(e.target.files[0]));
+  ['dragenter', 'dragover'].forEach(n => stage.addEventListener(n, e => {
+    e.preventDefault(); stage.classList.add('drag');
+  }));
+  ['dragleave', 'drop'].forEach(n => stage.addEventListener(n, e => {
+    e.preventDefault(); stage.classList.remove('drag');
+  }));
+  stage.addEventListener('drop', e => show(e.dataTransfer.files[0]));
+
+  document.getElementById('shape').addEventListener('click', (e) => {
+    const sq = stage.classList.toggle('square');
+    e.target.textContent = sq ? 'Circle' : 'Rounded square';
+  });
+  document.getElementById('theme').addEventListener('click', (e) => {
+    dark = !dark;
+    stage.style.background = dark
+      ? 'radial-gradient(120% 95% at 50% 52%, #150610 0%, #0a030b 44%, #060208 76%, #030105 100%)'
+      : 'radial-gradient(120% 95% at 50% 52%, #fff 0%, #faf7f4 60%, #f3eee9 100%)';
+    e.target.textContent = dark ? 'Light' : 'Dark';
+  });
+  document.getElementById('speed').addEventListener('click', (e) => {
+    rate = rate === 1 ? 2 : rate === 2 ? .5 : 1;
+    e.target.textContent = rate === 1 ? 'Faster' : rate === 2 ? 'Slower' : 'Normal';
+  });
+
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

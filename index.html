@@ -181,23 +181,35 @@
        kept as the site's rounded-square (not the original's oval
        crop), just smaller so it doesn't dominate sitting on the text. ── */
     /* ── Header orbits ──────────────────────────────────────────────────
-       A slow orrery behind the name: three tilted rings with a comet
-       running one of them. It sits at z-index:-1 inside the header's own
-       stacking context, which puts it under the photo, the name and the
-       spider but still over the page's background.
+       A slow orrery around the profile photo: three tilted rings with a
+       comet running one of them.
 
-       It bleeds past the column on both sides and is masked to nothing at
-       its edges, so it reads as light falling behind the header rather
-       than a picture in a box. The drawing itself is theme-aware (see the
-       script): bright and additive on the dark page, dark ink at low
-       opacity on the light one. */
+       There are two canvases on the same box, and that is the point. The
+       half of each ring on the far side of the middle is drawn on the one
+       at z-index:-1, under the photo and the name; the near half on the
+       one above them. So the comet goes behind the picture and comes back
+       out in front of it, and the photo is inside the system rather than
+       sitting on a drawing of one.
+
+       Both bleed past the column and are masked to nothing at their
+       edges, so it reads as light around the photo rather than a picture
+       in a box. The drawing is theme-aware (see the script): bright and
+       additive on the dark page, dark ink at low opacity on the light
+       one. */
     .hdr-orbits {
       position:absolute; z-index:-1; pointer-events:none;
       left:-22%; top:-38px; width:144%; height:calc(100% + 76px);
       opacity:.85;
-      -webkit-mask-image:radial-gradient(72% 62% at 50% 48%, #000 34%, transparent 78%);
-      mask-image:radial-gradient(72% 62% at 50% 48%, #000 34%, transparent 78%);
+      /* The fade is centred on the system itself, not the box: the photo
+         it goes round sits off to one side of the header, and a mask
+         pinned to the middle cropped the far half of the rings. The
+         script writes these two as it measures. */
+      --orb-mx:50%; --orb-my:50%;
+      -webkit-mask-image:radial-gradient(64% 76% at var(--orb-mx) var(--orb-my), #000 30%, transparent 76%);
+      mask-image:radial-gradient(64% 76% at var(--orb-mx) var(--orb-my), #000 30%, transparent 76%);
     }
+    /* Above the name block (z-index 2) and the avatar inside it. */
+    .hdr-orbits-front { z-index:3; }
     body.dark .hdr-orbits { opacity:1; }
     /* Editing the header is fiddly enough without something moving under
        the thing being dragged. */
@@ -5127,6 +5139,7 @@
       <!-- The orbits behind the name (see "Header orbits" near the foot of
            the file). Purely decorative, sized and painted from script. -->
       <canvas class="hdr-orbits" id="hdrOrbits" aria-hidden="true"></canvas>
+      <canvas class="hdr-orbits hdr-orbits-front" id="hdrOrbitsFront" aria-hidden="true"></canvas>
       <div class="site-spider" aria-hidden="true">
         <svg class="spider-rope" overflow="visible">
           <path class="rope-path" d="M10,0 L10,30"/>
@@ -18948,15 +18961,19 @@ void main () {
 
 
 /* ══ Header orbits ═══════════════════════════════════════════════════════
-   A small orrery behind the name: three rings with a comet running one of
-   them. The canvas is .hdr-orbits, sized to the header and masked to
-   nothing at its edges (see the CSS).
+   A small orrery around the profile photo: three rings with a comet
+   running one of them.
 
    The rings are real circles in 3D — a radius, an inclination and a
    longitude, projected flat — rather than 2D ellipses drawn to look
-   tilted. That is what lets each ring dim as it passes behind the middle,
-   and what lets the whole system tip together when the pointer moves
-   across the header instead of three shapes skewing separately.
+   tilted. Keeping the depth is what makes the rest work: each ring dims
+   on its far side, the whole system tips together under the pointer, and,
+   most of all, every segment knows which side of the photo it is on.
+
+   That last one is why there are two canvases on the same box (see the
+   CSS). Far-side segments go on the one under the photo and the name,
+   near-side segments on the one above them, so the comet passes behind
+   the picture and comes back out in front of it.
 
    Both themes are drawn from the same geometry but not the same way. Dark
    is additive: strokes pile into light where they cross, which is where
@@ -18969,54 +18986,65 @@ void main () {
    header nobody is looking at should not be animating. ══════════════ */
 (function () {
   const cv = document.getElementById('hdrOrbits');
-  if (!cv || !cv.getContext) return;
-  const ctx = cv.getContext('2d');
+  const cvF = document.getElementById('hdrOrbitsFront');
+  if (!cv || !cvF || !cv.getContext) return;
+  const back = cv.getContext('2d');
+  const front = cvF.getContext('2d');
+  const both = [back, front];
   const host = cv.parentElement;
   const TAU = Math.PI * 2;
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  /* The system is centred on the name and sized from it, so the title
-     reads as the thing being orbited rather than something with a
-     decoration above it. The rings are then squashed vertically: at their
-     true proportion, a circle wide enough to pass outside the name would
-     be about as tall as the whole page above the works. */
+  /* The system is centred on the photo and sized from it, so the photo is
+     the thing being orbited. The rings are then squashed vertically: at
+     their true proportion, a ring wide enough to swing clear of the photo
+     would be taller than the whole header. */
   let W = 0, H = 0, S = 0, CX = 0, CY = 0;
-  const VSQ = .46;
+  const VSQ = .52;
   function resize() {
     const r = cv.getBoundingClientRect();
     if (!r.width || !r.height) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     W = r.width; H = r.height;
-    // The visible title is the display copy — .profile-name itself is the
-    // editable original and is display:none while the page is being read.
-    const name = host.querySelector('.profile-name-display') || host.querySelector('.profile-name-block');
-    const n = name && name.getBoundingClientRect();
-    if (n && n.width) {
-      CX = n.left + n.width / 2 - r.left;
-      CY = n.top + n.height / 2 - r.top;
-      // r = .40 on the widest ring, so this is a ring half as wide again
-      // as the name it goes round.
-      S = Math.max(260, Math.min(W * .92, n.width * 1.9));
+    const av = host.querySelector('.pbc-avatar');
+    const a = av && av.getBoundingClientRect();
+    if (a && a.width) {
+      CX = a.left + a.width / 2 - r.left;
+      CY = a.top + a.height / 2 - r.top;
+      // Tied to the photo's own size: the widest ring is r = .40 of this,
+      // so it clears the picture by about half its width and no more. The
+      // rings are flatter than they are wide, so they cross the photo's
+      // face the way a ring crosses a planet rather than framing it.
+      S = Math.min(W * .9, a.width * 2.4);
     } else {
       CX = W / 2; CY = H / 2; S = Math.min(W, H * 1.08);
     }
-    cv.width = Math.round(W * dpr);
-    cv.height = Math.round(H * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    for (const g of both) {
+      g.canvas.width = Math.round(W * dpr);
+      g.canvas.height = Math.round(H * dpr);
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // Keep the edge fade centred on the system (see the CSS).
+      g.canvas.style.setProperty('--orb-mx', (CX / W * 100).toFixed(2) + '%');
+      g.canvas.style.setProperty('--orb-my', (CY / H * 100).toFixed(2) + '%');
+    }
   }
   if (window.ResizeObserver) {
     const ro = new ResizeObserver(resize);
     ro.observe(cv);
-    // The name arrives from the backend seconds after first paint and can
-    // be a different length, which moves the middle of the system.
-    const nm = host.querySelector('.profile-name-display');
-    if (nm) ro.observe(nm);
+    // The photo can be replaced and resized from edit mode, and it is
+    // what the whole system is measured from.
+    const av = host.querySelector('.pbc-avatar');
+    if (av) ro.observe(av);
   }
   window.addEventListener('resize', resize);
+  // Dragging the photo sideways moves the middle without resizing
+  // anything, so the slot's own transform has to be watched too.
+  const slot = host.querySelector('.avatar-overlay-slot');
+  if (slot) new MutationObserver(resize).observe(slot, { attributes: true, attributeFilter: ['style', 'class'] });
 
-  /* Radius as a share of the short side, inclination, the angle the tilt
-     is turned to, how fast it turns on its own axis, how brightly it is
-     drawn. The first one carries the comet. */
+  /* Radius as a share of S, inclination, the angle the tilt is turned to,
+     how fast it turns on its own axis, how brightly it is drawn. The
+     first one carries the comet. */
   const ORBITS = [
     { r: .40, inc: 1.02, node: -0.62, spin:  .045, alpha: .40, lit: true },
     { r: .34, inc: 1.30, node:  0.75, spin: -.031, alpha: .16 },
@@ -19041,24 +19069,24 @@ void main () {
   }));
 
   // A four-pointed star, drawn as two crossing tapers.
-  function spark(x, y, s, a, ink) {
-    ctx.globalAlpha = a;
-    ctx.fillStyle = ink;
-    ctx.beginPath();
-    ctx.moveTo(x, y - s * 3.2);
-    ctx.quadraticCurveTo(x + s * .5, y - s * .5, x + s * 3.2, y);
-    ctx.quadraticCurveTo(x + s * .5, y + s * .5, x, y + s * 3.2);
-    ctx.quadraticCurveTo(x - s * .5, y + s * .5, x - s * 3.2, y);
-    ctx.quadraticCurveTo(x - s * .5, y - s * .5, x, y - s * 3.2);
-    ctx.fill();
+  function spark(g, x, y, s, a, ink) {
+    g.globalAlpha = a;
+    g.fillStyle = ink;
+    g.beginPath();
+    g.moveTo(x, y - s * 3.2);
+    g.quadraticCurveTo(x + s * .5, y - s * .5, x + s * 3.2, y);
+    g.quadraticCurveTo(x + s * .5, y + s * .5, x, y + s * 3.2);
+    g.quadraticCurveTo(x - s * .5, y + s * .5, x - s * 3.2, y);
+    g.quadraticCurveTo(x - s * .5, y - s * .5, x, y - s * 3.2);
+    g.fill();
   }
-  function glow(x, y, r, colour) {
-    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, colour);
-    g.addColorStop(.35, colour.replace(/[\d.]+\)$/, '.16)'));
-    g.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.globalAlpha = 1; ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  function glow(g, x, y, r, colour) {
+    const gr = g.createRadialGradient(x, y, 0, x, y, r);
+    gr.addColorStop(0, colour);
+    gr.addColorStop(.35, colour.replace(/[\d.]+\)$/, '.16)'));
+    gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.globalAlpha = 1; g.fillStyle = gr;
+    g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
   }
 
   /* The pointer tips the system while it is over the header, and it eases
@@ -19082,32 +19110,39 @@ void main () {
     ty += (tgy - ty) * Math.min(1, dt * 4);
     const dark = document.body.classList.contains('dark');
 
-    ctx.clearRect(0, 0, W, H);
-    ctx.globalCompositeOperation = dark ? 'lighter' : 'source-over';
-    ctx.lineCap = 'round';
+    for (const g of both) {
+      g.clearRect(0, 0, W, H);
+      g.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+      g.lineCap = 'round';
+    }
 
+    // Stars belong to the sky, so they stay on the back layer.
     for (const st of STARS) {
       const tw = .45 + .55 * (.5 + .5 * Math.sin(t * st.sp + st.ph));
       const x = st.x * W, y = st.y * H;
-      if (dark && st.big) spark(x, y, st.s * .9, .5 * tw, '#fff');
+      if (dark && st.big) spark(back, x, y, st.s * .9, .5 * tw, '#fff');
       else {
-        ctx.globalAlpha = (dark ? .45 : .18) * tw;
-        ctx.fillStyle = dark ? '#e9dff2' : '#6b6560';
-        ctx.fillRect(x, y, st.s, st.s);
+        back.globalAlpha = (dark ? .45 : .18) * tw;
+        back.fillStyle = dark ? '#e9dff2' : '#6b6560';
+        back.fillRect(x, y, st.s, st.s);
       }
     }
 
+    // z is the depth the projection kept: negative is the far side of the
+    // photo, which is the half that goes under it.
     for (const o of ORBITS) {
       const spin = t * o.spin * TAU;
-      ctx.lineWidth = o.lit ? 1.05 : .85;
       const N = 132;
       for (let i = 0; i < N; i++) {
         const a = point(o, spin + (i / N) * TAU, tx, ty);
         const b = point(o, spin + ((i + 1) / N) * TAU, tx, ty);
-        const depth = .5 + .5 * ((a.z + b.z) / 2) / o.r;   // 0 behind, 1 in front
-        ctx.globalAlpha = o.alpha * (dark ? 1 : .9) * (.22 + .78 * depth);
-        ctx.strokeStyle = dark ? '#e8d7e6' : '#38323a';
-        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        const mz = (a.z + b.z) / 2;
+        const g = mz < 0 ? back : front;
+        const depth = .5 + .5 * mz / o.r;           // 0 behind, 1 in front
+        g.lineWidth = o.lit ? 1.05 : .85;
+        g.globalAlpha = o.alpha * (dark ? 1 : .9) * (.22 + .78 * depth);
+        g.strokeStyle = dark ? '#e8d7e6' : '#38323a';
+        g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
       }
     }
 
@@ -19119,35 +19154,38 @@ void main () {
       const u = i / SEGS;
       const a = point(lit, spin + head - u * TAIL, tx, ty);
       const b = point(lit, spin + head - ((i + 1) / SEGS) * TAIL, tx, ty);
+      const mz = (a.z + b.z) / 2;
+      const g = mz < 0 ? back : front;
       const fade = Math.pow(1 - u, 1.7);
-      const depth = .5 + .5 * ((a.z + b.z) / 2) / lit.r;
+      const depth = .5 + .5 * mz / lit.r;
       const col = u < .045
         ? (dark ? [255, 244, 226] : [255, 170, 90])
         : u < .28
           ? [253, 190 - (u - .045) * 560, 104 - (u - .045) * 200]
           : [246, 38, 94];
-      ctx.strokeStyle = 'rgb(' + col.map(Math.round).join(',') + ')';
-      ctx.globalAlpha = (.1 + .9 * fade) * (.35 + .65 * depth) * (dark ? .85 : .88);
-      ctx.lineWidth = .7 + 1.7 * fade;
-      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      g.strokeStyle = 'rgb(' + col.map(Math.round).join(',') + ')';
+      g.globalAlpha = (.1 + .9 * fade) * (.35 + .65 * depth) * (dark ? .85 : .88);
+      g.lineWidth = .7 + 1.7 * fade;
+      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
       // A wider, fainter copy of the same stroke is the glow around it,
       // which costs far less than blurring the canvas every frame.
-      ctx.globalAlpha = (.03 + .15 * fade) * (.3 + .7 * depth) * (dark ? 1 : .5);
-      ctx.lineWidth = 3 + 7 * fade;
-      ctx.stroke();
+      g.globalAlpha = (.03 + .15 * fade) * (.3 + .7 * depth) * (dark ? 1 : .5);
+      g.lineWidth = 3 + 7 * fade;
+      g.stroke();
     }
 
     const hp = point(lit, spin + head, tx, ty);
-    glow(hp.x, hp.y, S * .017, dark ? 'rgba(255,240,222,.6)' : 'rgba(255,168,96,.5)');
+    glow(hp.z < 0 ? back : front, hp.x, hp.y, S * .017,
+         dark ? 'rgba(255,240,222,.6)' : 'rgba(255,168,96,.5)');
 
-    /* No bright core any more: the name is what sits at the middle now, so
-       this is only the light it would be standing in — a wide, soft bloom
-       behind the letters, and nothing sharp enough to read through them. */
-    if (dark) glow(CX, CY, S * .17, 'rgba(255,224,238,.17)');
-    else glow(CX, CY, S * .15, 'rgba(255,186,138,.16)');
+    /* The light the photo stands in — on the back layer only, so it never
+       washes over the picture or the letters it overlaps. */
+    glow(back, CX, CY, S * .34, dark ? 'rgba(255,224,238,.15)' : 'rgba(255,186,138,.15)');
 
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'source-over';
+    for (const g of both) {
+      g.globalAlpha = 1;
+      g.globalCompositeOperation = 'source-over';
+    }
   }
 
   function alive() {
@@ -19182,9 +19220,10 @@ void main () {
 
   resize();
   if (reduce) draw(0); else start();
-  // The header slides in on load, so measure again once that has settled
-  // or the canvas keeps the size it had halfway through the animation.
+  // The header slides in on load and the photo arrives from the backend
+  // after it, so measure again once both have settled.
   setTimeout(() => { resize(); start(); }, 700);
+  setTimeout(() => { resize(); start(); }, 2500);
 })();
 
 /* ── Click-to-enlarge ──────────────────────────────────────
