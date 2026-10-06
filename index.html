@@ -10743,8 +10743,13 @@ function initBrandTimeline(list) {
     if (yr && yr.getBoundingClientRect().height) {
       const yrr = yr.getBoundingClientRect();
       aEnd = yrr.top - rr.top - GAP;
-      // Centred on the date's text, so the line lands on its middle.
-      a.seg.style.left = (yrr.left + yrr.width / 2 - rr.left - 1).toFixed(1) + 'px';
+      // Centred on the first part of the date — the start year — not the
+      // whole range: "2025 – Present" and "2026" are different lengths, but
+      // the year always is four digits, so the line sits in the same place
+      // in every row.
+      const from = yr.querySelector('.pli-year-from');
+      const fr = (from && from.getBoundingClientRect().width) ? from.getBoundingClientRect() : yrr;
+      a.seg.style.left = (fr.left + fr.width / 2 - rr.left - 1).toFixed(1) + 'px';
     }
     const set = (s, t, e) => { const h = Math.max(0, e - t); s.seg.style.top = t + 'px'; s.seg.style.height = h + 'px'; s.seg.style.display = h > 1 ? '' : 'none'; };
     set(a, top, aEnd);
