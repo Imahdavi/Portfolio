@@ -708,7 +708,7 @@
       .pl-timeline .proj-list-item { position:relative; }
       /* The line, one piece per row (initBrandTimeline sets its top and
          height): from under the subtitle down to the date. */
-      .pl-seg { position:absolute; left:-31px; width:2px; overflow:visible; pointer-events:none; }
+      .pl-seg { position:absolute; left:-17px; width:2px; overflow:visible; pointer-events:none; }
       .pl-seg path { fill:none; stroke-width:.6; stroke-linecap:round; vector-effect:non-scaling-stroke; }
       .pl-seg .pl-seg-track { stroke:rgba(0,0,0,.14); }
       .pl-seg .pl-seg-fill { stroke:rgba(0,0,0,.55); stroke-dasharray:1; stroke-dashoffset:1; }
@@ -10721,15 +10721,16 @@ function initBrandTimeline(list) {
      of line starts and stops. All measured, since titles wrap, a subtitle
      can be empty, and the media changes the row's height as it lands. */
   const GAP = 8;   // clear space between the line and the text it meets
-  const INK = 4;
+  const INK = 18;
   const place = info => {
     const { row, a } = info;
     const rr = row.getBoundingClientRect();
     const lineX = a.seg.getBoundingClientRect().left + 1;     // the stroke's centre
     const body = row.querySelector('.pli-body');
     if (!body) return;
-    // INK sets the text 4px left of the line: a glyph's ink starts a little
-    // inside its box, so box-on-line read as the line sitting left of the text.
+    // INK: how far left of the line the text starts. The line runs a step
+    // inside the text's edge rather than on it, as marked on the design;
+    // the text itself is unchanged from when the line sat at its edge.
     const shift = Math.round(body.getBoundingClientRect().left - lineX + INK);
     if (info.shift !== shift) { info.shift = shift; row.style.setProperty('--pl-shift', shift + 'px'); }
 
