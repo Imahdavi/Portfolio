@@ -10725,12 +10725,12 @@ function initBrandTimeline(list) {
   const place = info => {
     const { row, a } = info;
     const rr = row.getBoundingClientRect();
-    const lineX = a.seg.getBoundingClientRect().left + 1;     // the stroke's centre
+    // The CSS position (left:-17px) is only the reference the text is pulled
+    // to; taken from the row, not the line, since the line is moved below.
+    const lineX = rr.left - 17 + 1;
     const body = row.querySelector('.pli-body');
     if (!body) return;
-    // INK: how far left of the line the text starts. The line runs a step
-    // inside the text's edge rather than on it, as marked on the design;
-    // the text itself is unchanged from when the line sat at its edge.
+    // INK: how far left of that reference the text starts.
     const shift = Math.round(body.getBoundingClientRect().left - lineX + INK);
     if (info.shift !== shift) { info.shift = shift; row.style.setProperty('--pl-shift', shift + 'px'); }
 
@@ -10743,6 +10743,8 @@ function initBrandTimeline(list) {
     if (yr && yr.getBoundingClientRect().height) {
       const yrr = yr.getBoundingClientRect();
       aEnd = yrr.top - rr.top - GAP;
+      // Centred on the date's text, so the line lands on its middle.
+      a.seg.style.left = (yrr.left + yrr.width / 2 - rr.left - 1).toFixed(1) + 'px';
     }
     const set = (s, t, e) => { const h = Math.max(0, e - t); s.seg.style.top = t + 'px'; s.seg.style.height = h + 'px'; s.seg.style.display = h > 1 ? '' : 'none'; };
     set(a, top, aEnd);
