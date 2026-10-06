@@ -704,43 +704,47 @@
        760px — past any phone, and reached by a narrow desktop window; see
        initBrandTimeline, which also sits it out under reduced motion. */
     @media (min-width:760px) {
-      /* A left column per row: title and subtitle centred on the line, the
-         line running down from under them to the date and on past it to the
-         next brand. The rule between rows moves onto the body alone, so it
-         stops short of the column and never crosses the line. */
-      #view-home .projects-list.pl-timeline .proj-list-item {
-        border-bottom:none; padding-bottom:0; margin-bottom:0; gap:22px;
-      }
-      #view-home .projects-list.pl-timeline .pli-body {
-        padding-bottom:26px; margin-bottom:26px; border-bottom:1px solid rgba(0,0,0,.07);
-      }
-      #view-home .projects-list.pl-timeline .proj-list-item:last-child .pli-body { border-bottom:none; margin-bottom:0; }
-      .pli-side {
-        flex:0 0 132px; align-self:stretch;
-        display:flex; flex-direction:column; align-items:center; text-align:center;
-        /* Through the body's bottom margin, so the line meets the next row's
-           title instead of stopping at the rule. */
-        margin-bottom:-26px;
-      }
-      .proj-list-item:last-child .pli-side { margin-bottom:0; }
-      /* align-self too: the body's layout pins .pli-title-row to flex-start. */
-      .pli-side .pli-title-row { justify-content:center; align-self:center; }
-      .pli-side .pli-category { margin-top:5px; }
-      .pli-side .pli-year { justify-content:center; padding:8px 0; }
-      .pl-seg { flex:1 1 0; width:2px; min-height:14px; overflow:visible; pointer-events:none; }
-      .pl-seg-a { margin-top:12px; }
+      #view-home .projects-list.pl-timeline { position:relative; padding-left:48px; }
+      .pl-timeline .proj-list-item { position:relative; }
+      /* The line is drawn rather than boxed: the faint track and the
+         filled length are the same path, the fill dashed back to wherever
+         the scroll has reached (see initBrandTimeline). */
+      /* height rather than top+bottom: an <svg> with a viewBox and no
+         height of its own takes the box's ratio instead of stretching. */
+      .pl-seg { position:absolute; left:-36px; top:20px; height:calc(100% - 40px); width:14px; overflow:visible; pointer-events:none; }
       .pl-seg path { fill:none; stroke-width:.6; stroke-linecap:round; vector-effect:non-scaling-stroke; }
       .pl-seg .pl-seg-track { stroke:rgba(0,0,0,.14); }
       .pl-seg .pl-seg-fill { stroke:rgba(0,0,0,.55); stroke-dasharray:1; stroke-dashoffset:1; }
+      /* The site's own sparkle (the star divider's mark), in place of a
+         plain dot. */
+      .pl-star {
+        position:absolute; left:-38px; top:0; width:17px; height:17px;
+        transform:scale(0) rotate(-25deg); transform-origin:50% 50%;
+        transition:transform .45s cubic-bezier(.34,1.56,.64,1);
+      }
+      .pl-star svg { display:block; width:100%; height:100%; }
+      .pl-star path { fill:#1a1a1a; }
+      .pl-stem {
+        position:absolute; left:-22px; top:8px; width:15px; height:1px;
+        transform:scaleX(0); transform-origin:left center;
+        background:rgba(0,0,0,.18);
+        transition:transform .35s cubic-bezier(.2,.8,.2,1) .05s;
+      }
+      /* Both go back as the scroll does, so nothing is lit ahead of the line. */
+      .proj-list-item.pl-on .pl-star { transform:scale(1) rotate(0deg); }
+      .proj-list-item.pl-on .pl-stem { transform:scaleX(1); }
       body.dark .pl-seg .pl-seg-track { stroke:rgba(255,255,255,.16); }
       body.dark .pl-seg .pl-seg-fill { stroke:rgba(255,255,255,.6); }
-      body.dark #view-home .projects-list.pl-timeline .pli-body { border-bottom-color:var(--d-line); }
-      /* Reorder mode collapses the rows to bars: the column dissolves back
-         into the bar (title, then date, as that mode wants) and the line goes. */
-      .projects-list.pli-compact .pli-side { display:contents; }
-      .projects-list.pli-compact .pl-seg { display:none; }
-      #view-home .projects-list.pli-compact.pl-timeline .pli-body { padding-bottom:0; margin-bottom:0; border-bottom:none; }
-      #view-home .projects-list.pli-compact.pl-timeline .proj-list-item { margin-bottom:6px; padding-bottom:9px; }
+      body.dark .pl-star path { fill:var(--d-text); }
+      body.dark .pl-stem { background:rgba(255,255,255,.22); }
+      /* Reorder mode collapses the rows to bars; a rail of stars beside
+         them would just be in the way of the dragging. */
+      .projects-list.pli-compact .pl-seg,
+      .projects-list.pli-compact .pl-star,
+      .projects-list.pli-compact .pl-stem { display:none; }
+      @media (prefers-reduced-motion:reduce) {
+        .pl-star, .pl-stem { transition:none; }
+      }
     }
     .proj-list-item {
       display:flex; gap:18px;
@@ -10681,15 +10685,19 @@ function saveProjectsListEdits() {
 let _pliRevealObs = null;
 
 /* ─── Brand timeline ───────────────────────────────────────────────
-   A left column per Brand row (see .pl-timeline): title and subtitle
-   centred at the top, then a line down to the date and on past it to the
-   next brand. The line fills to wherever the scroll has reached.
+   The spine beside the Brand rows (see .pl-timeline). Its line fills to
+   wherever the scroll has reached, each row's dot pops in as it passes
+   that mark, and both stay in once they are lit — a timeline read down
+   rather than the pinned sideways track of the component it comes from.
 
    Desktop only: a phone has no room for a rail beside the rows, and the
    media strips already fill the width. Reduced motion gets every piece
    filled and every dot in place, with nothing animating. */
 const PL_MIN_WIDTH = 760;   // a phone never reaches this; a narrow desktop window does
 const PL_MARK = 0.72;      // the scroll's reach, down the viewport
+// The site's own sparkle — the big star from the divider mark (see
+// starDividerSVG), on its own and squared up to sit on the line.
+const PL_STAR = '<svg viewBox="0 0 166.46 107.09" xmlns="http://www.w3.org/2000/svg"><path d="M161.24,53.35c-14.46,3.72-29.9,4.84-42.64,13.31-14.46,9.61-21.64,25.92-29.95,40.43,1.15-9.62,6.54-34.2-3.08-40.84-4.35-3-15.47-4.7-20.86-5.61-21.42-3.61-43.16-5.7-64.71-7.49,22.86-2.01,46.45-1.69,69.49-4.98,10.21-1.46,23.14-4.63,31.19-11.46,11.06-9.39,18.95-24.6,24.86-36.7-1.93,11.74-6.08,29.6,1.51,40,6.74,9.23,23.79,11.02,34.18,13.35Z"/></svg>';
 let _plOff = null;
 
 function initBrandTimeline(list) {
@@ -10700,20 +10708,7 @@ function initBrandTimeline(list) {
   // browser dragged narrow loses the rail (and its listeners) rather than
   // leaving one with nowhere to sit.
   const onWidth = () => { if (list.isConnected) initBrandTimeline(list); };
-  /* Taking the column down puts each piece back exactly where
-     buildProjectListItem made it — title and subtitle at the head of the
-     body, the date at the front of the meta row — so the phone layout and
-     everything that looks for them there never knows the column existed. */
   const strip = () => {
-    list.querySelectorAll('.pli-side').forEach(side => {
-      const item = side.closest('.proj-list-item');
-      const body = item && item.querySelector('.pli-body');
-      const meta = item && item.querySelector('.pli-meta-row');
-      const t = side.querySelector('.pli-title-row'), c = side.querySelector('.pli-category'), y = side.querySelector('.pli-year');
-      if (body) { if (c) body.prepend(c); if (t) body.prepend(t); }
-      if (meta && y) meta.prepend(y);
-      side.remove();
-    });
     list.querySelectorAll('.pl-seg, .pl-star, .pl-stem').forEach(e => e.remove());
     list.querySelectorAll('.pl-on').forEach(e => e.classList.remove('pl-on'));
   };
@@ -10729,35 +10724,29 @@ function initBrandTimeline(list) {
   strip();
 
   list.classList.add('pl-timeline');
-  /* Each row gets a left column: title, subtitle, a line, the date, and
-     the line again down to the next brand. The pieces are the row's own
-     elements moved in, not copies, so editing them in place still edits
-     the real thing; strip() hands them back. The line is two pieces either
-     side of the date so the date sits in a gap rather than on a rule. */
-  const segSVG = cls => '<svg class="pl-seg ' + cls + '" aria-hidden="true" viewBox="0 0 2 100" preserveAspectRatio="none">' +
-                        '<path class="pl-seg-track" pathLength="1"/><path class="pl-seg-fill" pathLength="1"/></svg>';
-  const segs = [];
-  rows.forEach(row => {
-    const side = document.createElement('div');
-    side.className = 'pli-side';
-    const t = row.querySelector('.pli-title-row'), c = row.querySelector('.pli-category'), y = row.querySelector('.pli-year');
-    if (t) side.appendChild(t);
-    if (c) side.appendChild(c);
-    side.insertAdjacentHTML('beforeend', segSVG('pl-seg-a'));
-    if (y) side.appendChild(y);
-    side.insertAdjacentHTML('beforeend', segSVG('pl-seg-b'));
-    const body = row.querySelector('.pli-body');
-    row.insertBefore(side, body || null);
-    side.querySelectorAll('.pl-seg').forEach(seg => segs.push({
-      row, seg, track: seg.querySelector('.pl-seg-track'), fill: seg.querySelector('.pl-seg-fill'), h: 0 }));
+  // A piece of line per brand rather than one down the whole list, so the
+  // sections sit apart with a gap between them.
+  const segs = rows.map(row => {
+    row.insertAdjacentHTML('afterbegin',
+      '<svg class="pl-seg" aria-hidden="true" viewBox="0 0 14 100">' +
+        '<path class="pl-seg-track" pathLength="1"/><path class="pl-seg-fill" pathLength="1"/>' +
+      '</svg>' +
+      '<span class="pl-stem" aria-hidden="true"></span>' +
+      '<span class="pl-star" aria-hidden="true">' + PL_STAR + '</span>');
+    return { row, seg: row.querySelector('.pl-seg'),
+             track: row.querySelector('.pl-seg-track'), fill: row.querySelector('.pl-seg-fill'),
+             star: row.querySelector('.pl-star'), h: 0 };
   });
 
-  // A straight line down the middle of each piece, sized to its height.
+  // The line's own shape, for a height: straight down the middle of the
+  // 14-wide box.
   const shape = (s, h) => {
     if (Math.abs(h - s.h) < 0.5) return;
     s.h = h;
-    const d = `M1,0 L1,${h.toFixed(1)}`;
-    s.seg.setAttribute('viewBox', '0 0 2 ' + h.toFixed(1));
+    // Straight down the middle. It turned in towards the row at each end
+    // for a while; plain reads better beside rows that are all edges.
+    const d = `M6.5,0.6 L6.5,${(h - 0.6).toFixed(1)}`;
+    s.seg.setAttribute('viewBox', '0 0 14 ' + h.toFixed(1));
     s.track.setAttribute('d', d);
     s.fill.setAttribute('d', d);
   };
@@ -10768,6 +10757,7 @@ function initBrandTimeline(list) {
       const r = s.seg.getBoundingClientRect();
       if (r.height) shape(s, r.height);
       s.fill.style.strokeDashoffset = '0';
+      s.row.classList.add('pl-on');
     });
     wide.addEventListener('change', onWidth, { once: true });
     _plOff = () => wide.removeEventListener('change', onWidth);
@@ -10781,12 +10771,17 @@ function initBrandTimeline(list) {
     const mark = window.innerHeight * PL_MARK;
     segs.forEach(s => {
       const r = s.seg.getBoundingClientRect();
-      if (!r.height) return;
-      shape(s, r.height);
-      // Fills down to wherever the scroll has reached and empties again
-      // going back up. pathLength is 1, so the offset is what's left.
-      const p = Math.max(0, Math.min(1, (mark - r.top) / r.height));
-      s.fill.style.strokeDashoffset = (1 - p).toFixed(3);
+      if (r.height) {
+        shape(s, r.height);
+        // Straight off where the scroll is: back up the page it empties
+        // again, rather than staying drawn behind you. pathLength is 1, so
+        // the dash offset is simply what is left to draw.
+        const p = Math.max(0, Math.min(1, (mark - r.top) / r.height));
+        s.fill.style.strokeDashoffset = (1 - p).toFixed(3);
+      }
+      const d = s.star.getBoundingClientRect();
+      // Lit only once the line has come down to it, and out again above.
+      s.row.classList.toggle('pl-on', d.top <= mark);
     });
   };
   const onScroll = () => { if (!raf) raf = requestAnimationFrame(paint); };
