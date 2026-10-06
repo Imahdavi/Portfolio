@@ -2628,89 +2628,29 @@
     .avg-role-fld { font-size:10.5px; color:#999; text-align:center; max-width:100%; line-height:1.25; }
 
 
-    /* ── Media loading state, ported from 21st.dev's "Loading State"
-       (@theshanelevine) ────────────────────────────────────────────
-       A 3×3 grid of 4px pixels blinking on a staggered 650ms loop, a
-       shimmering label, and a monospace tabular counter — the source's
-       geometry, timings and delays exactly. What it counts is the one
-       change: the source shows elapsed seconds, which tells you nothing
-       you did not already know, while a video reports how much of itself
-       has arrived. So the counter is a real percentage read off the
-       element's own buffered ranges, not a timer and not a guess.
-
-       It sits over a video that has not got its data yet — the state the
-       lazy loader leaves media in while it waits its turn — and hands
-       over at 100%, fading out as the clip fades in. */
-    /* The glyph is 21st.dev's "Diamond" (@theshanelevine), which replaced
-       the Loading State's own 3x3 grid: eight 4-unit pixels on a 20-unit
-       ring, each flashing on for a hundredth of its 0.8s cycle and fading
-       out over the rest, staggered 0.1s apart so the lit one travels
-       round. Its geometry, timings and delays are the source's; it is
-       drawn straight into the markup rather than through a component, and
-       the delays live in CSS rather than in eight generated classes. */
-    @keyframes mloadSpin { 0% { opacity:0; } 1% { opacity:1; } 100% { opacity:0; } }
-    .mload-mark { width:17px; height:17px; display:block; flex:none; fill:currentColor; }
-    .mload-mark rect { animation:mloadSpin .8s ease-in-out infinite; opacity:0; }
-    .mload-mark rect:nth-of-type(1) { animation-delay:0s;   }
-    .mload-mark rect:nth-of-type(2) { animation-delay:.1s;  }
-    .mload-mark rect:nth-of-type(3) { animation-delay:.2s;  }
-    .mload-mark rect:nth-of-type(4) { animation-delay:.3s;  }
-    .mload-mark rect:nth-of-type(5) { animation-delay:.4s;  }
-    .mload-mark rect:nth-of-type(6) { animation-delay:.5s;  }
-    .mload-mark rect:nth-of-type(7) { animation-delay:.6s;  }
-    .mload-mark rect:nth-of-type(8) { animation-delay:.7s;  }
-    @keyframes mloadShimmer { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
-
+    /* ── Media loading state ─────────────────────────────────────
+       The "working" Thinking Orb (@yogesharc, 21st.dev; thinking-orbs.js)
+       over a video that hasn't got its data yet, with its label under it
+       in smaller, quieter type — the orb leads, the word explains. It
+       draws in currentColor, so it takes the overlay's colour. */
     .mload {
       position:absolute; inset:0; z-index:3; pointer-events:none;
-      display:flex; align-items:center; justify-content:center;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
       color:#3a3a3a;
-      --mload-dim:rgba(58,58,58,.45);
       transition:opacity .35s ease;
     }
-    body.dark .mload { color:#e6e7e8; --mload-dim:rgba(230,231,232,.45); }
+    body.dark .mload { color:#e6e7e8; }
     .mload.is-done { opacity:0; }
-    .mload-row { display:flex; align-items:center; gap:10px; }
-    /* The label is painted by a gradient clipped to the glyphs, which is
-       why it needs a transparent colour — the sweep is the animation. */
-    .mload-lbl {
-      font-size:13px; font-weight:500; white-space:nowrap;
-      background:linear-gradient(90deg, var(--mload-dim) 35%, currentColor 50%, var(--mload-dim) 65%);
-      background-size:200% 100%;
-      -webkit-background-clip:text; background-clip:text; color:transparent;
-      animation:mloadShimmer 1.4s linear infinite;
-    }
-    .mload-pct {
-      font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size:12px; font-variant-numeric:tabular-nums; color:var(--mload-dim);
-    }
-    /* A strip tile is ~95px across at its narrowest. The word is the
-       first thing to go: the glyph already says "working" and the number
-       already says how far. */
-    .mload.is-compact { gap:6px; }
-    .mload.is-compact .mload-row { gap:6px; }
-    .mload.is-compact .mload-lbl { display:none; }
-    .mload.is-compact .mload-pct { font-size:11px; }
+    .mload-orb { display:block; flex:none; }
+    .mload-lbl { font-size:11px; font-weight:400; line-height:1; opacity:.5; white-space:nowrap; }
     /* The clip is held back until it can actually show a frame, so the
        hand-over is one crossfade rather than a pop. */
     video.mload-hold { opacity:0; }
     video.mload-shown { opacity:1; transition:opacity .35s ease; }
     /* .media-inner is a dark plate whatever the page theme is, so the
        overlay over one is always the light pairing. */
-    .media-wrap .media-inner .mload { color:#e6e7e8; --mload-dim:rgba(230,231,232,.45); }
-    /* Every tile in every row exists from the start, and only the ones
-       scrolled to are ever revealed — leaving a travelling ring plus a
-       shimmer running in each of the rest would be hundreds of animations
-       for something nobody is looking at. The ring rests at 0 opacity
-       between flashes, so stopping it has to light it back up or the
-       glyph would simply not be there. */
-    .pli-tile:not([data-revealed]) .mload-mark rect,
-    .pli-tile:not([data-revealed]) .mload-lbl { animation:none; }
-    .pli-tile:not([data-revealed]) .mload-mark rect { opacity:.55; }
+    .media-wrap .media-inner .mload { color:#e6e7e8; }
     @media (prefers-reduced-motion:reduce) {
-      .mload-mark rect, .mload-lbl { animation:none; }
-      .mload-mark rect { opacity:.55; }
-      .mload-lbl { color:currentColor; }
       video.mload-shown { transition:none; }
     }
     /* ── Tool stack, ported from 21st.dev's "Tool Calls Section"
@@ -5955,6 +5895,7 @@ one keyframe at a time</div>
      while the page is still parsing (the nav's star icon, for one), and a
      deferred script would only arrive after them. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<!-- Thinking Orbs, the media loading state (see attachMediaLoadState). --><script src="/thinking-orbs.js"></script>
 <script>
 /* ─── Lottie animation data ─────────────────────────────── */
 const LOTTIE_DATA = {
@@ -10958,22 +10899,11 @@ function rememberMediaSize(src, w, h) {
    shorter one after a seek, and a counter that walked backwards would
    read as a fault. */
 
-/* The Diamond's eight pixels, in the source's order — top, then
-   clockwise — on its 20-unit viewBox. Written out rather than generated
-   from an angle so the coordinates stay the component's own; the stagger
-   that makes the lit one travel is in the CSS. */
-const MLOAD_MARK_SVG =
-  '<svg class="mload-mark" viewBox="0 0 20 20" aria-hidden="true">' +
-  '<rect x="8"  y="0"  width="4" height="4"/>' +
-  '<rect x="12" y="4"  width="4" height="4"/>' +
-  '<rect x="16" y="8"  width="4" height="4"/>' +
-  '<rect x="12" y="12" width="4" height="4"/>' +
-  '<rect x="8"  y="16" width="4" height="4"/>' +
-  '<rect x="4"  y="12" width="4" height="4"/>' +
-  '<rect x="0"  y="8"  width="4" height="4"/>' +
-  '<rect x="4"  y="4"  width="4" height="4"/>' +
-  '</svg>';
-const MLOAD_COMPACT_MAX = 180;   // px — below this the label is dropped
+/* The media loading state: the "working" Thinking Orb (thinking-orbs.js)
+   with the label under it, smaller than the orb — the component's own
+   pairing. It sits over a video that hasn't got its data yet and fades out
+   as the clip fades in. */
+const MLOAD_ORB_SIZE = 36;
 
 function attachMediaLoadState(video, host, label) {
   if (!video || !host || video._mloadWired) return;
@@ -10983,57 +10913,40 @@ function attachMediaLoadState(video, host, label) {
   el.className = 'mload';
   el.setAttribute('aria-hidden', 'true');
 
-  const row = document.createElement('div');
-  row.className = 'mload-row';
-
-  row.insertAdjacentHTML('beforeend', MLOAD_MARK_SVG);
+  const orbSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  orbSvg.setAttribute('class', 'mload-orb');
+  el.appendChild(orbSvg);
 
   const lbl = document.createElement('span');
   lbl.className = 'mload-lbl';
   lbl.textContent = label || 'Loading';
-  row.appendChild(lbl);
+  el.appendChild(lbl);
 
-  const pct = document.createElement('span');
-  pct.className = 'mload-pct';
-  row.appendChild(pct);
-
-  el.appendChild(row);
-  // Measured now rather than by a media query: what decides this is how
-  // wide this particular box is, and strip tiles and board blocks sit at
-  // very different widths on the same viewport.
-  if (host.clientWidth && host.clientWidth < MLOAD_COMPACT_MAX) el.classList.add('is-compact');
   host.appendChild(el);
   video.classList.add('mload-hold');
 
-  let shown = 0, finished = false;
+  // Mounted once it's on the page: the orb tears itself down when its svg
+  // leaves the document, so it has to be in it first. Without the script
+  // (blocked, say) the label alone still shows.
+  let orb = null;
+  if (window.ThinkingOrbs) {
+    try { orb = ThinkingOrbs.mountOrb(orbSvg, { state: 'working', size: MLOAD_ORB_SIZE }); } catch (e) {}
+  }
 
-  const paint = () => {
-    if (finished) return;
-    const d = video.duration;
-    if (!d || !isFinite(d) || !video.buffered.length) return;
-    const end = video.buffered.end(video.buffered.length - 1);
-    const p = Math.min(99, Math.floor((end / d) * 100));
-    if (p > shown) { shown = p; pct.textContent = shown + '%'; }
-  };
-
+  let finished = false;
   const finish = () => {
     if (finished) return;
     finished = true;
-    pct.textContent = '100%';
     video.classList.remove('mload-hold');
     video.classList.add('mload-shown');
     el.classList.add('is-done');
     off();
-    setTimeout(() => el.remove(), 400);
+    setTimeout(() => { if (orb) orb.destroy(); el.remove(); }, 400);
   };
 
-  // A file that fails is handed back to the loader with its src cleared,
-  // and will be tried again — so the overlay stays up rather than
-  // reporting a finish that did not happen. It goes away with the tile.
-  const onError = () => { shown = 0; pct.textContent = ''; };
-
-  const evs = [['progress', paint], ['timeupdate', paint], ['loadedmetadata', paint],
-               ['loadeddata', finish], ['canplay', finish], ['error', onError]];
+  // A file that fails is handed back to the loader and tried again, so the
+  // overlay stays up rather than reporting a finish that did not happen.
+  const evs = [['loadeddata', finish], ['canplay', finish]];
   const off = () => evs.forEach(([n, f]) => video.removeEventListener(n, f));
   evs.forEach(([n, f]) => video.addEventListener(n, f));
 
