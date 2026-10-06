@@ -711,7 +711,10 @@
          the scroll has reached (see initBrandTimeline). */
       /* height rather than top+bottom: an <svg> with a viewBox and no
          height of its own takes the box's ratio instead of stretching. */
-      .pl-seg { position:absolute; left:-36px; top:20px; height:calc(100% - 40px); width:14px; overflow:visible; pointer-events:none; }
+      /* Starts under the row's title and subtitle rather than beside them:
+         --pl-top is measured per row in initBrandTimeline, since a title
+         can wrap and a subtitle can be empty. */
+      .pl-seg { position:absolute; left:-36px; top:var(--pl-top, 20px); height:calc(100% - var(--pl-top, 20px) - 20px); width:14px; overflow:visible; pointer-events:none; }
       .pl-seg path { fill:none; stroke-width:.6; stroke-linecap:round; vector-effect:non-scaling-stroke; }
       .pl-seg .pl-seg-track { stroke:rgba(0,0,0,.14); }
       .pl-seg .pl-seg-fill { stroke:rgba(0,0,0,.55); stroke-dasharray:1; stroke-dashoffset:1; }
@@ -10711,6 +10714,7 @@ function initBrandTimeline(list) {
   const strip = () => {
     list.querySelectorAll('.pl-seg, .pl-star, .pl-stem').forEach(e => e.remove());
     list.querySelectorAll('.pl-on').forEach(e => e.classList.remove('pl-on'));
+    list.querySelectorAll('.proj-list-item').forEach(e => e.style.removeProperty('--pl-top'));
   };
   if (!wide.matches) {
     list.classList.remove('pl-timeline');
@@ -10738,6 +10742,17 @@ function initBrandTimeline(list) {
              star: row.querySelector('.pl-star'), h: 0 };
   });
 
+  // Where the line starts: 12px under the subtitle, or under the title when
+  // the subtitle is empty. Measured, since either can wrap.
+  const placeTop = s => {
+    const row = s.row;
+    const cat = row.querySelector('.pli-category');
+    const anchor = (cat && cat.textContent.trim()) ? cat : row.querySelector('.pli-title-row');
+    if (!anchor) return;
+    const top = Math.round(anchor.getBoundingClientRect().bottom - row.getBoundingClientRect().top + 12);
+    if (top > 0 && s.top !== top) { s.top = top; row.style.setProperty('--pl-top', top + 'px'); }
+  };
+
   // The line's own shape, for a height: straight down the middle of the
   // 14-wide box.
   const shape = (s, h) => {
@@ -10754,6 +10769,7 @@ function initBrandTimeline(list) {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduced) {
     segs.forEach(s => {
+      placeTop(s);
       const r = s.seg.getBoundingClientRect();
       if (r.height) shape(s, r.height);
       s.fill.style.strokeDashoffset = '0';
@@ -10770,6 +10786,7 @@ function initBrandTimeline(list) {
     raf = 0;
     const mark = window.innerHeight * PL_MARK;
     segs.forEach(s => {
+      placeTop(s);
       const r = s.seg.getBoundingClientRect();
       if (r.height) {
         shape(s, r.height);
