@@ -706,48 +706,26 @@
     @media (min-width:760px) {
       #view-home .projects-list.pl-timeline { position:relative; padding-left:48px; }
       .pl-timeline .proj-list-item { position:relative; }
-      /* The line is drawn rather than boxed: the faint track and the
-         filled length are the same path, the fill dashed back to wherever
-         the scroll has reached (see initBrandTimeline). */
-      /* height rather than top+bottom: an <svg> with a viewBox and no
-         height of its own takes the box's ratio instead of stretching. */
-      /* Starts under the row's title and subtitle rather than beside them:
-         --pl-top is measured per row in initBrandTimeline, since a title
-         can wrap and a subtitle can be empty. */
-      .pl-seg { position:absolute; left:-36px; top:var(--pl-top, 20px); height:calc(100% - var(--pl-top, 20px) - 20px); width:14px; overflow:visible; pointer-events:none; }
+      /* The line, in two pieces per row (see initBrandTimeline, which sets
+         each piece's top and height): from under the subtitle to the date,
+         then from under the date on down. */
+      .pl-seg { position:absolute; left:-31px; width:2px; overflow:visible; pointer-events:none; }
       .pl-seg path { fill:none; stroke-width:.6; stroke-linecap:round; vector-effect:non-scaling-stroke; }
       .pl-seg .pl-seg-track { stroke:rgba(0,0,0,.14); }
       .pl-seg .pl-seg-fill { stroke:rgba(0,0,0,.55); stroke-dasharray:1; stroke-dashoffset:1; }
-      /* The site's own sparkle (the star divider's mark), in place of a
-         plain dot. */
-      .pl-star {
-        position:absolute; left:-38px; top:0; width:17px; height:17px;
-        transform:scale(0) rotate(-25deg); transform-origin:50% 50%;
-        transition:transform .45s cubic-bezier(.34,1.56,.64,1);
-      }
-      .pl-star svg { display:block; width:100%; height:100%; }
-      .pl-star path { fill:#1a1a1a; }
-      .pl-stem {
-        position:absolute; left:-22px; top:8px; width:15px; height:1px;
-        transform:scaleX(0); transform-origin:left center;
-        background:rgba(0,0,0,.18);
-        transition:transform .35s cubic-bezier(.2,.8,.2,1) .05s;
-      }
-      /* Both go back as the scroll does, so nothing is lit ahead of the line. */
-      .proj-list-item.pl-on .pl-star { transform:scale(1) rotate(0deg); }
-      .proj-list-item.pl-on .pl-stem { transform:scaleX(1); }
       body.dark .pl-seg .pl-seg-track { stroke:rgba(255,255,255,.16); }
       body.dark .pl-seg .pl-seg-fill { stroke:rgba(255,255,255,.6); }
-      body.dark .pl-star path { fill:var(--d-text); }
-      body.dark .pl-stem { background:rgba(255,255,255,.22); }
-      /* Reorder mode collapses the rows to bars; a rail of stars beside
-         them would just be in the way of the dragging. */
-      .projects-list.pli-compact .pl-seg,
-      .projects-list.pli-compact .pl-star,
-      .projects-list.pli-compact .pl-stem { display:none; }
-      @media (prefers-reduced-motion:reduce) {
-        .pl-star, .pl-stem { transition:none; }
-      }
+      /* Title, subtitle and date pulled left so their left edge sits on the
+         line. The date is translated, not given a margin, so the avatars
+         beside it stay where they were. */
+      .pl-timeline .pli-title-row,
+      .pl-timeline .pli-category { margin-left:calc(-1 * var(--pl-shift, 0px)); }
+      .pl-timeline .pli-year { transform:translateX(calc(-1 * var(--pl-shift, 0px))); }
+      /* Reorder mode collapses the rows to bars: no line, nothing pulled. */
+      .projects-list.pli-compact .pl-seg { display:none; }
+      .projects-list.pli-compact .pli-title-row,
+      .projects-list.pli-compact .pli-category { margin-left:0; }
+      .projects-list.pli-compact .pli-year { transform:none; }
     }
     .proj-list-item {
       display:flex; gap:18px;
@@ -10698,9 +10676,6 @@ let _pliRevealObs = null;
    filled and every dot in place, with nothing animating. */
 const PL_MIN_WIDTH = 760;   // a phone never reaches this; a narrow desktop window does
 const PL_MARK = 0.72;      // the scroll's reach, down the viewport
-// The site's own sparkle — the big star from the divider mark (see
-// starDividerSVG), on its own and squared up to sit on the line.
-const PL_STAR = '<svg viewBox="0 0 166.46 107.09" xmlns="http://www.w3.org/2000/svg"><path d="M161.24,53.35c-14.46,3.72-29.9,4.84-42.64,13.31-14.46,9.61-21.64,25.92-29.95,40.43,1.15-9.62,6.54-34.2-3.08-40.84-4.35-3-15.47-4.7-20.86-5.61-21.42-3.61-43.16-5.7-64.71-7.49,22.86-2.01,46.45-1.69,69.49-4.98,10.21-1.46,23.14-4.63,31.19-11.46,11.06-9.39,18.95-24.6,24.86-36.7-1.93,11.74-6.08,29.6,1.51,40,6.74,9.23,23.79,11.02,34.18,13.35Z"/></svg>';
 let _plOff = null;
 
 function initBrandTimeline(list) {
@@ -10714,7 +10689,7 @@ function initBrandTimeline(list) {
   const strip = () => {
     list.querySelectorAll('.pl-seg, .pl-star, .pl-stem').forEach(e => e.remove());
     list.querySelectorAll('.pl-on').forEach(e => e.classList.remove('pl-on'));
-    list.querySelectorAll('.proj-list-item').forEach(e => e.style.removeProperty('--pl-top'));
+    list.querySelectorAll('.proj-list-item').forEach(e => e.style.removeProperty('--pl-shift'));
   };
   if (!wide.matches) {
     list.classList.remove('pl-timeline');
@@ -10728,52 +10703,68 @@ function initBrandTimeline(list) {
   strip();
 
   list.classList.add('pl-timeline');
-  // A piece of line per brand rather than one down the whole list, so the
-  // sections sit apart with a gap between them.
-  const segs = rows.map(row => {
-    row.insertAdjacentHTML('afterbegin',
-      '<svg class="pl-seg" aria-hidden="true" viewBox="0 0 14 100">' +
-        '<path class="pl-seg-track" pathLength="1"/><path class="pl-seg-fill" pathLength="1"/>' +
-      '</svg>' +
-      '<span class="pl-stem" aria-hidden="true"></span>' +
-      '<span class="pl-star" aria-hidden="true">' + PL_STAR + '</span>');
-    return { row, seg: row.querySelector('.pl-seg'),
-             track: row.querySelector('.pl-seg-track'), fill: row.querySelector('.pl-seg-fill'),
-             star: row.querySelector('.pl-star'), h: 0 };
+  /* Each brand's line, in two pieces: from under the subtitle down to the
+     date, then from under the date to the foot of the row. The title,
+     subtitle and date are pulled left (--pl-shift) so their left edge sits
+     on the line itself — the "L" of Lina straight above it. */
+  const SEG = '<svg class="pl-seg" aria-hidden="true" viewBox="0 0 2 100" preserveAspectRatio="none">' +
+              '<path class="pl-seg-track" pathLength="1"/><path class="pl-seg-fill" pathLength="1"/></svg>';
+  const segs = [];
+  const rowsInfo = rows.map(row => {
+    row.insertAdjacentHTML('afterbegin', SEG + SEG);
+    const [a, b] = row.querySelectorAll(':scope > .pl-seg');
+    const mk = seg => ({ row, seg, track: seg.querySelector('.pl-seg-track'), fill: seg.querySelector('.pl-seg-fill'), h: 0 });
+    const sa = mk(a), sb = mk(b);
+    segs.push(sa, sb);
+    return { row, a: sa, b: sb };
   });
 
-  // Where the line starts: 12px under the subtitle, or under the title when
-  // the subtitle is empty. Measured, since either can wrap.
-  const placeTop = s => {
-    const row = s.row;
+  /* Lays out one row: how far to pull the text left, and where each piece
+     of line starts and stops. All measured, since titles wrap, a subtitle
+     can be empty, and the media changes the row's height as it lands. */
+  const GAP = 8;   // clear space between the line and the text it meets
+  const place = info => {
+    const { row, a, b } = info;
+    const rr = row.getBoundingClientRect();
+    const lineX = a.seg.getBoundingClientRect().left + 1;     // the stroke's centre
+    const body = row.querySelector('.pli-body');
+    if (!body) return;
+    const shift = Math.round(body.getBoundingClientRect().left - lineX);
+    if (info.shift !== shift) { info.shift = shift; row.style.setProperty('--pl-shift', shift + 'px'); }
+
     const cat = row.querySelector('.pli-category');
-    const anchor = (cat && cat.textContent.trim()) ? cat : row.querySelector('.pli-title-row');
-    if (!anchor) return;
-    const top = Math.round(anchor.getBoundingClientRect().bottom - row.getBoundingClientRect().top + 12);
-    if (top > 0 && s.top !== top) { s.top = top; row.style.setProperty('--pl-top', top + 'px'); }
+    const head = (cat && cat.textContent.trim()) ? cat : row.querySelector('.pli-title-row');
+    const yr = row.querySelector('.pli-year');
+    const top = head ? head.getBoundingClientRect().bottom - rr.top + GAP + 4 : 20;
+    const bottom = rr.height - 20;
+    let aEnd = bottom, bStart = bottom;
+    if (yr && yr.getBoundingClientRect().height) {
+      const yrr = yr.getBoundingClientRect();
+      aEnd = yrr.top - rr.top - GAP;
+      bStart = yrr.bottom - rr.top + GAP;
+    }
+    const set = (s, t, e) => { const h = Math.max(0, e - t); s.seg.style.top = t + 'px'; s.seg.style.height = h + 'px'; s.seg.style.display = h > 1 ? '' : 'none'; };
+    set(a, top, aEnd);
+    set(b, bStart, bottom);
   };
 
-  // The line's own shape, for a height: straight down the middle of the
-  // 14-wide box.
+  // A straight line down the 2-wide box, for its height.
   const shape = (s, h) => {
     if (Math.abs(h - s.h) < 0.5) return;
     s.h = h;
-    // Straight down the middle. It turned in towards the row at each end
-    // for a while; plain reads better beside rows that are all edges.
-    const d = `M6.5,0.6 L6.5,${(h - 0.6).toFixed(1)}`;
-    s.seg.setAttribute('viewBox', '0 0 14 ' + h.toFixed(1));
+    const d = `M1,0 L1,${h.toFixed(1)}`;
+    s.seg.setAttribute('viewBox', '0 0 2 ' + h.toFixed(1));
     s.track.setAttribute('d', d);
     s.fill.setAttribute('d', d);
   };
 
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduced) {
+    rowsInfo.forEach(place);
     segs.forEach(s => {
-      placeTop(s);
       const r = s.seg.getBoundingClientRect();
       if (r.height) shape(s, r.height);
       s.fill.style.strokeDashoffset = '0';
-      s.row.classList.add('pl-on');
     });
     wide.addEventListener('change', onWidth, { once: true });
     _plOff = () => wide.removeEventListener('change', onWidth);
@@ -10785,20 +10776,15 @@ function initBrandTimeline(list) {
   const paint = () => {
     raf = 0;
     const mark = window.innerHeight * PL_MARK;
+    rowsInfo.forEach(place);
     segs.forEach(s => {
-      placeTop(s);
       const r = s.seg.getBoundingClientRect();
-      if (r.height) {
-        shape(s, r.height);
-        // Straight off where the scroll is: back up the page it empties
-        // again, rather than staying drawn behind you. pathLength is 1, so
-        // the dash offset is simply what is left to draw.
-        const p = Math.max(0, Math.min(1, (mark - r.top) / r.height));
-        s.fill.style.strokeDashoffset = (1 - p).toFixed(3);
-      }
-      const d = s.star.getBoundingClientRect();
-      // Lit only once the line has come down to it, and out again above.
-      s.row.classList.toggle('pl-on', d.top <= mark);
+      if (!r.height) return;
+      shape(s, r.height);
+      // Fills to wherever the scroll has reached, and empties again going
+      // back up. pathLength is 1, so the offset is what's left to draw.
+      const p = Math.max(0, Math.min(1, (mark - r.top) / r.height));
+      s.fill.style.strokeDashoffset = (1 - p).toFixed(3);
     });
   };
   const onScroll = () => { if (!raf) raf = requestAnimationFrame(paint); };
