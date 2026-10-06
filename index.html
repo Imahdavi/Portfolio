@@ -706,9 +706,8 @@
     @media (min-width:760px) {
       #view-home .projects-list.pl-timeline { position:relative; padding-left:48px; }
       .pl-timeline .proj-list-item { position:relative; }
-      /* The line, in two pieces per row (see initBrandTimeline, which sets
-         each piece's top and height): from under the subtitle to the date,
-         then from under the date on down. */
+      /* The line, one piece per row (initBrandTimeline sets its top and
+         height): from under the subtitle down to the date. */
       .pl-seg { position:absolute; left:-31px; width:2px; overflow:visible; pointer-events:none; }
       .pl-seg path { fill:none; stroke-width:.6; stroke-linecap:round; vector-effect:non-scaling-stroke; }
       .pl-seg .pl-seg-track { stroke:rgba(0,0,0,.14); }
@@ -10703,33 +10702,36 @@ function initBrandTimeline(list) {
   strip();
 
   list.classList.add('pl-timeline');
-  /* Each brand's line, in two pieces: from under the subtitle down to the
-     date, then from under the date to the foot of the row. The title,
+  /* Each brand's line runs from under the subtitle down to the date and
+     stops there; nothing below the date. The title,
      subtitle and date are pulled left (--pl-shift) so their left edge sits
      on the line itself — the "L" of Lina straight above it. */
   const SEG = '<svg class="pl-seg" aria-hidden="true" viewBox="0 0 2 100" preserveAspectRatio="none">' +
               '<path class="pl-seg-track" pathLength="1"/><path class="pl-seg-fill" pathLength="1"/></svg>';
   const segs = [];
   const rowsInfo = rows.map(row => {
-    row.insertAdjacentHTML('afterbegin', SEG + SEG);
-    const [a, b] = row.querySelectorAll(':scope > .pl-seg');
+    row.insertAdjacentHTML('afterbegin', SEG);
+    const a = row.querySelector(':scope > .pl-seg');
     const mk = seg => ({ row, seg, track: seg.querySelector('.pl-seg-track'), fill: seg.querySelector('.pl-seg-fill'), h: 0 });
-    const sa = mk(a), sb = mk(b);
-    segs.push(sa, sb);
-    return { row, a: sa, b: sb };
+    const sa = mk(a);
+    segs.push(sa);
+    return { row, a: sa };
   });
 
   /* Lays out one row: how far to pull the text left, and where each piece
      of line starts and stops. All measured, since titles wrap, a subtitle
      can be empty, and the media changes the row's height as it lands. */
   const GAP = 8;   // clear space between the line and the text it meets
+  const INK = 2;
   const place = info => {
-    const { row, a, b } = info;
+    const { row, a } = info;
     const rr = row.getBoundingClientRect();
     const lineX = a.seg.getBoundingClientRect().left + 1;     // the stroke's centre
     const body = row.querySelector('.pli-body');
     if (!body) return;
-    const shift = Math.round(body.getBoundingClientRect().left - lineX);
+    // INK lifts the text 2px left of the line: a glyph's ink starts a little
+    // inside its box, so box-on-line read as the line sitting left of the text.
+    const shift = Math.round(body.getBoundingClientRect().left - lineX + INK);
     if (info.shift !== shift) { info.shift = shift; row.style.setProperty('--pl-shift', shift + 'px'); }
 
     const cat = row.querySelector('.pli-category');
@@ -10737,15 +10739,13 @@ function initBrandTimeline(list) {
     const yr = row.querySelector('.pli-year');
     const top = head ? head.getBoundingClientRect().bottom - rr.top + GAP + 4 : 20;
     const bottom = rr.height - 20;
-    let aEnd = bottom, bStart = bottom;
+    let aEnd = bottom;
     if (yr && yr.getBoundingClientRect().height) {
       const yrr = yr.getBoundingClientRect();
       aEnd = yrr.top - rr.top - GAP;
-      bStart = yrr.bottom - rr.top + GAP;
     }
     const set = (s, t, e) => { const h = Math.max(0, e - t); s.seg.style.top = t + 'px'; s.seg.style.height = h + 'px'; s.seg.style.display = h > 1 ? '' : 'none'; };
     set(a, top, aEnd);
-    set(b, bStart, bottom);
   };
 
   // A straight line down the 2-wide box, for its height.
