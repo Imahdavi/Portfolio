@@ -715,16 +715,15 @@
       body.dark .pl-seg .pl-seg-track { stroke:rgba(255,255,255,.16); }
       body.dark .pl-seg .pl-seg-fill { stroke:rgba(255,255,255,.6); }
       /* Title, subtitle and date pulled left so their left edge sits on the
-         line. The date is translated, not given a margin, so the avatars
-         beside it stay where they were. */
+         line. The date moves with its whole row, so the brand avatar beside
+         it keeps its usual gap instead of being left behind. */
       .pl-timeline .pli-title-row,
-      .pl-timeline .pli-category { margin-left:calc(-1 * var(--pl-shift, 0px)); }
-      .pl-timeline .pli-year { transform:translateX(calc(-1 * var(--pl-shift, 0px))); }
+      .pl-timeline .pli-category,
+      .pl-timeline .pli-meta-row { margin-left:calc(-1 * var(--pl-shift, 0px)); }
       /* Reorder mode collapses the rows to bars: no line, nothing pulled. */
       .projects-list.pli-compact .pl-seg { display:none; }
       .projects-list.pli-compact .pli-title-row,
       .projects-list.pli-compact .pli-category { margin-left:0; }
-      .projects-list.pli-compact .pli-year { transform:none; }
     }
     .proj-list-item {
       display:flex; gap:18px;
@@ -10722,14 +10721,14 @@ function initBrandTimeline(list) {
      of line starts and stops. All measured, since titles wrap, a subtitle
      can be empty, and the media changes the row's height as it lands. */
   const GAP = 8;   // clear space between the line and the text it meets
-  const INK = 2;
+  const INK = 4;
   const place = info => {
     const { row, a } = info;
     const rr = row.getBoundingClientRect();
     const lineX = a.seg.getBoundingClientRect().left + 1;     // the stroke's centre
     const body = row.querySelector('.pli-body');
     if (!body) return;
-    // INK lifts the text 2px left of the line: a glyph's ink starts a little
+    // INK sets the text 4px left of the line: a glyph's ink starts a little
     // inside its box, so box-on-line read as the line sitting left of the text.
     const shift = Math.round(body.getBoundingClientRect().left - lineX + INK);
     if (info.shift !== shift) { info.shift = shift; row.style.setProperty('--pl-shift', shift + 'px'); }
