@@ -1954,6 +1954,125 @@
       .toast-icon .toast-spin { animation:none; }
     }
 
+    /* ─────────────────── INVOICE (admin) ───────────────────
+       The slip is 21st.dev's "Receipt Pricing" ported to plain CSS: thermal
+       paper with serrated ends (a five-layer mask), a monospace ledger with
+       dot leaders, dashed rules, a double-ruled total, a rotated stamp and
+       a barcode hashed from the invoice number. The paper stays white in
+       either theme, like a real slip, so the export never changes colour. */
+    #view-invoice { padding-top:40px; }
+    .inv-head { max-width:980px; margin:0 auto 22px; }
+    .inv-title { font-size:22px; font-weight:600; letter-spacing:-.01em; }
+    .inv-sub { font-size:12.5px; color:#888; margin-top:4px; }
+    .inv-wrap { max-width:980px; margin:0 auto; display:grid; gap:28px; }
+    @media (min-width:960px) {
+      .inv-wrap { grid-template-columns:minmax(0,1fr) 360px; align-items:start; }
+      .inv-preview { position:sticky; top:0; }
+    }
+
+    .inv-form fieldset { border:0; margin:0 0 18px; padding:0; display:grid; gap:10px; }
+    .inv-form legend { font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#999; padding:0; margin-bottom:8px; }
+    .inv-form label { display:grid; gap:5px; font-size:12px; font-weight:500; color:#555; }
+    .inv-opt { font-weight:400; color:#aaa; }
+    .inv-form input, .inv-form select, .inv-form textarea {
+      font:inherit; font-size:14px; color:#1a1a1a; background:#f5f4f2; border:1px solid transparent;
+      border-radius:10px; padding:9px 11px; width:100%; box-sizing:border-box; outline:none; transition:border-color .15s, background .15s;
+    }
+    .inv-form textarea { resize:vertical; min-height:42px; }
+    .inv-form input:focus, .inv-form select:focus, .inv-form textarea:focus { border-color:rgba(0,0,0,.25); background:#fff; }
+    .inv-grid2 { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px; }
+    .inv-form label, .inv-form input, .inv-form select { min-width:0; }
+
+    .inv-items { display:grid; gap:8px; }
+    .inv-item { display:grid; grid-template-columns:72px minmax(0,1fr) 30px; gap:6px; align-items:center; padding-bottom:8px; border-bottom:1px dashed rgba(0,0,0,.1); }
+    .inv-item [data-f="desc"] { grid-column:1 / -1; }
+    .inv-item label { font-size:11px; font-weight:400; color:#999; gap:3px; }
+    .inv-item .inv-del { align-self:end; margin-bottom:4px; }
+    .inv-item input { padding:8px 9px; }
+    .inv-del { width:30px; height:30px; border:0; border-radius:8px; background:transparent; color:#aaa; font-size:18px; line-height:1; cursor:pointer; }
+    .inv-del:hover { background:#f0eeeb; color:#c0392b; }
+    .inv-add { justify-self:start; border:1px dashed rgba(0,0,0,.2); background:transparent; border-radius:10px; padding:7px 14px; font:inherit; font-size:12.5px; color:#555; cursor:pointer; }
+    .inv-add:hover { border-color:rgba(0,0,0,.4); color:#1a1a1a; }
+
+    .inv-actions { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:18px; }
+    .inv-btn { padding:7px 14px; border-radius:20px; border:1px solid rgba(0,0,0,.12); background:#fff; font:inherit; font-size:12.5px; font-weight:500; color:#444; cursor:pointer; transition:all .15s; }
+    .inv-btn:hover { border-color:rgba(0,0,0,.3); color:#1a1a1a; }
+    .inv-btn-main { background:#1a1a1a; border-color:#1a1a1a; color:#fff; }
+    .inv-btn-main:hover { background:#000; color:#fff; }
+    .inv-btn[disabled] { opacity:.5; pointer-events:none; }
+
+    body.dark .inv-sub, body.dark .inv-form legend, body.dark .inv-opt { color:var(--d-text-3); }
+    body.dark .inv-form label { color:var(--d-text-2); }
+    body.dark .inv-form input, body.dark .inv-form select, body.dark .inv-form textarea { background:var(--d-surface); color:var(--d-text); color-scheme:dark; }
+    body.dark .inv-form input:focus, body.dark .inv-form select:focus, body.dark .inv-form textarea:focus { border-color:var(--d-line-2); background:var(--d-raised); }
+    body.dark .inv-del:hover { background:var(--d-raised); }
+    body.dark .inv-item { border-bottom-color:var(--d-line); }
+    body.dark .inv-item label { color:var(--d-text-3); }
+    body.dark .inv-add { border-color:var(--d-line-2); color:var(--d-text-2); }
+    body.dark .inv-add:hover { color:var(--d-text); border-color:rgba(255,255,255,.4); }
+    body.dark .inv-btn { background:transparent; border-color:var(--d-line-2); color:var(--d-text-2); }
+    body.dark .inv-btn:hover { color:var(--d-text); border-color:rgba(255,255,255,.4); }
+    body.dark .inv-btn-main { background:var(--d-text); border-color:var(--d-text); color:var(--d-bg); }
+
+    /* The slip. The wrapper carries the drop shadow, because a mask on the
+       paper would clip a shadow of its own. */
+    .inv-slip { filter:drop-shadow(0 1px 1px rgb(0 0 0/.06)) drop-shadow(0 10px 14px rgb(0 0 0/.14)); padding:4px 0 20px; }
+    .inv-paper {
+      --tooth-w:12px; --tooth-h:12px; --ink:#1c1c1c; --ink-2:#6b6b6b; --rule:#bdbdbd;
+      position:relative; display:block; width:100%; max-width:360px; margin:0 auto; box-sizing:border-box;
+      background:#fff; color:var(--ink);
+      font-family:'Fira Code', ui-monospace, 'SF Mono', Menlo, Consolas, Tahoma, monospace;
+      font-size:12px; line-height:1.55; font-variant-numeric:tabular-nums;
+      padding:calc(var(--tooth-h) + 18px) 22px calc(var(--tooth-h) + 20px);
+      -webkit-mask:
+        conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/var(--tooth-w) var(--tooth-h) repeat-x,
+        conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top/var(--tooth-w) var(--tooth-h) repeat-x,
+        linear-gradient(#000 0 0) center/100% calc(100% - 2 * var(--tooth-h) + 1px) no-repeat;
+              mask:
+        conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/var(--tooth-w) var(--tooth-h) repeat-x,
+        conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top/var(--tooth-w) var(--tooth-h) repeat-x,
+        linear-gradient(#000 0 0) center/100% calc(100% - 2 * var(--tooth-h) + 1px) no-repeat;
+    }
+    .inv-paper.is-printing { animation:invPrint .46s cubic-bezier(.22,1,.36,1) both; }
+    @keyframes invPrint { from { clip-path:inset(0 0 100% 0); } to { clip-path:inset(0 0 0 0); } }
+    @media (prefers-reduced-motion:reduce) { .inv-paper.is-printing { animation:none; } }
+
+    .rc-center { text-align:center; }
+    .rc-brand { font-size:15px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; }
+    .rc-dim { color:var(--ink-2); }
+    .rc-small { font-size:10.5px; }
+    .rc-kicker { font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--ink-2); margin-top:10px; }
+    .rc-rule { border:0; border-top:1px dashed var(--rule); margin:12px 0; }
+    .rc-line { display:flex; align-items:baseline; gap:6px; }
+    .rc-line > .rc-k { flex:none; max-width:62%; }
+    .rc-line > .rc-v { flex:none; text-align:right; }
+    .rc-line > .rc-dots { flex:1; min-width:12px; border-bottom:1px dotted #9a9a9a; transform:translateY(-4px); }
+    .rc-item + .rc-item { margin-top:7px; }
+    .rc-item .rc-k { overflow-wrap:anywhere; }
+    .rc-item .rc-sub { font-size:10.5px; color:var(--ink-2); }
+    .rc-total { border-top:3px double var(--ink); border-bottom:3px double var(--ink); padding:7px 0; margin-top:10px; font-weight:700; font-size:14px; }
+    .rc-billto { position:relative; padding-right:96px; min-height:44px; }
+    .rc-block-k { font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink-2); margin-bottom:3px; }
+    .rc-pre { white-space:pre-wrap; overflow-wrap:anywhere; }
+    .rc-empty { color:#aaa; font-style:italic; }
+    .rc-stamp {
+      position:absolute; right:0; top:50%; transform:translateY(-50%) rotate(-12deg);
+      border:2px solid currentColor; border-radius:6px; padding:3px 10px;
+      font-size:15px; font-weight:700; letter-spacing:.2em; opacity:.78; pointer-events:none;
+    }
+    .rc-stamp.paid { color:#1f8a4c; }
+    .rc-stamp.unpaid { color:#c0392b; }
+    .rc-barcode { display:flex; justify-content:center; align-items:stretch; height:42px; gap:0; margin:14px auto 4px; }
+    .rc-barcode i { display:block; background:var(--ink); }
+
+    /* Save PDF prints only the slip. */
+    @media print {
+      @page { margin:12mm; }
+      body.inv-printing * { visibility:hidden !important; }
+      body.inv-printing #invPaper, body.inv-printing #invPaper * { visibility:visible !important; }
+      body.inv-printing #invPaper { position:fixed; left:50%; top:0; transform:translateX(-50%); animation:none; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    }
+
     /* ─────────────────── ANALYTICS PAGE ─────────────────── */
     .an-nav-btn { display:none !important; }
     body.is-admin .an-nav-btn { display:flex !important; }
@@ -5475,6 +5594,79 @@ one keyframe at a time</div>
   </div><!-- /view-game -->
 
 
+  <!-- ══════════════════════════════ INVOICE ══════════════════════════════ -->
+  <!-- Admin-only invoice maker, printed as a thermal receipt after 21st.dev's
+       "Receipt Pricing". The form on the left fills the slip on the right as
+       you type; the slip exports as a PNG or, through the print dialog, a PDF.
+       Drafts stay in this browser (localStorage), never in the site settings. -->
+  <div class="view" id="view-invoice">
+    <div class="inv-head">
+      <div class="inv-title">Invoice</div>
+      <div class="inv-sub">Only visible to you. Fill in the form; the receipt updates as you type.</div>
+    </div>
+    <div class="inv-wrap">
+      <form class="inv-form" id="invForm" autocomplete="off" onsubmit="return false">
+        <fieldset>
+          <legend>From</legend>
+          <label>Name<input name="merchant" type="text"></label>
+          <label>Line under it<input name="merchantNote" type="text"></label>
+        </fieldset>
+        <fieldset>
+          <legend>Bill to</legend>
+          <label>Client name<input name="client" type="text" dir="auto" placeholder="Client or company"></label>
+          <label>Client details <span class="inv-opt">optional</span><input name="clientDetail" type="text" dir="auto" placeholder="Email, phone or company"></label>
+        </fieldset>
+        <fieldset>
+          <legend>Invoice</legend>
+          <div class="inv-grid2">
+            <label>Number<input name="number" type="text"></label>
+            <label>Status
+              <select name="status"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select>
+            </label>
+            <label>Date<input name="date" type="date"></label>
+            <label>Due date <span class="inv-opt">optional</span><input name="due" type="date"></label>
+            <label>Currency
+              <select name="currency"><option value="USD">US dollar ($)</option><option value="IRT">Toman (تومان)</option></select>
+            </label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Services</legend>
+          <div class="inv-items" id="invItems"></div>
+          <button type="button" class="inv-add" id="invAdd">+ Add a service</button>
+        </fieldset>
+        <fieldset>
+          <legend>Adjustments</legend>
+          <div class="inv-grid2">
+            <label>Discount <span class="inv-opt">amount</span><input name="discount" type="number" min="0" step="any" inputmode="decimal"></label>
+            <label>Tax <span class="inv-opt">%</span><input name="tax" type="number" min="0" step="any" inputmode="decimal"></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Payment</legend>
+          <label>Method<input name="payMethod" type="text" dir="auto" placeholder="Card transfer, PayPal, crypto…"></label>
+          <label>Details<textarea name="payDetail" rows="3" dir="auto" placeholder="Card number, IBAN / Sheba, account name…"></textarea></label>
+        </fieldset>
+        <fieldset>
+          <legend>Note <span class="inv-opt">optional</span></legend>
+          <textarea name="note" rows="2" dir="auto" placeholder="Terms, thanks, anything else"></textarea>
+        </fieldset>
+      </form>
+
+      <div class="inv-preview">
+        <div class="inv-actions">
+          <button type="button" class="inv-btn inv-btn-main" id="invPng">Download PNG</button>
+          <button type="button" class="inv-btn" id="invPdf">Save PDF</button>
+          <button type="button" class="inv-btn" id="invNew">New invoice</button>
+        </div>
+        <div class="inv-slip" id="invSlip">
+          <article class="inv-paper" id="invPaper"></article>
+        </div>
+      </div>
+    </div>
+  </div><!-- /view-invoice -->
+
+
   <!-- ══════════════════════════════ ANALYTICS ══════════════════════════════ -->
   <div class="view" id="view-analytics">
     <div class="an-title">Analytics</div>
@@ -5662,6 +5854,14 @@ one keyframe at a time</div>
     <svg viewBox="0 0 24 24" fill="none">
       <path d="M14.19 3.02a6.62 6.62 0 0 1 0 9.36c-2.2 2.2-5.55 2.45-7.85.74l-2.4 2.4a1.6 1.6 0 1 1-2.26-2.27l2.4-2.4c-1.7-2.3-1.46-5.65.75-7.85a6.62 6.62 0 0 1 9.36 0Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
       <circle cx="18.1" cy="18.1" r="3.05" stroke="currentColor" stroke-width="2"/>
+    </svg>
+  </button>
+  <!-- Admin-only, like Analytics (an-nav-btn hides it from visitors). -->
+  <button class="nav-btn an-nav-btn" id="nb-invoice" onclick="goView('view-invoice',this)">
+    <span class="nav-tip">Invoice</span>
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M5.5 3.5h13v17l-2.17-1.5-2.16 1.5-2.17-1.5-2.17 1.5-2.16-1.5-2.17 1.5v-17Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M9 8.5h6M9 12h6M9 15.5h3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
     </svg>
   </button>
   <button class="nav-btn an-nav-btn" id="nb-analytics" onclick="goView('view-analytics',this)">
@@ -7539,6 +7739,309 @@ async function trackView(project = null) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ session_id: _SID, visitor_id: _VID, referrer: _getReferrer(), country, device: _getDevice(), browser: _getBrowser(), project, event: 'view' })
   }).catch(() => {});
+}
+
+/* ─── Invoice maker (admin) ────────────────────────────── */
+/* The draft lives in this browser only (localStorage) — never in the
+   site-settings blob, which every visitor downloads. */
+const INV_KEY = 'pf_invoice_draft';
+const INV_SEQ = 'pf_invoice_seq';
+let _inv = null;
+
+function invToday() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function invSeq() { try { return Math.max(1, parseInt(localStorage.getItem(INV_SEQ), 10) || 1); } catch (e) { return 1; } }
+function invNumber(n) { return 'INV-' + String(n).padStart(4, '0'); }
+function invBlankItem() { return { desc:'', qty:'1', rate:'' }; }
+
+function invDefaults() {
+  return {
+    merchant:'Alireza Mahdavi', merchantNote:'Motion & 3D Design · imahdavi.space',
+    client:'', clientDetail:'',
+    number:invNumber(invSeq()), status:'unpaid', date:invToday(), due:'', currency:'USD',
+    items:[invBlankItem()], discount:'', tax:'',
+    payMethod:'', payDetail:'', note:'Thank you for your business.'
+  };
+}
+function invLoad() {
+  try {
+    const s = JSON.parse(localStorage.getItem(INV_KEY));
+    if (s && typeof s === 'object') {
+      const d = Object.assign(invDefaults(), s);
+      if (!Array.isArray(d.items) || !d.items.length) d.items = [invBlankItem()];
+      return d;
+    }
+  } catch (e) {}
+  return invDefaults();
+}
+function invSave() { try { localStorage.setItem(INV_KEY, JSON.stringify(_inv)); } catch (e) {} }
+
+function invEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+function invNum(v) { const n = parseFloat(String(v).replace(/,/g, '')); return isFinite(n) ? n : 0; }
+function invMoney(n, cur) {
+  if (cur === 'IRT') return Math.round(n).toLocaleString('en-US') + ' T';
+  const s = Math.abs(n).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  return (n < 0 ? '-$' : '$') + s;
+}
+function invDate(iso, persian) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T12:00:00');
+  if (isNaN(d)) return iso;
+  const opt = { year:'numeric', month:'short', day:'2-digit' };
+  const g = d.toLocaleDateString('en-US', opt);
+  if (!persian) return g;
+  try {
+    const pt = {};
+    new Intl.DateTimeFormat('en-US-u-ca-persian', { year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(d).forEach(x => { pt[x.type] = x.value; });
+    return g + ' · ' + pt.year + '/' + pt.month + '/' + pt.day;
+  }
+  catch (e) { return g; }
+}
+
+/* The barcode, after the original: an FNV-1a hash of the invoice number
+   seeds a small PRNG that lays out 46 bars, so the same number always
+   prints the same code. */
+function invHash(s) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return h >>> 0;
+}
+function invBars(seed, n) {
+  let a = seed || 1;
+  const rnd = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  let out = '';
+  for (let i = 0; i < n; i++) {
+    const w = 1 + Math.floor(rnd() * 3), gap = 1 + Math.floor(rnd() * 2);
+    out += `<i style="width:${w}px;margin-right:${gap}px"></i>`;
+  }
+  return out;
+}
+
+function invTotals() {
+  const sub = _inv.items.reduce((t, it) => t + invNum(it.qty || 0) * invNum(it.rate), 0);
+  const disc = Math.min(invNum(_inv.discount), sub);
+  const taxPct = invNum(_inv.tax);
+  const tax = (sub - disc) * taxPct / 100;
+  return { sub, disc, taxPct, tax, total: sub - disc + tax };
+}
+
+function invLine(k, v, cls) {
+  return `<div class="rc-line ${cls || ''}"><span class="rc-k">${k}</span><span class="rc-dots"></span><span class="rc-v">${v}</span></div>`;
+}
+
+function renderInvoicePaper() {
+  const p = document.getElementById('invPaper');
+  if (!p || !_inv) return;
+  const s = _inv, cur = s.currency, fa = cur === 'IRT', T = invTotals();
+  const items = s.items.filter(it => (it.desc || '').trim() || invNum(it.rate));
+  let h = '';
+  h += `<div class="rc-center"><div class="rc-brand" dir="auto">${invEsc(s.merchant) || 'Your name'}</div>`;
+  if (s.merchantNote) h += `<div class="rc-dim rc-small" dir="auto">${invEsc(s.merchantNote)}</div>`;
+  h += `<div class="rc-kicker">Invoice</div></div>`;
+  h += `<hr class="rc-rule">`;
+  h += invLine('No.', invEsc(s.number));
+  h += invLine('Date', invEsc(invDate(s.date, fa)));
+  if (s.due) h += invLine('Due', invEsc(invDate(s.due, fa)));
+  h += `<hr class="rc-rule">`;
+  h += `<div class="rc-billto"><div class="rc-block-k">Bill to</div>`;
+  h += s.client ? `<div dir="auto" style="font-weight:600">${invEsc(s.client)}</div>` : `<div class="rc-empty">Client name</div>`;
+  if (s.clientDetail) h += `<div class="rc-dim rc-small" dir="auto">${invEsc(s.clientDetail)}</div>`;
+  h += `<div class="rc-stamp ${s.status === 'paid' ? 'paid' : 'unpaid'}">${s.status === 'paid' ? 'PAID' : 'UNPAID'}</div></div>`;
+  h += `<hr class="rc-rule">`;
+  if (!items.length) h += `<div class="rc-empty">No services yet</div>`;
+  items.forEach(it => {
+    const q = invNum(it.qty || 0), r = invNum(it.rate);
+    h += `<div class="rc-item">${invLine(`<bdi dir="auto">${invEsc(it.desc) || '—'}</bdi>`, invEsc(invMoney(q * r, cur)))}`;
+    if (q !== 1) h += `<div class="rc-sub">${q.toLocaleString('en-US')} × ${invEsc(invMoney(r, cur))}</div>`;
+    h += `</div>`;
+  });
+  h += `<hr class="rc-rule">`;
+  h += invLine('Subtotal', invEsc(invMoney(T.sub, cur)));
+  if (T.disc) h += invLine('Discount', '−' + invEsc(invMoney(T.disc, cur)));
+  if (T.taxPct) h += invLine(`Tax ${T.taxPct.toLocaleString('en-US')}%`, invEsc(invMoney(T.tax, cur)));
+  h += invLine('Total due', invEsc(invMoney(T.total, cur)), 'rc-total');
+  if (fa) h += `<div class="rc-dim rc-small" style="text-align:right;margin-top:4px">T = Toman (تومان)</div>`;
+  if (s.payMethod || s.payDetail) {
+    h += `<hr class="rc-rule"><div class="rc-block-k">Payment</div>`;
+    if (s.payMethod) h += `<div dir="auto" style="font-weight:600">${invEsc(s.payMethod)}</div>`;
+    if (s.payDetail) h += `<div class="rc-pre" dir="auto">${invEsc(s.payDetail)}</div>`;
+  }
+  if (s.note) h += `<hr class="rc-rule"><div class="rc-pre rc-center rc-dim" dir="auto">${invEsc(s.note)}</div>`;
+  h += `<div class="rc-barcode">${invBars(invHash(s.number || 'INV'), 46)}</div>`;
+  h += `<div class="rc-center rc-small rc-dim" style="letter-spacing:.3em">${invEsc(s.number)}</div>`;
+  p.innerHTML = h;
+}
+
+function renderInvoiceItems() {
+  const box = document.getElementById('invItems');
+  if (!box) return;
+  const ph = _inv.currency === 'IRT' ? 'Rate (T)' : 'Rate ($)';
+  box.innerHTML = _inv.items.map((it, i) => `<div class="inv-item" data-i="${i}">
+      <input data-f="desc" type="text" dir="auto" placeholder="Service ${i + 1}" value="${invEsc(it.desc)}">
+      <label>Qty<input data-f="qty" type="number" min="0" step="any" inputmode="decimal" value="${invEsc(it.qty)}"></label>
+      <label>${ph}<input data-f="rate" type="number" min="0" step="any" inputmode="decimal" placeholder="0" value="${invEsc(it.rate)}"></label>
+      <button type="button" class="inv-del" title="Remove" aria-label="Remove service">×</button>
+    </div>`).join('');
+}
+
+function initInvoice() {
+  const form = document.getElementById('invForm');
+  if (!form || form._ready) return;
+  form._ready = true;
+  _inv = invLoad();
+  const fill = () => {
+    form.querySelectorAll('[name]').forEach(el => { el.value = _inv[el.name] == null ? '' : _inv[el.name]; });
+    renderInvoiceItems();
+    renderInvoicePaper();
+  };
+  fill();
+
+  form.addEventListener('input', e => {
+    const el = e.target;
+    const row = el.closest('.inv-item');
+    if (row) _inv.items[+row.dataset.i][el.dataset.f] = el.value;
+    else if (el.name) _inv[el.name] = el.value;
+    else return;
+    invSave();
+    renderInvoicePaper();
+  });
+  form.addEventListener('change', e => { if (e.target.name === 'currency') renderInvoiceItems(); });
+  document.getElementById('invItems').addEventListener('click', e => {
+    const b = e.target.closest('.inv-del');
+    if (!b) return;
+    _inv.items.splice(+b.closest('.inv-item').dataset.i, 1);
+    if (!_inv.items.length) _inv.items.push(invBlankItem());
+    invSave(); renderInvoiceItems(); renderInvoicePaper();
+  });
+  document.getElementById('invAdd').addEventListener('click', () => {
+    _inv.items.push(invBlankItem());
+    invSave(); renderInvoiceItems(); renderInvoicePaper();
+    const rows = document.querySelectorAll('#invItems .inv-item');
+    rows[rows.length - 1].querySelector('input').focus();
+  });
+  document.getElementById('invNew').addEventListener('click', () => {
+    if (!confirm('Start a new invoice? The current one will be cleared.')) return;
+    // The number moves on; who you are, how you get paid and the currency stay.
+    let n = invSeq() + 1;
+    try { localStorage.setItem(INV_SEQ, String(n)); } catch (e) {}
+    const keep = { merchant:_inv.merchant, merchantNote:_inv.merchantNote, currency:_inv.currency, payMethod:_inv.payMethod, payDetail:_inv.payDetail, note:_inv.note, tax:_inv.tax };
+    _inv = Object.assign(invDefaults(), keep, { number:invNumber(n) });
+    invSave(); fill(); invPrintIn();
+  });
+  document.getElementById('invPng').addEventListener('click', invExportPng);
+  document.getElementById('invPdf').addEventListener('click', invExportPdf);
+}
+
+function invPrintIn() {
+  const p = document.getElementById('invPaper');
+  if (!p) return;
+  p.classList.remove('is-printing'); void p.offsetWidth; p.classList.add('is-printing');
+}
+
+function openInvoice() {
+  if (!document.body.classList.contains('is-admin')) { goView('view-home', document.getElementById('nb-home')); return; }
+  initInvoice();
+  invPrintIn();
+}
+
+function invFileName(ext) {
+  const who = (_inv.client || '').trim().replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '-');
+  return (_inv.number || 'Invoice') + (who ? '-' + who : '') + '.' + ext;
+}
+
+/* PNG: the slip is redrawn through an SVG foreignObject onto a canvas at 3x.
+   The page's .inv-paper/.rc- rules and the Fira Code files are inlined,
+   because an SVG image can't reach the page's stylesheets or fonts. */
+let _invFontCss = null;
+async function invFontCss() {
+  if (_invFontCss != null) return _invFontCss;
+  const files = ['/fonts/firacode-latin.woff2', '/fonts/firacode-latin-ext.woff2'];
+  const parts = await Promise.all(files.map(async f => {
+    try {
+      const b = await (await fetch(f)).blob();
+      const url = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(b); });
+      return `@font-face{font-family:'Fira Code';font-weight:300 700;src:url(${url}) format('woff2');}`;
+    } catch (e) { return ''; }
+  }));
+  return (_invFontCss = parts.join(''));
+}
+function invPaperCss() {
+  let css = '';
+  for (const sh of document.styleSheets) {
+    let rules; try { rules = sh.cssRules; } catch (e) { continue; }
+    for (const r of rules) if (r.selectorText && /\.inv-paper|\.rc-/.test(r.selectorText)) css += r.cssText + '\n';
+  }
+  return css;
+}
+
+async function invExportPng() {
+  const btn = document.getElementById('invPng');
+  const src = document.getElementById('invPaper');
+  btn.disabled = true;
+  try {
+    const W = 360, PAD = 36, SCALE = 3;
+    const clone = src.cloneNode(true);
+    clone.removeAttribute('id');
+    clone.classList.remove('is-printing');
+    clone.style.cssText = `width:${W}px;max-width:none;margin:0;`;
+    // Measure at the export width, off-screen.
+    const probe = document.createElement('div');
+    probe.style.cssText = `position:fixed;left:-10000px;top:0;width:${W}px;`;
+    probe.appendChild(clone);
+    document.body.appendChild(probe);
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    const H = Math.ceil(clone.getBoundingClientRect().height);
+    probe.remove();
+
+    const css = (await invFontCss()) + invPaperCss();
+    const html = new XMLSerializer().serializeToString(clone);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><foreignObject width="100%" height="100%">` +
+      `<div xmlns="http://www.w3.org/1999/xhtml"><style>${css.replace(/</g, '\\3c ')}</style>${html}</div></foreignObject></svg>`;
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('render')); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+
+    const c = document.createElement('canvas');
+    c.width = (W + PAD * 2) * SCALE; c.height = (H + PAD * 2) * SCALE;
+    const ctx = c.getContext('2d');
+    ctx.scale(SCALE, SCALE);
+    // The same two-layer shadow the slip has on the page.
+    ctx.shadowColor = 'rgba(0,0,0,.14)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 10;
+    ctx.drawImage(img, PAD, PAD, W, H);
+    ctx.shadowColor = 'rgba(0,0,0,.06)'; ctx.shadowBlur = 1; ctx.shadowOffsetY = 1;
+    ctx.drawImage(img, PAD, PAD, W, H);
+
+    const blob = await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('blob')), 'image/png'));
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = invFileName('png');
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  } catch (e) {
+    console.warn('[invoice] PNG export failed', e);
+    showToast({ type:'error', title:'Couldn’t make the PNG here — use Save PDF instead.' });
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* PDF: the browser's print dialog, with the print rules hiding all but the
+   slip. The title becomes the suggested file name. */
+function invExportPdf() {
+  const oldTitle = document.title;
+  document.title = invFileName('pdf').replace(/\.pdf$/, '');
+  document.body.classList.add('inv-printing');
+  const done = () => {
+    document.body.classList.remove('inv-printing');
+    document.title = oldTitle;
+    window.removeEventListener('afterprint', done);
+  };
+  window.addEventListener('afterprint', done);
+  window.print();
+  setTimeout(done, 1000);
 }
 
 /* ─── Analytics dashboard ──────────────────────────────── */
@@ -11333,8 +11836,8 @@ const PROJECTS = {
 function uid() { return Math.random().toString(36).slice(2,9); }
 
 /* ─── View navigation ──────────────────────────────────── */
-const MAIN_VIEWS = ['view-home','view-exp','view-soon','view-game','view-analytics'];
-const NAV_MAP    = { 'view-home':'nb-home', 'view-exp':'nb-exp', 'view-soon':'nb-soon', 'view-game':'nb-game', 'view-analytics':'nb-analytics' };
+const MAIN_VIEWS = ['view-home','view-exp','view-soon','view-game','view-invoice','view-analytics'];
+const NAV_MAP    = { 'view-home':'nb-home', 'view-exp':'nb-exp', 'view-soon':'nb-soon', 'view-game':'nb-game', 'view-invoice':'nb-invoice', 'view-analytics':'nb-analytics' };
 let current     = 'view-home';
 let prevMain    = 'view-home';
 let editMode    = false;
@@ -11426,6 +11929,7 @@ function goView(viewId, btn) {
   else if (viewId === 'view-soon') trackView('note');
 
   else if (viewId === 'view-game') trackView('game');
+  else if (viewId === 'view-invoice') openInvoice();
 }
 
 function setNavActive(btn) {
