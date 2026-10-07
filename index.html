@@ -4679,6 +4679,7 @@
        drawing, which is what made them look out of place. Scaling the
        rendered SVG rather than the box leaves nav spacing untouched. */
     #nb-exp-star   { --nav-lottie-scale:1.12; }
+    #nb-invoice-icon { --nav-lottie-scale:1.14; }   /* receipt: 14.8 x 18 -> about 17 x 20.5 */
     /* !important: lottie-web sets its own inline transform (a no-op
        translate3d(0,0,0)) on this svg every frame, which otherwise wins
        over a plain stylesheet rule regardless of selector weight. */
@@ -5859,10 +5860,9 @@ one keyframe at a time</div>
   <!-- Invoice maker: open to everyone for now (was admin-only, an-nav-btn). -->
   <button class="nav-btn" id="nb-invoice" onclick="goView('view-invoice',this)">
     <span class="nav-tip">Invoice</span>
-    <svg viewBox="0 0 24 24" fill="none">
-      <path d="M5.5 3.5h13v17l-2.17-1.5-2.16 1.5-2.17-1.5-2.17 1.5-2.16-1.5-2.17 1.5v-17Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-      <path d="M9 8.5h6M9 12h6M9 15.5h3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-    </svg>
+    <!-- Iconly "Receipt bill check" Lottie (/receipt-icon.json), played like
+         the Experience star: once on load, again on every tap. -->
+    <div class="nav-lottie-icon" id="nb-invoice-icon" aria-hidden="true"></div>
   </button>
   <button class="nav-btn an-nav-btn" id="nb-analytics" onclick="goView('view-analytics',this)">
     <span class="nav-tip">Analytics</span>
@@ -17309,6 +17309,23 @@ document.addEventListener('DOMContentLoaded', () => {
     loop: false,
     autoplay: true,
     path: '/media/site/star-medal.json',
+  });
+
+  btn.addEventListener('click', () => anim.goToAndPlay(0, true));
+})();
+
+/* ── Invoice tab's receipt Lottie ── same behaviour as the star. */
+(function () {
+  const el = document.getElementById('nb-invoice-icon');
+  const btn = document.getElementById('nb-invoice');
+  if (!el || !btn || typeof lottie === 'undefined') return;
+
+  const anim = lottie.loadAnimation({
+    container: el,
+    renderer: 'svg',
+    loop: false,
+    autoplay: true,
+    path: '/receipt-icon.json',
   });
 
   btn.addEventListener('click', () => anim.goToAndPlay(0, true));
