@@ -1954,7 +1954,7 @@
       .toast-icon .toast-spin { animation:none; }
     }
 
-    /* ─────────────────── INVOICE (admin) ───────────────────
+    /* ─────────────────── INVOICE ───────────────────
        The slip is 21st.dev's "Receipt Pricing" ported to plain CSS: thermal
        paper with serrated ends (a five-layer mask), a monospace ledger with
        dot leaders, dashed rules, a double-ruled total, a rotated stamp and
@@ -5595,14 +5595,14 @@ one keyframe at a time</div>
 
 
   <!-- ══════════════════════════════ INVOICE ══════════════════════════════ -->
-  <!-- Admin-only invoice maker, printed as a thermal receipt after 21st.dev's
+  <!-- Invoice maker, printed as a thermal receipt after 21st.dev's
        "Receipt Pricing". The form on the left fills the slip on the right as
        you type; the slip exports as a PNG or, through the print dialog, a PDF.
        Drafts stay in this browser (localStorage), never in the site settings. -->
   <div class="view" id="view-invoice">
     <div class="inv-head">
       <div class="inv-title">Invoice</div>
-      <div class="inv-sub">Only visible to you. Fill in the form; the receipt updates as you type.</div>
+      <div class="inv-sub">Fill in the form; the receipt updates as you type. Your draft stays in this browser.</div>
     </div>
     <div class="inv-wrap">
       <form class="inv-form" id="invForm" autocomplete="off" onsubmit="return false">
@@ -5856,8 +5856,8 @@ one keyframe at a time</div>
       <circle cx="18.1" cy="18.1" r="3.05" stroke="currentColor" stroke-width="2"/>
     </svg>
   </button>
-  <!-- Admin-only, like Analytics (an-nav-btn hides it from visitors). -->
-  <button class="nav-btn an-nav-btn" id="nb-invoice" onclick="goView('view-invoice',this)">
+  <!-- Invoice maker: open to everyone for now (was admin-only, an-nav-btn). -->
+  <button class="nav-btn" id="nb-invoice" onclick="goView('view-invoice',this)">
     <span class="nav-tip">Invoice</span>
     <svg viewBox="0 0 24 24" fill="none">
       <path d="M5.5 3.5h13v17l-2.17-1.5-2.16 1.5-2.17-1.5-2.17 1.5-2.16-1.5-2.17 1.5v-17Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
@@ -7741,7 +7741,7 @@ async function trackView(project = null) {
   }).catch(() => {});
 }
 
-/* ─── Invoice maker (admin) ────────────────────────────── */
+/* ─── Invoice maker ────────────────────────────────────── */
 /* The draft lives in this browser only (localStorage) — never in the
    site-settings blob, which every visitor downloads. */
 const INV_KEY = 'pf_invoice_draft';
@@ -7989,7 +7989,6 @@ function invPrintIn() {
 }
 
 function openInvoice() {
-  if (!document.body.classList.contains('is-admin')) { goView('view-home', document.getElementById('nb-home')); return; }
   initInvoice();
   invPrintIn();
   if (!window.qrcode) invLoadQr().then(renderInvoicePaper).catch(() => {});
