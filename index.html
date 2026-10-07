@@ -2049,6 +2049,7 @@
     .rc-block-k { font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink-2); margin-bottom:3px; }
     .rc-pre { white-space:pre-wrap; overflow-wrap:anywhere; }
     .rc-empty { color:#aaa; font-style:italic; }
+    .rc-faint { color:#c4c4c4; }
     .rc-stamp {
       position:absolute; inset-inline-end:0; top:50%; transform:translateY(-50%) rotate(-12deg);
       border:2px solid currentColor; border-radius:6px; padding:3px 10px;
@@ -5680,8 +5681,8 @@ one keyframe at a time</div>
       <form class="inv-form" id="invForm" autocomplete="off" onsubmit="return false">
         <fieldset>
           <legend data-t="from">From</legend>
-          <label><span data-t="name">Name</span><input name="merchant" type="text" dir="auto"></label>
-          <label><span data-t="lineUnder">Line under it</span><input name="merchantNote" type="text" dir="auto"></label>
+          <label><span data-t="name">Name</span><input name="merchant" type="text" dir="auto" data-ph="namePh"></label>
+          <label><span data-t="lineUnder">Line under it</span><input name="merchantNote" type="text" dir="auto" data-ph="lineUnderPh"></label>
         </fieldset>
         <fieldset>
           <legend data-t="billTo">Bill to</legend>
@@ -7892,7 +7893,7 @@ let _inv = null;
 const INV_I18N = {
   en: {
     title:'Invoice', sub:'Fill in the form; the receipt updates as you type. Your draft stays in this browser.',
-    from:'From', name:'Name', lineUnder:'Line under it',
+    from:'From', name:'Name', lineUnder:'Line under it', namePh:'Your name or studio', lineUnderPh:'e.g. Motion Designer', servicePh:'e.g. Motion graphics, 30s',
     billTo:'Bill to', clientName:'Client name', clientPh:'Client or company',
     clientDetail:'Client details', clientDetailPh:'Email, phone or company', optional:'optional',
     invoice:'Invoice', number:'Number', status:'Status', unpaid:'Unpaid', paid:'Paid',
@@ -7913,7 +7914,7 @@ const INV_I18N = {
   },
   fa: {
     title:'فاکتور', sub:'فرم را پر کنید؛ رسید همزمان به‌روز می‌شود. پیش‌نویس فقط در همین مرورگر ذخیره می‌شود.',
-    from:'از طرف', name:'نام', lineUnder:'زیرنویس',
+    from:'از طرف', name:'نام', lineUnder:'زیرنویس', namePh:'نام شما یا استودیو', lineUnderPh:'مثلاً موشن دیزاینر', servicePh:'مثلاً موشن گرافیک ۳۰ ثانیه',
     billTo:'صورتحساب برای', clientName:'نام مشتری', clientPh:'نام شخص یا شرکت',
     clientDetail:'اطلاعات مشتری', clientDetailPh:'ایمیل، تلفن یا شرکت', optional:'اختیاری',
     invoice:'فاکتور', number:'شماره', status:'وضعیت', unpaid:'پرداخت نشده', paid:'پرداخت شده',
@@ -7938,8 +7939,14 @@ function invT(k) { const L = (_inv && _inv.lang === 'fa') ? 'fa' : 'en'; return 
    typed by hand is left alone. The older defaults are listed so a draft
    saved under them moves to the new ones. */
 const INV_DEFAULTS = {
-  merchantNote: { en:'Motion Designer', fa:'موشن دیزاینر', old:['Motion & 3D Design · imahdavi.space'] },
+  payMethod: { en:'Bank transfer', fa:'کارت به کارت', old:[] },
   note: { en:'Thank you!\nLooking forward to our next move.', fa:'ممنون از همکاری‌تون!\nمنتظر پروژه بعدی هستم.', old:['Thank you for your business.'] }
+};
+// Name and the line under it start empty now (the boxes show a hint);
+// drafts saved while they were prefilled let go of those old values.
+const INV_OLD_PREFILL = {
+  merchant: ['Alireza Mahdavi'],
+  merchantNote: ['Motion Designer', 'موشن دیزاینر', 'Motion & 3D Design · imahdavi.space']
 };
 function invAdoptDefaults(lang) {
   for (const f in INV_DEFAULTS) {
@@ -7959,12 +7966,12 @@ function invBlankItem() { return { desc:'', qty:'1', rate:'' }; }
 function invDefaults(lang) {
   lang = lang || 'en';
   return {
-    lang,
-    merchant:'Alireza Mahdavi', merchantNote:INV_DEFAULTS.merchantNote[lang],
+    v:2, lang,
+    merchant:'', merchantNote:'',
     client:'', clientDetail:'',
     number:invNumber(invSeq()), status:'unpaid', date:invToday(), due:'', currency:'USD',
     items:[invBlankItem()], discount:'', tax:'',
-    payMethod:'', payDetail:'', note:INV_DEFAULTS.note[lang]
+    payMethod:INV_DEFAULTS.payMethod[lang], payDetail:'', note:INV_DEFAULTS.note[lang]
   };
 }
 function invLoad() {
@@ -7974,6 +7981,11 @@ function invLoad() {
       const d = Object.assign(invDefaults(s.lang), s);
       if (d.lang !== 'fa') d.lang = 'en';
       if (!Array.isArray(d.items) || !d.items.length) d.items = [invBlankItem()];
+      if (s.v !== 2) {
+        for (const f in INV_OLD_PREFILL) if (INV_OLD_PREFILL[f].includes(d[f])) d[f] = '';
+        if (!d.payMethod) d.payMethod = INV_DEFAULTS.payMethod[d.lang];
+        d.v = 2;
+      }
       _inv = d;
       invAdoptDefaults(d.lang);
       return d;
@@ -8106,7 +8118,7 @@ function renderInvoicePaper() {
   p.classList.toggle('is-fa', fa);
   const items = s.items.filter(it => (it.desc || '').trim() || invNum(it.rate));
   let h = '';
-  h += `<div class="rc-center"><div class="rc-brand" dir="auto">${invEsc(s.merchant) || invT('rYourName')}</div>`;
+  h += `<div class="rc-center"><div class="rc-brand${s.merchant ? '' : ' rc-faint'}" dir="auto">${invEsc(s.merchant) || invT('rYourName')}</div>`;
   if (s.merchantNote) h += `<div class="rc-dim rc-small" dir="auto">${invEsc(s.merchantNote)}</div>`;
   h += `<div class="rc-kicker">${invT('title')}</div></div>`;
   h += `<hr class="rc-rule">`;
@@ -8149,9 +8161,9 @@ function renderInvoiceItems() {
   if (!box) return;
   const rate = invT('rate') + (_inv.currency === 'IRT' ? (invFa() ? ' (تومان)' : ' (T)') : ' ($)');
   box.innerHTML = _inv.items.map((it, i) => `<div class="inv-item" data-i="${i}">
-      <input data-f="desc" type="text" dir="auto" placeholder="${invEsc(invT('service'))} ${invFmt(i + 1)}" value="${invEsc(it.desc)}">
+      <input data-f="desc" type="text" dir="auto" placeholder="${invEsc(invT('servicePh'))}" value="${invEsc(it.desc)}">
       <label>${invT('qty')}<input data-f="qty" type="text" inputmode="decimal" dir="ltr" value="${invEsc(it.qty)}"></label>
-      <label>${rate}<input data-f="rate" type="text" inputmode="decimal" dir="ltr" placeholder="0" value="${invEsc(it.rate)}"></label>
+      <label>${rate}<input data-f="rate" type="text" inputmode="decimal" dir="ltr" placeholder="500" value="${invEsc(it.rate)}"></label>
       <button type="button" class="inv-del" title="${invEsc(invT('remove'))}" aria-label="${invEsc(invT('remove'))}">×</button>
     </div>`).join('');
 }
