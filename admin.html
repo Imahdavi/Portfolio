@@ -198,7 +198,7 @@
     </button>
     <div class="nav-spacer"></div>
     <a class="nav-link" href="index.html" target="_blank">← View site</a>
-    <a class="nav-link" href="#" onclick="localStorage.removeItem('portfolio_admin');window.location.reload();" style="color:#ff6b6b">Logout</a>
+    <a class="nav-link" href="#" onclick="localStorage.removeItem('portfolio_admin');localStorage.removeItem('pf_admin_key');window.location.reload();" style="color:#ff6b6b">Logout</a>
   </aside>
 
   <main>
@@ -316,7 +316,7 @@
     <!-- ══ Security ══ -->
     <div class="tab" id="tab-security">
       <h2 class="tab-title">Security</h2>
-      <p class="tab-desc">Change the admin panel password.</p>
+      <p class="tab-desc">The admin password is the <code>ADMIN_KEY</code> secret on the Cloudflare Worker. To change it, run <code>npx wrangler secret put ADMIN_KEY</code> in the portfolio-api folder, then log in here again.</p>
       <div class="section danger-zone">
         <div class="section-title">Change Password</div>
         <div class="field"><label>Current Password</label><input type="password" id="sec-current"/></div>
@@ -340,6 +340,14 @@
    still pointed at Supabase, which is why it stopped working — that
    project's egress quota ran out and every call returns 402. */
 const API_URL = 'https://portfolio-api.alireza-mahdavi.workers.dev';
+// The API refuses writes without the admin key (the ADMIN_KEY secret on the
+// Worker). The password typed at the gate IS that key; it is kept here so the
+// site's inline editing can send it too.
+function adminHeaders(h) {
+  let k = '';
+  try { k = localStorage.getItem('pf_admin_key') || ''; } catch (e) {}
+  return Object.assign({}, h, k ? { 'X-Admin-Key': k } : {});
+}
 const SB_MEDIA_BUCKET = 'Media';
 
 // Vercel Blob got suspended for exceeding its 10GB/mo transfer quota, so
@@ -362,7 +370,7 @@ async function uploadMedia(file, bucket, path) {
   const contentBase64 = await _fileToBase64(file);
   const res = await fetch(`${API_URL}/api/media/upload`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ bucket, path, contentType: file.type || 'application/octet-stream', contentBase64 }),
   });
   const data = await res.json();
@@ -390,14 +398,17 @@ async function unlock() {
   if (!pass) { err.textContent = 'Enter a password.'; return; }
 
   try {
+    // The server checks the password (the Worker's ADMIN_KEY secret).
+    const chk = await fetch(`${API_URL}/api/admin/check`, { method: 'POST', headers: { 'X-Admin-Key': pass } });
+    if (chk.status === 401) { err.textContent = 'Wrong password.'; return; }
+    if (!chk.ok) { err.textContent = 'Connection error.'; return; }
     const res  = await fetch(`${API_URL}/api/settings`, { cache: 'no-store' });
     const rows = await res.json();
     if (!res.ok || !rows[0]) { err.textContent = 'Connection error.'; return; }
-    const stored = rows[0].data.admin_password || 'admin1234';
-    if (pass !== stored) { err.textContent = 'Wrong password.'; return; }
 
     sessionPassword = pass;
     settings = rows[0].data;
+    localStorage.setItem('pf_admin_key', pass);
     localStorage.setItem('portfolio_admin', 'true');
     document.getElementById('gate').style.display = 'none';
     document.body.style.alignItems = 'unset';
@@ -668,7 +679,7 @@ async function save() {
   try {
     const res = await fetch(`${API_URL}/api/settings`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ data: settings })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -836,7 +847,7 @@ async function saveBoardBlocks(key) {
   try {
     const res = await fetch(`${API_URL}/api/projects`, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ key, data: proj })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -848,24 +859,9 @@ async function saveBoardBlocks(key) {
 
 /* ── Change password ── */
 async function changePassword() {
-  const cur     = document.getElementById('sec-current').value;
-  const nw      = document.getElementById('sec-new').value;
-  const confirm = document.getElementById('sec-confirm').value;
-  const status  = document.getElementById('save-status-sec');
-
-  if (cur !== sessionPassword)  { status.textContent = 'Current password is wrong.'; status.className = 'save-status err'; return; }
-  if (!nw)                       { status.textContent = 'New password cannot be empty.'; status.className = 'save-status err'; return; }
-  if (nw !== confirm)            { status.textContent = 'Passwords do not match.'; status.className = 'save-status err'; return; }
-
-  settings.admin_password = nw;
-  sessionPassword = nw;
-  await save();
-  document.getElementById('sec-current').value = '';
-  document.getElementById('sec-new').value     = '';
-  document.getElementById('sec-confirm').value = '';
-  status.textContent = 'Password updated ✓';
-  status.className = 'save-status ok';
-  setTimeout(() => status.textContent = '', 3000);
+  const status = document.getElementById('save-status-sec');
+  status.textContent = 'Change it in Cloudflare (see above).';
+  status.className = 'save-status err';
 }
 </script>
 </body>

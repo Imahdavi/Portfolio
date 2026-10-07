@@ -7693,6 +7693,24 @@ const BUCKET_MEDIA     = 'Media';
    the Supabase rows — out of D1, which the current outage doesn't touch. */
 const API_URL = 'https://portfolio-api.alireza-mahdavi.workers.dev';
 
+/* Every write (and the analytics read) must carry the admin key, which the
+   admin panel stores at login; the API answers 401 without it. A refused
+   save used to vanish silently, so it is now said out loud, once. */
+function adminHeaders(h) {
+  let k = '';
+  try { k = localStorage.getItem('pf_admin_key') || ''; } catch (e) {}
+  return Object.assign({}, h, k ? { 'X-Admin-Key': k } : {});
+}
+let _authWarned = false;
+function adminRefused(res) {
+  if (!res || res.status !== 401) return false;
+  if (!_authWarned && typeof showToast === 'function') {
+    _authWarned = true;
+    showToast({ type: 'error', title: 'Not saved — log in again at /admin.html' });
+  }
+  return true;
+}
+
 /* ─── Analytics ────────────────────────────────────────── */
 function _mkId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -8138,7 +8156,9 @@ async function loadAnalytics(hours, btn) {
   const url = `${API_URL}/api/analytics?limit=20000`;
   let all;
   try {
-    all = await (await fetch(url)).json();
+    const res = await fetch(url, { headers: adminHeaders() });
+    if (adminRefused(res)) return;
+    all = await res.json();
   } catch(e) { return; }
   if (!Array.isArray(all)) return;
   // A later click may have changed the range while this was loading.
@@ -8478,11 +8498,12 @@ async function saveProject(key) {
   // the row it just saved, so a board left off here comes back as the default
   // grid and its bento coordinates go unread.
   if (proj.layout) data.layout = proj.layout;
-  await fetch(`${API_URL}/api/projects`, {
+  const res = await fetch(`${API_URL}/api/projects`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ key, data })
   });
+  adminRefused(res);
 }
 
 let _cachedSettings = null;
@@ -8575,11 +8596,12 @@ async function saveSettings() {
     // Stamp the write so other tabs can tell their copy has been superseded.
     _cachedSettings.savedAt = Date.now();
     _settingsLoadedAt = _cachedSettings.savedAt;
-    await fetch(`${API_URL}/api/settings`, {
+    const res = await fetch(`${API_URL}/api/settings`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ data: _cachedSettings })
     });
+    adminRefused(res);   // not retried: without the key it can't succeed
   } catch (e) {
     _saveDirty = true; // network hiccup — make sure we try again
   } finally {
@@ -16376,6 +16398,8 @@ async function tusUpload(file, bucket, path, onProgress) {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${API_URL}/api/media/upload`);
     xhr.setRequestHeader('Content-Type', 'application/json');
+    const key = adminHeaders()['X-Admin-Key'];
+    if (key) xhr.setRequestHeader('X-Admin-Key', key);
     if (onProgress) xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded, e.total); };
     xhr.onload = () => {
       let data;
@@ -16604,7 +16628,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* ─── Init ─────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', async () => {
-  if (localStorage.getItem('portfolio_admin') === 'true') document.body.classList.add('is-admin');
+  // Admin mode needs the key from the admin panel's login too; the old flag
+  // alone (set before the API checked anything) no longer counts.
+  if (localStorage.getItem('portfolio_admin') === 'true' && localStorage.getItem('pf_admin_key')) document.body.classList.add('is-admin');
   await Promise.all([loadSettings(), loadProjects()]);
   /* loadSettings renders as soon as it has settings, which can be before the
      boards land. Re-render once both are in: the Brand list decides which
