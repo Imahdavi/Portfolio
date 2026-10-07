@@ -2021,7 +2021,7 @@
       --tooth-w:12px; --tooth-h:12px; --ink:#1c1c1c; --ink-2:#6b6b6b; --rule:#bdbdbd;
       position:relative; display:block; width:100%; max-width:360px; margin:0 auto; box-sizing:border-box;
       background:#fff; color:var(--ink);
-      font-family:'Fira Code', ui-monospace, 'SF Mono', Menlo, Consolas, Tahoma, monospace;
+      font-family:'Fira Code', 'Vazirmatn', ui-monospace, 'SF Mono', Menlo, Consolas, Tahoma, monospace;
       font-size:12px; line-height:1.55; font-variant-numeric:tabular-nums;
       padding:calc(var(--tooth-h) + 18px) 22px calc(var(--tooth-h) + 20px);
       -webkit-mask:
@@ -2045,18 +2045,18 @@
     .rc-rule { border:0; border-top:1px dashed var(--rule); margin:12px 0; }
     .rc-line { display:flex; align-items:baseline; gap:6px; }
     .rc-line > .rc-k { flex:none; max-width:62%; }
-    .rc-line > .rc-v { flex:none; text-align:right; }
+    .rc-line > .rc-v { flex:none; text-align:end; }
     .rc-line > .rc-dots { flex:1; min-width:12px; border-bottom:1px dotted #9a9a9a; transform:translateY(-4px); }
     .rc-item + .rc-item { margin-top:7px; }
     .rc-item .rc-k { overflow-wrap:anywhere; }
     .rc-item .rc-sub { font-size:10.5px; color:var(--ink-2); }
     .rc-total { border-top:3px double var(--ink); border-bottom:3px double var(--ink); padding:7px 0; margin-top:10px; font-weight:700; font-size:14px; }
-    .rc-billto { position:relative; padding-right:96px; min-height:44px; }
+    .rc-billto { position:relative; padding-inline-end:96px; min-height:44px; }
     .rc-block-k { font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink-2); margin-bottom:3px; }
     .rc-pre { white-space:pre-wrap; overflow-wrap:anywhere; }
     .rc-empty { color:#aaa; font-style:italic; }
     .rc-stamp {
-      position:absolute; right:0; top:50%; transform:translateY(-50%) rotate(-12deg);
+      position:absolute; inset-inline-end:0; top:50%; transform:translateY(-50%) rotate(-12deg);
       border:2px solid currentColor; border-radius:6px; padding:3px 10px;
       font-size:15px; font-weight:700; letter-spacing:.2em; opacity:.78; pointer-events:none;
     }
@@ -2065,13 +2065,36 @@
     .rc-qr { width:132px; margin:16px auto 4px; }
     .rc-qr svg { display:block; width:100%; height:auto; }
 
-    /* Save PDF prints only the slip. */
-    @media print {
-      @page { margin:12mm; }
-      body.inv-printing * { visibility:hidden !important; }
-      body.inv-printing #invPaper, body.inv-printing #invPaper * { visibility:visible !important; }
-      body.inv-printing #invPaper { position:fixed; left:50%; top:0; transform:translateX(-50%); animation:none; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-    }
+    /* Persian. Vazirmatn's Arabic-script cut, fetched only when something
+       on the page uses it (a Persian slip, or Persian typed into an English
+       one); Latin text keeps Fira Code. Letter-spacing and capitals are off
+       for Persian: spacing tears its joined letters apart. */
+    @font-face { font-family:'Vazirmatn'; font-weight:400; font-display:swap; unicode-range:U+0600-06FF, U+200C-200E, U+FB50-FDFF, U+FE70-FEFF;
+      src:url(https://cdn.jsdelivr.net/npm/@fontsource/vazirmatn@5/files/vazirmatn-arabic-400-normal.woff2) format('woff2'); }
+    @font-face { font-family:'Vazirmatn'; font-weight:700; font-display:swap; unicode-range:U+0600-06FF, U+200C-200E, U+FB50-FDFF, U+FE70-FEFF;
+      src:url(https://cdn.jsdelivr.net/npm/@fontsource/vazirmatn@5/files/vazirmatn-arabic-700-normal.woff2) format('woff2'); }
+    @font-face { font-family:'Vazirmatn'; font-weight:400; font-display:swap; unicode-range:U+0000-00FF, U+2013-2014, U+2018-201E, U+2026, U+2212;
+      src:url(https://cdn.jsdelivr.net/npm/@fontsource/vazirmatn@5/files/vazirmatn-latin-400-normal.woff2) format('woff2'); }
+    @font-face { font-family:'Vazirmatn'; font-weight:700; font-display:swap; unicode-range:U+0000-00FF, U+2013-2014, U+2018-201E, U+2026, U+2212;
+      src:url(https://cdn.jsdelivr.net/npm/@fontsource/vazirmatn@5/files/vazirmatn-latin-700-normal.woff2) format('woff2'); }
+    /* A Persian slip is set in Vazirmatn throughout: Fira Code's monospace
+       space opened wide gaps between Persian words. */
+    .inv-paper.is-fa { font-family:'Vazirmatn', 'Fira Code', Tahoma, sans-serif; font-size:12.5px; line-height:1.75; }
+    .inv-paper.is-fa .rc-brand, .inv-paper.is-fa .rc-kicker, .inv-paper.is-fa .rc-block-k, .inv-paper.is-fa .rc-stamp { letter-spacing:0; text-transform:none; }
+    .inv-paper.is-fa .rc-kicker, .inv-paper.is-fa .rc-block-k { font-size:11px; }
+    .inv-paper.is-fa .rc-stamp { font-size:14px; }
+    #view-invoice.inv-is-fa { font-family:'Vazirmatn', Tahoma, sans-serif; }
+    #view-invoice.inv-is-fa .inv-form legend { letter-spacing:0; text-transform:none; font-size:12px; }
+
+    /* English / Persian switch, a two-button pill. */
+    .inv-head-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .inv-lang { display:inline-flex; padding:3px; border-radius:20px; background:#f2f1ef; flex:none; }
+    .inv-lang button { border:0; background:transparent; border-radius:17px; padding:5px 14px; font:inherit; font-size:12.5px; font-weight:500; color:#777; cursor:pointer; transition:background .15s, color .15s, box-shadow .15s; }
+    .inv-lang button[lang="fa"] { font-family:'Vazirmatn', Tahoma, sans-serif; }
+    .inv-lang button[aria-pressed="true"] { background:#fff; color:#1a1a1a; box-shadow:0 1px 3px rgba(0,0,0,.12); }
+    body.dark .inv-lang { background:var(--d-surface); }
+    body.dark .inv-lang button { color:var(--d-text-3); }
+    body.dark .inv-lang button[aria-pressed="true"] { background:var(--d-raised); color:var(--d-text); box-shadow:none; }
 
     /* ─────────────────── ANALYTICS PAGE ─────────────────── */
     .an-nav-btn { display:none !important; }
@@ -5597,68 +5620,76 @@ one keyframe at a time</div>
 
   <!-- ══════════════════════════════ INVOICE ══════════════════════════════ -->
   <!-- Invoice maker, printed as a thermal receipt after 21st.dev's
-       "Receipt Pricing". The form on the left fills the slip on the right as
-       you type; the slip exports as a PNG or, through the print dialog, a PDF.
+       "Receipt Pricing". The form fills the slip as you type; the slip
+       exports as a PNG or a PDF. English or Persian (the toggle up top
+       flips the form and the slip, Persian right-to-left). Every visible
+       string carries a data-t / data-ph key; INV_I18N has the words.
        Drafts stay in this browser (localStorage), never in the site settings. -->
   <div class="view" id="view-invoice">
     <div class="inv-head">
-      <div class="inv-title">Invoice</div>
-      <div class="inv-sub">Fill in the form; the receipt updates as you type. Your draft stays in this browser.</div>
+      <div class="inv-head-row">
+        <div class="inv-title" data-t="title">Invoice</div>
+        <div class="inv-lang" role="group" aria-label="Language">
+          <button type="button" data-lang="en" aria-pressed="true">English</button>
+          <button type="button" data-lang="fa" aria-pressed="false" lang="fa">فارسی</button>
+        </div>
+      </div>
+      <div class="inv-sub" data-t="sub">Fill in the form; the receipt updates as you type. Your draft stays in this browser.</div>
     </div>
     <div class="inv-wrap">
       <form class="inv-form" id="invForm" autocomplete="off" onsubmit="return false">
         <fieldset>
-          <legend>From</legend>
-          <label>Name<input name="merchant" type="text"></label>
-          <label>Line under it<input name="merchantNote" type="text"></label>
+          <legend data-t="from">From</legend>
+          <label><span data-t="name">Name</span><input name="merchant" type="text" dir="auto"></label>
+          <label><span data-t="lineUnder">Line under it</span><input name="merchantNote" type="text" dir="auto"></label>
         </fieldset>
         <fieldset>
-          <legend>Bill to</legend>
-          <label>Client name<input name="client" type="text" dir="auto" placeholder="Client or company"></label>
-          <label>Client details <span class="inv-opt">optional</span><input name="clientDetail" type="text" dir="auto" placeholder="Email, phone or company"></label>
+          <legend data-t="billTo">Bill to</legend>
+          <label><span data-t="clientName">Client name</span><input name="client" type="text" dir="auto" data-ph="clientPh"></label>
+          <label><span><span data-t="clientDetail">Client details</span> <span class="inv-opt" data-t="optional">optional</span></span><input name="clientDetail" type="text" dir="auto" data-ph="clientDetailPh"></label>
         </fieldset>
         <fieldset>
-          <legend>Invoice</legend>
+          <legend data-t="invoice">Invoice</legend>
           <div class="inv-grid2">
-            <label>Number<input name="number" type="text"></label>
-            <label>Status
-              <select name="status"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select>
+            <label><span data-t="number">Number</span><input name="number" type="text" dir="auto"></label>
+            <label><span data-t="status">Status</span>
+              <select name="status"><option value="unpaid" data-t="unpaid">Unpaid</option><option value="paid" data-t="paid">Paid</option></select>
             </label>
-            <label>Date<input name="date" type="date"></label>
-            <label>Due date <span class="inv-opt">optional</span><input name="due" type="date"></label>
-            <label>Currency
-              <select name="currency"><option value="USD">US dollar ($)</option><option value="IRT">Toman (تومان)</option></select>
+            <label><span data-t="date">Date</span><input name="date" type="date"></label>
+            <label><span><span data-t="due">Due date</span> <span class="inv-opt" data-t="optional">optional</span></span><input name="due" type="date"></label>
+            <label><span data-t="currency">Currency</span>
+              <select name="currency"><option value="USD" data-t="usd">US dollar ($)</option><option value="IRT" data-t="irt">Toman (تومان)</option></select>
             </label>
           </div>
         </fieldset>
         <fieldset>
-          <legend>Services</legend>
+          <legend data-t="services">Services</legend>
           <div class="inv-items" id="invItems"></div>
-          <button type="button" class="inv-add" id="invAdd">+ Add a service</button>
+          <button type="button" class="inv-add" id="invAdd" data-t="addService">+ Add a service</button>
         </fieldset>
         <fieldset>
-          <legend>Adjustments</legend>
+          <legend data-t="adjustments">Adjustments</legend>
           <div class="inv-grid2">
-            <label>Discount <span class="inv-opt">amount</span><input name="discount" type="number" min="0" step="any" inputmode="decimal"></label>
-            <label>Tax <span class="inv-opt">%</span><input name="tax" type="number" min="0" step="any" inputmode="decimal"></label>
+            <label><span><span data-t="discount">Discount</span> <span class="inv-opt" data-t="amount">amount</span></span><input name="discount" type="number" min="0" step="any" inputmode="decimal"></label>
+            <label><span><span data-t="tax">Tax</span> <span class="inv-opt">%</span></span><input name="tax" type="number" min="0" step="any" inputmode="decimal"></label>
           </div>
         </fieldset>
         <fieldset>
-          <legend>Payment</legend>
-          <label>Method<input name="payMethod" type="text" dir="auto" placeholder="Card transfer, PayPal, crypto…"></label>
-          <label>Details<textarea name="payDetail" rows="3" dir="auto" placeholder="Card number, IBAN / Sheba, account name…"></textarea></label>
+          <legend data-t="payment">Payment</legend>
+          <label><span data-t="method">Method</span><input name="payMethod" type="text" dir="auto" data-ph="methodPh"></label>
+          <label><span data-t="details">Details</span><textarea name="payDetail" rows="3" dir="auto" data-ph="detailsPh"></textarea></label>
         </fieldset>
         <fieldset>
-          <legend>Note <span class="inv-opt">optional</span></legend>
-          <textarea name="note" rows="2" dir="auto" placeholder="Terms, thanks, anything else"></textarea>
+          <legend><span data-t="note">Note</span> <span class="inv-opt" data-t="optional">optional</span></legend>
+          <textarea name="note" rows="2" dir="auto" data-ph="notePh"></textarea>
         </fieldset>
       </form>
 
       <div class="inv-preview">
         <div class="inv-actions">
-          <button type="button" class="inv-btn inv-btn-main" id="invPng">Download PNG</button>
-          <button type="button" class="inv-btn" id="invPdf">Save PDF</button>
-          <button type="button" class="inv-btn" id="invNew">New invoice</button>
+          <button type="button" class="inv-btn inv-btn-main" id="invPng" data-t="png">Download PNG</button>
+          <button type="button" class="inv-btn" id="invPdf" data-t="pdf">Download PDF</button>
+          <button type="button" class="inv-btn" id="invNew" data-t="newInv">New invoice</button>
         </div>
         <div class="inv-slip" id="invSlip">
           <article class="inv-paper" id="invPaper"></article>
@@ -7795,6 +7826,67 @@ const INV_KEY = 'pf_invoice_draft';
 const INV_SEQ = 'pf_invoice_seq';
 let _inv = null;
 
+/* Every word the form and the slip show, in both languages. The form's
+   markup names its strings with data-t (text) and data-ph (placeholder). */
+const INV_I18N = {
+  en: {
+    title:'Invoice', sub:'Fill in the form; the receipt updates as you type. Your draft stays in this browser.',
+    from:'From', name:'Name', lineUnder:'Line under it',
+    billTo:'Bill to', clientName:'Client name', clientPh:'Client or company',
+    clientDetail:'Client details', clientDetailPh:'Email, phone or company', optional:'optional',
+    invoice:'Invoice', number:'Number', status:'Status', unpaid:'Unpaid', paid:'Paid',
+    date:'Date', due:'Due date', currency:'Currency', usd:'US dollar ($)', irt:'Toman (تومان)',
+    services:'Services', addService:'+ Add a service', service:'Service', qty:'Qty', rate:'Rate', remove:'Remove service',
+    adjustments:'Adjustments', discount:'Discount', amount:'amount', tax:'Tax',
+    payment:'Payment', method:'Method', methodPh:'Card transfer, PayPal, crypto…',
+    details:'Details', detailsPh:'Card number, IBAN / Sheba, account name…',
+    note:'Note', notePh:'Terms, thanks, anything else',
+    png:'Download PNG', pdf:'Download PDF', newInv:'New invoice',
+    confirmNew:'Start a new invoice? The current one will be cleared.',
+    exportFail:'Couldn’t make the file here — try another browser.',
+    // the slip
+    rNo:'No.', rDate:'Date', rDue:'Due', rBillTo:'Bill to', rClient:'Client name', rNone:'No services yet',
+    rSub:'Subtotal', rDisc:'Discount', rTax:'Tax', rTotal:'Total due', rPayment:'Payment',
+    rPaid:'PAID', rUnpaid:'UNPAID', rScan:'Scan for invoice details', rYourName:'Your name',
+    qStatus:'Status', qFrom:'From'
+  },
+  fa: {
+    title:'فاکتور', sub:'فرم را پر کنید؛ رسید همزمان به‌روز می‌شود. پیش‌نویس فقط در همین مرورگر ذخیره می‌شود.',
+    from:'از طرف', name:'نام', lineUnder:'زیرنویس',
+    billTo:'صورتحساب برای', clientName:'نام مشتری', clientPh:'نام شخص یا شرکت',
+    clientDetail:'اطلاعات مشتری', clientDetailPh:'ایمیل، تلفن یا شرکت', optional:'اختیاری',
+    invoice:'فاکتور', number:'شماره', status:'وضعیت', unpaid:'پرداخت نشده', paid:'پرداخت شده',
+    date:'تاریخ', due:'سررسید', currency:'واحد پول', usd:'دلار آمریکا ($)', irt:'تومان',
+    services:'خدمات', addService:'+ افزودن خدمت', service:'خدمت', qty:'تعداد', rate:'مبلغ', remove:'حذف خدمت',
+    adjustments:'تخفیف و مالیات', discount:'تخفیف', amount:'مبلغ', tax:'مالیات',
+    payment:'پرداخت', method:'روش پرداخت', methodPh:'کارت به کارت، پی‌پال، کریپتو…',
+    details:'جزئیات', detailsPh:'شماره کارت، شبا، نام صاحب حساب…',
+    note:'یادداشت', notePh:'شرایط، تشکر یا هر توضیح دیگر',
+    png:'دانلود PNG', pdf:'دانلود PDF', newInv:'فاکتور جدید',
+    confirmNew:'فاکتور جدید شروع شود؟ فاکتور فعلی پاک می‌شود.',
+    exportFail:'ساخت فایل اینجا ممکن نشد — با مرورگر دیگری امتحان کنید.',
+    rNo:'شماره', rDate:'تاریخ', rDue:'سررسید', rBillTo:'صورتحساب برای', rClient:'نام مشتری', rNone:'هنوز خدمتی اضافه نشده',
+    rSub:'جمع', rDisc:'تخفیف', rTax:'مالیات', rTotal:'مبلغ قابل پرداخت', rPayment:'پرداخت',
+    rPaid:'پرداخت شد', rUnpaid:'پرداخت نشده', rScan:'برای دیدن جزئیات اسکن کنید', rYourName:'نام شما',
+    qStatus:'وضعیت', qFrom:'از طرف'
+  }
+};
+function invT(k) { const L = (_inv && _inv.lang === 'fa') ? 'fa' : 'en'; return INV_I18N[L][k] != null ? INV_I18N[L][k] : INV_I18N.en[k]; }
+
+/* Text fields that still hold a default follow the language; anything
+   typed by hand is left alone. The older defaults are listed so a draft
+   saved under them moves to the new ones. */
+const INV_DEFAULTS = {
+  merchantNote: { en:'Motion Designer', fa:'موشن دیزاینر', old:['Motion & 3D Design · imahdavi.space'] },
+  note: { en:'Thank you!\nLooking forward to our next move.', fa:'ممنون از همکاری‌تون!\nمنتظر پروژه بعدی هستم.', old:['Thank you for your business.'] }
+};
+function invAdoptDefaults(lang) {
+  for (const f in INV_DEFAULTS) {
+    const d = INV_DEFAULTS[f];
+    if ([d.en, d.fa].concat(d.old).includes(_inv[f])) _inv[f] = d[lang];
+  }
+}
+
 function invToday() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -7803,23 +7895,26 @@ function invSeq() { try { return Math.max(1, parseInt(localStorage.getItem(INV_S
 function invNumber(n) { return 'INV-' + String(n).padStart(4, '0'); }
 function invBlankItem() { return { desc:'', qty:'1', rate:'' }; }
 
-function invDefaults() {
+function invDefaults(lang) {
+  lang = lang || 'en';
   return {
-    merchant:'Alireza Mahdavi', merchantNote:'Motion & 3D Design · imahdavi.space',
+    lang,
+    merchant:'Alireza Mahdavi', merchantNote:INV_DEFAULTS.merchantNote[lang],
     client:'', clientDetail:'',
     number:invNumber(invSeq()), status:'unpaid', date:invToday(), due:'', currency:'USD',
     items:[invBlankItem()], discount:'', tax:'',
-    payMethod:'', payDetail:'', note:INV_NOTE
+    payMethod:'', payDetail:'', note:INV_DEFAULTS.note[lang]
   };
 }
-const INV_NOTE = 'Thank you!\nLooking forward to our next move.';
 function invLoad() {
   try {
     const s = JSON.parse(localStorage.getItem(INV_KEY));
     if (s && typeof s === 'object') {
-      const d = Object.assign(invDefaults(), s);
-      if (d.note === 'Thank you for your business.') d.note = INV_NOTE; // the first default
+      const d = Object.assign(invDefaults(s.lang), s);
+      if (d.lang !== 'fa') d.lang = 'en';
       if (!Array.isArray(d.items) || !d.items.length) d.items = [invBlankItem()];
+      _inv = d;
+      invAdoptDefaults(d.lang);
       return d;
     }
   } catch (e) {}
@@ -7830,19 +7925,34 @@ function invSave() { try { localStorage.setItem(INV_KEY, JSON.stringify(_inv)); 
 function invEsc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 }
-function invNum(v) { const n = parseFloat(String(v).replace(/,/g, '')); return isFinite(n) ? n : 0; }
+// Persian digits are accepted when typed, as well as Latin ones.
+function invNum(v) {
+  const s = String(v == null ? '' : v).replace(/[۰-۹]/g, c => '۰۱۲۳۴۵۶۷۸۹'.indexOf(c)).replace(/[,٬]/g, '').replace('٫', '.');
+  const n = parseFloat(s);
+  return isFinite(n) ? n : 0;
+}
+function invFa() { return _inv && _inv.lang === 'fa'; }
+function invFmt(n, dec) {
+  return n.toLocaleString(invFa() ? 'fa-IR' : 'en-US', { minimumFractionDigits:dec || 0, maximumFractionDigits:dec || 0 });
+}
 function invMoney(n, cur) {
+  if (invFa()) return cur === 'IRT' ? invFmt(Math.round(n)) + ' تومان' : invFmt(n, 2) + ' دلار';
   if (cur === 'IRT') return Math.round(n).toLocaleString('en-US') + ' T';
   const s = Math.abs(n).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
   return (n < 0 ? '-$' : '$') + s;
 }
-function invDate(iso, persian) {
+// English: the Gregorian date, plus the Persian one when billing in Toman.
+// Persian: the Persian (Jalali) date, written out — "۱۴ مهر ۱۴۰۵".
+function invDate(iso) {
   if (!iso) return '';
   const d = new Date(iso + 'T12:00:00');
   if (isNaN(d)) return iso;
-  const opt = { year:'numeric', month:'short', day:'2-digit' };
-  const g = d.toLocaleDateString('en-US', opt);
-  if (!persian) return g;
+  if (invFa()) {
+    try { return new Intl.DateTimeFormat('fa-IR-u-ca-persian', { year:'numeric', month:'long', day:'numeric' }).format(d); }
+    catch (e) { return iso; }
+  }
+  const g = d.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'2-digit' });
+  if (_inv.currency !== 'IRT') return g;
   try {
     const pt = {};
     new Intl.DateTimeFormat('en-US-u-ca-persian', { year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(d).forEach(x => { pt[x.type] = x.value; });
@@ -7869,26 +7979,27 @@ function invLoadQr() {
 }
 
 function invQrText() {
-  const s = _inv, cur = s.currency, fa = cur === 'IRT', T = invTotals();
-  const m = n => fa ? Math.round(n).toLocaleString('en-US') + ' تومان' : invMoney(n, cur);
+  const s = _inv, cur = s.currency, T = invTotals();
+  // In English, Toman amounts spell the unit out; "T" needs the slip's legend.
+  const m = n => (!invFa() && cur === 'IRT') ? Math.round(n).toLocaleString('en-US') + ' تومان' : invMoney(n, cur);
   const L = [];
-  L.push('INVOICE ' + (s.number || ''));
-  if (s.merchant) L.push('From: ' + s.merchant);
-  if (s.client) L.push('Bill to: ' + s.client + (s.clientDetail ? ' (' + s.clientDetail + ')' : ''));
-  L.push('Date: ' + invDate(s.date, fa));
-  if (s.due) L.push('Due: ' + invDate(s.due, fa));
+  L.push(invT('title') + ' ' + (s.number || ''));
+  if (s.merchant) L.push(invT('qFrom') + ': ' + s.merchant);
+  if (s.client) L.push(invT('rBillTo') + ': ' + s.client + (s.clientDetail ? ' (' + s.clientDetail + ')' : ''));
+  L.push(invT('rDate') + ': ' + invDate(s.date));
+  if (s.due) L.push(invT('rDue') + ': ' + invDate(s.due));
   L.push('—');
   s.items.filter(it => (it.desc || '').trim() || invNum(it.rate)).forEach(it => {
     const q = invNum(it.qty || 0), r = invNum(it.rate);
-    L.push((it.desc || '—') + (q !== 1 ? ' ×' + q.toLocaleString('en-US') : '') + ': ' + m(q * r));
+    L.push((it.desc || '—') + (q !== 1 ? ' ×' + invFmt(q) : '') + ': ' + m(q * r));
   });
   L.push('—');
-  L.push('Subtotal: ' + m(T.sub));
-  if (T.disc) L.push('Discount: -' + m(T.disc));
-  if (T.taxPct) L.push('Tax ' + T.taxPct + '%: ' + m(T.tax));
-  L.push('TOTAL DUE: ' + m(T.total));
-  L.push('Status: ' + (s.status === 'paid' ? 'PAID' : 'UNPAID'));
-  if (s.payMethod || s.payDetail) L.push('—', 'Payment: ' + [s.payMethod, s.payDetail].filter(Boolean).join('\n'));
+  L.push(invT('rSub') + ': ' + m(T.sub));
+  if (T.disc) L.push(invT('rDisc') + ': -' + m(T.disc));
+  if (T.taxPct) L.push(invT('rTax') + ' ' + invFmt(T.taxPct) + '%: ' + m(T.tax));
+  L.push(invT('rTotal') + ': ' + m(T.total));
+  L.push(invT('qStatus') + ': ' + (s.status === 'paid' ? invT('rPaid') : invT('rUnpaid')));
+  if (s.payMethod || s.payDetail) L.push('—', invT('rPayment') + ': ' + [s.payMethod, s.payDetail].filter(Boolean).join('\n'));
   if (s.note) L.push('—', s.note);
   return L.join('\n');
 }
@@ -7922,63 +8033,79 @@ function invLines(t) {
 }
 
 function invLine(k, v, cls) {
-  return `<div class="rc-line ${cls || ''}"><span class="rc-k">${k}</span><span class="rc-dots"></span><span class="rc-v">${v}</span></div>`;
+  return `<div class="rc-line ${cls || ''}"><span class="rc-k">${k}</span><span class="rc-dots"></span><span class="rc-v"><bdi>${v}</bdi></span></div>`;
 }
 
 function renderInvoicePaper() {
   const p = document.getElementById('invPaper');
   if (!p || !_inv) return;
-  const s = _inv, cur = s.currency, fa = cur === 'IRT', T = invTotals();
+  const s = _inv, cur = s.currency, fa = invFa(), T = invTotals();
+  p.dir = fa ? 'rtl' : 'ltr';
+  p.lang = fa ? 'fa' : 'en';
+  p.classList.toggle('is-fa', fa);
   const items = s.items.filter(it => (it.desc || '').trim() || invNum(it.rate));
   let h = '';
-  h += `<div class="rc-center"><div class="rc-brand" dir="auto">${invEsc(s.merchant) || 'Your name'}</div>`;
+  h += `<div class="rc-center"><div class="rc-brand" dir="auto">${invEsc(s.merchant) || invT('rYourName')}</div>`;
   if (s.merchantNote) h += `<div class="rc-dim rc-small" dir="auto">${invEsc(s.merchantNote)}</div>`;
-  h += `<div class="rc-kicker">Invoice</div></div>`;
+  h += `<div class="rc-kicker">${invT('title')}</div></div>`;
   h += `<hr class="rc-rule">`;
-  h += invLine('No.', invEsc(s.number));
-  h += invLine('Date', invEsc(invDate(s.date, fa)));
-  if (s.due) h += invLine('Due', invEsc(invDate(s.due, fa)));
+  h += invLine(invT('rNo'), `<span dir="ltr">${invEsc(s.number)}</span>`);
+  h += invLine(invT('rDate'), invEsc(invDate(s.date)));
+  if (s.due) h += invLine(invT('rDue'), invEsc(invDate(s.due)));
   h += `<hr class="rc-rule">`;
-  h += `<div class="rc-billto"><div class="rc-block-k">Bill to</div>`;
-  h += s.client ? `<div dir="auto" style="font-weight:600">${invEsc(s.client)}</div>` : `<div class="rc-empty">Client name</div>`;
+  h += `<div class="rc-billto"><div class="rc-block-k">${invT('rBillTo')}</div>`;
+  h += s.client ? `<div dir="auto" style="font-weight:600">${invEsc(s.client)}</div>` : `<div class="rc-empty">${invT('rClient')}</div>`;
   if (s.clientDetail) h += `<div class="rc-dim rc-small" dir="auto">${invEsc(s.clientDetail)}</div>`;
-  h += `<div class="rc-stamp ${s.status === 'paid' ? 'paid' : 'unpaid'}">${s.status === 'paid' ? 'PAID' : 'UNPAID'}</div></div>`;
+  h += `<div class="rc-stamp ${s.status === 'paid' ? 'paid' : 'unpaid'}">${s.status === 'paid' ? invT('rPaid') : invT('rUnpaid')}</div></div>`;
   h += `<hr class="rc-rule">`;
-  if (!items.length) h += `<div class="rc-empty">No services yet</div>`;
+  if (!items.length) h += `<div class="rc-empty">${invT('rNone')}</div>`;
   items.forEach(it => {
     const q = invNum(it.qty || 0), r = invNum(it.rate);
     h += `<div class="rc-item">${invLine(`<bdi dir="auto">${invEsc(it.desc) || '—'}</bdi>`, invEsc(invMoney(q * r, cur)))}`;
-    if (q !== 1) h += `<div class="rc-sub">${q.toLocaleString('en-US')} × ${invEsc(invMoney(r, cur))}</div>`;
+    if (q !== 1) h += `<div class="rc-sub">${invFmt(q)} × ${invEsc(invMoney(r, cur))}</div>`;
     h += `</div>`;
   });
   h += `<hr class="rc-rule">`;
-  h += invLine('Subtotal', invEsc(invMoney(T.sub, cur)));
-  if (T.disc) h += invLine('Discount', '−' + invEsc(invMoney(T.disc, cur)));
-  if (T.taxPct) h += invLine(`Tax ${T.taxPct.toLocaleString('en-US')}%`, invEsc(invMoney(T.tax, cur)));
-  h += invLine('Total due', invEsc(invMoney(T.total, cur)), 'rc-total');
-  if (fa) h += `<div class="rc-dim rc-small" style="text-align:right;margin-top:4px">T = Toman (تومان)</div>`;
+  h += invLine(invT('rSub'), invEsc(invMoney(T.sub, cur)));
+  if (T.disc) h += invLine(invT('rDisc'), (fa ? '' : '−') + invEsc(invMoney(T.disc, cur)));
+  if (T.taxPct) h += invLine(`${invT('rTax')} ${invFmt(T.taxPct)}${fa ? '٪' : '%'}`,invEsc(invMoney(T.tax, cur)));
+  h += invLine(invT('rTotal'), invEsc(invMoney(T.total, cur)), 'rc-total');
+  if (!fa && cur === 'IRT') h += `<div class="rc-dim rc-small" style="text-align:end;margin-top:4px">T = Toman (تومان)</div>`;
   if (s.payMethod || s.payDetail) {
-    h += `<hr class="rc-rule"><div class="rc-block-k">Payment</div>`;
+    h += `<hr class="rc-rule"><div class="rc-block-k">${invT('rPayment')}</div>`;
     if (s.payMethod) h += `<div dir="auto" style="font-weight:600">${invEsc(s.payMethod)}</div>`;
     if (s.payDetail) h += `<div class="rc-pre">${invLines(s.payDetail)}</div>`;
   }
   if (s.note) h += `<hr class="rc-rule"><div class="rc-pre rc-center rc-dim">${invLines(s.note)}</div>`;
   const qr = invQrSvg(invQrText());
-  if (qr) h += `<div class="rc-qr">${qr}</div><div class="rc-center rc-small rc-dim">Scan for invoice details</div>`;
-  h += `<div class="rc-center rc-small rc-dim" style="letter-spacing:.3em">${invEsc(s.number)}</div>`;
+  if (qr) h += `<div class="rc-qr">${qr}</div><div class="rc-center rc-small rc-dim">${invT('rScan')}</div>`;
+  h += `<div class="rc-center rc-small rc-dim" dir="ltr" style="letter-spacing:.3em">${invEsc(s.number)}</div>`;
   p.innerHTML = h;
 }
 
 function renderInvoiceItems() {
   const box = document.getElementById('invItems');
   if (!box) return;
-  const ph = _inv.currency === 'IRT' ? 'Rate (T)' : 'Rate ($)';
+  const rate = invT('rate') + (_inv.currency === 'IRT' ? (invFa() ? ' (تومان)' : ' (T)') : ' ($)');
   box.innerHTML = _inv.items.map((it, i) => `<div class="inv-item" data-i="${i}">
-      <input data-f="desc" type="text" dir="auto" placeholder="Service ${i + 1}" value="${invEsc(it.desc)}">
-      <label>Qty<input data-f="qty" type="number" min="0" step="any" inputmode="decimal" value="${invEsc(it.qty)}"></label>
-      <label>${ph}<input data-f="rate" type="number" min="0" step="any" inputmode="decimal" placeholder="0" value="${invEsc(it.rate)}"></label>
-      <button type="button" class="inv-del" title="Remove" aria-label="Remove service">×</button>
+      <input data-f="desc" type="text" dir="auto" placeholder="${invEsc(invT('service'))} ${invFmt(i + 1)}" value="${invEsc(it.desc)}">
+      <label>${invT('qty')}<input data-f="qty" type="text" inputmode="decimal" dir="ltr" value="${invEsc(it.qty)}"></label>
+      <label>${rate}<input data-f="rate" type="text" inputmode="decimal" dir="ltr" placeholder="0" value="${invEsc(it.rate)}"></label>
+      <button type="button" class="inv-del" title="${invEsc(invT('remove'))}" aria-label="${invEsc(invT('remove'))}">×</button>
     </div>`).join('');
+}
+
+// Puts the form's own words, direction and the toggle in the current language.
+function applyInvoiceLang() {
+  const view = document.getElementById('view-invoice');
+  if (!view) return;
+  const fa = invFa();
+  view.dir = fa ? 'rtl' : 'ltr';
+  view.lang = fa ? 'fa' : 'en';
+  view.classList.toggle('inv-is-fa', fa);
+  view.querySelectorAll('[data-t]').forEach(el => { el.textContent = invT(el.dataset.t); });
+  view.querySelectorAll('[data-ph]').forEach(el => { el.placeholder = invT(el.dataset.ph); });
+  view.querySelectorAll('.inv-lang [data-lang]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === (fa ? 'fa' : 'en'))));
 }
 
 function initInvoice() {
@@ -7987,12 +8114,20 @@ function initInvoice() {
   form._ready = true;
   _inv = invLoad();
   const fill = () => {
+    applyInvoiceLang();
     form.querySelectorAll('[name]').forEach(el => { el.value = _inv[el.name] == null ? '' : _inv[el.name]; });
     renderInvoiceItems();
     renderInvoicePaper();
   };
   fill();
 
+  document.querySelector('#view-invoice .inv-lang').addEventListener('click', e => {
+    const b = e.target.closest('[data-lang]');
+    if (!b || b.dataset.lang === _inv.lang) return;
+    _inv.lang = b.dataset.lang;
+    invAdoptDefaults(_inv.lang);
+    invSave(); fill(); invPrintIn();
+  });
   form.addEventListener('input', e => {
     const el = e.target;
     const row = el.closest('.inv-item');
@@ -8017,12 +8152,12 @@ function initInvoice() {
     rows[rows.length - 1].querySelector('input').focus();
   });
   document.getElementById('invNew').addEventListener('click', () => {
-    if (!confirm('Start a new invoice? The current one will be cleared.')) return;
-    // The number moves on; who you are, how you get paid and the currency stay.
+    if (!confirm(invT('confirmNew'))) return;
+    // The number moves on; who you are, how you get paid, the currency and the language stay.
     let n = invSeq() + 1;
     try { localStorage.setItem(INV_SEQ, String(n)); } catch (e) {}
     const keep = { merchant:_inv.merchant, merchantNote:_inv.merchantNote, currency:_inv.currency, payMethod:_inv.payMethod, payDetail:_inv.payDetail, note:_inv.note, tax:_inv.tax };
-    _inv = Object.assign(invDefaults(), keep, { number:invNumber(n) });
+    _inv = Object.assign(invDefaults(_inv.lang), keep, { number:invNumber(n) });
     invSave(); fill(); invPrintIn();
   });
   document.getElementById('invPng').addEventListener('click', invExportPng);
@@ -8046,18 +8181,28 @@ function invFileName(ext) {
   return (_inv.number || 'Invoice') + (who ? '-' + who : '') + '.' + ext;
 }
 
-/* PNG: the slip is redrawn through an SVG foreignObject onto a canvas at 3x.
-   The page's .inv-paper/.rc- rules and the Fira Code files are inlined,
-   because an SVG image can't reach the page's stylesheets or fonts. */
+/* Both exports draw the slip the same way: through an SVG foreignObject
+   onto a canvas at 3x. The page's .inv-paper/.rc- rules and the fonts
+   (Fira Code, and Vazirmatn for Persian) are inlined, because an SVG image
+   can't reach the page's stylesheets or font files. */
+const INV_VZ = 'https://cdn.jsdelivr.net/npm/@fontsource/vazirmatn@5/files/vazirmatn-';
+const INV_AR = 'U+0600-06FF, U+200C-200E, U+FB50-FDFF, U+FE70-FEFF', INV_LA = 'U+0000-00FF, U+2013-2014, U+2018-201E, U+2026, U+2212';
+const INV_FONTS = [
+  ['Fira Code', '300 700', '/fonts/firacode-latin.woff2', 'U+0000-00FF, U+2000-206F, U+2212'],
+  ['Fira Code', '300 700', '/fonts/firacode-latin-ext.woff2', 'U+0100-024F, U+1E00-1EFF, U+20A0-20C0'],
+  ['Vazirmatn', '400', INV_VZ + 'arabic-400-normal.woff2', INV_AR],
+  ['Vazirmatn', '700', INV_VZ + 'arabic-700-normal.woff2', INV_AR],
+  ['Vazirmatn', '400', INV_VZ + 'latin-400-normal.woff2', INV_LA],
+  ['Vazirmatn', '700', INV_VZ + 'latin-700-normal.woff2', INV_LA],
+];
 let _invFontCss = null;
 async function invFontCss() {
   if (_invFontCss != null) return _invFontCss;
-  const files = ['/fonts/firacode-latin.woff2', '/fonts/firacode-latin-ext.woff2'];
-  const parts = await Promise.all(files.map(async f => {
+  const parts = await Promise.all(INV_FONTS.map(async ([fam, w, f, range]) => {
     try {
       const b = await (await fetch(f)).blob();
       const url = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(b); });
-      return `@font-face{font-family:'Fira Code';font-weight:300 700;src:url(${url}) format('woff2');}`;
+      return `@font-face{font-family:'${fam}';font-weight:${w};unicode-range:${range};src:url(${url}) format('woff2');}`;
     } catch (e) { return ''; }
   }));
   return (_invFontCss = parts.join(''));
@@ -8071,71 +8216,109 @@ function invPaperCss() {
   return css;
 }
 
-async function invExportPng() {
-  const btn = document.getElementById('invPng');
+// The slip on a canvas, PAD css px of margin around it, at 3x.
+async function invCanvas(PAD, bg) {
+  if (!window.qrcode) { await invLoadQr(); renderInvoicePaper(); }
   const src = document.getElementById('invPaper');
-  btn.disabled = true;
-  try {
-    if (!window.qrcode) { await invLoadQr(); renderInvoicePaper(); }
-    const W = 360, PAD = 36, SCALE = 3;
-    const clone = src.cloneNode(true);
-    clone.removeAttribute('id');
-    clone.classList.remove('is-printing');
-    clone.style.cssText = `width:${W}px;max-width:none;margin:0;`;
-    // Measure at the export width, off-screen.
-    const probe = document.createElement('div');
-    probe.style.cssText = `position:fixed;left:-10000px;top:0;width:${W}px;`;
-    probe.appendChild(clone);
-    document.body.appendChild(probe);
-    if (document.fonts && document.fonts.ready) await document.fonts.ready;
-    const H = Math.ceil(clone.getBoundingClientRect().height);
-    probe.remove();
+  const W = 360, SCALE = 3;
+  const clone = src.cloneNode(true);
+  clone.removeAttribute('id');
+  clone.classList.remove('is-printing');
+  clone.style.cssText = `width:${W}px;max-width:none;margin:0;`;
+  // Measure at the export width, off-screen.
+  const probe = document.createElement('div');
+  probe.style.cssText = `position:fixed;left:-10000px;top:0;width:${W}px;`;
+  probe.appendChild(clone);
+  document.body.appendChild(probe);
+  if (document.fonts && document.fonts.ready) await document.fonts.ready;
+  const H = Math.ceil(clone.getBoundingClientRect().height);
+  probe.remove();
 
-    const css = (await invFontCss()) + invPaperCss();
-    const html = new XMLSerializer().serializeToString(clone);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><foreignObject width="100%" height="100%">` +
-      `<div xmlns="http://www.w3.org/1999/xhtml"><style>${css.replace(/</g, '\\3c ')}</style>${html}</div></foreignObject></svg>`;
-    const img = new Image();
-    await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('render')); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+  const css = (await invFontCss()) + invPaperCss();
+  const html = new XMLSerializer().serializeToString(clone);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><foreignObject width="100%" height="100%">` +
+    `<div xmlns="http://www.w3.org/1999/xhtml"><style>${css.replace(/</g, '\\3c ')}</style>${html}</div></foreignObject></svg>`;
+  const img = new Image();
+  await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('render')); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+  // Fonts inside an SVG image can land a beat after onload.
+  await new Promise(r => setTimeout(r, 60));
 
-    const c = document.createElement('canvas');
-    c.width = (W + PAD * 2) * SCALE; c.height = (H + PAD * 2) * SCALE;
-    const ctx = c.getContext('2d');
-    ctx.scale(SCALE, SCALE);
-    // The same two-layer shadow the slip has on the page.
-    ctx.shadowColor = 'rgba(0,0,0,.14)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 10;
-    ctx.drawImage(img, PAD, PAD, W, H);
-    ctx.shadowColor = 'rgba(0,0,0,.06)'; ctx.shadowBlur = 1; ctx.shadowOffsetY = 1;
-    ctx.drawImage(img, PAD, PAD, W, H);
-
-    const blob = await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('blob')), 'image/png'));
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = invFileName('png');
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  } catch (e) {
-    console.warn('[invoice] PNG export failed', e);
-    showToast({ type:'error', title:'Couldn’t make the PNG here — use Save PDF instead.' });
-  } finally {
-    btn.disabled = false;
-  }
+  const c = document.createElement('canvas');
+  c.width = (W + PAD * 2) * SCALE; c.height = (H + PAD * 2) * SCALE;
+  const ctx = c.getContext('2d');
+  if (bg) { ctx.fillStyle = bg; ctx.fillRect(0, 0, c.width, c.height); }
+  ctx.scale(SCALE, SCALE);
+  // The same two-layer shadow the slip has on the page.
+  ctx.shadowColor = 'rgba(0,0,0,.14)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 10;
+  ctx.drawImage(img, PAD, PAD, W, H);
+  ctx.shadowColor = 'rgba(0,0,0,.06)'; ctx.shadowBlur = 1; ctx.shadowOffsetY = 1;
+  ctx.drawImage(img, PAD, PAD, W, H);
+  return { canvas: c, cssW: W + PAD * 2, cssH: H + PAD * 2 };
 }
 
-/* PDF: the browser's print dialog, with the print rules hiding all but the
-   slip. The title becomes the suggested file name. */
+function invDownload(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+async function invExport(btn, make) {
+  btn.disabled = true;
+  try { await make(); }
+  catch (e) {
+    console.warn('[invoice] export failed', e);
+    showToast({ type:'error', title: invT('exportFail') });
+  } finally { btn.disabled = false; }
+}
+
+function invExportPng() {
+  return invExport(document.getElementById('invPng'), async () => {
+    const { canvas } = await invCanvas(36);
+    const blob = await new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('blob')), 'image/png'));
+    invDownload(blob, invFileName('png'));
+  });
+}
+
+/* PDF: the same picture as the PNG, on a page cut to the slip's size, so
+   it looks exactly like the preview in any viewer. It used to go through
+   the print dialog, which laid the slip out over the page's own layout and
+   came out cut, blank or on several pages depending on the browser. */
 function invExportPdf() {
-  const oldTitle = document.title;
-  document.title = invFileName('pdf').replace(/\.pdf$/, '');
-  document.body.classList.add('inv-printing');
-  const done = () => {
-    document.body.classList.remove('inv-printing');
-    document.title = oldTitle;
-    window.removeEventListener('afterprint', done);
-  };
-  window.addEventListener('afterprint', done);
-  window.print();
-  setTimeout(done, 1000);
+  return invExport(document.getElementById('invPdf'), async () => {
+    const { canvas, cssW, cssH } = await invCanvas(24, '#f1f1f1');
+    const jpg = await new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('blob')), 'image/jpeg', 0.92));
+    const bytes = new Uint8Array(await jpg.arrayBuffer());
+    // CSS px to PDF points.
+    invDownload(invJpegPdf(bytes, canvas.width, canvas.height, +(cssW * 0.75).toFixed(2), +(cssH * 0.75).toFixed(2)), invFileName('pdf'));
+  });
+}
+
+// A one-page PDF holding one JPEG, written by hand: the format needs only
+// five objects and a table of where each one starts.
+function invJpegPdf(jpeg, pxW, pxH, ptW, ptH) {
+  const enc = new TextEncoder();
+  const parts = [], offs = [];
+  let len = 0;
+  const push = x => { const b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); len += b.length; };
+  const obj = (n, body) => { offs[n] = len; push(n + ' 0 obj\n'); body(); push('\nendobj\n'); };
+  push('%PDF-1.4\n');
+  obj(1, () => push('<< /Type /Catalog /Pages 2 0 R >>'));
+  obj(2, () => push('<< /Type /Pages /Kids [3 0 R] /Count 1 >>'));
+  obj(3, () => push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${ptW} ${ptH}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`));
+  obj(4, () => {
+    push(`<< /Type /XObject /Subtype /Image /Width ${pxW} /Height ${pxH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`);
+    push(jpeg);
+    push('\nendstream');
+  });
+  const draw = `q ${ptW} 0 0 ${ptH} 0 0 cm /Im0 Do Q`;
+  obj(5, () => push(`<< /Length ${draw.length} >>\nstream\n${draw}\nendstream`));
+  const xref = len;
+  let x = 'xref\n0 6\n0000000000 65535 f \n';
+  for (let i = 1; i <= 5; i++) x += String(offs[i]).padStart(10, '0') + ' 00000 n \n';
+  push(x + 'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n');
+  return new Blob(parts, { type: 'application/pdf' });
 }
 
 /* ─── Analytics dashboard ──────────────────────────────── */
