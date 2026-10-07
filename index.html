@@ -6406,8 +6406,9 @@ const USE_CUSTOM_CURSOR = true;
 
    Same bytes, now in /web-shot.b64.txt: still base64, still text/plain, so
    there is still no media URL for IDM to catch. It is fetched and decoded
-   only once Spider Sound is switched on (see _preloadWebShot), or failing
-   that on the first shot. */
+   in the background once the page is idle (see _idlePreload) — offline,
+   with no AudioContext started — so Spider Sound plays from the first
+   click instead of a few seconds later. */
 (function() {
   var _ctx = null, _gain = null, _buf = null, _last = 0;
   var SHOT_OFFSET = 1.55, SHOT_DUR = 0.35, VOL = 0.35;
@@ -6426,6 +6427,15 @@ const USE_CUSTOM_CURSOR = true;
     }
     return _ctx;
   }
+  // Decoding needs a context but not a running one. Before Spider Sound is
+  // switched on there is no live AudioContext (making one without a click
+  // only earns a console warning), so an offline context decodes instead;
+  // an AudioBuffer plays in any context.
+  function _decoder() {
+    if (_ctx) return _ctx;
+    var Off = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    return Off ? new Off(1, 1, 44100) : _getCtx();
+  }
   var _loading = null;
   function _load() {
     if (_buf) return Promise.resolve(_buf);
@@ -6434,7 +6444,7 @@ const USE_CUSTOM_CURSOR = true;
       .then(function(r) { if (!r.ok) throw new Error(r.status); return r.text(); })
       .then(function(t) {
         // Callback form: older Safari has no promise-returning decodeAudioData.
-        return new Promise(function(res, rej) { _getCtx().decodeAudioData(_b64buf(t.trim()), res, rej); });
+        return new Promise(function(res, rej) { _decoder().decodeAudioData(_b64buf(t.trim()), res, rej); });
       })
       .then(function(b) { _buf = b; return b; })
       .catch(function() { _loading = null; });   // let the next attempt retry
@@ -6453,12 +6463,31 @@ const USE_CUSTOM_CURSOR = true;
     _last = now;
     var ctx = _getCtx();
     if (ctx.state === 'suspended') ctx.resume();
-    if (!_buf) { _load(); return; }
+    if (!_buf) {
+      // Not here yet: fire as soon as it lands, unless that is too late to
+      // still read as this click's sound.
+      _load().then(function() { if (_buf && Date.now() - now < 700) _start(ctx); });
+      return;
+    }
+    _start(ctx);
+  }
+  function _start(ctx) {
     var src = ctx.createBufferSource();
     src.buffer = _buf;
     src.connect(_gain);
     src.start(0, SHOT_OFFSET, SHOT_DUR);
   }
+
+  // Fetched and decoded quietly once the page has settled, so the first
+  // shot after switching Spider Sound on is instant instead of waiting
+  // seconds on the download. Skipped when the visitor asked to save data.
+  function _idlePreload() {
+    var c = navigator.connection;
+    if (c && c.saveData) return;
+    (window.requestIdleCallback || function(f) { setTimeout(f, 1500); })(function() { _load(); }, { timeout: 4000 });
+  }
+  if (document.readyState === 'complete') _idlePreload();
+  else window.addEventListener('load', _idlePreload, { once: true });
 
   window._webShotMuted = true;
   window._playWebShot = function() {
