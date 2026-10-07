@@ -2100,7 +2100,9 @@
     .inv-lang button[aria-checked="true"] { color:#1a1a1a; }
     .inv-lang button:focus-visible, .inv-act:focus-visible { outline:2px solid #1a1a1a; outline-offset:2px; }
 
-    .inv-acts { display:grid; grid-template-columns:1fr 1fr 40px; gap:8px; }
+    /* "New invoice" gets the wider cell, so its label fits in both languages
+       and the cell itself never changes size on a switch. */
+    .inv-acts { display:grid; grid-template-columns:1fr 1fr 1.5fr; gap:8px; }
     .inv-act {
       display:inline-flex; align-items:center; justify-content:center; gap:7px; height:40px; padding:0 12px;
       border-radius:12px; border:1px solid rgba(0,0,0,.12); background:#fff; color:#2a2a2a;
@@ -2112,7 +2114,8 @@
     .inv-act:active { transform:scale(.97); }
     .inv-act-main { background:#1a1a1a; border-color:#1a1a1a; color:#fff; }
     .inv-act-main:hover { background:#000; border-color:#000; }
-    .inv-act-icon { padding:0; }
+    .inv-act-new { padding:0 10px; white-space:nowrap; font-weight:500; letter-spacing:0; }
+    .inv-act-new svg { width:15px; height:15px; }
     .inv-act .ico-spin { display:none; animation:invSpin .8s linear infinite; }
     .inv-act.is-busy { pointer-events:none; }
     .inv-act.is-busy .ico-dl { display:none; }
@@ -5743,8 +5746,9 @@ one keyframe at a time</div>
               <svg class="ico-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2" opacity=".25"/><path d="M20 12a8 8 0 0 0-8-8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               <span>PDF</span>
             </button>
-            <button type="button" class="inv-act inv-act-icon" id="invNew" data-tip="newInv">
+            <button type="button" class="inv-act inv-act-new" id="invNew" data-tip="newInv">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span data-t="newInv">New invoice</span>
             </button>
           </div>
         </div>
