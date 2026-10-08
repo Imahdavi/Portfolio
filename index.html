@@ -2145,7 +2145,8 @@
     .inv-seg-opt[aria-checked="true"] { background:var(--vsw-chip); color:var(--vsw-on); }
     .inv-seg-opt:focus-visible { outline:2px solid var(--vsw-on); outline-offset:1px; }
     .inv-seg-opt[lang="fa"] { font-family:'Vazirmatn', Tahoma, sans-serif; }
-    .inv-lang .inv-seg-opt { width:112px; }
+    .inv-lang { width:100%; }
+    .inv-lang .inv-seg-opt { flex:1 1 0; }
     .inv-exports .inv-seg-opt { width:84px; }
     .inv-exports .inv-seg-opt:active { background:var(--vsw-chip); }
     .inv-seg-opt svg { width:15px; height:15px; flex:none; }
@@ -5708,14 +5709,11 @@ one keyframe at a time</div>
     <div class="home-divider inv-divider" aria-hidden="true"></div>
 
     <!-- The controls, centred, in the home page's Category/Brand switch
-         (.view-switch): language, then the downloads, then a new invoice.
-         Fixed left-to-right, so a language switch moves none of it.
-         data-tip names the localized tooltip / accessible name. -->
+         (.view-switch): the downloads, then a new invoice. (The language
+         switch opens the form.) Fixed left-to-right, so a language switch
+         moves none of it. data-tip names the localized tooltip /
+         accessible name. -->
     <div class="inv-bar" dir="ltr">
-      <div class="view-switch inv-seg inv-lang" role="radiogroup" aria-label="Language" data-active="en">
-        <button type="button" class="inv-seg-opt" role="radio" data-lang="en" aria-checked="true">English</button>
-        <button type="button" class="inv-seg-opt" role="radio" data-lang="fa" aria-checked="false" lang="fa">فارسی</button>
-      </div>
       <div class="view-switch inv-seg inv-exports">
         <button type="button" class="inv-seg-opt" id="invPng" data-tip="png">
           <svg class="ico-dl" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -5736,6 +5734,15 @@ one keyframe at a time</div>
 
     <div class="inv-wrap">
       <form class="inv-form" id="invForm" autocomplete="off" onsubmit="return false">
+        <!-- First thing in the form: the language. Full width and fixed
+             left-to-right, so it stays put while the form flips. -->
+        <fieldset>
+          <legend data-t="language">Language</legend>
+          <div class="view-switch inv-seg inv-lang" dir="ltr" role="radiogroup" aria-label="Language" data-active="en">
+            <button type="button" class="inv-seg-opt" role="radio" data-lang="en" aria-checked="true">English</button>
+            <button type="button" class="inv-seg-opt" role="radio" data-lang="fa" aria-checked="false" lang="fa">فارسی</button>
+          </div>
+        </fieldset>
         <fieldset>
           <legend data-t="from">From</legend>
           <label><span data-t="name">Name</span><input name="merchant" type="text" dir="auto" data-ph="namePh"></label>
@@ -7928,7 +7935,7 @@ let _inv = null;
    markup names its strings with data-t (text) and data-ph (placeholder). */
 const INV_I18N = {
   en: {
-    title:'Invoice', sub:'Bill like a pro — fill it in, download it, get paid.',
+    language:'Language', title:'Invoice', sub:'Bill like a pro — fill it in, download it, get paid.',
     from:'From', name:'Name', lineUnder:'Line under it', namePh:'Your name or studio', lineUnderPh:'e.g. Motion Designer', servicePh:'e.g. Motion graphics, 30s',
     billTo:'Bill to', clientName:'Client name', clientPh:'Client or company',
     clientDetail:'Client details', clientDetailPh:'Email, phone or company', optional:'optional',
@@ -7949,7 +7956,7 @@ const INV_I18N = {
     qStatus:'Status', qFrom:'From'
   },
   fa: {
-    title:'فاکتور', sub:'حرفه‌ای فاکتور بده — پرش کن، دانلودش کن، پولت رو بگیر.',
+    language:'زبان', title:'فاکتور', sub:'حرفه‌ای فاکتور بده — پرش کن، دانلودش کن، پولت رو بگیر.',
     from:'از طرف', name:'نام', lineUnder:'زیرنویس', namePh:'نام شما یا استودیو', lineUnderPh:'مثلاً موشن دیزاینر', servicePh:'مثلاً موشن گرافیک ۳۰ ثانیه',
     billTo:'صورتحساب برای', clientName:'نام مشتری', clientPh:'نام شخص یا شرکت',
     clientDetail:'اطلاعات مشتری', clientDetailPh:'ایمیل، تلفن یا شرکت', optional:'اختیاری',
