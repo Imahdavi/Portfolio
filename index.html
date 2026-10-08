@@ -2102,8 +2102,6 @@
     .inv-seg-opt:focus-visible { outline:2px solid var(--vsw-on); outline-offset:1px; }
     .inv-seg-opt[lang="fa"] { font-family:'Vazirmatn', Tahoma, sans-serif; }
     .inv-lang .inv-seg-opt { width:112px; }
-    /* isolate: two Persian runs side by side would otherwise swap places */
-    .inv-seg-mark { unicode-bidi:isolate; font-size:11px; font-weight:600; opacity:.7; min-width:15px; text-align:center; }
     .inv-exports .inv-seg-opt { width:84px; }
     .inv-exports .inv-seg-opt:active { background:var(--vsw-chip); }
     .inv-seg-opt svg { width:15px; height:15px; flex:none; }
@@ -5661,7 +5659,7 @@ one keyframe at a time</div>
          (--font-intro), then the same fading hairline. -->
     <div class="inv-head">
       <div class="inv-title" data-t="title">Invoice</div>
-      <div class="inv-sub" data-t="sub">Fill in the form; the receipt updates as you type. Your draft stays in this browser.</div>
+      <div class="inv-sub" data-t="sub">Every keyframe has a price — print yours, one line at a time.</div>
     </div>
     <div class="home-divider inv-divider" aria-hidden="true"></div>
 
@@ -5671,8 +5669,8 @@ one keyframe at a time</div>
          data-tip names the localized tooltip / accessible name. -->
     <div class="inv-bar" dir="ltr">
       <div class="view-switch inv-seg inv-lang" role="radiogroup" aria-label="Language" data-active="en">
-        <button type="button" class="inv-seg-opt" role="radio" data-lang="en" aria-checked="true"><span class="inv-seg-mark" aria-hidden="true">Aa</span>English</button>
-        <button type="button" class="inv-seg-opt" role="radio" data-lang="fa" aria-checked="false" lang="fa"><span class="inv-seg-mark" aria-hidden="true">آب</span><bdi>فارسی</bdi></button>
+        <button type="button" class="inv-seg-opt" role="radio" data-lang="en" aria-checked="true">English</button>
+        <button type="button" class="inv-seg-opt" role="radio" data-lang="fa" aria-checked="false" lang="fa">فارسی</button>
       </div>
       <div class="view-switch inv-seg inv-exports">
         <button type="button" class="inv-seg-opt" id="invPng" data-tip="png">
@@ -7881,7 +7879,7 @@ let _inv = null;
    markup names its strings with data-t (text) and data-ph (placeholder). */
 const INV_I18N = {
   en: {
-    title:'Invoice', sub:'Fill in the form; the receipt updates as you type. Your draft stays in this browser.',
+    title:'Invoice', sub:'Every keyframe has a price — print yours, one line at a time.',
     from:'From', name:'Name', lineUnder:'Line under it', namePh:'Your name or studio', lineUnderPh:'e.g. Motion Designer', servicePh:'e.g. Motion graphics, 30s',
     billTo:'Bill to', clientName:'Client name', clientPh:'Client or company',
     clientDetail:'Client details', clientDetailPh:'Email, phone or company', optional:'optional',
@@ -7902,7 +7900,7 @@ const INV_I18N = {
     qStatus:'Status', qFrom:'From'
   },
   fa: {
-    title:'فاکتور', sub:'فرم را پر کنید؛ رسید همزمان به‌روز می‌شود. پیش‌نویس فقط در همین مرورگر ذخیره می‌شود.',
+    title:'فاکتور', sub:'هر کی‌فریم قیمتی داره؛ فاکتورش رو همین‌جا، خط به خط چاپ کن.',
     from:'از طرف', name:'نام', lineUnder:'زیرنویس', namePh:'نام شما یا استودیو', lineUnderPh:'مثلاً موشن دیزاینر', servicePh:'مثلاً موشن گرافیک ۳۰ ثانیه',
     billTo:'صورتحساب برای', clientName:'نام مشتری', clientPh:'نام شخص یا شرکت',
     clientDetail:'اطلاعات مشتری', clientDetailPh:'ایمیل، تلفن یا شرکت', optional:'اختیاری',
