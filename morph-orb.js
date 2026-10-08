@@ -77,8 +77,6 @@
       T("h", FLY_D, ORB_D, 1300, 1500, E.out),
       T("r", FLY_D / 2, ORB_D / 2, 1300, 1500, E.out),
       T("cHalo", 0, 0.6, 620, 1500, E.out),
-      T("trail", 0, 1, 700, 800, E.out),
-      T("trail", 1, 0, 1300, 1500, E.in)
     ];
   }
   var ASSEMBLE = [
@@ -329,7 +327,7 @@
         ghosts[j].style.opacity = (0.28 * Math.pow(1 - j / 6, 1.5) * trailVis).toFixed(3);
       }
     }
-    var span = 150;
+    var span = 0;   // the box turns into the orb in place, no flight
     function applyPath() {
       var u = vals.u || 0;
       curX = bez(u, 0, geo.dir * 0.3 * span, 0);
@@ -361,7 +359,7 @@
     CH.trail = function (v) { trailVis = v; renderTrail(); };
     CH.pulse = function (v) { if (v < 0) { pulse.style.opacity = "0"; return; } pulse.style.opacity = fmt(0.5 * (1 - v)); pulse.style.transform = "scale(" + fmt(1 + v) + ")"; };
     CH.wp = applyWords;
-    CH.rOp = function (v) { layer.style.setProperty("--rOp", fmt(v)); };
+    CH.rOp = function (v) { actor.style.setProperty("--rOp", fmt(v)); };
     ORB_KEYS.forEach(function (name) { CH["orb." + name] = function (v) { orb.P[name] = v; if (name === "alpha") orb.ensure(); }; });
 
     function set(ch, v) { vals[ch] = v; dirty[ch] = 1; }
