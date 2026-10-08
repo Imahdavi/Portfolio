@@ -269,13 +269,18 @@
     var dark = document.body.classList.contains("dark");
     var rect = from.getBoundingClientRect();
     var br = parseFloat(getComputedStyle(from).borderTopLeftRadius) || 24;
-    var home = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    // Inside a container (the page section) the layer lives in its content, so it scrolls with it and hides
+    // with it when the section is switched away; without one it sits fixed over the viewport.
+    var cont = opts.container || null, base = { x: 0, y: 0 };
+    if (cont) { var cr = cont.getBoundingClientRect(); base = { x: cr.left + cont.clientLeft - cont.scrollLeft, y: cr.top + cont.clientTop - cont.scrollTop }; }
+    var home = { x: rect.left + rect.width / 2 - base.x, y: rect.top + rect.height / 2 - base.y };
     // the orb thinks where the box was: the ball arcs up and lands back on that spot
     var stage = { x: home.x, y: home.y };
     var geo = { bw: rect.width, bh: rect.height, br: br, cw: cardW(), ch: 116, dir: Math.random() < 0.5 ? -1 : 1 };
 
     /* DOM */
-    var layer = el("div", "mo-layer", document.body);
+    var layer = el("div", "mo-layer", cont || document.body);
+    if (cont) layer.style.position = "absolute";
     layer.setAttribute("aria-hidden", "true");
     var halo = el("div", "mo-halo", layer);
     halo.style.left = stage.x + "px"; halo.style.top = stage.y + "px";

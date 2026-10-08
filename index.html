@@ -13082,6 +13082,7 @@ async function submitNote() {
       let failed = null;
       const answered = await window.MorphOrb.run({
         from: document.getElementById('note-card'),
+        container: document.getElementById('view-soon'),
         hide: [document.querySelector('#view-soon .pib-contact')],
         labels: ['Sending', 'Delivering', 'Almost there'],
         doneText: 'Sent',
