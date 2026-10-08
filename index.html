@@ -5763,7 +5763,7 @@ one keyframe at a time</div>
             <label><span data-t="date">Date</span><input name="date" type="date"></label>
             <label><span><span data-t="due">Due date</span> <span class="inv-opt" data-t="optional">optional</span></span><input name="due" type="date"></label>
             <label><span data-t="currency">Currency</span>
-              <select name="currency"><option value="USD" data-t="usd">US dollar ($)</option><option value="IRT" data-t="irt">Toman (تومان)</option></select>
+              <select name="currency"><option value="USD" data-t="usd">US dollar ($)</option><option value="EUR" data-t="eur">Euro (€)</option><option value="IRT" data-t="irt">Toman (تومان)</option></select>
             </label>
           </div>
         </fieldset>
@@ -7940,7 +7940,7 @@ const INV_I18N = {
     billTo:'Bill to', clientName:'Client name', clientPh:'Client or company',
     clientDetail:'Client details', clientDetailPh:'Email, phone or company', optional:'optional',
     invoice:'Invoice', number:'Number', status:'Status', unpaid:'Unpaid', paid:'Paid', noStatus:'None (no stamp)',
-    date:'Date', due:'Due date', currency:'Currency', usd:'US dollar ($)', irt:'Toman (تومان)',
+    date:'Date', due:'Due date', currency:'Currency', usd:'US dollar ($)', eur:'Euro (€)', irt:'Toman (تومان)',
     services:'Services', addService:'+ Add a service', service:'Service', qty:'Qty', rate:'Rate', remove:'Remove service',
     adjustments:'Adjustments', discount:'Discount', amount:'amount', tax:'Tax',
     payment:'Payment', method:'Method', methodPh:'Card transfer, PayPal, crypto…',
@@ -7961,7 +7961,7 @@ const INV_I18N = {
     billTo:'صورتحساب برای', clientName:'نام مشتری', clientPh:'نام شخص یا شرکت',
     clientDetail:'اطلاعات مشتری', clientDetailPh:'ایمیل، تلفن یا شرکت', optional:'اختیاری',
     invoice:'فاکتور', number:'شماره', status:'وضعیت', unpaid:'پرداخت نشده', paid:'پرداخت شده', noStatus:'هیچ‌کدام (بدون مهر)',
-    date:'تاریخ', due:'سررسید', currency:'واحد پول', usd:'دلار آمریکا ($)', irt:'تومان',
+    date:'تاریخ', due:'سررسید', currency:'واحد پول', usd:'دلار آمریکا ($)', eur:'یورو (€)', irt:'تومان',
     services:'خدمات', addService:'+ افزودن خدمت', service:'خدمت', qty:'تعداد', rate:'مبلغ', remove:'حذف خدمت',
     adjustments:'تخفیف و مالیات', discount:'تخفیف', amount:'مبلغ', tax:'مالیات',
     payment:'پرداخت', method:'روش پرداخت', methodPh:'کارت به کارت، پی‌پال، کریپتو…',
@@ -8051,11 +8051,18 @@ function invFa() { return _inv && _inv.lang === 'fa'; }
 function invFmt(n, dec) {
   return n.toLocaleString(invFa() ? 'fa-IR' : 'en-US', { minimumFractionDigits:dec || 0, maximumFractionDigits:dec || 0 });
 }
+// Symbol for the English slip and the rate label; the word for the Persian one.
+const INV_CUR = {
+  USD: { sym:'$', fa:'دلار' },
+  EUR: { sym:'€', fa:'یورو' },
+  IRT: { sym:'T', fa:'تومان' },
+};
 function invMoney(n, cur) {
-  if (invFa()) return cur === 'IRT' ? invFmt(Math.round(n)) + ' تومان' : invFmt(n, 2) + ' دلار';
+  const c = INV_CUR[cur] || INV_CUR.USD;
+  if (invFa()) return cur === 'IRT' ? invFmt(Math.round(n)) + ' تومان' : invFmt(n, 2) + ' ' + c.fa;
   if (cur === 'IRT') return Math.round(n).toLocaleString('en-US') + ' T';
   const s = Math.abs(n).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
-  return (n < 0 ? '-$' : '$') + s;
+  return (n < 0 ? '-' : '') + c.sym + s;
 }
 // English: the Gregorian date, plus the Persian one when billing in Toman.
 // Persian: the Persian (Jalali) date, written out — "۱۴ مهر ۱۴۰۵".
@@ -8207,7 +8214,7 @@ function renderInvoicePaper() {
 function renderInvoiceItems() {
   const box = document.getElementById('invItems');
   if (!box) return;
-  const rate = invT('rate') + (_inv.currency === 'IRT' ? (invFa() ? ' (تومان)' : ' (T)') : ' ($)');
+  const rate = invT('rate') + (_inv.currency === 'IRT' && invFa() ? ' (تومان)' : ' (' + (INV_CUR[_inv.currency] || INV_CUR.USD).sym + ')');
   box.innerHTML = _inv.items.map((it, i) => `<div class="inv-item" data-i="${i}">
       <input data-f="desc" type="text" dir="auto" placeholder="${invEsc(invT('servicePh'))}" value="${invEsc(it.desc)}">
       <label>${invT('qty')}<input data-f="qty" type="text" inputmode="decimal" dir="ltr" value="${invEsc(it.qty)}"></label>
