@@ -6242,6 +6242,7 @@ one keyframe at a time</div>
      deferred script would only arrive after them. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 <!-- Thinking Orbs, the media loading state (see attachMediaLoadState). --><script src="/thinking-orbs.js"></script>
+<!-- MorphOrb, the Ticket composer's send animation (see the note send handler). --><script src="/morph-orb.js"></script>
 <script>
 /* ─── Lottie animation data ─────────────────────────────── */
 const LOTTIE_DATA = {
@@ -13044,12 +13045,10 @@ async function submitNote() {
      someone might want to say a second thing. It stays put now — the
      outcome is reported by a toast in the middle of the page, and the
      box is emptied and handed back ready. */
-  const toast = showToast({ type:'loading', title:'Sending your note…' });
-
-  try {
-    // Supabase used to take these; it is quota-blocked, so the note now goes
-    // to /api/contact, which relays it to Telegram. Nothing is stored on the
-    // way — the attachment goes to Telegram and no further.
+  // Supabase used to take these; it is quota-blocked, so the note now goes
+  // to /api/contact, which relays it to Telegram. Nothing is stored on the
+  // way — the attachment goes to Telegram and no further.
+  const deliver = async () => {
     const payload = { message: msg, email: emailVal,
                       instagram: igVal || null, telegram: tgVal || null,
                       website: document.getElementById('note-website')?.value || '' };
@@ -13068,13 +13067,39 @@ async function submitNote() {
     // The textarea resizes itself and repaints the send button on input,
     // so clearing it by hand has to say so.
     ta.dispatchEvent(new Event('input'));
+    return { title: 'Message sent', body: "Got it — thanks for reaching out. I'll get back to you soon." };
+  };
+
+  /* Sending is the MorphOrb (morph-orb.js, after 21st.dev's thinking orb and
+     input): the composer folds into a ball, flies up and thinks as a dotted
+     orb while the note travels, then condenses green and opens into the
+     reply card. "Send another" folds it back into the composer. */
+  // Reduced motion (or no orb script) keeps the original toast.
+  const useOrb = window.MorphOrb && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const toast = useOrb ? null : showToast({ type:'loading', title:'Sending your note…' });
+  try {
+    if (useOrb) {
+      let failed = null;
+      const answered = await window.MorphOrb.run({
+        from: document.getElementById('note-card'),
+        hide: [document.querySelector('#view-soon .pib-contact')],
+        labels: ['Sending', 'Delivering', 'Almost there'],
+        doneText: 'Sent',
+        resetText: 'Send another',
+        submit: () => deliver().catch(e => { failed = e; throw e; })
+      });
+      if (failed || !answered) throw failed || new Error('not sent');
+    } else {
+      await deliver();
+      toast.update({ type: 'success', title: 'Got it — thanks for reaching out.',
+                     desc: "I'll get back to you soon.", duration: 5000 });
+    }
     btn.disabled = false; paintNoteGo();
-    toast.update({ type: 'success', title: 'Got it — thanks for reaching out.',
-                   desc: "I'll get back to you soon.", duration: 5000 });
   } catch(e) {
     btn.disabled = false; paintNoteGo();
-    toast.update({ type: 'error', title: 'That didn’t send.',
-                   desc: 'Opening your mail app instead.', duration: 6000 });
+    const errMsg = { type: 'error', title: 'That didn’t send.',
+                     desc: 'Opening your mail app instead.', duration: 6000 };
+    if (toast) toast.update(errMsg); else showToast(errMsg);
     const body = encodeURIComponent(`${msg}\n\n---\nEmail: ${emailVal}${igVal ? '\nInstagram: ' + igVal : ''}${tgVal ? '\nTelegram: ' + tgVal : ''}`);
     window.location.href = `mailto:halirezamahdavi@gmail.com?subject=Portfolio note&body=${body}`;
   }
