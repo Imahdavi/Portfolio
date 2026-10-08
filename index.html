@@ -2015,23 +2015,26 @@
        paper would clip a shadow of its own. */
     .inv-slip { filter:drop-shadow(0 1px 1px rgb(0 0 0/.06)) drop-shadow(0 10px 14px rgb(0 0 0/.14)); padding:4px 0 20px; }
 
-    /* Paper in the air. The slip drifts up and down, leans a degree or two
-       in 3D so its corners dip and lift, and a soft sheen slides across it
-       as if the sheet were flexing. The shadow is drawn by the slip's
-       filter from the moving sheet, so it follows on its own. On a mouse,
-       the sheet also leans toward the pointer (--tx/--ty, set by script).
-       None of this is on .inv-paper, so PNG/PDF exports stay flat. */
+    /* Paper hanging in the air, held at the top. The top edge never moves:
+       everything turns about it (transform-origin at the top), using only
+       moves that leave that edge in place — rotateX swings the bottom
+       toward you and away, skewX sways it left and right. A soft sheen
+       slides across as if the sheet were flexing, and the slip's filter
+       draws the shadow from the moving sheet. On a mouse, the bottom also
+       swings toward the pointer (--tx/--ty, set by script). None of this
+       is on .inv-paper, so PNG/PDF exports stay flat. */
     .inv-tilt {
-      transform:perspective(1100px) rotateX(var(--ty, 0deg)) rotateY(var(--tx, 0deg));
-      transition:transform .6s cubic-bezier(.22,1,.36,1);
+      transform-origin:50% 0;
+      transform:perspective(1100px) rotateX(var(--ty, 0deg)) skewX(var(--tx, 0deg));
+      transition:transform .7s cubic-bezier(.22,1,.36,1);
     }
-    .inv-float { animation:invFloat 9s ease-in-out infinite; transform-origin:50% 40%; }
+    .inv-float { animation:invFloat 8s ease-in-out infinite; transform-origin:50% 0; }
     @keyframes invFloat {
-      0%   { transform:perspective(1100px) translateY(0)     rotateX(0deg)    rotateY(0deg)    rotateZ(0deg); }
-      20%  { transform:perspective(1100px) translateY(-6px)  rotateX(2.2deg)  rotateY(-2.6deg) rotateZ(-.5deg); }
-      45%  { transform:perspective(1100px) translateY(-10px) rotateX(-1.2deg) rotateY(1.6deg)  rotateZ(.35deg); }
-      70%  { transform:perspective(1100px) translateY(-4px)  rotateX(1.6deg)  rotateY(2.4deg)  rotateZ(.6deg); }
-      100% { transform:perspective(1100px) translateY(0)     rotateX(0deg)    rotateY(0deg)    rotateZ(0deg); }
+      0%   { transform:perspective(1100px) rotateX(0deg)    skewX(0deg); }
+      22%  { transform:perspective(1100px) rotateX(5deg)    skewX(-1.1deg); }
+      48%  { transform:perspective(1100px) rotateX(-2.5deg) skewX(.7deg); }
+      74%  { transform:perspective(1100px) rotateX(3.5deg)  skewX(1.2deg); }
+      100% { transform:perspective(1100px) rotateX(0deg)    skewX(0deg); }
     }
     .inv-slip .inv-paper::after {
       content:''; position:absolute; inset:0; pointer-events:none;
@@ -8268,15 +8271,15 @@ function initInvoice() {
     _inv = Object.assign(invDefaults(_inv.lang), keep, { number:invNumber(n) });
     invSave(); fill(); invPrintIn();
   });
-  // The floating sheet leans toward the pointer (mouse only, and not for
+  // The hanging sheet swings its bottom toward the pointer (mouse only, and not for
   // anyone who asked for less motion).
   const slip = document.getElementById('invSlip'), tilt = slip.querySelector('.inv-tilt');
   if (matchMedia('(hover:hover) and (pointer:fine)').matches && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
     slip.addEventListener('pointermove', e => {
       const r = slip.getBoundingClientRect();
       const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
-      tilt.style.setProperty('--tx', (x * 9).toFixed(2) + 'deg');
-      tilt.style.setProperty('--ty', (-y * 7).toFixed(2) + 'deg');
+      tilt.style.setProperty('--tx', (-x * 3).toFixed(2) + 'deg');
+      tilt.style.setProperty('--ty', (y * 8).toFixed(2) + 'deg');
     });
     slip.addEventListener('pointerleave', () => { tilt.style.removeProperty('--tx'); tilt.style.removeProperty('--ty'); });
   }
