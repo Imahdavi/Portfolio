@@ -2173,9 +2173,20 @@
     .an-nav-btn { display:none !important; }
     body.is-admin .an-nav-btn { display:flex !important; }
 
-    .an-range  { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:22px; }
-    .an-range-btn { padding:6px 16px; border-radius:20px; border:1px solid rgba(0,0,0,.12); background:#fff; font-size:12.5px; font-weight:500; color:#666; cursor:pointer; transition:all .15s; }
-    .an-range-btn.active { background:#1a1a1a; color:#fff; border-color:#1a1a1a; }
+    /* The range picker wears .view-switch (track, border, colours); the
+       options are its chips as buttons, text only. On a narrow screen the
+       track scrolls sideways rather than wrapping. */
+    .an-range { max-width:100%; margin-bottom:22px; overflow-x:auto; scrollbar-width:none; }
+    .an-range::-webkit-scrollbar { display:none; }
+    .an-range-btn {
+      display:flex; align-items:center; justify-content:center; flex:0 0 auto; height:100%;
+      padding:0 12px; border:0; border-radius:6px; background:transparent;
+      font-family:inherit; font-size:13px; font-weight:500; white-space:nowrap;
+      color:var(--vsw-idle); cursor:pointer; transition:background .15s, color .15s;
+    }
+    .an-range-btn:hover { color:var(--vsw-on); }
+    .an-range-btn.active { background:var(--vsw-chip); color:var(--vsw-on); }
+    .an-range-btn:focus-visible { outline:2px solid var(--vsw-on); outline-offset:1px; }
 
     .an-stats  { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
     .an-stat   { background:#f5f4f2; border-radius:14px; padding:16px 12px; text-align:center; }
@@ -4535,12 +4546,6 @@
     body.dark .an-split, body.dark .an-bar-zero,
     body.dark .an-bitem-bar-wrap { background:rgba(255,255,255,.10); }
     body.dark .an-proj-item { border-bottom-color:var(--d-line); }
-    body.dark .an-range-btn {
-      background:var(--d-surface); border-color:var(--d-line-2); color:var(--d-text-2);
-    }
-    body.dark .an-range-btn.active {
-      background:var(--d-text); color:var(--d-bg); border-color:var(--d-text);
-    }
 
     /* Social dock — the tray goes darker than the page rather than
        lighter, so it reads as a recess. The tooltip flips to a white
@@ -5807,10 +5812,12 @@ one keyframe at a time</div>
   <!-- ══════════════════════════════ ANALYTICS ══════════════════════════════ -->
   <div class="view" id="view-analytics">
     <div class="an-title">Analytics</div>
-    <div class="an-range">
-      <!-- Ranges are in hours; 0 is all time. -->
+    <!-- Ranges are in hours; 0 is all time. Worn as the home page's
+         Category/Brand switch (.view-switch), text only. -->
+    <div class="view-switch an-range">
       <button class="an-range-btn" onclick="loadAnalytics(1,this)">1h</button>
       <button class="an-range-btn" onclick="loadAnalytics(8,this)">8h</button>
+      <button class="an-range-btn" onclick="loadAnalytics(12,this)">12h</button>
       <button class="an-range-btn" onclick="loadAnalytics(24,this)">24h</button>
       <button class="an-range-btn active" onclick="loadAnalytics(168,this)">7 days</button>
       <button class="an-range-btn" onclick="loadAnalytics(720,this)">30 days</button>
@@ -8507,7 +8514,7 @@ async function loadAnalytics(hours, btn) {
   document.getElementById('an-new').textContent = newCount;
   document.getElementById('an-ret').textContent = returningCount;
 
-  const RANGE_LABELS = { 1: 'Last hour', 8: 'Last 8 hours', 24: 'Last 24 hours', 168: 'Last 7 days', 720: 'Last 30 days', 0: 'All time' };
+  const RANGE_LABELS = { 1: 'Last hour', 8: 'Last 8 hours', 12: 'Last 12 hours', 24: 'Last 24 hours', 168: 'Last 7 days', 720: 'Last 30 days', 0: 'All time' };
   document.getElementById('an-range-lbl').textContent = RANGE_LABELS[hours] || 'Selected range';
   const newPct = visitors.size ? Math.round(newCount / visitors.size * 100) : 0;
   document.getElementById('an-ret-pct').textContent = visitors.size ? (100 - newPct) + '%' : '—';
@@ -8555,8 +8562,8 @@ async function loadAnalytics(hours, btn) {
   // 'brand' is Home's Brand view. 'taste' and 'game' were already being
   // recorded but weren't listed here, so they fell through into Top
   // projects below as if they were boards.
-  const PAGE_KEYS = { 'brand': 'Brand', 'work-experience': 'Experience', 'note': 'Ticket', 'taste': 'Taste', 'game': 'Game' };
-  const pageMap = { 'Home': 0, 'Brand': 0, 'Experience': 0, 'Ticket': 0, 'Taste': 0, 'Game': 0 };
+  const PAGE_KEYS = { 'brand': 'Brand', 'work-experience': 'Experience', 'note': 'Ticket', 'taste': 'Taste', 'game': 'Game', 'invoice': 'Invoice' };
+  const pageMap = { 'Home': 0, 'Brand': 0, 'Experience': 0, 'Ticket': 0, 'Taste': 0, 'Game': 0, 'Invoice': 0 };
   rows.forEach(r => {
     if (!r.project)                pageMap['Home']++;
     else if (PAGE_KEYS[r.project]) pageMap[PAGE_KEYS[r.project]]++;
@@ -8596,7 +8603,7 @@ const AN_VIEWS = '#0c6d62', AN_VISITS = '#12a594';
 function analyticsBuckets(hours) {
   if (hours === 1)  return { step: 5 * 60000 };
   if (hours === 8)  return { step: 30 * 60000 };
-  if (hours === 24) return { step: 3600000 };
+  if (hours === 12 || hours === 24) return { step: 3600000 };
   return null;   // daily
 }
 
@@ -12358,7 +12365,7 @@ function goView(viewId, btn) {
   else if (viewId === 'view-soon') trackView('note');
 
   else if (viewId === 'view-game') trackView('game');
-  else if (viewId === 'view-invoice') openInvoice();
+  else if (viewId === 'view-invoice') { trackView('invoice'); openInvoice(); }
 }
 
 function setNavActive(btn) {
