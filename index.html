@@ -2014,6 +2014,42 @@
     /* The slip. The wrapper carries the drop shadow, because a mask on the
        paper would clip a shadow of its own. */
     .inv-slip { filter:drop-shadow(0 1px 1px rgb(0 0 0/.06)) drop-shadow(0 10px 14px rgb(0 0 0/.14)); padding:4px 0 20px; }
+
+    /* Paper in the air. The slip drifts up and down, leans a degree or two
+       in 3D so its corners dip and lift, and a soft sheen slides across it
+       as if the sheet were flexing. The shadow is drawn by the slip's
+       filter from the moving sheet, so it follows on its own. On a mouse,
+       the sheet also leans toward the pointer (--tx/--ty, set by script).
+       None of this is on .inv-paper, so PNG/PDF exports stay flat. */
+    .inv-tilt {
+      transform:perspective(1100px) rotateX(var(--ty, 0deg)) rotateY(var(--tx, 0deg));
+      transition:transform .6s cubic-bezier(.22,1,.36,1);
+    }
+    .inv-float { animation:invFloat 9s ease-in-out infinite; transform-origin:50% 40%; }
+    @keyframes invFloat {
+      0%   { transform:perspective(1100px) translateY(0)     rotateX(0deg)    rotateY(0deg)    rotateZ(0deg); }
+      20%  { transform:perspective(1100px) translateY(-6px)  rotateX(2.2deg)  rotateY(-2.6deg) rotateZ(-.5deg); }
+      45%  { transform:perspective(1100px) translateY(-10px) rotateX(-1.2deg) rotateY(1.6deg)  rotateZ(.35deg); }
+      70%  { transform:perspective(1100px) translateY(-4px)  rotateX(1.6deg)  rotateY(2.4deg)  rotateZ(.6deg); }
+      100% { transform:perspective(1100px) translateY(0)     rotateX(0deg)    rotateY(0deg)    rotateZ(0deg); }
+    }
+    .inv-slip .inv-paper::after {
+      content:''; position:absolute; inset:0; pointer-events:none;
+      background:linear-gradient(112deg,
+        rgba(0,0,0,.045) 0%, rgba(0,0,0,0) 28%, rgba(255,255,255,.55) 46%,
+        rgba(0,0,0,0) 62%, rgba(0,0,0,.05) 100%);
+      background-size:260% 260%;
+      animation:invSheen 9s ease-in-out infinite;
+    }
+    @keyframes invSheen {
+      0%, 100% { background-position:0% 30%; }
+      45%      { background-position:100% 70%; }
+      70%      { background-position:60% 10%; }
+    }
+    @media (prefers-reduced-motion:reduce) {
+      .inv-float, .inv-slip .inv-paper::after { animation:none; }
+      .inv-tilt { transition:none; }
+    }
     .inv-paper {
       --tooth-w:12px; --tooth-h:12px; --ink:#1c1c1c; --ink-2:#6b6b6b; --rule:#bdbdbd;
       position:relative; display:block; width:100%; max-width:360px; margin:0 auto; box-sizing:border-box;
@@ -5740,8 +5776,15 @@ one keyframe at a time</div>
       </form>
 
       <div class="inv-preview">
+        <!-- The slip floats: .inv-tilt leans toward the pointer, .inv-float
+             drifts on its own. Both sit outside .inv-paper, so the exports
+             (which copy only the paper and its rules) come out flat. -->
         <div class="inv-slip" id="invSlip">
-          <article class="inv-paper" id="invPaper"></article>
+          <div class="inv-tilt">
+            <div class="inv-float">
+              <article class="inv-paper" id="invPaper"></article>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -8225,6 +8268,18 @@ function initInvoice() {
     _inv = Object.assign(invDefaults(_inv.lang), keep, { number:invNumber(n) });
     invSave(); fill(); invPrintIn();
   });
+  // The floating sheet leans toward the pointer (mouse only, and not for
+  // anyone who asked for less motion).
+  const slip = document.getElementById('invSlip'), tilt = slip.querySelector('.inv-tilt');
+  if (matchMedia('(hover:hover) and (pointer:fine)').matches && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    slip.addEventListener('pointermove', e => {
+      const r = slip.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
+      tilt.style.setProperty('--tx', (x * 9).toFixed(2) + 'deg');
+      tilt.style.setProperty('--ty', (-y * 7).toFixed(2) + 'deg');
+    });
+    slip.addEventListener('pointerleave', () => { tilt.style.removeProperty('--tx'); tilt.style.removeProperty('--ty'); });
+  }
   document.getElementById('invPng').addEventListener('click', invExportPng);
   document.getElementById('invPdf').addEventListener('click', invExportPdf);
 }
