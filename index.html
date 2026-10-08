@@ -2088,6 +2088,7 @@
     .rc-item .rc-sub { font-size:10.5px; color:var(--ink-2); }
     .rc-total { border-top:3px double var(--ink); border-bottom:3px double var(--ink); padding:7px 0; margin-top:10px; font-weight:700; font-size:14px; }
     .rc-billto { position:relative; padding-inline-end:96px; min-height:44px; }
+    .rc-billto.no-stamp { padding-inline-end:0; min-height:0; }
     .rc-block-k { font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink-2); margin-bottom:3px; }
     .rc-pre { white-space:pre-wrap; overflow-wrap:anywhere; }
     .rc-empty { color:#aaa; font-style:italic; }
@@ -2109,6 +2110,7 @@
       font-family:'Fira Code', ui-monospace, monospace; font-size:9px; line-height:1;
       letter-spacing:.1em; color:#8f8f8f; white-space:nowrap; pointer-events:none;
     }
+    .rc-made b { font-weight:700; color:#3a3a3a; }
     .rc-qr svg { display:block; width:100%; height:auto; }
 
     /* Persian. Vazirmatn's Arabic-script cut, fetched only when something
@@ -5755,7 +5757,7 @@ one keyframe at a time</div>
           <div class="inv-grid2">
             <label><span data-t="number">Number</span><input name="number" type="text" dir="auto"></label>
             <label><span data-t="status">Status</span>
-              <select name="status"><option value="unpaid" data-t="unpaid">Unpaid</option><option value="paid" data-t="paid">Paid</option></select>
+              <select name="status"><option value="unpaid" data-t="unpaid">Unpaid</option><option value="paid" data-t="paid">Paid</option><option value="none" data-t="noStatus">None</option></select>
             </label>
             <label><span data-t="date">Date</span><input name="date" type="date"></label>
             <label><span><span data-t="due">Due date</span> <span class="inv-opt" data-t="optional">optional</span></span><input name="due" type="date"></label>
@@ -7938,7 +7940,7 @@ const INV_I18N = {
     from:'From', name:'Name', lineUnder:'Line under it', namePh:'Your name or studio', lineUnderPh:'e.g. Motion Designer', servicePh:'e.g. Motion graphics, 30s',
     billTo:'Bill to', clientName:'Client name', clientPh:'Client or company',
     clientDetail:'Client details', clientDetailPh:'Email, phone or company', optional:'optional',
-    invoice:'Invoice', number:'Number', status:'Status', unpaid:'Unpaid', paid:'Paid',
+    invoice:'Invoice', number:'Number', status:'Status', unpaid:'Unpaid', paid:'Paid', noStatus:'None (no stamp)',
     date:'Date', due:'Due date', currency:'Currency', usd:'US dollar ($)', irt:'Toman (تومان)',
     services:'Services', addService:'+ Add a service', service:'Service', qty:'Qty', rate:'Rate', remove:'Remove service',
     adjustments:'Adjustments', discount:'Discount', amount:'amount', tax:'Tax',
@@ -7959,7 +7961,7 @@ const INV_I18N = {
     from:'از طرف', name:'نام', lineUnder:'زیرنویس', namePh:'نام شما یا استودیو', lineUnderPh:'مثلاً موشن دیزاینر', servicePh:'مثلاً موشن گرافیک ۳۰ ثانیه',
     billTo:'صورتحساب برای', clientName:'نام مشتری', clientPh:'نام شخص یا شرکت',
     clientDetail:'اطلاعات مشتری', clientDetailPh:'ایمیل، تلفن یا شرکت', optional:'اختیاری',
-    invoice:'فاکتور', number:'شماره', status:'وضعیت', unpaid:'پرداخت نشده', paid:'پرداخت شده',
+    invoice:'فاکتور', number:'شماره', status:'وضعیت', unpaid:'پرداخت نشده', paid:'پرداخت شده', noStatus:'هیچ‌کدام (بدون مهر)',
     date:'تاریخ', due:'سررسید', currency:'واحد پول', usd:'دلار آمریکا ($)', irt:'تومان',
     services:'خدمات', addService:'+ افزودن خدمت', service:'خدمت', qty:'تعداد', rate:'مبلغ', remove:'حذف خدمت',
     adjustments:'تخفیف و مالیات', discount:'تخفیف', amount:'مبلغ', tax:'مالیات',
@@ -8113,7 +8115,7 @@ function invQrText() {
   if (T.disc) L.push(invT('rDisc') + ': -' + m(T.disc));
   if (T.taxPct) L.push(invT('rTax') + ' ' + invFmt(T.taxPct) + '%: ' + m(T.tax));
   L.push(invT('rTotal') + ': ' + m(T.total));
-  L.push(invT('qStatus') + ': ' + (s.status === 'paid' ? invT('rPaid') : invT('rUnpaid')));
+  if (s.status !== 'none') L.push(invT('qStatus') + ': ' + (s.status === 'paid' ? invT('rPaid') : invT('rUnpaid')));
   if (s.payMethod || s.payDetail) L.push('—', invT('rPayment') + ': ' + [s.payMethod, s.payDetail].filter(Boolean).join('\n'));
   if (s.note) L.push('—', s.note);
   return L.join('\n');
@@ -8168,10 +8170,13 @@ function renderInvoicePaper() {
   h += invLine(invT('rDate'), invEsc(invDate(s.date)));
   if (s.due) h += invLine(invT('rDue'), invEsc(invDate(s.due)));
   h += `<hr class="rc-rule">`;
-  h += `<div class="rc-billto"><div class="rc-block-k">${invT('rBillTo')}</div>`;
+  // "None" leaves the stamp off, and the bill-to block takes the full width.
+  const stamp = s.status !== 'none';
+  h += `<div class="rc-billto${stamp ? '' : ' no-stamp'}"><div class="rc-block-k">${invT('rBillTo')}</div>`;
   h += s.client ? `<div dir="auto" style="font-weight:600">${invEsc(s.client)}</div>` : `<div class="rc-empty">${invT('rClient')}</div>`;
   if (s.clientDetail) h += `<div class="rc-dim rc-small" dir="auto">${invEsc(s.clientDetail)}</div>`;
-  h += `<div class="rc-stamp ${s.status === 'paid' ? 'paid' : 'unpaid'}">${s.status === 'paid' ? invT('rPaid') : invT('rUnpaid')}</div></div>`;
+  if (stamp) h += `<div class="rc-stamp ${s.status === 'paid' ? 'paid' : 'unpaid'}">${s.status === 'paid' ? invT('rPaid') : invT('rUnpaid')}</div>`;
+  h += `</div>`;
   h += `<hr class="rc-rule">`;
   if (!items.length) h += `<div class="rc-empty">${invT('rNone')}</div>`;
   items.forEach(it => {
@@ -8196,7 +8201,7 @@ function renderInvoicePaper() {
   if (qr) h += `<div class="rc-qr">${qr}</div><div class="rc-center rc-small rc-dim">${invT('rScan')}</div>`;
   h += `<div class="rc-center rc-small rc-dim" dir="ltr" style="letter-spacing:.3em">${invEsc(s.number)}</div>`;
   // A small credit, set sideways up the bottom-left edge; on the exports too.
-  h += `<div class="rc-made" dir="ltr">made with imahdavi.space</div>`;
+  h += `<div class="rc-made" dir="ltr">made with <b>imahdavi.space</b></div>`;
   p.innerHTML = h;
 }
 
