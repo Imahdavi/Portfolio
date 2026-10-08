@@ -12301,15 +12301,32 @@ function showView(toId, anim) {
       history.pushState({ view: 'project', key: activeKey }, '', '/project/' + activeKey);
     } else if (toId === 'view-home') {
       history.pushState({ view: 'home' }, '', '/');
-    } else if (toId === 'view-exp') {
-      history.pushState({ view: 'exp' }, '', '/exp');
-    } else if (toId === 'view-soon') {
-      history.pushState({ view: 'soon' }, '', '/soon');
-    } else if (toId === 'view-game') {
-      history.pushState({ view: 'game' }, '', '/game');
+    } else if (VIEW_PATHS[toId]) {
+      history.pushState({ view: toId }, '', VIEW_PATHS[toId]);
     }
     if (toId === 'view-analytics') loadAnalytics(_analyticsRange);
   }
+}
+
+/* Each section's own address, so a link like imahdavi.space/invoice opens
+   straight onto it. Aliases are friendlier spellings that land on the
+   same section and are rewritten to its address. vercel.json serves
+   index.html for every one of them. */
+// /soon is the Ticket section's old address, kept so earlier links still land.
+const VIEW_PATHS = { 'view-exp':'/exp', 'view-soon':'/ticket', 'view-game':'/game', 'view-invoice':'/invoice' };
+const VIEW_PATH_ALIASES = { '/experience':'/exp', '/soon':'/ticket', '/invoices':'/invoice' };
+function viewForPath(path) {
+  let p = (path.replace(/\/+$/, '') || '/').toLowerCase();
+  p = VIEW_PATH_ALIASES[p] || p;
+  return Object.keys(VIEW_PATHS).find(v => VIEW_PATHS[v] === p) || null;
+}
+// Opens the section a path names; false when it names none.
+function goViewForPath(path) {
+  const v = viewForPath(path);
+  if (!v) return false;
+  if (location.pathname !== VIEW_PATHS[v]) history.replaceState({ view: v }, '', VIEW_PATHS[v]);
+  goView(v, document.getElementById(NAV_MAP[v]));
+  return true;
 }
 
 // browser back/forward
@@ -12320,12 +12337,8 @@ window.addEventListener('popstate', () => {
     const key = path.slice('/project/'.length);
     if (PROJECTS[key]) openProject(key);
     else { setNavActive(document.getElementById('nb-home')); showView('view-home','enter-l'); }
-  } else if (path === '/exp') {
-    goView('view-exp', document.getElementById('nb-exp'));
-  } else if (path === '/soon') {
-    goView('view-soon', document.getElementById('nb-soon'));
-  } else if (path === '/game') {
-    goView('view-game', document.getElementById('nb-game'));
+  } else if (goViewForPath(path)) {
+    // opened
   } else {
     setNavActive(document.getElementById('nb-home'));
     showView('view-home', 'enter-l');
@@ -16949,6 +16962,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Admin mode needs the key from the admin panel's login too; the old flag
   // alone (set before the API checked anything) no longer counts.
   if (localStorage.getItem('portfolio_admin') === 'true' && localStorage.getItem('pf_admin_key')) document.body.classList.add('is-admin');
+  // The invoice maker needs none of the site's data, so /invoice opens at
+  // once instead of after the loads below.
+  let routedEarly = false;
+  if (viewForPath(location.pathname) === 'view-invoice') {
+    _restoringState = true;
+    routedEarly = goViewForPath(location.pathname);
+    _restoringState = false;
+  }
   await Promise.all([loadSettings(), loadProjects()]);
   /* loadSettings renders as soon as it has settings, which can be before the
      boards land. Re-render once both are in: the Brand list decides which
@@ -16958,18 +16979,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   trackView(null); // track home page visit
 
   // restore view from URL path
+  if (routedEarly) return;
   _restoringState = true;
   const path = location.pathname;
   if (path.startsWith('/project/')) {
     const key = path.slice('/project/'.length);
     if (PROJECTS[key]) openProject(key);
     else document.querySelectorAll('#view-home .sg').forEach(sg => sg.classList.add('run'));
-  } else if (path === '/exp') {
-    goView('view-exp', document.getElementById('nb-exp'));
-  } else if (path === '/soon') {
-    goView('view-soon', document.getElementById('nb-soon'));
-  } else if (path === '/game') {
-    goView('view-game', document.getElementById('nb-game'));
+  } else if (goViewForPath(path)) {
+    // opened
   } else {
     document.querySelectorAll('#view-home .sg').forEach(sg => sg.classList.add('run'));
   }

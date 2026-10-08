@@ -18,6 +18,22 @@
       "destination": "/index.html"
     },
     {
+      "source": "/invoice",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/invoices",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/experience",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/ticket",
+      "destination": "/index.html"
+    },
+    {
       "source": "/media/:path*",
       "destination": "https://imahdavi.github.io/Portfolio/media/:path*"
     }
