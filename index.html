@@ -2020,20 +2020,15 @@
        moves that leave that edge in place — rotateX swings the bottom
        toward you and away, skewX sways it left and right. A soft sheen
        slides across as if the sheet were flexing, and the slip's filter
-       draws the shadow from the moving sheet. On a mouse, the bottom also
-       swings toward the pointer (--tx/--ty, set by script). None of this
-       is on .inv-paper, so PNG/PDF exports stay flat. */
-    .inv-tilt {
-      transform-origin:50% 0;
-      transform:perspective(1100px) rotateX(var(--ty, 0deg)) skewX(var(--tx, 0deg));
-      transition:transform .7s cubic-bezier(.22,1,.36,1);
-    }
+       draws the shadow from the moving sheet. The swing is kept small (the
+       bottom travels a few pixels) so the sheet never reaches the edge of
+       the page. None of this is on .inv-paper, so PNG/PDF exports stay flat. */
     .inv-float { animation:invFloat 8s ease-in-out infinite; transform-origin:50% 0; }
     @keyframes invFloat {
       0%   { transform:perspective(1100px) rotateX(0deg)    skewX(0deg); }
-      22%  { transform:perspective(1100px) rotateX(5deg)    skewX(-1.1deg); }
-      48%  { transform:perspective(1100px) rotateX(-2.5deg) skewX(.7deg); }
-      74%  { transform:perspective(1100px) rotateX(3.5deg)  skewX(1.2deg); }
+      22%  { transform:perspective(1100px) rotateX(1.8deg)  skewX(-.35deg); }
+      48%  { transform:perspective(1100px) rotateX(-1deg)   skewX(.25deg); }
+      74%  { transform:perspective(1100px) rotateX(1.3deg)  skewX(.4deg); }
       100% { transform:perspective(1100px) rotateX(0deg)    skewX(0deg); }
     }
     .inv-slip .inv-paper::after {
@@ -2051,7 +2046,6 @@
     }
     @media (prefers-reduced-motion:reduce) {
       .inv-float, .inv-slip .inv-paper::after { animation:none; }
-      .inv-tilt { transition:none; }
     }
     .inv-paper {
       --tooth-w:12px; --tooth-h:12px; --ink:#1c1c1c; --ink-2:#6b6b6b; --rule:#bdbdbd;
@@ -5790,14 +5784,12 @@ one keyframe at a time</div>
       </form>
 
       <div class="inv-preview">
-        <!-- The slip floats: .inv-tilt leans toward the pointer, .inv-float
-             drifts on its own. Both sit outside .inv-paper, so the exports
-             (which copy only the paper and its rules) come out flat. -->
+        <!-- The slip floats: .inv-float sways it on its own. It sits outside
+             .inv-paper, so the exports (which copy only the paper and its
+             rules) come out flat. -->
         <div class="inv-slip" id="invSlip">
-          <div class="inv-tilt">
-            <div class="inv-float">
-              <article class="inv-paper" id="invPaper"></article>
-            </div>
+          <div class="inv-float">
+            <article class="inv-paper" id="invPaper"></article>
           </div>
         </div>
       </div>
@@ -8287,18 +8279,6 @@ function initInvoice() {
     _inv = Object.assign(invDefaults(_inv.lang), keep, { number:invNumber(n) });
     invSave(); fill(); invPrintIn();
   });
-  // The hanging sheet swings its bottom toward the pointer (mouse only, and not for
-  // anyone who asked for less motion).
-  const slip = document.getElementById('invSlip'), tilt = slip.querySelector('.inv-tilt');
-  if (matchMedia('(hover:hover) and (pointer:fine)').matches && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    slip.addEventListener('pointermove', e => {
-      const r = slip.getBoundingClientRect();
-      const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
-      tilt.style.setProperty('--tx', (-x * 3).toFixed(2) + 'deg');
-      tilt.style.setProperty('--ty', (y * 8).toFixed(2) + 'deg');
-    });
-    slip.addEventListener('pointerleave', () => { tilt.style.removeProperty('--tx'); tilt.style.removeProperty('--ty'); });
-  }
   document.getElementById('invPng').addEventListener('click', invExportPng);
   document.getElementById('invPdf').addEventListener('click', invExportPdf);
 }
