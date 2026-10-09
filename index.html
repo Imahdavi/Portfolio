@@ -8347,12 +8347,14 @@ function invPrintIn() {
    dollar rates). Refreshed every five minutes while the invoice is open;
    if the feed is down, the line and the equivalent simply stay hidden. */
 let _invRates = null, _invRatesTimer = 0;
-async function invLoadRates() {
+async function invLoadRates(retry = true) {
   try {
     const r = await fetch(`${API_URL}/api/rates`, { cache: 'no-store' });
     const j = r.ok ? await r.json() : null;
     if (j && j.toman) _invRates = j;
   } catch (e) {}
+  // A cold Worker can miss the first call; one more try a few seconds later.
+  if (!_invRates && retry) setTimeout(() => invLoadRates(false), 6000);
   renderInvoiceRates();
   renderInvoicePaper();
 }
