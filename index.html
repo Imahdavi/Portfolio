@@ -1987,6 +1987,20 @@
     .inv-form textarea { resize:vertical; min-height:42px; }
     .inv-form input:focus, .inv-form select:focus, .inv-form textarea:focus { border-color:rgba(0,0,0,.25); background:#fff; }
     .inv-grid2 { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px; }
+    /* Live Toman rates under the currency, with a slow green "live" pulse. */
+    .inv-rates { display:grid; gap:8px; padding:10px 12px; border-radius:10px; background:#f5f4f2; font-size:12px; color:#666; }
+    .inv-rates[hidden] { display:none; }
+    .inv-rates-line { display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; line-height:18px; }
+    .inv-rates-vals { font-family:'Fira Code', ui-monospace, monospace; font-size:11.5px; color:#1a1a1a; font-variant-numeric:tabular-nums; }
+    .inv-live-dot { width:7px; height:7px; border-radius:50%; background:#22b573; flex:none; animation:invLive 2s ease-in-out infinite; }
+    @keyframes invLive { 0%,100% { box-shadow:0 0 0 0 rgba(34,181,115,.45); } 50% { box-shadow:0 0 0 4px rgba(34,181,115,0); } }
+    .inv-form .inv-check { display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12px; color:#555; }
+    .inv-form .inv-check input { width:15px; height:15px; padding:0; margin:0; flex:none; accent-color:#1a1a1a; }
+    body.dark .inv-rates { background:var(--d-surface); color:var(--d-text-3); }
+    body.dark .inv-rates-vals { color:var(--d-text); }
+    body.dark .inv-form .inv-check { color:var(--d-text-2); }
+    body.dark .inv-form .inv-check input { accent-color:var(--d-text); }
+    @media (prefers-reduced-motion:reduce) { .inv-live-dot { animation:none; } }
     .inv-form label, .inv-form input, .inv-form select { min-width:0; }
 
     .inv-items { display:grid; gap:8px; }
@@ -5768,8 +5782,14 @@ one keyframe at a time</div>
             <label><span data-t="date">Date</span><input name="date" type="date"></label>
             <label><span><span data-t="due">Due date</span> <span class="inv-opt" data-t="optional">optional</span></span><input name="due" type="date"></label>
             <label><span data-t="currency">Currency</span>
-              <select name="currency"><option value="USD" data-t="usd">US dollar ($)</option><option value="EUR" data-t="eur">Euro (€)</option><option value="IRT" data-t="irt">Toman (تومان)</option></select>
+              <select name="currency"><option value="USD" data-t="usd">US dollar ($)</option><option value="EUR" data-t="eur">Euro (€)</option><option value="CAD" data-t="cad">Canadian dollar (CA$)</option><option value="IRT" data-t="irt">Toman (تومان)</option></select>
             </label>
+          </div>
+          <!-- Live Toman rates (/api/rates). Hidden until they load, and for
+               good if the feed is down. -->
+          <div class="inv-rates" id="invRates" hidden>
+            <div class="inv-rates-line"><span class="inv-live-dot" aria-hidden="true"></span><span data-t="liveRates">Live rate in Toman</span><span class="inv-rates-vals" id="invRatesVals" dir="ltr"></span></div>
+            <label class="inv-check"><input type="checkbox" name="tomanEq"><span data-t="tomanEq">Show the Toman equivalent on the invoice</span></label>
           </div>
         </fieldset>
         <fieldset>
@@ -7948,7 +7968,7 @@ const INV_I18N = {
     billTo:'Bill to', clientName:'Client name', clientPh:'Client or company',
     clientDetail:'Client details', clientDetailPh:'Email, phone or company', optional:'optional',
     invoice:'Invoice', number:'Number', status:'Status', unpaid:'Unpaid', paid:'Paid', noStatus:'None (no stamp)',
-    date:'Date', due:'Due date', currency:'Currency', usd:'US dollar ($)', eur:'Euro (€)', irt:'Toman (تومان)',
+    date:'Date', due:'Due date', currency:'Currency', usd:'US dollar ($)', eur:'Euro (€)', cad:'Canadian dollar (CA$)', irt:'Toman (تومان)',
     services:'Services', addService:'+ Add a service', service:'Service', qty:'Qty', rate:'Rate', remove:'Remove service',
     adjustments:'Adjustments', discount:'Discount', amount:'amount', tax:'Tax',
     payment:'Payment', method:'Method', methodPh:'Card transfer, PayPal, crypto…',
@@ -7959,6 +7979,7 @@ const INV_I18N = {
     exportFail:'Couldn’t make the file here — try another browser.',
     // the slip
     rNo:'No.', rDate:'Date', rDue:'Due', rBillTo:'Bill to', rClient:'Client name', rNone:'No services yet',
+    liveRates:'Live rate in Toman', tomanEq:'Show the Toman equivalent on the invoice', rEq:'Toman at the rate of', qEq:'Toman equivalent',
     rSub:'Subtotal', rDisc:'Discount', rTax:'Tax', rTotal:'Total due', rPayment:'Payment',
     rPaid:'PAID', rUnpaid:'UNPAID', rScan:'Scan for invoice details', rYourName:'Your name',
     qStatus:'Status', qFrom:'From'
@@ -7969,7 +7990,7 @@ const INV_I18N = {
     billTo:'صورتحساب برای', clientName:'نام مشتری', clientPh:'نام شخص یا شرکت',
     clientDetail:'اطلاعات مشتری', clientDetailPh:'ایمیل، تلفن یا شرکت', optional:'اختیاری',
     invoice:'فاکتور', number:'شماره', status:'وضعیت', unpaid:'پرداخت نشده', paid:'پرداخت شده', noStatus:'هیچ‌کدام (بدون مهر)',
-    date:'تاریخ', due:'سررسید', currency:'واحد پول', usd:'دلار آمریکا ($)', eur:'یورو (€)', irt:'تومان',
+    date:'تاریخ', due:'سررسید', currency:'واحد پول', usd:'دلار آمریکا ($)', eur:'یورو (€)', cad:'دلار کانادا (CA$)', irt:'تومان',
     services:'خدمات', addService:'+ افزودن خدمت', service:'خدمت', qty:'تعداد', rate:'مبلغ', remove:'حذف خدمت',
     adjustments:'تخفیف و مالیات', discount:'تخفیف', amount:'مبلغ', tax:'مالیات',
     payment:'پرداخت', method:'روش پرداخت', methodPh:'کارت به کارت، پی‌پال، کریپتو…',
@@ -7979,6 +8000,7 @@ const INV_I18N = {
     confirmNew:'فاکتور جدید شروع شود؟ فاکتور فعلی پاک می‌شود.',
     exportFail:'ساخت فایل اینجا ممکن نشد — با مرورگر دیگری امتحان کنید.',
     rNo:'شماره', rDate:'تاریخ', rDue:'سررسید', rBillTo:'صورتحساب برای', rClient:'نام مشتری', rNone:'هنوز خدمتی اضافه نشده',
+    liveRates:'نرخ لحظه‌ای به تومان', tomanEq:'معادل تومانی هم روی فاکتور نوشته شود', rEq:'تومان به نرخ', qEq:'معادل تومانی',
     rSub:'جمع', rDisc:'تخفیف', rTax:'مالیات', rTotal:'مبلغ قابل پرداخت', rPayment:'پرداخت',
     rPaid:'پرداخت شد', rUnpaid:'پرداخت نشده', rScan:'برای دیدن جزئیات اسکن کنید', rYourName:'نام شما',
     qStatus:'وضعیت', qFrom:'از طرف'
@@ -8063,6 +8085,7 @@ function invFmt(n, dec) {
 const INV_CUR = {
   USD: { sym:'$', fa:'دلار' },
   EUR: { sym:'€', fa:'یورو' },
+  CAD: { sym:'CA$', fa:'دلار کانادا' },
   IRT: { sym:'T', fa:'تومان' },
 };
 function invMoney(n, cur) {
@@ -8129,6 +8152,8 @@ function invQrText() {
   if (T.disc) L.push(invT('rDisc') + ': -' + m(T.disc));
   if (T.taxPct) L.push(invT('rTax') + ' ' + invFmt(T.taxPct) + '%: ' + m(T.tax));
   L.push(invT('rTotal') + ': ' + m(T.total));
+  const eq = invTomanEq(T.total);
+  if (eq) L.push(invT('qEq') + ': ≈ ' + eq);
   if (s.status !== 'none') L.push(invT('qStatus') + ': ' + (s.status === 'paid' ? invT('rPaid') : invT('rUnpaid')));
   if (s.payMethod || s.payDetail) L.push('—', invT('rPayment') + ': ' + [s.payMethod, s.payDetail].filter(Boolean).join('\n'));
   if (s.note) L.push('—', s.note);
@@ -8204,6 +8229,8 @@ function renderInvoicePaper() {
   if (T.disc) h += invLine(invT('rDisc'), (fa ? '' : '−') + invEsc(invMoney(T.disc, cur)));
   if (T.taxPct) h += invLine(`${invT('rTax')} ${invFmt(T.taxPct)}${fa ? '٪' : '%'}`,invEsc(invMoney(T.tax, cur)));
   h += invLine(invT('rTotal'), invEsc(invMoney(T.total, cur)), 'rc-total');
+  const eq = invTomanEq(T.total);
+  if (eq) h += `<div class="rc-dim rc-small" style="text-align:end;margin-top:4px">≈ ${invEsc(eq)}</div>`;
   if (!fa && cur === 'IRT') h += `<div class="rc-dim rc-small" style="text-align:end;margin-top:4px">T = Toman (تومان)</div>`;
   if (s.payMethod || s.payDetail) {
     h += `<hr class="rc-rule"><div class="rc-block-k">${invT('rPayment')}</div>`;
@@ -8256,7 +8283,11 @@ function initInvoice() {
   _inv = invLoad();
   const fill = () => {
     applyInvoiceLang();
-    form.querySelectorAll('[name]').forEach(el => { el.value = _inv[el.name] == null ? '' : _inv[el.name]; });
+    form.querySelectorAll('[name]').forEach(el => {
+      if (el.type === 'checkbox') el.checked = !!_inv[el.name];
+      else el.value = _inv[el.name] == null ? '' : _inv[el.name];
+    });
+    renderInvoiceRates();
     renderInvoiceItems();
     renderInvoicePaper();
   };
@@ -8273,7 +8304,7 @@ function initInvoice() {
     const el = e.target;
     const row = el.closest('.inv-item');
     if (row) _inv.items[+row.dataset.i][el.dataset.f] = el.value;
-    else if (el.name) _inv[el.name] = el.value;
+    else if (el.name) _inv[el.name] = el.type === 'checkbox' ? el.checked : el.value;
     else return;
     invSave();
     renderInvoicePaper();
@@ -8311,10 +8342,42 @@ function invPrintIn() {
   p.classList.remove('is-printing'); void p.offsetWidth; p.classList.add('is-printing');
 }
 
+/* Live Toman rates from the Worker (/api/rates: the free-market dollar
+   from Wallex's USDT/Toman trades, euro and Canadian dollar through their
+   dollar rates). Refreshed every five minutes while the invoice is open;
+   if the feed is down, the line and the equivalent simply stay hidden. */
+let _invRates = null, _invRatesTimer = 0;
+async function invLoadRates() {
+  try {
+    const r = await fetch(`${API_URL}/api/rates`, { cache: 'no-store' });
+    const j = r.ok ? await r.json() : null;
+    if (j && j.toman) _invRates = j;
+  } catch (e) {}
+  renderInvoiceRates();
+  renderInvoicePaper();
+}
+function renderInvoiceRates() {
+  const box = document.getElementById('invRates');
+  if (!box) return;
+  box.hidden = !_invRates;
+  if (!_invRates) return;
+  const T = _invRates.toman, n = v => invFmt(v);
+  document.getElementById('invRatesVals').textContent = '$ ' + n(T.USD) + '  ·  € ' + n(T.EUR) + '  ·  CA$ ' + n(T.CAD);
+}
+// "≈ 401,625,000 Toman at the rate of Oct 09, 2026", when asked for and known.
+function invTomanEq(total) {
+  const cur = _inv.currency;
+  if (!_inv.tomanEq || cur === 'IRT' || !_invRates || !_invRates.toman[cur] || !(total > 0)) return '';
+  return invFmt(Math.round(total * _invRates.toman[cur])) + ' ' + invT('rEq') + ' ' + invDate(invToday());
+}
+
 function openInvoice() {
   initInvoice();
   invPrintIn();
   if (!window.qrcode) invLoadQr().then(renderInvoicePaper).catch(() => {});
+  invLoadRates();
+  clearInterval(_invRatesTimer);
+  _invRatesTimer = setInterval(() => { if (current === 'view-invoice') invLoadRates(); }, 5 * 60 * 1000);
 }
 
 function invFileName(ext) {
