@@ -1990,14 +1990,24 @@
     /* Live Toman rates under the currency, with a slow green "live" pulse. */
     .inv-rates { display:grid; gap:8px; padding:10px 12px; border-radius:10px; background:#f5f4f2; font-size:12px; color:#666; }
     .inv-rates[hidden] { display:none; }
-    .inv-rates-line { display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; line-height:18px; }
-    .inv-rates-vals { font-family:'Fira Code', ui-monospace, monospace; font-size:11.5px; color:#1a1a1a; font-variant-numeric:tabular-nums; }
+    .inv-rates-head { display:flex; align-items:center; gap:8px; line-height:18px; font-weight:600; color:#444; }
+    .inv-rates-time { margin-inline-start:auto; font-weight:400; font-size:11px; color:#999; }
+    .inv-rates-rows { display:grid; gap:2px; }
+    .inv-rate { display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:8px; align-items:baseline; padding:5px 8px; border-radius:7px; line-height:16px; }
+    .inv-rate.is-cur { background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.06); color:#1a1a1a; }
+    .inv-rate-sym { color:#999; font-size:11px; }
+    .inv-rate-eq { color:#aaa; }
+    .inv-rate-v { font-family:'Fira Code', 'Vazirmatn', ui-monospace, monospace; font-size:12px; color:#1a1a1a; font-variant-numeric:tabular-nums; text-align:end; }
+    .inv-eq { font-size:11.5px; line-height:17px; color:#888; padding-inline-start:23px; }
+    .inv-eq.is-value { color:#1a1a1a; font-weight:600; }
+    .inv-eq.is-off { color:#999; font-weight:400; }
     .inv-live-dot { width:7px; height:7px; border-radius:50%; background:#22b573; flex:none; animation:invLive 2s ease-in-out infinite; }
     @keyframes invLive { 0%,100% { box-shadow:0 0 0 0 rgba(34,181,115,.45); } 50% { box-shadow:0 0 0 4px rgba(34,181,115,0); } }
     .inv-form .inv-check { display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12px; color:#555; }
     .inv-form .inv-check input { width:15px; height:15px; padding:0; margin:0; flex:none; accent-color:#1a1a1a; }
     body.dark .inv-rates { background:var(--d-surface); color:var(--d-text-3); }
-    body.dark .inv-rates-vals { color:var(--d-text); }
+    body.dark .inv-rates-head, body.dark .inv-rate-v, body.dark .inv-eq.is-value { color:var(--d-text); }
+    body.dark .inv-rate.is-cur { background:var(--d-raised); box-shadow:none; color:var(--d-text); }
     body.dark .inv-form .inv-check { color:var(--d-text-2); }
     body.dark .inv-form .inv-check input { accent-color:var(--d-text); }
     @media (prefers-reduced-motion:reduce) { .inv-live-dot { animation:none; } }
@@ -5788,8 +5798,10 @@ one keyframe at a time</div>
           <!-- Live Toman rates (/api/rates). Hidden until they load, and for
                good if the feed is down. -->
           <div class="inv-rates" id="invRates" hidden>
-            <div class="inv-rates-line"><span class="inv-live-dot" aria-hidden="true"></span><span data-t="liveRates">Live rate in Toman</span><span class="inv-rates-vals" id="invRatesVals" dir="ltr"></span></div>
+            <div class="inv-rates-head"><span class="inv-live-dot" aria-hidden="true"></span><span data-t="liveRates">Live exchange rate</span><span class="inv-rates-time" id="invRatesTime"></span></div>
+            <div class="inv-rates-rows" id="invRatesRows"></div>
             <label class="inv-check"><input type="checkbox" name="tomanEq"><span data-t="tomanEq">Show the Toman equivalent on the invoice</span></label>
+            <div class="inv-eq" id="invEqNote"></div>
           </div>
         </fieldset>
         <fieldset>
@@ -7979,7 +7991,7 @@ const INV_I18N = {
     exportFail:'Couldn’t make the file here — try another browser.',
     // the slip
     rNo:'No.', rDate:'Date', rDue:'Due', rBillTo:'Bill to', rClient:'Client name', rNone:'No services yet',
-    liveRates:'Live rate in Toman', tomanEq:'Show the Toman equivalent on the invoice', rEq:'Toman at the rate of', qEq:'Toman equivalent',
+    liveRates:'Live exchange rate', updated:'updated', usdName:'US dollar', eurName:'Euro', cadName:'Canadian dollar', tomanWord:'Toman', eqThis:'This invoice ≈', eqNeedAmount:'Enter an amount in Services to see it in Toman.', eqIsToman:'This invoice is already in Toman.', tomanEq:'Show the Toman equivalent on the invoice', rEq:'Toman at the rate of', qEq:'Toman equivalent',
     rSub:'Subtotal', rDisc:'Discount', rTax:'Tax', rTotal:'Total due', rPayment:'Payment',
     rPaid:'PAID', rUnpaid:'UNPAID', rScan:'Scan for invoice details', rYourName:'Your name',
     qStatus:'Status', qFrom:'From'
@@ -8000,7 +8012,7 @@ const INV_I18N = {
     confirmNew:'فاکتور جدید شروع شود؟ فاکتور فعلی پاک می‌شود.',
     exportFail:'ساخت فایل اینجا ممکن نشد — با مرورگر دیگری امتحان کنید.',
     rNo:'شماره', rDate:'تاریخ', rDue:'سررسید', rBillTo:'صورتحساب برای', rClient:'نام مشتری', rNone:'هنوز خدمتی اضافه نشده',
-    liveRates:'نرخ لحظه‌ای به تومان', tomanEq:'معادل تومانی هم روی فاکتور نوشته شود', rEq:'تومان به نرخ', qEq:'معادل تومانی',
+    liveRates:'نرخ لحظه‌ای ارز', updated:'به‌روز شده', usdName:'دلار آمریکا', eurName:'یورو', cadName:'دلار کانادا', tomanWord:'تومان', eqThis:'این فاکتور ≈', eqNeedAmount:'برای دیدن معادل تومانی، مبلغ خدمات را وارد کنید.', eqIsToman:'این فاکتور خودش به تومان است.', tomanEq:'معادل تومانی هم روی فاکتور نوشته شود', rEq:'تومان به نرخ', qEq:'معادل تومانی',
     rSub:'جمع', rDisc:'تخفیف', rTax:'مالیات', rTotal:'مبلغ قابل پرداخت', rPayment:'پرداخت',
     rPaid:'پرداخت شد', rUnpaid:'پرداخت نشده', rScan:'برای دیدن جزئیات اسکن کنید', rYourName:'نام شما',
     qStatus:'وضعیت', qFrom:'از طرف'
@@ -8244,6 +8256,7 @@ function renderInvoicePaper() {
   // A small credit, set sideways up the bottom-left edge; on the exports too.
   h += `<div class="rc-made" dir="ltr">made with <b>imahdavi.space</b></div>`;
   p.innerHTML = h;
+  renderInvoiceRates();   // the Toman note follows the total
 }
 
 function renderInvoiceItems() {
@@ -8358,13 +8371,32 @@ async function invLoadRates(retry = true) {
   renderInvoiceRates();
   renderInvoicePaper();
 }
+// "1 US dollar = 266,655 Toman" per currency, the invoice's own currency
+// marked; then, under the checkbox, what this invoice comes to in Toman —
+// or why there is nothing to show yet.
 function renderInvoiceRates() {
   const box = document.getElementById('invRates');
   if (!box) return;
   box.hidden = !_invRates;
   if (!_invRates) return;
-  const T = _invRates.toman, n = v => invFmt(v);
-  document.getElementById('invRatesVals').textContent = '$ ' + n(T.USD) + '  ·  € ' + n(T.EUR) + '  ·  CA$ ' + n(T.CAD);
+  const T = _invRates.toman, cur = _inv.currency;
+  const at = new Date(_invRates.at);
+  document.getElementById('invRatesTime').textContent = invT('updated') + ' ' +
+    at.toLocaleTimeString(invFa() ? 'fa-IR' : 'en-US', { hour:'2-digit', minute:'2-digit' });
+  document.getElementById('invRatesRows').innerHTML = [['USD', 'usdName', '$'], ['EUR', 'eurName', '€'], ['CAD', 'cadName', 'CA$']]
+    .map(([k, name, sym]) => `<div class="inv-rate${k === cur ? ' is-cur' : ''}">` +
+      `<span class="inv-rate-k">${invFmt(1)} ${invT(name)} <span class="inv-rate-sym" dir="ltr">(${sym})</span></span>` +
+      `<span class="inv-rate-eq">=</span>` +
+      `<span class="inv-rate-v">${invFmt(T[k])} ${invT('tomanWord')}</span></div>`).join('');
+  const note = document.getElementById('invEqNote');
+  const total = invTotals().total;
+  let msg = '', strong = false;
+  if (cur === 'IRT') msg = invT('eqIsToman');
+  else if (!(total > 0)) msg = invT('eqNeedAmount');
+  else { msg = invT('eqThis') + ' ' + invFmt(Math.round(total * T[cur])) + ' ' + invT('tomanWord'); strong = true; }
+  note.textContent = msg;
+  note.classList.toggle('is-value', strong);
+  note.classList.toggle('is-off', strong && !_inv.tomanEq);
 }
 // "≈ 401,625,000 Toman at the rate of Oct 09, 2026", when asked for and known.
 function invTomanEq(total) {
