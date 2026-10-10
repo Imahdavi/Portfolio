@@ -2171,6 +2171,19 @@
     .inv-seg-opt[lang="fa"] { font-family:'Vazirmatn', Tahoma, sans-serif; }
     .inv-lang, .inv-theme { width:100%; }
     .inv-lang .inv-seg-opt, .inv-theme .inv-seg-opt { flex:1 1 0; }
+    .inv-theme .inv-seg-opt[hidden] { display:none; }
+    /* In edit mode a design that visitors aren't offered stays in the
+       switch, so it can still be looked at, but reads as switched off. */
+    .inv-theme .inv-seg-opt.is-off { opacity:.4; text-decoration:line-through; }
+    /* The admin's row under the switch: which designs visitors get. */
+    .inv-offer { display:flex; align-items:center; flex-wrap:wrap; gap:6px 14px; padding:9px 12px; border:1px dashed rgba(0,0,0,.18); border-radius:10px; font-size:12px; color:#666; }
+    .inv-offer[hidden] { display:none; }
+    .inv-offer-k { font-weight:600; color:#444; margin-inline-end:auto; }
+    .inv-offer-opt { display:flex !important; grid-template-columns:none; align-items:center; gap:6px; cursor:pointer; font-size:12px; color:#333; }
+    .inv-offer-opt input { width:auto !important; margin:0; accent-color:#171717; }
+    body.dark .inv-offer { border-color:rgba(255,255,255,.2); color:var(--d-text-3); }
+    body.dark .inv-offer-k, body.dark .inv-offer-opt { color:var(--d-text-2); }
+    body.dark .inv-offer-opt input { accent-color:#eaebec; }
 
     /* The ticket design (boarding-pass.js). A ticket is wide, so the page
        goes to one column with the ticket on top at full width, instead of
@@ -2437,7 +2450,8 @@
     body.is-admin #app:has(#view-home.active) ~ #bottom-nav .edit-nav-btn,
     body.is-admin #app:has(#view-project.active) ~ #bottom-nav .edit-nav-btn,
     body.is-admin #app:has(#view-soon.active) ~ #bottom-nav .edit-nav-btn,
-    body.is-admin #app:has(#view-exp.active) ~ #bottom-nav .edit-nav-btn { display:flex !important; }
+    body.is-admin #app:has(#view-exp.active) ~ #bottom-nav .edit-nav-btn,
+    body.is-admin #app:has(#view-invoice.active) ~ #bottom-nav .edit-nav-btn { display:flex !important; }
     #editBtn.on { color:#111; }
 
     /* Home edit mode */
@@ -5813,6 +5827,14 @@ one keyframe at a time</div>
             <button type="button" class="inv-seg-opt" role="radio" data-theme="receipt" aria-checked="true" data-t="themeReceipt">Receipt</button>
             <button type="button" class="inv-seg-opt" role="radio" data-theme="ticket" aria-checked="false" data-t="themeTicket">Ticket</button>
           </div>
+          <!-- Admin, edit mode only: which designs visitors are offered.
+               At least one stays on; with one left, the switch above is
+               hidden from visitors altogether. -->
+          <div class="inv-offer" id="invOffer" hidden>
+            <span class="inv-offer-k" data-t="offered">Shown to visitors</span>
+            <label class="inv-offer-opt"><input type="checkbox" data-offer="receipt"><span data-t="themeReceipt">Receipt</span></label>
+            <label class="inv-offer-opt"><input type="checkbox" data-offer="ticket"><span data-t="themeTicket">Ticket</span></label>
+          </div>
         </fieldset>
         <fieldset>
           <legend data-t="from">From</legend>
@@ -8045,6 +8067,7 @@ const INV_I18N = {
     qStatus:'Status', qFrom:'From',
     // the design switch, and the ticket design (boarding-pass.js)
     design:'Design', themeReceipt:'Receipt', themeTicket:'Ticket',
+    offered:'Shown to visitors', offerLast:'At least one design has to stay on.',
     tkInvoice:'Invoice', tkItems:'Items', tkDisc:'Disc.', tkMethod:'Payment',
     tkCurrency:'Currency', tkTotal:'Total due', tkMore:'more',
     tkTear:'Tear off the stub', tkReattach:'Reattach the stub', tkTearHere:'Tear here'
@@ -8070,6 +8093,7 @@ const INV_I18N = {
     rPaid:'پرداخت شد', rUnpaid:'پرداخت نشده', rScan:'برای دیدن جزئیات اسکن کنید', rYourName:'نام شما',
     qStatus:'وضعیت', qFrom:'از طرف',
     design:'طرح', themeReceipt:'رسید', themeTicket:'بلیت',
+    offered:'نمایش به بازدیدکننده‌ها', offerLast:'دست‌کم یک طرح باید روشن بماند.',
     tkInvoice:'فاکتور', tkItems:'اقلام', tkDisc:'تخفیف', tkMethod:'پرداخت',
     tkCurrency:'واحد پول', tkTotal:'مبلغ قابل پرداخت', tkMore:'مورد دیگر',
     tkTear:'جدا کردن ته‌بلیت', tkReattach:'برگرداندن ته‌بلیت', tkTearHere:'از اینجا جدا کنید'
@@ -8265,13 +8289,66 @@ function invLine(k, v, cls) {
    (boarding-pass.js) — the services in its foot, the total as its big
    line, the status as its stamp, and a summary on the stub. */
 let _invTk = null;
+
+/* Which designs visitors are offered: settings.invoiceThemes, ticked by
+   the admin in edit mode (a design missing from it is offered). In edit
+   mode every design can still be picked, so a switched-off one can be
+   looked at before it is switched back on. */
+const INV_THEMES = ['receipt', 'ticket'];
+function invOffered() {
+  const t = (_cachedSettings && _cachedSettings.invoiceThemes) || {};
+  const on = INV_THEMES.filter(k => t[k] !== false);
+  return on.length ? on : ['receipt'];
+}
+function invEditing() {
+  try { return !!editMode && current === 'view-invoice'; } catch (e) { return false; }   // both declared further down
+}
+// The design actually drawn: the one picked, unless visitors aren't offered it.
+function invTheme() {
+  const want = _inv && _inv.theme === 'ticket' ? 'ticket' : 'receipt';
+  if (invEditing()) return want;
+  const on = invOffered();
+  return on.includes(want) ? want : on[0];
+}
+function paintInvoiceThemes() {
+  const view = document.getElementById('view-invoice');
+  if (!view || !_inv) return;
+  const on = invOffered(), editing = invEditing();
+  const th = view.querySelector('.inv-theme'), offer = document.getElementById('invOffer');
+  th.setAttribute('aria-label', invT('design'));
+  th.querySelectorAll('[data-theme]').forEach(b => {
+    const off = !on.includes(b.dataset.theme);
+    b.hidden = off && !editing;
+    b.classList.toggle('is-off', off && editing);
+  });
+  // With only one design offered, visitors get no switch at all.
+  th.closest('fieldset').hidden = !editing && on.length < 2;
+  offer.hidden = !editing;
+  offer.querySelectorAll('[data-offer]').forEach(c => { c.checked = on.includes(c.dataset.offer); });
+  const cur = invTheme();
+  th.dataset.active = cur;
+  th.querySelectorAll('[data-theme]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.theme === cur)));
+}
+// Settings arriving, or edit mode turning on or off.
+function refreshInvoiceThemes() {
+  if (!_inv) return;
+  paintInvoiceThemes();
+  renderInvoicePaper();
+}
+function updateInvoiceEditUI() {
+  const btn = document.getElementById('editBtn');
+  btn.classList.toggle('on', editMode);
+  document.getElementById('editLabel').textContent = editMode ? 'Done' : 'Edit';
+  refreshInvoiceThemes();
+}
+
 // The wide column is for the ticket on the invoice page only: every other
 // view, and the receipt, keep the site's own width.
 function invSyncWide() {
   const app = document.getElementById('app');
   let here = false;
   try { here = current === 'view-invoice'; } catch (e) {}   // `current` is declared further down
-  if (app) app.classList.toggle('inv-wide', here && !!_inv && _inv.theme === 'ticket' && !!window.BoardingPass);
+  if (app) app.classList.toggle('inv-wide', here && !!_inv && invTheme() === 'ticket' && !!window.BoardingPass);
 }
 function invTicketModel() {
   const s = _inv, cur = s.currency, fa = invFa(), T = invTotals();
@@ -8335,7 +8412,7 @@ function renderInvoicePaper() {
   const s = _inv, cur = s.currency, fa = invFa(), T = invTotals();
   // Which design. The ticket is built once and refilled after that; the
   // receipt is rebuilt every time, as it always was.
-  const ticket = s.theme === 'ticket' && !!window.BoardingPass;
+  const ticket = invTheme() === 'ticket' && !!window.BoardingPass;
   p.classList.toggle('is-ticket', ticket);
   invSyncWide();
   const wrap = p.closest('.inv-wrap'), slip = document.getElementById('invSlip');
@@ -8430,12 +8507,7 @@ function applyInvoiceLang() {
   const sw = view.querySelector('.inv-lang');
   sw.dataset.active = fa ? 'fa' : 'en';
   sw.querySelectorAll('[data-lang]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.lang === sw.dataset.active)));
-  const th = view.querySelector('.inv-theme');
-  if (th) {
-    th.setAttribute('aria-label', invT('design'));
-    th.dataset.active = _inv.theme === 'ticket' ? 'ticket' : 'receipt';
-    th.querySelectorAll('[data-theme]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.theme === th.dataset.active)));
-  }
+  paintInvoiceThemes();
 }
 
 function initInvoice() {
@@ -8464,9 +8536,26 @@ function initInvoice() {
   });
   document.querySelector('#view-invoice .inv-theme').addEventListener('click', e => {
     const b = e.target.closest('[data-theme]');
-    if (!b || b.dataset.theme === _inv.theme) return;
+    if (!b || b.dataset.theme === invTheme()) return;
     _inv.theme = b.dataset.theme;
     invSave(); applyInvoiceLang(); renderInvoicePaper(); invPrintIn();
+  });
+  // Admin: which designs visitors are offered. Saved with the site's
+  // settings straight away; the last one left can't be switched off.
+  document.getElementById('invOffer').addEventListener('change', e => {
+    const c = e.target.closest('[data-offer]');
+    if (!c) return;
+    const t = Object.assign({}, (_cachedSettings && _cachedSettings.invoiceThemes) || {});
+    t[c.dataset.offer] = c.checked;
+    if (!INV_THEMES.some(k => t[k] !== false)) {
+      c.checked = true;
+      showToast({ type:'error', title: invT('offerLast') });
+      return;
+    }
+    if (!_cachedSettings) _cachedSettings = {};
+    _cachedSettings.invoiceThemes = t;
+    saveSettings();
+    paintInvoiceThemes();
   });
   form.addEventListener('input', e => {
     const el = e.target;
@@ -8613,7 +8702,7 @@ function invPaperCss() {
 async function invCanvas(PAD, bg) {
   // The ticket exports the side that is showing, at its own width; the
   // receipt as it always has. The ticket's sides carry their own shadow.
-  const ticket = !!(_invTk && _inv.theme === 'ticket');
+  const ticket = !!(_invTk && invTheme() === 'ticket');
   if (!ticket && !window.qrcode) { await invLoadQr(); renderInvoicePaper(); }
   const W = ticket ? 960 : 360, SCALE = 3;
   let clone;
@@ -9417,6 +9506,7 @@ async function loadSettings() {
     // Name, photo and address on the Ticket page's card follow settings.
     { const rm = document.getElementById('reachMe'); if (rm && rm._paint) rm._paint(); }
     if (typeof paintResume === 'function') paintResume();   // the résumé card follows settings too
+    if (typeof refreshInvoiceThemes === 'function') refreshInvoiceThemes();   // which invoice designs are offered
 
     // profile
     if (s.profile) {
@@ -12622,6 +12712,7 @@ window.addEventListener('popstate', () => {
 
 function goView(viewId, btn) {
   if (editMode && current === 'view-home') { editMode = false; updateHomeEditUI(); }
+  if (editMode && current === 'view-invoice') { editMode = false; updateInvoiceEditUI(); }
   const fromIdx = MAIN_VIEWS.indexOf(current);
   const toIdx   = MAIN_VIEWS.indexOf(viewId);
   const anim    = fromIdx === -1 ? 'enter-r' : (toIdx >= fromIdx ? 'enter-r' : 'enter-l');
@@ -12862,6 +12953,7 @@ function toggleEdit() {
   if (current === 'view-home') updateHomeEditUI();
   else if (current === 'view-exp') updateExpEditUI();
   else if (current === 'view-soon') updateNoteEditUI();
+  else if (current === 'view-invoice') updateInvoiceEditUI();
   else updateEditUI();
 }
 
