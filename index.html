@@ -6503,6 +6503,11 @@ const USE_CUSTOM_CURSOR = true;
     cur.style.opacity = '0';
   });
   document.addEventListener('mouseenter', () => {
+    // Same rule as pointermove. Coming back from the browser's own chrome
+    // (a tab, the address bar) fires this, and re-adding pf-cursor-on over
+    // an open video hid the real cursor with the drawn one still suspended
+    // — so there was no cursor at all until the view was closed.
+    if (document.documentElement.classList.contains('cursor-off')) return;
     document.documentElement.classList.add('pf-cursor-on');
     cur.style.opacity = '1';
   });
