@@ -2177,22 +2177,21 @@
        the slip's narrow column beside the form. The paper's own look — the
        white, the torn teeth, the sway and the sheen — is the receipt's and
        is switched off; the ticket draws its own shadow and moves on its
-       own. On a phone it keeps a readable width and scrolls sideways. */
+       own. On a phone it stands up instead of lying down. */
     .inv-wrap.is-ticket { grid-template-columns:minmax(0,1fr) !important; }
     .inv-wrap.is-ticket .inv-preview { order:-1; position:static; }
     /* No overflow of its own on a wide screen: a scroll box clips whatever
        draws outside it, and the ticket's shadow falls past its edges — it
        came out cut off square at the bottom and sides. */
-    .inv-slip.is-ticket { filter:none; padding:6px 0 34px; }
-    /* On a narrow one the ticket keeps a readable width and scrolls
-       sideways, with room inside the scroll box for the shadow to fall. */
-    @media (max-width:700px) {
-      .inv-slip.is-ticket { overflow-x:auto; padding:6px 22px 34px; margin:0 -22px; }
-    }
+    .inv-slip.is-ticket { filter:none; padding:6px 0 40px; }
     .inv-slip.is-ticket .inv-float { animation:none; transform:none; }
     .inv-slip .inv-paper.is-ticket::after { display:none; }
+    /* 840px leaves the column room on both sides for the shadow and for the
+       stub when it is torn and swings out; the view clips anything wider.
+       On a phone the ticket stands up (see boarding-pass.js), so it fits
+       the screen rather than scrolling. */
     .inv-paper.is-ticket {
-      max-width:960px; min-width:620px; padding:0; background:none;
+      max-width:840px; padding:0; background:none;
       -webkit-mask:none; mask:none; font-variant-numeric:normal;
     }
     /* The print-in reveal ends on clip-path:inset(0), and holding that
