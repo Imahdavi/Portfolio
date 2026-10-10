@@ -2180,13 +2180,26 @@
        own. On a phone it keeps a readable width and scrolls sideways. */
     .inv-wrap.is-ticket { grid-template-columns:minmax(0,1fr) !important; }
     .inv-wrap.is-ticket .inv-preview { order:-1; position:static; }
-    .inv-slip.is-ticket { filter:none; padding:6px 0 10px; overflow-x:auto; }
+    /* No overflow of its own on a wide screen: a scroll box clips whatever
+       draws outside it, and the ticket's shadow falls past its edges — it
+       came out cut off square at the bottom and sides. */
+    .inv-slip.is-ticket { filter:none; padding:6px 0 34px; }
+    /* On a narrow one the ticket keeps a readable width and scrolls
+       sideways, with room inside the scroll box for the shadow to fall. */
+    @media (max-width:700px) {
+      .inv-slip.is-ticket { overflow-x:auto; padding:6px 22px 34px; margin:0 -22px; }
+    }
     .inv-slip.is-ticket .inv-float { animation:none; transform:none; }
     .inv-slip .inv-paper.is-ticket::after { display:none; }
     .inv-paper.is-ticket {
       max-width:960px; min-width:620px; padding:0; background:none;
       -webkit-mask:none; mask:none; font-variant-numeric:normal;
     }
+    /* The print-in reveal ends on clip-path:inset(0), and holding that
+       afterwards clipped the ticket's shadow to the paper's edge. The
+       receipt's shadow lives outside the paper, so only the ticket lets go
+       of the clip once the reveal is done. */
+    .inv-paper.is-ticket.is-printing { animation-fill-mode:backwards; }
     /* The ticket is drawn for 960px and its fine print shrinks with it, so
        while it is the invoice on screen the column widens to give it that
        room (see invSyncWide). The form keeps a comfortable measure under it. */
@@ -8033,8 +8046,7 @@ const INV_I18N = {
     qStatus:'Status', qFrom:'From',
     // the design switch, and the ticket design (boarding-pass.js)
     design:'Design', themeReceipt:'Receipt', themeTicket:'Ticket',
-    tkCover:'Cover', tkInvoice:'Invoice', tkSides:'Ticket side', tkTier:'Invoice',
-    tkBilled:'Billed to', tkItems:'Items', tkDisc:'Disc.', tkMethod:'Payment',
+    tkInvoice:'Invoice', tkItems:'Items', tkDisc:'Disc.', tkMethod:'Payment',
     tkCurrency:'Currency', tkTotal:'Total due', tkMore:'more',
     tkTear:'Tear off the stub', tkReattach:'Reattach the stub', tkTearHere:'Tear here'
   },
@@ -8059,8 +8071,7 @@ const INV_I18N = {
     rPaid:'پرداخت شد', rUnpaid:'پرداخت نشده', rScan:'برای دیدن جزئیات اسکن کنید', rYourName:'نام شما',
     qStatus:'وضعیت', qFrom:'از طرف',
     design:'طرح', themeReceipt:'رسید', themeTicket:'بلیت',
-    tkCover:'روی جلد', tkInvoice:'فاکتور', tkSides:'روی بلیت', tkTier:'فاکتور',
-    tkBilled:'صورتحساب برای', tkItems:'اقلام', tkDisc:'تخفیف', tkMethod:'پرداخت',
+    tkInvoice:'فاکتور', tkItems:'اقلام', tkDisc:'تخفیف', tkMethod:'پرداخت',
     tkCurrency:'واحد پول', tkTotal:'مبلغ قابل پرداخت', tkMore:'مورد دیگر',
     tkTear:'جدا کردن ته‌بلیت', tkReattach:'برگرداندن ته‌بلیت', tkTearHere:'از اینجا جدا کنید'
   }
@@ -8252,9 +8263,8 @@ function invLine(k, v, cls) {
 }
 
 /* The ticket design: the invoice put onto the boarding pass's slots
-   (boarding-pass.js). The cover carries who it is from and to, the date
-   and the total; the other side is the invoice proper, with the services
-   in the foot, the total as its big line, and the status as its stamp. */
+   (boarding-pass.js) — the services in its foot, the total as its big
+   line, the status as its stamp, and a summary on the stub. */
 let _invTk = null;
 // The wide column is for the ticket on the invoice page only: every other
 // view, and the receipt, keep the site's own width.
@@ -8282,16 +8292,7 @@ function invTicketModel() {
   };
   return {
     fa,
-    L: { tear: invT('tkTear'), reattach: invT('tkReattach'), tearHere: invT('tkTearHere'), sides: invT('tkSides') },
-    sideLabels: [invT('tkCover'), invT('tkInvoice')],
-    front: {
-      tier: invT('tkTier'), title: who, date,
-      welcome: invT('tkBilled') + '\n' + client,
-      eyebrow: s.merchantNote || '',
-      words: [total, invT('tkTotal')],
-      notes: [s.number, s.due ? invT('rDue') + ' ' + due : ''],
-      site: s.payMethod || ''
-    },
+    L: { tear: invT('tkTear'), reattach: invT('tkReattach'), tearHere: invT('tkTearHere') },
     back: {
       head: [invT('tkInvoice'), who, s.number],
       cells: [
