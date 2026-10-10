@@ -2169,8 +2169,29 @@
     .inv-seg-opt[aria-checked="true"] { background:var(--vsw-chip); color:var(--vsw-on); }
     .inv-seg-opt:focus-visible { outline:2px solid var(--vsw-on); outline-offset:1px; }
     .inv-seg-opt[lang="fa"] { font-family:'Vazirmatn', Tahoma, sans-serif; }
-    .inv-lang { width:100%; }
-    .inv-lang .inv-seg-opt { flex:1 1 0; }
+    .inv-lang, .inv-theme { width:100%; }
+    .inv-lang .inv-seg-opt, .inv-theme .inv-seg-opt { flex:1 1 0; }
+
+    /* The ticket design (boarding-pass.js). A ticket is wide, so the page
+       goes to one column with the ticket on top at full width, instead of
+       the slip's narrow column beside the form. The paper's own look — the
+       white, the torn teeth, the sway and the sheen — is the receipt's and
+       is switched off; the ticket draws its own shadow and moves on its
+       own. On a phone it keeps a readable width and scrolls sideways. */
+    .inv-wrap.is-ticket { grid-template-columns:minmax(0,1fr) !important; }
+    .inv-wrap.is-ticket .inv-preview { order:-1; position:static; }
+    .inv-slip.is-ticket { filter:none; padding:6px 0 10px; overflow-x:auto; }
+    .inv-slip.is-ticket .inv-float { animation:none; transform:none; }
+    .inv-slip .inv-paper.is-ticket::after { display:none; }
+    .inv-paper.is-ticket {
+      max-width:960px; min-width:620px; padding:0; background:none;
+      -webkit-mask:none; mask:none; font-variant-numeric:normal;
+    }
+    /* The ticket is drawn for 960px and its fine print shrinks with it, so
+       while it is the invoice on screen the column widens to give it that
+       room (see invSyncWide). The form keeps a comfortable measure under it. */
+    #app.inv-wide { max-width:min(1000px, 100vw); }
+    #app.inv-wide .inv-form { width:100%; max-width:640px; margin:0 auto; }
     .inv-exports .inv-seg-opt { width:84px; }
     .inv-exports .inv-seg-opt:active { background:var(--vsw-chip); }
     .inv-seg-opt svg { width:15px; height:15px; flex:none; }
@@ -5772,6 +5793,15 @@ one keyframe at a time</div>
             <button type="button" class="inv-seg-opt" role="radio" data-lang="fa" aria-checked="false" lang="fa">فارسی</button>
           </div>
         </fieldset>
+        <!-- The design: the till receipt, or the ticket (boarding-pass.js).
+             Same switch as the language, and also fixed left-to-right. -->
+        <fieldset>
+          <legend data-t="design">Design</legend>
+          <div class="view-switch inv-seg inv-theme" dir="ltr" role="radiogroup" data-active="receipt">
+            <button type="button" class="inv-seg-opt" role="radio" data-theme="receipt" aria-checked="true" data-t="themeReceipt">Receipt</button>
+            <button type="button" class="inv-seg-opt" role="radio" data-theme="ticket" aria-checked="false" data-t="themeTicket">Ticket</button>
+          </div>
+        </fieldset>
         <fieldset>
           <legend data-t="from">From</legend>
           <label><span data-t="name">Name</span><input name="merchant" type="text" dir="auto" data-ph="namePh"></label>
@@ -6275,6 +6305,7 @@ one keyframe at a time</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 <!-- Thinking Orbs, the media loading state (see attachMediaLoadState). --><script src="/thinking-orbs.js"></script>
 <!-- MorphOrb, the Ticket composer's send animation (see the note send handler). --><script src="/morph-orb.js"></script>
+<!-- The boarding pass, the invoice's second design (see invTicketModel). --><script src="/boarding-pass.js"></script>
 <script>
 /* ─── Lottie animation data ─────────────────────────────── */
 const LOTTIE_DATA = {
@@ -7999,7 +8030,13 @@ const INV_I18N = {
     liveRates:'Live exchange rate', updated:'updated', usdName:'US dollar', eurName:'Euro', cadName:'Canadian dollar', tomanWord:'Toman', eqThis:'This invoice ≈', eqNeedAmount:'Enter an amount in Services to see it in Toman.', eqIsToman:'This invoice is already in Toman.', tomanEq:'Show the Toman equivalent on the invoice', rEq:'Toman at the rate of', qEq:'Toman equivalent',
     rSub:'Subtotal', rDisc:'Discount', rTax:'Tax', rTotal:'Total due', rPayment:'Payment',
     rPaid:'PAID', rUnpaid:'UNPAID', rScan:'Scan for invoice details', rYourName:'Your name',
-    qStatus:'Status', qFrom:'From'
+    qStatus:'Status', qFrom:'From',
+    // the design switch, and the ticket design (boarding-pass.js)
+    design:'Design', themeReceipt:'Receipt', themeTicket:'Ticket',
+    tkCover:'Cover', tkInvoice:'Invoice', tkSides:'Ticket side', tkTier:'Invoice',
+    tkBilled:'Billed to', tkItems:'Items', tkDisc:'Disc.', tkMethod:'Payment',
+    tkCurrency:'Currency', tkTotal:'Total due', tkMore:'more',
+    tkTear:'Tear off the stub', tkReattach:'Reattach the stub', tkTearHere:'Tear here'
   },
   fa: {
     language:'زبان', title:'فاکتور', sub:'حرفه‌ای فاکتور بده — پرش کن، دانلودش کن، پولت رو بگیر.',
@@ -8020,7 +8057,12 @@ const INV_I18N = {
     liveRates:'نرخ لحظه‌ای ارز', updated:'به‌روز شده', usdName:'دلار آمریکا', eurName:'یورو', cadName:'دلار کانادا', tomanWord:'تومان', eqThis:'این فاکتور ≈', eqNeedAmount:'برای دیدن معادل تومانی، مبلغ خدمات را وارد کنید.', eqIsToman:'این فاکتور خودش به تومان است.', tomanEq:'معادل تومانی هم روی فاکتور نوشته شود', rEq:'تومان به نرخ', qEq:'معادل تومانی',
     rSub:'جمع', rDisc:'تخفیف', rTax:'مالیات', rTotal:'مبلغ قابل پرداخت', rPayment:'پرداخت',
     rPaid:'پرداخت شد', rUnpaid:'پرداخت نشده', rScan:'برای دیدن جزئیات اسکن کنید', rYourName:'نام شما',
-    qStatus:'وضعیت', qFrom:'از طرف'
+    qStatus:'وضعیت', qFrom:'از طرف',
+    design:'طرح', themeReceipt:'رسید', themeTicket:'بلیت',
+    tkCover:'روی جلد', tkInvoice:'فاکتور', tkSides:'روی بلیت', tkTier:'فاکتور',
+    tkBilled:'صورتحساب برای', tkItems:'اقلام', tkDisc:'تخفیف', tkMethod:'پرداخت',
+    tkCurrency:'واحد پول', tkTotal:'مبلغ قابل پرداخت', tkMore:'مورد دیگر',
+    tkTear:'جدا کردن ته‌بلیت', tkReattach:'برگرداندن ته‌بلیت', tkTearHere:'از اینجا جدا کنید'
   }
 };
 function invT(k) { const L = (_inv && _inv.lang === 'fa') ? 'fa' : 'en'; return INV_I18N[L][k] != null ? INV_I18N[L][k] : INV_I18N.en[k]; }
@@ -8056,7 +8098,7 @@ function invBlankItem() { return { desc:'', qty:'1', rate:'' }; }
 function invDefaults(lang) {
   lang = lang || 'en';
   return {
-    v:2, lang,
+    v:2, lang, theme:'receipt',
     merchant:'', merchantNote:'',
     client:'', clientDetail:'',
     number:invNumber(invSeq()), status:'unpaid', date:invToday(), due:'', currency:'USD',
@@ -8209,10 +8251,103 @@ function invLine(k, v, cls) {
   return `<div class="rc-line ${cls || ''}"><span class="rc-k">${k}</span><span class="rc-dots"></span><span class="rc-v"><bdi>${v}</bdi></span></div>`;
 }
 
+/* The ticket design: the invoice put onto the boarding pass's slots
+   (boarding-pass.js). The cover carries who it is from and to, the date
+   and the total; the other side is the invoice proper, with the services
+   in the foot, the total as its big line, and the status as its stamp. */
+let _invTk = null;
+// The wide column is for the ticket on the invoice page only: every other
+// view, and the receipt, keep the site's own width.
+function invSyncWide() {
+  const app = document.getElementById('app');
+  let here = false;
+  try { here = current === 'view-invoice'; } catch (e) {}   // `current` is declared further down
+  if (app) app.classList.toggle('inv-wide', here && !!_inv && _inv.theme === 'ticket' && !!window.BoardingPass);
+}
+function invTicketModel() {
+  const s = _inv, cur = s.currency, fa = invFa(), T = invTotals();
+  const items = s.items.filter(it => (it.desc || '').trim() || invNum(it.rate));
+  const total = invMoney(T.total, cur);
+  const who = s.merchant || invT('rYourName');
+  const client = s.client || invT('rClient');
+  const date = invDate(s.date), due = s.due ? invDate(s.due) : '—';
+  // Three lines fit in the foot; the rest are counted.
+  const services = items.slice(0, 3).map(it => [it.desc || '—', invMoney(invNum(it.qty || 0) * invNum(it.rate), cur)]);
+  if (items.length > 3) services.push(['+' + invFmt(items.length - 3) + ' ' + invT('tkMore'), '']);
+  if (!services.length) services.push([invT('rNone'), '']);
+  const stamp = s.status === 'none' ? null : {
+    kind: s.status === 'paid' ? 'paid' : 'unpaid',
+    text: s.status === 'paid' ? invT('rPaid') : invT('rUnpaid'),
+    sub: [s.number, date].filter(Boolean).join(' · ')
+  };
+  return {
+    fa,
+    L: { tear: invT('tkTear'), reattach: invT('tkReattach'), tearHere: invT('tkTearHere'), sides: invT('tkSides') },
+    sideLabels: [invT('tkCover'), invT('tkInvoice')],
+    front: {
+      tier: invT('tkTier'), title: who, date,
+      welcome: invT('tkBilled') + '\n' + client,
+      eyebrow: s.merchantNote || '',
+      words: [total, invT('tkTotal')],
+      notes: [s.number, s.due ? invT('rDue') + ' ' + due : ''],
+      site: s.payMethod || ''
+    },
+    back: {
+      head: [invT('tkInvoice'), who, s.number],
+      cells: [
+        [{ l: invT('rBillTo'), v: client, size: 1.45 }],
+        [{ l: invT('rNo'), v: s.number, size: 1.45 }],
+        [{ l: invT('rDate'), v: date, size: 1.45 }],
+        [{ l: invT('qFrom'), v: who, size: 1.3 }, { l: invT('rDue'), v: due, size: 1.3 }],
+        [{ l: invT('tkItems'), v: invFmt(items.length), size: 2.25 },
+         { l: invT('rTax'), v: T.taxPct ? invFmt(T.taxPct) + (fa ? '٪' : '%') : '—', size: 2.25 },
+         { l: invT('tkDisc'), v: T.disc ? invMoney(T.disc, cur) : '—', size: 2.25 }],
+        [{ l: invT('tkMethod'), v: s.payMethod || '—', size: 1.45 }]
+      ],
+      servicesLabel: invT('services'),
+      services,
+      seq: s.clientDetail || '',
+      featuring: invT('tkTotal'),
+      headline: total,
+      // The source's 4.3 is sized for ten letters; a long Toman total steps down.
+      headlineSize: Math.max(2.4, Math.min(4.3, 43 / Math.max(1, total.length))).toFixed(2),
+      stamp
+    },
+    stub: {
+      label: invT('tkInvoice'),
+      rows: [
+        [{ l: invT('rBillTo'), v: client, size: 1.25 }],
+        [{ l: invT('qFrom'), v: who, size: 1.2 }],
+        [{ l: invT('rNo'), v: s.number, size: 1.2 }],
+        [{ l: invT('rTotal'), v: total, size: 1.85 }],
+        [{ l: invT('rDate'), v: date, size: 1.2 }, { l: invT('rDue'), v: due, size: 1.2 }]
+      ]
+    }
+  };
+}
+
 function renderInvoicePaper() {
   const p = document.getElementById('invPaper');
   if (!p || !_inv) return;
   const s = _inv, cur = s.currency, fa = invFa(), T = invTotals();
+  // Which design. The ticket is built once and refilled after that; the
+  // receipt is rebuilt every time, as it always was.
+  const ticket = s.theme === 'ticket' && !!window.BoardingPass;
+  p.classList.toggle('is-ticket', ticket);
+  invSyncWide();
+  const wrap = p.closest('.inv-wrap'), slip = document.getElementById('invSlip');
+  if (wrap) wrap.classList.toggle('is-ticket', ticket);
+  if (slip) slip.classList.toggle('is-ticket', ticket);
+  if (ticket) {
+    p.dir = 'ltr';
+    p.lang = fa ? 'fa' : 'en';
+    p.classList.remove('is-fa');
+    if (!_invTk) { p.innerHTML = ''; _invTk = BoardingPass.mount(p); }
+    _invTk.update(invTicketModel());
+    renderInvoiceRates();
+    return;
+  }
+  if (_invTk) { _invTk.destroy(); _invTk = null; }
   p.dir = fa ? 'rtl' : 'ltr';
   p.lang = fa ? 'fa' : 'en';
   p.classList.toggle('is-fa', fa);
@@ -8292,6 +8427,12 @@ function applyInvoiceLang() {
   const sw = view.querySelector('.inv-lang');
   sw.dataset.active = fa ? 'fa' : 'en';
   sw.querySelectorAll('[data-lang]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.lang === sw.dataset.active)));
+  const th = view.querySelector('.inv-theme');
+  if (th) {
+    th.setAttribute('aria-label', invT('design'));
+    th.dataset.active = _inv.theme === 'ticket' ? 'ticket' : 'receipt';
+    th.querySelectorAll('[data-theme]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.theme === th.dataset.active)));
+  }
 }
 
 function initInvoice() {
@@ -8317,6 +8458,12 @@ function initInvoice() {
     _inv.lang = b.dataset.lang;
     invAdoptDefaults(_inv.lang);
     invSave(); fill(); invPrintIn();
+  });
+  document.querySelector('#view-invoice .inv-theme').addEventListener('click', e => {
+    const b = e.target.closest('[data-theme]');
+    if (!b || b.dataset.theme === _inv.theme) return;
+    _inv.theme = b.dataset.theme;
+    invSave(); applyInvoiceLang(); renderInvoicePaper(); invPrintIn();
   });
   form.addEventListener('input', e => {
     const el = e.target;
@@ -8346,7 +8493,7 @@ function initInvoice() {
     // The number moves on; who you are, how you get paid, the currency and the language stay.
     let n = invSeq() + 1;
     try { localStorage.setItem(INV_SEQ, String(n)); } catch (e) {}
-    const keep = { merchant:_inv.merchant, merchantNote:_inv.merchantNote, currency:_inv.currency, payMethod:_inv.payMethod, payDetail:_inv.payDetail, note:_inv.note, tax:_inv.tax };
+    const keep = { merchant:_inv.merchant, merchantNote:_inv.merchantNote, currency:_inv.currency, payMethod:_inv.payMethod, payDetail:_inv.payDetail, note:_inv.note, tax:_inv.tax, theme:_inv.theme };
     _inv = Object.assign(invDefaults(_inv.lang), keep, { number:invNumber(n) });
     invSave(); fill(); invPrintIn();
   });
@@ -8461,13 +8608,22 @@ function invPaperCss() {
 
 // The slip on a canvas, PAD css px of margin around it, at 3x.
 async function invCanvas(PAD, bg) {
-  if (!window.qrcode) { await invLoadQr(); renderInvoicePaper(); }
-  const src = document.getElementById('invPaper');
-  const W = 360, SCALE = 3;
-  const clone = src.cloneNode(true);
-  clone.removeAttribute('id');
-  clone.classList.remove('is-printing');
-  clone.style.cssText = `width:${W}px;max-width:none;margin:0;`;
+  // The ticket exports the side that is showing, at its own width; the
+  // receipt as it always has. The ticket's sides carry their own shadow.
+  const ticket = !!(_invTk && _inv.theme === 'ticket');
+  if (!ticket && !window.qrcode) { await invLoadQr(); renderInvoicePaper(); }
+  const W = ticket ? 960 : 360, SCALE = 3;
+  let clone;
+  if (ticket) {
+    clone = document.createElement('article');
+    clone.className = 'inv-paper is-ticket';
+    clone.appendChild(_invTk.snapshot());
+  } else {
+    clone = document.getElementById('invPaper').cloneNode(true);
+    clone.removeAttribute('id');
+    clone.classList.remove('is-printing');
+  }
+  clone.style.cssText = `width:${W}px;max-width:none;min-width:0;margin:0;`;
   // Measure at the export width, off-screen.
   const probe = document.createElement('div');
   probe.style.cssText = `position:fixed;left:-10000px;top:0;width:${W}px;`;
@@ -8491,11 +8647,15 @@ async function invCanvas(PAD, bg) {
   const ctx = c.getContext('2d');
   if (bg) { ctx.fillStyle = bg; ctx.fillRect(0, 0, c.width, c.height); }
   ctx.scale(SCALE, SCALE);
-  // The same two-layer shadow the slip has on the page.
-  ctx.shadowColor = 'rgba(0,0,0,.14)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 10;
-  ctx.drawImage(img, PAD, PAD, W, H);
-  ctx.shadowColor = 'rgba(0,0,0,.06)'; ctx.shadowBlur = 1; ctx.shadowOffsetY = 1;
-  ctx.drawImage(img, PAD, PAD, W, H);
+  if (ticket) {
+    ctx.drawImage(img, PAD, PAD, W, H);
+  } else {
+    // The same two-layer shadow the slip has on the page.
+    ctx.shadowColor = 'rgba(0,0,0,.14)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 10;
+    ctx.drawImage(img, PAD, PAD, W, H);
+    ctx.shadowColor = 'rgba(0,0,0,.06)'; ctx.shadowBlur = 1; ctx.shadowOffsetY = 1;
+    ctx.drawImage(img, PAD, PAD, W, H);
+  }
   return { canvas: c, cssW: W + PAD * 2, cssH: H + PAD * 2 };
 }
 
@@ -12404,6 +12564,7 @@ function showView(toId, anim) {
   }
 
   current = toId;
+  if (typeof invSyncWide === 'function') invSyncWide();
 
   // persist state in URL path (skip when we're already restoring from popstate)
   if (!_restoringState) {
