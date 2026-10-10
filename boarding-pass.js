@@ -92,13 +92,17 @@
     ".rc-tk-d{font-family:var(--rc-tk-disp);font-weight:300;text-transform:uppercase;letter-spacing:.12em;line-height:1;white-space:nowrap}",
     ".rc-tk-l{display:block;font-family:var(--rc-tk-cond);font-weight:600;font-stretch:condensed;text-transform:uppercase;font-size:" + u(0.72) + ";letter-spacing:.07em;line-height:1;color:var(--rc-tk-ink2);margin-bottom:" + u(0.45) + ";white-space:nowrap}",
     ".rc-tk-head{display:flex;align-items:baseline;justify-content:space-between;gap:" + u(1.5) + ";padding-bottom:" + u(1) + ";border-bottom:1px dashed var(--rc-tk-rule)}",
-    ".rc-tk-head>:nth-child(2){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
-    ".rc-tk-grid{display:grid;grid-template-columns:1.08fr 1fr .78fr;border-bottom:1px dashed var(--rc-tk-rule)}",
+    ".rc-tk-hname{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+    ".rc-tk-grid{display:grid;grid-template-columns:1fr .9fr 1.08fr;border-bottom:1px dashed var(--rc-tk-rule)}",
     ".rc-tk-cell{padding:" + u(1) + " " + u(1.2) + " " + u(1) + " 0;min-width:0}",
     ".rc-tk-cell+.rc-tk-cell,.rc-tk-grid>:nth-child(5),.rc-tk-grid>:nth-child(6){border-left:1px dashed var(--rc-tk-rule);padding-left:" + u(1.2) + "}",
     ".rc-tk-grid>:nth-child(4){border-left:0;padding-left:0}",
     ".rc-tk-grid>:nth-child(5),.rc-tk-grid>:nth-child(6){border-top:1px dashed var(--rc-tk-rule)}",
     ".rc-tk-row{display:flex;gap:" + u(2.4) + "}",
+    // Payment details under the method: three lines at most on a wide
+    // ticket, whose height is fixed; standing up there is room for all.
+    ".rc-tk-sub{display:block;margin-top:" + u(0.4) + ";max-height:3.9em;overflow:hidden;font-family:var(--rc-tk-mono);font-size:" + u(1) + ";line-height:1.3;color:var(--rc-tk-ink2)}",
+    ".rc-tk-sub>span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
     ".rc-tk-foot{flex:1;display:flex;align-items:center;gap:" + u(2) + ";padding-top:" + u(1.1) + ";min-height:0}",
     ".rc-tk-svc{min-width:0;flex:0 0 42%}",
     ".rc-tk-tot{flex:1;min-width:0;text-align:center}",
@@ -145,25 +149,27 @@
     ".rc-tk-svc{flex:none}",
     // The name gets a line of its own under "Invoice" and the number.
     ".rc-tk-head{flex-wrap:wrap;row-gap:" + u(0.8) + "}",
-    ".rc-tk-head>:nth-child(2){order:3;flex:0 0 100%}",
-    ".rc-tk-head>:nth-child(3){white-space:nowrap}",
+    ".rc-tk-hname{order:3;flex:0 0 100%}",
+    ".rc-tk-hno{white-space:nowrap}",
     // The stamp drops into the flow under the total, where it covers nothing.
     ".rc-tk-stamp-slot{display:flex;justify-content:center;padding-top:" + u(1.4) + "}",
     ".rc-tk-stamp-slot:empty{display:none}",
     ".rc-tk-stamp{position:relative;left:auto;top:auto}",
     ".rc-tk-hint{display:none}",
     ".rc-tk-stub-in>.rc-tk-sf:first-of-type{margin-top:" + u(1) + "}",
+    ".rc-tk-sub{max-height:none}",
+    ".rc-tk-sub>span{white-space:normal;overflow-wrap:anywhere}",
     "}",
     "@media (prefers-reduced-motion: reduce){.rc-tk-tilt,.rc-tk-stub{transition-duration:.01ms}.rc-tk-v,.rc-tk-stamp{animation:none!important}}",
   ].join("");
 
   function injectCss() {
     const old = document.getElementById("rc-tk-css");
-    if (old && old.dataset.v === "4") return;
+    if (old && old.dataset.v === "6") return;
     if (old) old.remove();
     const s = document.createElement("style");
     s.id = "rc-tk-css";
-    s.dataset.v = "4";
+    s.dataset.v = "6";
     s.textContent = CSS;
     document.head.appendChild(s);
   }
@@ -175,12 +181,17 @@
       '<rect width="100%" height="100%" filter="url(#' + id + ')"/></svg>';
   }
 
-  /** One labelled value: the source's Field. `i` staggers the type-in. */
+  /** One labelled value: the source's Field. `i` staggers the type-in.
+      `sub` is smaller lines under the value, each in its own direction (a
+      card number under a Persian name stays left-to-right). */
   function field(f, i) {
     if (!f) return "";
+    const sub = f.sub ? String(f.sub).split("\n").map(l => l.trim()).filter(Boolean) : [];
     return '<span style="display:block;min-width:0"><span class="rc-tk-l">' + esc(f.l) + "</span>" +
       '<span class="rc-tk-m rc-tk-v" dir="auto" style="display:block;font-size:' + u(f.size) + ";animation-delay:" + (0.1 + i * 0.12).toFixed(2) + 's">' +
-      esc(f.v) + "</span></span>";
+      esc(f.v) + "</span>" +
+      (sub.length ? '<span class="rc-tk-sub">' + sub.map(l => '<span dir="auto">' + esc(l) + "</span>").join("") + "</span>" : "") +
+      "</span>";
   }
 
   let seq = 0;
@@ -299,8 +310,8 @@
 
       main.querySelector(".rc-tk-head").innerHTML =
         '<span class="rc-tk-c" style="font-size:' + u(1.65) + '">' + esc(B.head[0]) + "</span>" +
-        '<span class="rc-tk-c" dir="auto" style="font-size:' + u(2.75) + '">' + esc(B.head[1]) + "</span>" +
-        '<span class="rc-tk-c" dir="ltr" style="font-size:' + u(2.3) + '">' + esc(B.head[2]) + "</span>";
+        (B.head[1] ? '<span class="rc-tk-c rc-tk-hname" dir="auto" style="font-size:' + u(2.75) + '">' + esc(B.head[1]) + "</span>" : "") +
+        '<span class="rc-tk-c rc-tk-hno" dir="ltr" style="font-size:' + u(2.3) + '">' + esc(B.head[2]) + "</span>";
 
       let n = 0;
       main.querySelector(".rc-tk-grid").innerHTML = B.cells.map((c, i) =>
