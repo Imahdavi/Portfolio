@@ -66,11 +66,12 @@
     '--rc-tk-disp:"Futura","Century Gothic","Avenir Next","Josefin Sans","Quicksand",ui-sans-serif,sans-serif}',
     ".rc-tk-stage{position:relative;width:100%;aspect-ratio:1000/330;perspective:1800px;touch-action:pan-y}",
     ".rc-tk-tilt{position:absolute;inset:0;transform-style:preserve-3d;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .6s cubic-bezier(.2,.8,.2,1)}",
-    ".rc-tk-face{position:absolute;inset:0;",
-    "filter:drop-shadow(0 " + u(1.1) + " " + u(1.6) + " rgba(0,0,0,.13)) drop-shadow(0 " + u(0.2) + " " + u(0.3) + " rgba(0,0,0,.09))}",
+    // No shadow: the paper is outlined with a hairline instead, which is
+    // all near-white stock needs to stand off a white page.
+    ".rc-tk-face{position:absolute;inset:0}",
     ".rc-tk-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;max-width:none}",
     ".rc-tk-grain{opacity:.12;mix-blend-mode:multiply}",
-    ".rc-tk-piece{position:absolute;top:0;bottom:0;overflow:hidden;color:var(--rc-tk-ink);box-sizing:border-box;",
+    ".rc-tk-piece{position:absolute;top:0;bottom:0;overflow:hidden;color:var(--rc-tk-ink);box-sizing:border-box;box-shadow:inset 0 0 0 1px rgba(0,0,0,.09);",
     "background:linear-gradient(162deg,#fff 0%,var(--rc-tk-paper) 58%,color-mix(in srgb,var(--rc-tk-paper) 94%,#000) 100%)}",
     ".rc-tk-main{left:0;width:77.4%;border-radius:" + u(0.35) + " 0 0 " + u(0.35) + ";padding:" + u(2.3) + " " + u(2.6) + " " + u(2.1) + ";display:flex;flex-direction:column;",
     "-webkit-mask:radial-gradient(circle at 100% 50%,#0000 " + u(0.2) + ",#000 " + u(0.24) + ") 0 0/100% " + u(0.86) + " repeat-y;",
@@ -158,11 +159,11 @@
 
   function injectCss() {
     const old = document.getElementById("rc-tk-css");
-    if (old && old.dataset.v === "3") return;
+    if (old && old.dataset.v === "4") return;
     if (old) old.remove();
     const s = document.createElement("style");
     s.id = "rc-tk-css";
-    s.dataset.v = "3";
+    s.dataset.v = "4";
     s.textContent = CSS;
     document.head.appendChild(s);
   }
