@@ -8081,7 +8081,9 @@ const INV_I18N = {
     openOk:'Invoice opened — every field is back to edit.', openQr:'Read from its QR code — check the fields before sending.',
     openFail:'Couldn’t read an invoice from that file.', openAsk:'Open this invoice? The one in the form will be replaced.',
     openReading:'Reading the invoice…',
-    openFailWhy:'It needs a PNG or PDF made on this page. Invoices downloaded before Oct 13 in the Ticket design carry neither the data nor a QR code — download it again and open the new file.',
+    openOcr:'Reading the printed text…', openOcrWait:'The first time takes up to a minute.',
+    openOcrOk:'Read from the printed text — check every field, the amounts and the status above all.',
+    openFailWhy:'It needs a PNG or PDF made on this page, sharp enough to read. A photo of a printout, or a copy shrunk very small, may not be.',
     tkInvoice:'Invoice', tkItems:'Items', tkDisc:'Disc.', tkMethod:'Payment',
     tkCurrency:'Currency', tkTotal:'Total due', tkMore:'more',
     tkTear:'Tear off the stub', tkReattach:'Reattach the stub', tkTearHere:'Tear here'
@@ -8112,7 +8114,9 @@ const INV_I18N = {
     openOk:'فاکتور باز شد — همهٔ فیلدها برای ویرایش برگشتند.', openQr:'از روی کد QR خوانده شد — پیش از ارسال فیلدها را چک کنید.',
     openFail:'از این فایل فاکتوری خوانده نشد.', openAsk:'این فاکتور باز شود؟ فاکتور فعلی فرم جایگزین می‌شود.',
     openReading:'در حال خواندن فاکتور…',
-    openFailWhy:'باید PNG یا PDF ساخته‌شده در همین صفحه باشد. فاکتورهایی که پیش از ۲۱ مهر با طرح بلیت دانلود شده‌اند نه داده را دارند نه کد QR — دوباره دانلودش کنید و فایل جدید را باز کنید.',
+    openOcr:'در حال خواندن متن چاپ‌شده…', openOcrWait:'بار اول تا یک دقیقه طول می‌کشد.',
+    openOcrOk:'از روی متن چاپ‌شده خوانده شد — همهٔ فیلدها، به‌خصوص مبلغ‌ها و وضعیت را چک کنید.',
+    openFailWhy:'باید PNG یا PDF ساخته‌شده در همین صفحه باشد و آن‌قدر واضح که خوانده شود. عکس از روی کاغذ یا نسخه‌ای که خیلی کوچک شده ممکن است خوانده نشود.',
     tkInvoice:'فاکتور', tkItems:'اقلام', tkDisc:'تخفیف', tkMethod:'پرداخت',
     tkCurrency:'واحد پول', tkTotal:'مبلغ قابل پرداخت', tkMore:'مورد دیگر',
     tkTear:'جدا کردن ته‌بلیت', tkReattach:'برگرداندن ته‌بلیت', tkTearHere:'از اینجا جدا کنید'
@@ -8617,10 +8621,17 @@ function initInvoice() {
     const busy = showToast({ type:'loading', title: invT('openReading') });
     try {
       const bytes = new Uint8Array(await f.arrayBuffer());
-      let data = invReadEmbedded(bytes), fromQr = false;
+      let data = invReadEmbedded(bytes), how = 'openOk';
       if (!data) {
         const t = await invReadQrText(f, bytes).catch(e => { console.warn('[invoice] QR read failed', e); return null; });
-        if (t) { data = invParseQrText(t); fromQr = true; }
+        if (t) { data = invParseQrText(t); how = 'openQr'; }
+      }
+      if (!data) {
+        // An old ticket: read its printed text. Slow the first time.
+        busy.update({ title: invT('openOcr'), desc: invT('openOcrWait') });
+        data = await invReadPrinted(f, bytes, p => busy.update({ desc: invT('openOcrWait') + ' ' + Math.round(p * 100) + '%' }))
+          .catch(e => { console.warn('[invoice] text read failed', e); return null; });
+        if (data) how = 'openOcrOk';
       }
       busy.close();
       if (!data) { showToast({ type:'error', title: invT('openFail'), desc: invT('openFailWhy'), duration: 9000 }); return; }
@@ -8630,7 +8641,7 @@ function initInvoice() {
       if (_inv.lang !== 'fa') _inv.lang = 'en';
       if (!Array.isArray(_inv.items) || !_inv.items.length) _inv.items = [invBlankItem()];
       invSave(); fill(); invPrintIn();
-      showToast({ type:'success', title: invT(fromQr ? 'openQr' : 'openOk'), duration: fromQr ? 7000 : 4500 });
+      showToast({ type:'success', title: invT(how), duration: how === 'openOk' ? 4500 : 8000 });
     } catch (e) {
       busy.close();
       console.warn('[invoice] open failed', e);
@@ -8985,6 +8996,167 @@ async function invReadQrText(file, bytes) {
   }
   return null;
 }
+/* ---- The last resort: the printed text.
+   Ticket invoices downloaded before the QR moved onto the stub carry
+   neither the data nor a code, so the words on the picture are read
+   instead (Tesseract.js, loaded the first time it is needed — a few
+   megabytes, so the first read takes a while). Each value is matched to
+   the label printed above it by position: the label row gives every
+   column its left edge, and a value belongs to the label whose column it
+   starts in. Only the pass is read; the stub repeats it. The big thin
+   total and the tilted stamp read badly, and neither is needed — the
+   total is the services' sum, and the status is left to be checked. */
+const INV_OCR_SRC = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+let _invOcr = null;
+function invLoadOcr() {
+  if (window.Tesseract) return Promise.resolve();
+  if (!_invOcr) _invOcr = new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = INV_OCR_SRC; sc.async = true;
+    sc.onload = res; sc.onerror = () => { _invOcr = null; rej(new Error('ocr')); };
+    document.head.appendChild(sc);
+  });
+  return _invOcr;
+}
+const INV_OCR_LABELS = {
+  en: { billto:['BILL','TO'], from:['FROM'], due:['DUE'], no:['NO'], date:['DATE'], items:['ITEMS'], tax:['TAX'], disc:['DISC'], payment:['PAYMENT'], services:['SERVICES'], total:['TOTAL','DUE'] },
+  fa: { billto:['صورتحساب','برای'], from:['از','طرف'], due:['سررسید'], no:['شماره'], date:['تاریخ'], items:['اقلام'], tax:['مالیات'], disc:['تخفیف'], payment:['پرداخت'], services:['خدمات'], total:['مبلغ','قابل','پرداخت'] }
+};
+async function invReadPrinted(file, bytes, onProgress) {
+  let blob = file;
+  if (!/^image\//.test(file.type)) {
+    const s = new TextDecoder('latin1').decode(bytes);
+    const at = s.indexOf('/DCTDecode');
+    if (at < 0) return null;
+    const a = s.indexOf('stream', at) + 7, b = s.indexOf('endstream', a);
+    blob = new Blob([bytes.subarray(a, b)], { type:'image/jpeg' });
+  }
+  await invLoadOcr();
+  const bmp = await createImageBitmap(blob);
+  // The pass only (the stub at the right repeats it), scaled so the small
+  // labels come out large enough to read.
+  const k = Math.min(3, 2600 / (bmp.width * 0.765));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * 0.765 * k); c.height = Math.round(bmp.height * k);
+  const g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(bmp, 0, 0, bmp.width * 0.765, bmp.height, 0, 0, c.width, c.height);
+  const logger = m => { if (onProgress && m && m.status === 'recognizing text') onProgress(m.progress); };
+  for (const lang of ['en', 'fa']) {
+    const w = await Tesseract.createWorker(lang === 'fa' ? 'fas' : 'eng', 1, { logger });
+    let data;
+    try { data = (await w.recognize(c)).data; } finally { await w.terminate(); }
+    const out = invParsePrinted(data.words || [], lang);
+    if (out) return out;
+  }
+  return null;
+}
+function invParsePrinted(words, lang) {
+  const norm = t => String(t).replace(/[.:،,]+$/g, '').replace(/^[^\w؀-ۿ]+|[^\w؀-ۿ]+$/g, '');
+  const W = words.map(w => ({ t: w.text, n: norm(w.text).toUpperCase(), x0: w.bbox.x0, x1: w.bbox.x1, y0: w.bbox.y0, y1: w.bbox.y1, used: false }))
+    .filter(w => w.t.trim());
+  // Find each label: its words side by side on one line, left to right.
+  const labels = [];
+  const L = INV_OCR_LABELS[lang];
+  const find = (key, toks) => {
+    for (let i = 0; i < W.length; i++) {
+      if (W[i].used || W[i].n !== toks[0].toUpperCase()) continue;
+      const run = [W[i]];
+      for (let j = 1; j < toks.length; j++) {
+        const prev = run[run.length - 1];
+        const nx = W.find(w => !w.used && w.n === toks[j].toUpperCase() && Math.abs(w.y0 - prev.y0) < (prev.y1 - prev.y0) && w.x0 > prev.x0 && w.x0 - prev.x1 < (prev.y1 - prev.y0) * 3);
+        if (!nx) { run.length = 0; break; }
+        run.push(nx);
+      }
+      if (!run.length) continue;
+      run.forEach(w => { w.used = true; });
+      labels.push({ key, x0: run[0].x0, x1: run[run.length - 1].x1, y0: Math.min(...run.map(w => w.y0)), y1: Math.max(...run.map(w => w.y1)) });
+      return;
+    }
+  };
+  // Multi-word labels first, so "Total due" doesn't lend its "due" to Due.
+  Object.entries(L).sort((a, b) => b[1].length - a[1].length).forEach(([k, t]) => find(k, t));
+  if (labels.length < 4) return null;
+  const at = k => labels.find(l => l.key === k);
+  const lh = Math.max(4, ...labels.map(l => l.y1 - l.y0));
+  // A label's column runs to the next label on its row.
+  const colEnd = l => {
+    const right = labels.filter(o => o !== l && Math.abs(o.y0 - l.y0) < lh && o.x0 > l.x0).map(o => o.x0);
+    return right.length ? Math.min(...right) : Infinity;
+  };
+  const valueWords = (l, rows) => {
+    const end = colEnd(l);
+    return W.filter(w => !w.used && w.y0 > l.y1 - 1 && w.y0 < l.y1 + lh * (rows || 4.5) &&
+      (w.x0 + w.x1) / 2 >= l.x0 - lh && (w.x0 + w.x1) / 2 < end - lh * 0.3)
+      .sort((a, b) => (Math.abs(a.y0 - b.y0) < lh ? a.x0 - b.x0 : a.y0 - b.y0));
+  };
+  const text = (ws) => ws.map(w => w.t).join(' ').replace(/\s+/g, ' ').trim();
+  const val = k => { const l = at(k); return l ? text(valueWords(l)) : ''; };
+  const dash = v => (/^[-–—=_.\s]*$/.test(v) ? '' : v);
+  const out = { lang, items: [] };
+  const client = val('billto'); if (client) out.client = client;
+  const from = val('from'); if (from) out.merchant = from;
+  const num = W.map(w => w.t).join(' ').match(/INV-?\s?\d{1,6}/i);
+  if (num) out.number = num[0].replace(/\s/g, '').toUpperCase().replace(/^INV(\d)/, 'INV-$1');
+  const toIso = t => {
+    const m = String(t).match(/[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4}/);
+    if (!m) return '';
+    const d = new Date(m[0].replace(',', '') + ' 12:00');
+    return isNaN(d) ? '' : d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  };
+  const date = toIso(val('date')); if (date) out.date = date;
+  const due = toIso(dash(val('due'))); if (due) out.due = due;
+  const tax = dash(val('tax')).match(/[\d.]+/); if (tax) out.tax = tax[0];
+  const disc = dash(val('disc')).replace(/[^\d.]/g, ''); if (disc) out.discount = disc;
+  // Payment: the method, and the smaller lines under it, down to the rule
+  // above the services.
+  const pay = at('payment');
+  if (pay) {
+    const svc = at('services'), stop = svc ? svc.y0 : Infinity;
+    const ws = W.filter(w => !w.used && w.y0 > pay.y1 - 1 && w.y1 < stop && (w.x0 + w.x1) / 2 >= pay.x0 - lh && (w.x0 + w.x1) / 2 < colEnd(pay))
+      .sort((a, b) => (Math.abs(a.y0 - b.y0) < lh ? a.x0 - b.x0 : a.y0 - b.y0));
+    const rows = [];
+    ws.forEach(w => { const r = rows.find(r => Math.abs(r.y - w.y0) < lh); if (r) r.ws.push(w); else rows.push({ y: w.y0, ws: [w] }); });
+    const lines = rows.map(r => text(r.ws)).filter(Boolean);
+    if (lines[0]) out.payMethod = dash(lines[0]);
+    if (lines.length > 1) out.payDetail = lines.slice(1).join('\n');
+  }
+  // Services: the rows under its label, left of the total.
+  let cur = null;
+  const curOf = t => /CA\$/.test(t) ? 'CAD' : /€/.test(t) ? 'EUR' : /\bT\b|تومان/.test(t) ? 'IRT' : /\$/.test(t) ? 'USD' : null;
+  const svc = at('services'), tot = at('total');
+  if (svc) {
+    const right = tot ? tot.x0 - lh : Infinity;
+    // The big thin total is centred under its label and reaches left past
+    // it, into the services' rows; its glyphs are three times the height
+    // of anything else, which is how they are left out.
+    const hs = W.filter(w => !w.used).map(w => w.y1 - w.y0).sort((a, b) => a - b);
+    const tall = (hs[Math.floor(hs.length / 2)] || lh) * 2.2;
+    const ws = W.filter(w => !w.used && w.y0 > svc.y1 - 1 && w.x1 <= right && w.y0 < svc.y1 + lh * 12 &&
+      w.y1 - w.y0 < tall && !/^[’‘"“”`´'.,]+$/.test(w.t));
+    const rows = [];
+    ws.sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0).forEach(w => { const r = rows.find(r => Math.abs(r.y - w.y0) < lh * 1.2); if (r) r.ws.push(w); else rows.push({ y: w.y0, ws: [w] }); });
+    rows.forEach(r => {
+      r.ws.sort((a, b) => a.x0 - b.x0);
+      const toks = r.ws.map(w => w.t);
+      // The amount is the run of figures (and currency mark) at the end.
+      let i = toks.length;
+      while (i > 0 && /^([$€]|CA\$|T|تومان)?[\d۰-۹,.٫٬]+([$€]|T|تومان)?$|^(T|تومان|\$|€)$/.test(toks[i - 1])) i--;
+      const desc = toks.slice(0, i).join(' ').trim(), amt = toks.slice(i).join(' ');
+      if (!desc || /^[a-z0-9._%+-]+@/i.test(desc)) return;   // the client's email line
+      cur = cur || curOf(amt);
+      const n = parseFloat(amt.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[^\d.]/g, '')) || 0;
+      out.items.push({ desc, qty: '1', rate: n ? String(n) : '' });
+    });
+  }
+  if (cur) out.currency = cur;
+  const all = W.map(w => w.n).join(' ');
+  out.status = /UNPAID|نشده/.test(all) ? 'unpaid' : /\bPAID\b/.test(all) ? 'paid' : 'unpaid';
+  if (!out.items.length) delete out.items;
+  return out;
+}
+
 // The QR text back into fields, in either language. Numbers can be in
 // Persian digits; amounts carry their currency's mark.
 function invParseQrText(text) {
