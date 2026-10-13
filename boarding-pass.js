@@ -112,7 +112,7 @@
     ".rc-tk-eq>span{display:block}",
     // The stub: the QR, centred, with its caption, the number and the credit.
     ".rc-tk-stub{align-items:center;justify-content:center;text-align:center}",
-    ".rc-tk-qr{display:block;width:100%;max-width:" + u(13) + ";aspect-ratio:1}",
+    ".rc-tk-qr{display:block;width:100%;max-width:" + u(15.5) + ";aspect-ratio:1}",
     ".rc-tk-qr svg{display:block;width:100%;height:100%}",
     ".rc-tk-qr path{fill:var(--rc-tk-ink)}",
     ".rc-tk-scan{margin:" + u(0.9) + " 0 0;white-space:normal;line-height:1.3;max-width:100%}",
@@ -180,11 +180,11 @@
 
   function injectCss() {
     const old = document.getElementById("rc-tk-css");
-    if (old && old.dataset.v === "8") return;
+    if (old && old.dataset.v === "9") return;
     if (old) old.remove();
     const s = document.createElement("style");
     s.id = "rc-tk-css";
-    s.dataset.v = "8";
+    s.dataset.v = "9";
     s.textContent = CSS;
     document.head.appendChild(s);
   }

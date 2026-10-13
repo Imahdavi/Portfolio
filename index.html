@@ -5813,7 +5813,7 @@ one keyframe at a time</div>
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15V4m0 0L7.5 8.5M12 4l4.5 4.5M5 19.5h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span data-t="openInv">Open invoice</span>
         </button>
-        <input type="file" id="invOpenFile" accept="image/png,image/jpeg,application/pdf,.pdf" hidden>
+        <input type="file" id="invOpenFile" accept="image/*,application/pdf,.pdf" hidden>
       </div>
     </div>
 
@@ -8079,7 +8079,9 @@ const INV_I18N = {
     offered:'Shown to visitors', offerLast:'At least one design has to stay on.',
     openInv:'Open invoice', openTip:'Open a PNG or PDF invoice made here, to edit it',
     openOk:'Invoice opened — every field is back to edit.', openQr:'Read from its QR code — check the fields before sending.',
-    openFail:'No invoice found in that file. It has to be a PNG or PDF made here.', openAsk:'Open this invoice? The one in the form will be replaced.',
+    openFail:'Couldn’t read an invoice from that file.', openAsk:'Open this invoice? The one in the form will be replaced.',
+    openReading:'Reading the invoice…',
+    openFailWhy:'It needs a PNG or PDF made on this page. Invoices downloaded before Oct 13 in the Ticket design carry neither the data nor a QR code — download it again and open the new file.',
     tkInvoice:'Invoice', tkItems:'Items', tkDisc:'Disc.', tkMethod:'Payment',
     tkCurrency:'Currency', tkTotal:'Total due', tkMore:'more',
     tkTear:'Tear off the stub', tkReattach:'Reattach the stub', tkTearHere:'Tear here'
@@ -8108,7 +8110,9 @@ const INV_I18N = {
     offered:'نمایش به بازدیدکننده‌ها', offerLast:'دست‌کم یک طرح باید روشن بماند.',
     openInv:'باز کردن فاکتور', openTip:'فاکتور PNG یا PDF ساخته‌شده همین‌جا را باز کنید تا ویرایشش کنید',
     openOk:'فاکتور باز شد — همهٔ فیلدها برای ویرایش برگشتند.', openQr:'از روی کد QR خوانده شد — پیش از ارسال فیلدها را چک کنید.',
-    openFail:'فاکتوری در این فایل پیدا نشد. باید PNG یا PDF ساخته‌شده همین‌جا باشد.', openAsk:'این فاکتور باز شود؟ فاکتور فعلی فرم جایگزین می‌شود.',
+    openFail:'از این فایل فاکتوری خوانده نشد.', openAsk:'این فاکتور باز شود؟ فاکتور فعلی فرم جایگزین می‌شود.',
+    openReading:'در حال خواندن فاکتور…',
+    openFailWhy:'باید PNG یا PDF ساخته‌شده در همین صفحه باشد. فاکتورهایی که پیش از ۲۱ مهر با طرح بلیت دانلود شده‌اند نه داده را دارند نه کد QR — دوباره دانلودش کنید و فایل جدید را باز کنید.',
     tkInvoice:'فاکتور', tkItems:'اقلام', tkDisc:'تخفیف', tkMethod:'پرداخت',
     tkCurrency:'واحد پول', tkTotal:'مبلغ قابل پرداخت', tkMore:'مورد دیگر',
     tkTear:'جدا کردن ته‌بلیت', tkReattach:'برگرداندن ته‌بلیت', tkTearHere:'از اینجا جدا کنید'
@@ -8559,7 +8563,7 @@ function initInvoice() {
     t[c.dataset.offer] = c.checked;
     if (!INV_THEMES.some(k => t[k] !== false)) {
       c.checked = true;
-      showToast({ type:'error', title: invT('offerLast') });
+      showToast({ type:'error', title: invT('offerLast'), duration: 4000 });
       return;
     }
     if (!_cachedSettings) _cachedSettings = {};
@@ -8609,24 +8613,28 @@ function initInvoice() {
     const f = openFile.files[0];
     openFile.value = '';
     if (!f) return;
+    // Reading the code off a big picture takes a moment.
+    const busy = showToast({ type:'loading', title: invT('openReading') });
     try {
       const bytes = new Uint8Array(await f.arrayBuffer());
       let data = invReadEmbedded(bytes), fromQr = false;
       if (!data) {
-        const t = await invReadQrText(f, bytes).catch(() => null);
+        const t = await invReadQrText(f, bytes).catch(e => { console.warn('[invoice] QR read failed', e); return null; });
         if (t) { data = invParseQrText(t); fromQr = true; }
       }
-      if (!data) { showToast({ type:'error', title: invT('openFail') }); return; }
+      busy.close();
+      if (!data) { showToast({ type:'error', title: invT('openFail'), desc: invT('openFailWhy'), duration: 9000 }); return; }
       if (!confirm(invT('openAsk'))) return;
       // The design you are looking at stays unless the file says otherwise.
       _inv = Object.assign(invDefaults(data.lang === 'fa' ? 'fa' : 'en'), { theme:_inv.theme }, data);
       if (_inv.lang !== 'fa') _inv.lang = 'en';
       if (!Array.isArray(_inv.items) || !_inv.items.length) _inv.items = [invBlankItem()];
       invSave(); fill(); invPrintIn();
-      showToast({ type:'success', title: invT(fromQr ? 'openQr' : 'openOk') });
+      showToast({ type:'success', title: invT(fromQr ? 'openQr' : 'openOk'), duration: fromQr ? 7000 : 4500 });
     } catch (e) {
+      busy.close();
       console.warn('[invoice] open failed', e);
-      showToast({ type:'error', title: invT('openFail') });
+      showToast({ type:'error', title: invT('openFail'), desc: invT('openFailWhy'), duration: 9000 });
     }
   });
 }
@@ -8741,7 +8749,8 @@ async function invCanvas(PAD, bg) {
   // The ticket exports the side that is showing, at its own width; the
   // receipt as it always has. The ticket's sides carry their own shadow.
   const ticket = !!(_invTk && invTheme() === 'ticket');
-  if (!ticket && !window.qrcode) { await invLoadQr(); renderInvoicePaper(); }
+  // Both designs print the QR (the ticket on its stub), so both wait for it.
+  if (!window.qrcode) { await invLoadQr(); renderInvoicePaper(); }
   const W = ticket ? 960 : 360, SCALE = 3;
   let clone;
   if (ticket) {
@@ -8955,15 +8964,26 @@ async function invReadQrText(file, bytes) {
   }
   await invLoadJsqr();
   const bmp = await createImageBitmap(blob);
-  // Big exports are read at a sensible size: the code is large in them.
-  const k = Math.min(1, 2400 / Math.max(bmp.width, bmp.height));
+  /* The picture may have been shrunk, cropped or recompressed on the way
+     (a phone, a messenger), so the code is looked for more than one way:
+     the whole picture, then where it sits on each design — the ticket's
+     stub at the right, the foot of the receipt — each region scaled so the
+     code comes out a good size for the reader. */
   const c = document.createElement('canvas');
-  c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
   const g = c.getContext('2d', { willReadFrequently: true });
-  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
-  g.drawImage(bmp, 0, 0, c.width, c.height);
-  const r = window.jsQR(g.getImageData(0, 0, c.width, c.height).data, c.width, c.height);
-  return r && r.data ? r.data : null;
+  const regions = [[0, 0, 1, 1], [0.6, 0, 0.4, 1], [0, 0.45, 1, 0.55], [0.15, 0.5, 0.7, 0.5], [0, 0, 1, 0.6]];
+  for (const [x, y, w, h] of regions) {
+    for (const max of [1600, 2600, 900]) {
+      const sx = bmp.width * x, sy = bmp.height * y, sw = bmp.width * w, sh = bmp.height * h;
+      const k = Math.min(2, max / Math.max(sw, sh));
+      c.width = Math.max(1, Math.round(sw * k)); c.height = Math.max(1, Math.round(sh * k));
+      g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(bmp, sx, sy, sw, sh, 0, 0, c.width, c.height);
+      const r = window.jsQR(g.getImageData(0, 0, c.width, c.height).data, c.width, c.height, { inversionAttempts:'attemptBoth' });
+      if (r && r.data) return r.data;
+    }
+  }
+  return null;
 }
 // The QR text back into fields, in either language. Numbers can be in
 // Persian digits; amounts carry their currency's mark.
