@@ -2234,6 +2234,7 @@
       transition:color .15s, background .15s;
     }
     .inv-new svg { width:13px; height:13px; }
+    .inv-bar-row { display:flex; flex-wrap:wrap; justify-content:center; gap:4px 6px; }
     .inv-new:hover { color:#171717; background:#f1f0ee; }
     .inv-new:focus-visible { outline:2px solid #171717; outline-offset:1px; }
     body.dark .inv-new { color:var(--d-text-3); }
@@ -5802,10 +5803,18 @@ one keyframe at a time</div>
           PDF
         </button>
       </div>
-      <button type="button" class="inv-new" id="invNew" data-tip="newInv">
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        <span data-t="newInv">New invoice</span>
-      </button>
+      <div class="inv-bar-row">
+        <button type="button" class="inv-new" id="invNew" data-tip="newInv">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span data-t="newInv">New invoice</span>
+        </button>
+        <!-- Brings back a PNG or PDF made here, into the form to be edited. -->
+        <button type="button" class="inv-new" id="invOpen" data-tip="openTip">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15V4m0 0L7.5 8.5M12 4l4.5 4.5M5 19.5h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span data-t="openInv">Open invoice</span>
+        </button>
+        <input type="file" id="invOpenFile" accept="image/png,image/jpeg,application/pdf,.pdf" hidden>
+      </div>
     </div>
 
     <div class="inv-wrap">
@@ -8068,6 +8077,9 @@ const INV_I18N = {
     // the design switch, and the ticket design (boarding-pass.js)
     design:'Design', themeReceipt:'Receipt', themeTicket:'Ticket',
     offered:'Shown to visitors', offerLast:'At least one design has to stay on.',
+    openInv:'Open invoice', openTip:'Open a PNG or PDF invoice made here, to edit it',
+    openOk:'Invoice opened — every field is back to edit.', openQr:'Read from its QR code — check the fields before sending.',
+    openFail:'No invoice found in that file. It has to be a PNG or PDF made here.', openAsk:'Open this invoice? The one in the form will be replaced.',
     tkInvoice:'Invoice', tkItems:'Items', tkDisc:'Disc.', tkMethod:'Payment',
     tkCurrency:'Currency', tkTotal:'Total due', tkMore:'more',
     tkTear:'Tear off the stub', tkReattach:'Reattach the stub', tkTearHere:'Tear here'
@@ -8094,6 +8106,9 @@ const INV_I18N = {
     qStatus:'وضعیت', qFrom:'از طرف',
     design:'طرح', themeReceipt:'رسید', themeTicket:'بلیت',
     offered:'نمایش به بازدیدکننده‌ها', offerLast:'دست‌کم یک طرح باید روشن بماند.',
+    openInv:'باز کردن فاکتور', openTip:'فاکتور PNG یا PDF ساخته‌شده همین‌جا را باز کنید تا ویرایشش کنید',
+    openOk:'فاکتور باز شد — همهٔ فیلدها برای ویرایش برگشتند.', openQr:'از روی کد QR خوانده شد — پیش از ارسال فیلدها را چک کنید.',
+    openFail:'فاکتوری در این فایل پیدا نشد. باید PNG یا PDF ساخته‌شده همین‌جا باشد.', openAsk:'این فاکتور باز شود؟ فاکتور فعلی فرم جایگزین می‌شود.',
     tkInvoice:'فاکتور', tkItems:'اقلام', tkDisc:'تخفیف', tkMethod:'پرداخت',
     tkCurrency:'واحد پول', tkTotal:'مبلغ قابل پرداخت', tkMore:'مورد دیگر',
     tkTear:'جدا کردن ته‌بلیت', tkReattach:'برگرداندن ته‌بلیت', tkTearHere:'از اینجا جدا کنید'
@@ -8391,18 +8406,13 @@ function invTicketModel() {
       headline: total,
       // The source's 4.3 is sized for ten letters; a long Toman total steps down.
       headlineSize: Math.max(2.4, Math.min(4.3, 43 / Math.max(1, total.length))).toFixed(2),
+      // Under the total, as on the receipt: the Toman equivalent when it is
+      // asked for, and what "T" means on an English invoice in Toman.
+      eq: [invTomanEq(T.total) ? '≈ ' + invTomanEq(T.total) : '', !fa && cur === 'IRT' ? 'T = Toman (تومان)' : ''].filter(Boolean),
       stamp
     },
-    stub: {
-      label: invT('tkInvoice'),
-      rows: [
-        [{ l: invT('rBillTo'), v: client, size: 1.25 }],
-        [{ l: invT('qFrom'), v: who, size: 1.2 }],
-        [{ l: invT('rNo'), v: s.number, size: 1.2 }],
-        [{ l: invT('rTotal'), v: total, size: 1.85 }],
-        [{ l: invT('rDate'), v: date, size: 1.2 }, { l: invT('rDue'), v: due, size: 1.2 }]
-      ]
-    }
+    // The stub repeats nothing: it carries the scannable code.
+    stub: { qr: invQrSvg(invQrText()), caption: invT('rScan'), number: s.number }
   };
 }
 
@@ -8591,6 +8601,34 @@ function initInvoice() {
   });
   document.getElementById('invPng').addEventListener('click', invExportPng);
   document.getElementById('invPdf').addEventListener('click', invExportPdf);
+
+  // Open invoice: the data inside the file if it has it, else its QR code.
+  const openFile = document.getElementById('invOpenFile');
+  document.getElementById('invOpen').addEventListener('click', () => openFile.click());
+  openFile.addEventListener('change', async () => {
+    const f = openFile.files[0];
+    openFile.value = '';
+    if (!f) return;
+    try {
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      let data = invReadEmbedded(bytes), fromQr = false;
+      if (!data) {
+        const t = await invReadQrText(f, bytes).catch(() => null);
+        if (t) { data = invParseQrText(t); fromQr = true; }
+      }
+      if (!data) { showToast({ type:'error', title: invT('openFail') }); return; }
+      if (!confirm(invT('openAsk'))) return;
+      // The design you are looking at stays unless the file says otherwise.
+      _inv = Object.assign(invDefaults(data.lang === 'fa' ? 'fa' : 'en'), { theme:_inv.theme }, data);
+      if (_inv.lang !== 'fa') _inv.lang = 'en';
+      if (!Array.isArray(_inv.items) || !_inv.items.length) _inv.items = [invBlankItem()];
+      invSave(); fill(); invPrintIn();
+      showToast({ type:'success', title: invT(fromQr ? 'openQr' : 'openOk') });
+    } catch (e) {
+      console.warn('[invoice] open failed', e);
+      showToast({ type:'error', title: invT('openFail') });
+    }
+  });
 }
 
 function invPrintIn() {
@@ -8774,7 +8812,10 @@ function invExportPng() {
   return invExport(document.getElementById('invPng'), async () => {
     const { canvas } = await invCanvas(36);
     const blob = await new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('blob')), 'image/png'));
-    invDownload(blob, invFileName('png'));
+    // The invoice itself rides along inside the file, so "Open invoice"
+    // can bring it back exactly (see invTagPng).
+    const png = invTagPng(new Uint8Array(await blob.arrayBuffer()), invPayload());
+    invDownload(new Blob([png], { type:'image/png' }), invFileName('png'));
   });
 }
 
@@ -8788,13 +8829,13 @@ function invExportPdf() {
     const jpg = await new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('blob')), 'image/jpeg', 0.92));
     const bytes = new Uint8Array(await jpg.arrayBuffer());
     // CSS px to PDF points.
-    invDownload(invJpegPdf(bytes, canvas.width, canvas.height, +(cssW * 0.75).toFixed(2), +(cssH * 0.75).toFixed(2)), invFileName('pdf'));
+    invDownload(invJpegPdf(bytes, canvas.width, canvas.height, +(cssW * 0.75).toFixed(2), +(cssH * 0.75).toFixed(2), invPayload()), invFileName('pdf'));
   });
 }
 
 // A one-page PDF holding one JPEG, written by hand: the format needs only
 // five objects and a table of where each one starts.
-function invJpegPdf(jpeg, pxW, pxH, ptW, ptH) {
+function invJpegPdf(jpeg, pxW, pxH, ptW, ptH, meta) {
   const enc = new TextEncoder();
   const parts = [], offs = [];
   let len = 0;
@@ -8811,11 +8852,176 @@ function invJpegPdf(jpeg, pxW, pxH, ptW, ptH) {
   });
   const draw = `q ${ptW} 0 0 ${ptH} 0 0 cm /Im0 Do Q`;
   obj(5, () => push(`<< /Length ${draw.length} >>\nstream\n${draw}\nendstream`));
+  // The document info, with the invoice itself in it as hex (no escaping
+  // to get wrong) for "Open invoice" to read back.
+  const n = meta ? 6 : 5;
+  if (meta) obj(6, () => push(`<< /Producer (imahdavi.space) /InvoiceData <${invHex(enc.encode(meta))}> >>`));
   const xref = len;
-  let x = 'xref\n0 6\n0000000000 65535 f \n';
-  for (let i = 1; i <= 5; i++) x += String(offs[i]).padStart(10, '0') + ' 00000 n \n';
-  push(x + 'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n');
+  let x = `xref\n0 ${n + 1}\n0000000000 65535 f \n`;
+  for (let i = 1; i <= n; i++) x += String(offs[i]).padStart(10, '0') + ' 00000 n \n';
+  push(x + `trailer\n<< /Size ${n + 1} /Root 1 0 R${meta ? ' /Info 6 0 R' : ''} >>\nstartxref\n` + xref + '\n%%EOF\n');
   return new Blob(parts, { type: 'application/pdf' });
+}
+
+/* ── Opening an invoice made here ────────────────────────────────────────
+   Every PNG and PDF this page makes carries the invoice inside it: a tEXt
+   chunk in the PNG, an entry in the PDF's document info. "Open invoice"
+   reads it back into the form, field for field, to be changed and sent
+   again. Files made before that was added have only what is printed, so
+   for those the QR code is read off the picture instead (it holds the
+   invoice as text) and parsed back as far as it goes. */
+const INV_DATA_KEY = 'InvoiceData';
+function invPayload() {
+  return JSON.stringify({ app:'imahdavi.space/invoice', v:1, inv:_inv });
+}
+const invHex = b => Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+const invUnhex = h => new Uint8Array((h.match(/../g) || []).map(x => parseInt(x, 16)));
+const invB64 = b => { let s = ''; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(s); };
+const invUnb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+
+let _invCrc = null;
+function invCrc32(bytes) {
+  if (!_invCrc) {
+    _invCrc = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; _invCrc[n] = c >>> 0; }
+  }
+  let c = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) c = _invCrc[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+// A tEXt chunk, right after the header chunk. tEXt is Latin-1 only, so
+// the JSON goes in as base64.
+function invTagPng(png, json) {
+  const enc = new TextEncoder();
+  const data = enc.encode(INV_DATA_KEY + '\0' + invB64(enc.encode(json)));
+  const type = enc.encode('tEXt');
+  const chunk = new Uint8Array(12 + data.length);
+  const dv = new DataView(chunk.buffer);
+  dv.setUint32(0, data.length);
+  chunk.set(type, 4); chunk.set(data, 8);
+  const crcIn = new Uint8Array(4 + data.length); crcIn.set(type, 0); crcIn.set(data, 4);
+  dv.setUint32(8 + data.length, invCrc32(crcIn));
+  const at = 8 + 25;   // the signature, then IHDR (13 bytes of data + 12)
+  const out = new Uint8Array(png.length + chunk.length);
+  out.set(png.subarray(0, at), 0); out.set(chunk, at); out.set(png.subarray(at), at + chunk.length);
+  return out;
+}
+function invReadEmbedded(bytes) {
+  const dec = new TextDecoder();
+  let json = null;
+  if (bytes[0] === 0x89 && bytes[1] === 0x50) {        // PNG: walk the chunks
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    for (let p = 8; p + 8 <= bytes.length;) {
+      const len = dv.getUint32(p), type = String.fromCharCode(...bytes.subarray(p + 4, p + 8));
+      if (type === 'tEXt') {
+        const body = bytes.subarray(p + 8, p + 8 + len), z = body.indexOf(0);
+        if (z > 0 && String.fromCharCode(...body.subarray(0, z)) === INV_DATA_KEY)
+          json = dec.decode(invUnb64(String.fromCharCode(...body.subarray(z + 1))));
+      }
+      if (type === 'IEND' || json) break;
+      p += 12 + len;
+    }
+  } else {                                              // PDF: the info entry
+    const m = new TextDecoder('latin1').decode(bytes).match(/\/InvoiceData\s*<([0-9A-Fa-f\s]+)>/);
+    if (m) json = dec.decode(invUnhex(m[1].replace(/\s+/g, '')));
+  }
+  if (!json) return null;
+  try { const o = JSON.parse(json); return o && o.inv && typeof o.inv === 'object' ? o.inv : null; } catch (e) { return null; }
+}
+
+// ---- The fallback: the QR code on the picture.
+const INV_JSQR_SRC = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+let _invJsqr = null;
+function invLoadJsqr() {
+  if (window.jsQR) return Promise.resolve();
+  if (!_invJsqr) _invJsqr = new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = INV_JSQR_SRC; sc.async = true;
+    sc.onload = res; sc.onerror = () => { _invJsqr = null; rej(new Error('jsqr')); };
+    document.head.appendChild(sc);
+  });
+  return _invJsqr;
+}
+async function invReadQrText(file, bytes) {
+  let blob = file;
+  if (!/^image\//.test(file.type)) {
+    // One of this page's PDFs: the picture is its one JPEG stream.
+    const s = new TextDecoder('latin1').decode(bytes);
+    const at = s.indexOf('/DCTDecode');
+    if (at < 0) return null;
+    const a = s.indexOf('stream', at) + 'stream'.length + 1, b = s.indexOf('endstream', a);
+    if (a <= 'stream'.length || b < 0) return null;
+    blob = new Blob([bytes.subarray(a, b)], { type:'image/jpeg' });
+  }
+  await invLoadJsqr();
+  const bmp = await createImageBitmap(blob);
+  // Big exports are read at a sensible size: the code is large in them.
+  const k = Math.min(1, 2400 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(bmp, 0, 0, c.width, c.height);
+  const r = window.jsQR(g.getImageData(0, 0, c.width, c.height).data, c.width, c.height);
+  return r && r.data ? r.data : null;
+}
+// The QR text back into fields, in either language. Numbers can be in
+// Persian digits; amounts carry their currency's mark.
+function invParseQrText(text) {
+  const lines = String(text).split('\n');
+  const fa2en = t => String(t).replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/٫/g, '.').replace(/٬/g, ',');
+  const amount = t => { const m = fa2en(t).replace(/,/g, '').match(/-?\d+(\.\d+)?/); return m ? parseFloat(m[0]) : 0; };
+  const curOf = t => /CA\$|دلار کانادا/.test(t) ? 'CAD' : /€|یورو/.test(t) ? 'EUR' : /تومان|\bT\b/.test(t) ? 'IRT' : /\$|دلار/.test(t) ? 'USD' : null;
+  const lab = {};
+  ['en', 'fa'].forEach(L => ['qFrom', 'rBillTo', 'rDate', 'rDue', 'rSub', 'rDisc', 'rTax', 'rTotal', 'qStatus', 'rPayment', 'qEq'].forEach(k => { lab[INV_I18N[L][k]] = k; }));
+  const isFa = /[؀-ۿ]/.test(lines[0] || '');
+  const out = { lang: isFa ? 'fa' : 'en', items: [] };
+  const head = lines[0] || '';
+  const num = head.replace(INV_I18N.en.title, '').replace(INV_I18N.fa.title, '').trim();
+  if (num) out.number = num;
+  const toIso = t => {
+    t = String(t).split(' · ')[0].trim();
+    const d = new Date(t + ' 12:00');
+    return isNaN(d) ? '' : d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  };
+  let part = 0, cur = null;
+  for (let i = 1; i < lines.length; i++) {
+    const l = lines[i];
+    if (l === '—') { part++; continue; }
+    const c = l.indexOf(': ');
+    const key = c > 0 ? lab[l.slice(0, c).replace(/\s+[\d۰-۹.٫]+[%٪]$/, '').trim()] : null;
+    const val = c > 0 ? l.slice(c + 2) : l;
+    if (part === 1) {                                   // services: the amount is after the last ": "
+      const lc = l.lastIndexOf(': ');
+      const m = lc > 0 ? l.slice(0, lc) : l, val = lc > 0 ? l.slice(lc + 2) : '';
+      const q = m.match(/\s×([\d۰-۹.,٫]+)$/);
+      const qty = q ? amount(q[1]) : 1;
+      const total = amount(val);
+      cur = cur || curOf(val);
+      out.items.push({ desc: (q ? m.slice(0, q.index) : m).replace(/^—$/, ''), qty: String(qty), rate: String(qty ? +(total / qty).toFixed(2) : total) });
+      continue;
+    }
+    if (part >= 2 && key === 'rPayment') {             // method, then details to the next rule
+      const rest = [val];
+      while (i + 1 < lines.length && lines[i + 1] !== '—') rest.push(lines[++i]);
+      out.payMethod = rest[0] || '';
+      out.payDetail = rest.slice(1).join('\n');
+      continue;
+    }
+    if (part >= 2 && !key && c < 0) { out.note = lines.slice(i).join('\n'); break; }
+    if (key === 'qFrom') out.merchant = val;
+    else if (key === 'rBillTo') { const m = val.match(/^(.*?)\s*\((.*)\)$/); out.client = m ? m[1] : val; if (m) out.clientDetail = m[2]; }
+    else if (key === 'rDate') { const d = toIso(val); if (d) out.date = d; }
+    else if (key === 'rDue') { const d = toIso(val); if (d) out.due = d; }
+    else if (key === 'rDisc') { out.discount = String(amount(val)); cur = cur || curOf(val); }
+    else if (key === 'rTax') { const m = fa2en(l.slice(0, c)).match(/([\d.]+)\s*[%٪]/); if (m) out.tax = m[1]; }
+    else if (key === 'rTotal' || key === 'rSub') cur = cur || curOf(val);
+    else if (key === 'qStatus') out.status = /PAID$|^پرداخت شد$/.test(val.trim()) && !/UNPAID|نشده/.test(val) ? 'paid' : 'unpaid';
+  }
+  if (!out.status) out.status = 'none';
+  if (cur) out.currency = cur;
+  if (!out.items.length) delete out.items;
+  return out;
 }
 
 /* ─── Analytics dashboard ──────────────────────────────── */

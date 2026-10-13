@@ -107,6 +107,18 @@
     ".rc-tk-svc{min-width:0;flex:0 0 42%}",
     ".rc-tk-tot{flex:1;min-width:0;text-align:center}",
     ".rc-tk-sf{margin-top:" + u(1.45) + ";min-width:0}",
+    // The Toman equivalent and legend under the total, when asked for.
+    ".rc-tk-eq{margin-top:" + u(0.7) + ";font-family:var(--rc-tk-mono);font-size:" + u(0.95) + ";line-height:1.35;color:var(--rc-tk-ink2)}",
+    ".rc-tk-eq>span{display:block}",
+    // The stub: the QR, centred, with its caption, the number and the credit.
+    ".rc-tk-stub{align-items:center;justify-content:center;text-align:center}",
+    ".rc-tk-qr{display:block;width:100%;max-width:" + u(13) + ";aspect-ratio:1}",
+    ".rc-tk-qr svg{display:block;width:100%;height:100%}",
+    ".rc-tk-qr path{fill:var(--rc-tk-ink)}",
+    ".rc-tk-scan{margin:" + u(0.9) + " 0 0;white-space:normal;line-height:1.3;max-width:100%}",
+    ".rc-tk-sno{margin-top:" + u(1.1) + ";font-size:" + u(1.05) + ";letter-spacing:.28em;max-width:100%}",
+    ".rc-tk-credit{display:block;margin-top:" + u(1.1) + ";font-family:'Fira Code',ui-monospace,monospace;font-size:" + u(0.6) + ";letter-spacing:.08em;color:#8f8f8f;white-space:nowrap}",
+    ".rc-tk-credit b{font-weight:700;color:#3a3a3a}",
     ".rc-tk-stamp{position:absolute;left:33%;top:52%;padding:" + u(0.35) + ";border:" + u(0.2) + " solid var(--rc-tk-stamp);border-radius:" + u(0.45) + ";color:var(--rc-tk-stamp);",
     "opacity:.8;transform:rotate(-9deg);pointer-events:none;mix-blend-mode:multiply}",
     ".rc-tk-stamp>span{display:block;padding:" + u(0.45) + " " + u(1.1) + ";border:" + u(0.08) + " solid var(--rc-tk-stamp);border-radius:" + u(0.25) + ";text-align:center}",
@@ -156,8 +168,11 @@
     ".rc-tk-stamp-slot:empty{display:none}",
     ".rc-tk-stamp{position:relative;left:auto;top:auto}",
     ".rc-tk-hint{display:none}",
-    ".rc-tk-stub-in>.rc-tk-sf:first-of-type{margin-top:" + u(1) + "}",
     ".rc-tk-sub{max-height:none}",
+    // Items, tax and discount share half the width here: the source's big
+    // figures don't fit three abreast in it.
+    ".rc-tk-grid>:nth-child(5){gap:" + u(1.2) + "!important}",
+    ".rc-tk-grid>:nth-child(5) .rc-tk-v{font-size:" + u(1.45) + "!important}",
     ".rc-tk-sub>span{white-space:normal;overflow-wrap:anywhere}",
     "}",
     "@media (prefers-reduced-motion: reduce){.rc-tk-tilt,.rc-tk-stub{transition-duration:.01ms}.rc-tk-v,.rc-tk-stamp{animation:none!important}}",
@@ -165,11 +180,11 @@
 
   function injectCss() {
     const old = document.getElementById("rc-tk-css");
-    if (old && old.dataset.v === "6") return;
+    if (old && old.dataset.v === "8") return;
     if (old) old.remove();
     const s = document.createElement("style");
     s.id = "rc-tk-css";
-    s.dataset.v = "6";
+    s.dataset.v = "8";
     s.textContent = CSS;
     document.head.appendChild(s);
   }
@@ -330,6 +345,7 @@
         '<div class="rc-tk-tot">' +
           '<div class="rc-tk-c" style="font-size:' + u(1.2) + ";margin-bottom:" + u(0.9) + '">' + esc(B.featuring) + "</div>" +
           '<div class="rc-tk-d" dir="ltr" style="font-size:' + u(B.headlineSize) + ';overflow:hidden;text-overflow:ellipsis">' + esc(B.headline) + "</div>" +
+          (B.eq && B.eq.length ? '<div class="rc-tk-eq">' + B.eq.map(l => '<span dir="auto">' + esc(l) + "</span>").join("") + "</div>" : "") +
         "</div>";
 
       // The stamp is the invoice's status. It thumps down when it changes,
@@ -344,11 +360,15 @@
         : "";
       lastStamp = key;
 
+      /* The stub is what you keep, and it says nothing the pass already
+         does: the invoice's QR code (which holds the whole invoice as
+         text), what scanning it gives, the number, and the credit. */
       const S = m.stub;
       stub.querySelector(".rc-tk-stub-in").innerHTML =
-        '<span class="rc-tk-c" style="display:block;font-size:' + u(1.65) + ";padding-bottom:" + u(1) + ';border-bottom:1px dashed var(--rc-tk-rule)">' + esc(S.label) + "</span>" +
-        S.rows.map(r => '<span class="rc-tk-sf' + (r.length > 1 ? " rc-tk-row" : "") + '" style="display:' + (r.length > 1 ? "flex;gap:" + u(1.3) : "block") + '">' +
-          r.map(f => field(f, n++)).join("") + "</span>").join("");
+        (S.qr ? '<span class="rc-tk-qr">' + S.qr + "</span>" : "") +
+        '<span class="rc-tk-l rc-tk-scan" dir="auto">' + esc(S.caption) + "</span>" +
+        '<span class="rc-tk-m rc-tk-sno" dir="ltr">' + esc(S.number) + "</span>" +
+        '<span class="rc-tk-credit" dir="ltr">made with <b>imahdavi.space</b></span>';
       stub.setAttribute("aria-label", torn ? L.reattach : L.tear);
       face.querySelector(".rc-tk-hint").textContent = L.tearHere;
     }
