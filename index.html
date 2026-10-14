@@ -12422,22 +12422,38 @@ function initBrandTimeline(list) {
 
   (view || window).addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll);
-  /* The rows grow as their media lands, and a line measured before that
-     stops short of the row it belongs to. Only a real change in the list's
-     height repaints: the observer sees its own writes otherwise, and
-     paint → shape → observer → paint spins the main thread. */
-  let lastH = 0;
+  /* The rows change height as their media and fonts land, and a line
+     measured before that misses its date — it ran past it on the first
+     row, the one on screen at load, until something scrolled. Each row is
+     watched, not just the list: one row can shrink while another grows
+     and leave the list's height where it was. Only a real change in a
+     height repaints, since the observer would otherwise see its own
+     writes (the line is positioned inside the row, so drawing it never
+     changes a row's size). */
+  const lastH = new Map();
   const ro = window.ResizeObserver ? new ResizeObserver(entries => {
-    const h = Math.round(entries[0].contentRect.height);
-    if (h === lastH) return;
-    lastH = h;
-    onScroll();
+    let changed = false;
+    entries.forEach(e => {
+      const h = Math.round(e.contentRect.height);
+      if (lastH.get(e.target) !== h) { lastH.set(e.target, h); changed = true; }
+    });
+    if (changed) onScroll();
   }) : null;
-  if (ro) ro.observe(list);
+  if (ro) { ro.observe(list); rows.forEach(r => ro.observe(r)); }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(onScroll);
+  // The rows slide in, and a date measured mid-slide is measured too low:
+  // the first row's line ran past its date by the slide's length. An
+  // animation ending changes no size and scrolls nothing, so it is heard
+  // here instead (onScroll waits for the next frame, so a burst of them
+  // costs one paint).
+  list.addEventListener('animationend', onScroll);
+  list.addEventListener('transitionend', onScroll);
   paint();
   wide.addEventListener('change', onWidth, { once: true });
   _plOff = () => {
     if (ro) ro.disconnect();
+    list.removeEventListener('animationend', onScroll);
+    list.removeEventListener('transitionend', onScroll);
     (view || window).removeEventListener('scroll', onScroll);
     window.removeEventListener('resize', onScroll);
     wide.removeEventListener('change', onWidth);
