@@ -18679,7 +18679,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'Tosan Tools': { src: M + 'tosan.png', ink: true },     // the horse, from tosantools.com
     'Netbina (Outsourced)': { src: M + 'netbina.png' },     // the flying saucer
     'Vam30': { src: M + 'vam30.png', ink: true },           // the snapping fingers
-    'Doran Office': { src: M + 'doran.svg' },
+    'Doran Office': { src: M + 'doran.svg', size: 56, nudge: '-1px, -.5px' },   // wide, and weighted to the dot: set smaller, nudged to sit centred
     'Freelance': { src: '/media/site/avatar-doodle.webp' },
   };
   const mark = e => {
@@ -18687,7 +18687,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const l = LOGOS[e.co];
     if (!l) return `<i aria-hidden="true">${building}</i>`;
     if (l.initial) return `<i class="xtl-logo xtl-initial" aria-hidden="true">${l.initial}</i>`;
-    return `<i class="xtl-logo${l.ink ? ' xtl-ink' : ''}" aria-hidden="true"><img src="${l.src}" alt="" loading="lazy" decoding="async"></i>`;
+    const st = (l.size ? `max-width:${l.size}%;max-height:${l.size}%;` : '') + (l.nudge ? `transform:translate(${l.nudge});` : '');
+    return `<i class="xtl-logo${l.ink ? ' xtl-ink' : ''}" aria-hidden="true"><img src="${l.src}" alt="" loading="lazy" decoding="async"${st ? ` style="${st}"` : ''}></i>`;
   };
   const item = e => {
     const now = /Present/.test(e.date) && !e.remote;   // a filled dot only for the job held now
