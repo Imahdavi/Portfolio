@@ -6132,9 +6132,13 @@ one keyframe at a time</div>
  <div class="bottom-nav-group">
   <button class="nav-btn active" id="nb-home" onclick="goView('view-home',this)">
     <span class="nav-tip">Home</span>
-    <svg viewBox="0 0 24 24" fill="none">
-      <path d="M9.07874 16.1354H14.8937" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path fill-rule="evenodd" clip-rule="evenodd" d="M2.40002 13.713C2.40002 8.082 3.01402 8.475 6.31902 5.41C7.76502 4.246 10.015 2 11.958 2C13.9 2 16.195 4.235 17.654 5.41C20.959 8.475 21.572 8.082 21.572 13.713C21.572 22 19.613 22 11.986 22C4.35903 22 2.40002 22 2.40002 13.713Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Iconly "Home hashtag". Drawn at 1.5 in the original; set at 2
+         here so it carries the same weight as the icons beside it. -->
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M13.5 9H10.5C8.85 9 7.5 10.35 7.5 12V15C7.5 16.65 8.85 18 10.5 18H13.5C15.15 18 16.5 16.65 16.5 15V12"/>
+      <path d="M12 9V18"/>
+      <path d="M7.5 13.5H16.5"/>
+      <path d="M22 10.5002C22 9.29016 21.19 7.74016 20.2 7.05016L14.02 2.72016C12.62 1.74016 10.37 1.79016 9.02 2.84016L3.63 7.04016C2.73 7.74016 2 9.23016 2 10.3602V17.7702C2 20.0902 3.89 21.9902 6.21 21.9902H17.79C20.11 21.9902 22 20.0902 22 17.7802V14.6802"/>
     </svg>
   </button>
   <button class="nav-btn" id="nb-exp" onclick="goView('view-exp',this)">
