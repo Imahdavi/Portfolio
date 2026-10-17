@@ -4579,8 +4579,6 @@
     .xtl-pts { margin:12px 0 0; padding:0; list-style:none; font-size:14px; line-height:1.6; color:#6b6b6b; }
     .xtl-pts li { position:relative; padding-left:14px; }
     .xtl-pts li::before { content:""; position:absolute; left:0; top:.72em; width:5px; height:1.5px; background:#bdbdbd; }
-    .xtl-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:14px; }
-    .xtl-tags span { font-size:11.5px; padding:3px 10px; border-radius:99px; background:rgba(0,0,0,.05); color:#555; }
     .xtl-sub { margin:56px 0 0; font:600 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing:.14em; text-transform:uppercase; color:rgba(82,82,82,.55); }
     .xtl-sub + .xtl-list { margin-top:28px; }
     body.dark .xtl-list::before { border-color:var(--d-line-2); }
@@ -4591,7 +4589,6 @@
     body.dark .xtl-role { color:var(--d-text); }
     body.dark .xtl-date, body.dark .xtl-pts { color:var(--d-text-3); }
     body.dark .xtl-pts { color:var(--d-text-2); }
-    body.dark .xtl-tags span { background:var(--d-raised); color:var(--d-text-2); }
     body.dark .xtl-sub { color:var(--d-text-3); }
     @media (max-width:600px) { .xtl-role { font-size:17px; } .xtl-pts { font-size:13.5px; } }
     @media (prefers-reduced-motion:reduce) { .xtl-item { opacity:1; transform:none; transition:none; } }
@@ -18624,30 +18621,24 @@ document.addEventListener('DOMContentLoaded', () => {
     { co: 'Lina Food — Lina Industrial Group', role: 'Motion Designer & Editor', date: 'Dec 2025 – Present',
       pts: ['Design and produce motion graphics for the brand’s social media content.',
             'Contribute to promotional teasers, handling motion design and editing on parts of each production.',
-            'Use AI tools hands-on to produce promotional teasers on select projects.'],
-      tags: ['Motion Graphics', 'Editing', 'AI Video'] },
+            'Use AI tools hands-on to produce promotional teasers on select projects.'] },
     { co: 'Tosan Tools', role: 'Motion Designer & Editor', date: 'Feb 2025 – Oct 2025',
       pts: ['Worked with the marketing team as a motion designer and editor.',
             'Designed and produced motion graphics for social media.',
-            'Supported the video editor by adding visual effects to product teasers and social media videos.'],
-      tags: ['Social Media', 'Visual Effects', 'Teasers'] },
+            'Supported the video editor by adding visual effects to product teasers and social media videos.'] },
     { co: 'Netbina (Outsourced)', role: 'Motion Designer', date: 'Oct 2023 – Present',
       pts: ['Collaborate with Netbina agency on an outsourced basis, delivering motion design for social media and web.',
-            'Create motion content for Cubox gaming devices and other display formats.'],
-      tags: ['Social Media', 'Web', 'Cubox & LED'] },
+            'Create motion content for Cubox gaming devices and other display formats.'] },
     { co: 'Vam30', role: 'Visual & Motion Designer', date: 'Oct 2023 – Dec 2024',
       pts: ['Worked as a motion, visual, and interaction designer for a loan platform app.',
             'Designed and produced animated tutorials guiding users through the website.',
             'Created logo motion for the brand.',
-            'Designed and implemented web interactions alongside the technical team.'],
-      tags: ['UI Motion', 'Logo Motion', 'Lottie'] },
+            'Designed and implemented web interactions alongside the technical team.'] },
     { co: 'Doran Office', role: 'Motion Designer', date: 'Mar 2023 – Present',
       pts: ['Collaborate with Doran agency on projects for a variety of brands.',
-            'Deliver motion design across social media, web, logo motion, and other mediums.'],
-      tags: ['Agency', 'Logo Motion', 'Web'] },
+            'Deliver motion design across social media, web, logo motion, and other mediums.'] },
     { co: 'Freelance', role: 'Freelance Motion Designer', date: 'Apr 2019 – Mar 2023',
-      pts: ['Worked on freelance projects across a range of mediums, including social media, logo motion, and video.'],
-      tags: ['Social Media', 'Logo Motion', 'Video'] },
+      pts: ['Worked on freelance projects across a range of mediums, including social media, logo motion, and video.'] },
   ];
   const edu = [
     { co: 'University of Applied Science & Technology — Art Unit 12', role: 'Bachelor of Illustration', date: '2023 – 2025', edu: true },
@@ -18663,8 +18654,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="xtl-co"><i aria-hidden="true">${e.edu ? cap : building}</i>${esc(e.co)}</div>
       <h3 class="xtl-role">${esc(e.role)}</h3>
       <div class="xtl-date">${cal}<span>${esc(e.date)}</span>${now ? '<b>Now</b>' : ''}</div>
-      ${e.pts ? `<ul class="xtl-pts">${e.pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}
-      ${e.tags ? `<div class="xtl-tags">${e.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}</li>`;
+      ${e.pts ? `<ul class="xtl-pts">${e.pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}</li>`;
   };
   const w = document.getElementById('xtl-work'), d = document.getElementById('xtl-edu');
   if (!w || !d) return;
