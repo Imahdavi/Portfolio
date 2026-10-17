@@ -4569,9 +4569,12 @@
     .xtl-item:last-child { padding-bottom:0; }
     .xtl-dot { position:absolute; left:-24px; top:15.5px; width:11px; height:11px; border-radius:50%; border:2px solid #1a1a1a; background:#fff; box-shadow:0 0 0 6px #fff; transform:translateX(-50%); }
     .xtl-item.now .xtl-dot { background:#1a1a1a; }
-    /* Type set as the Brand list sets it: company like .pli-category, role
-       like .pli-title, dates like .pli-year, the notes like .pli-desc. */
-    .xtl-co { display:flex; align-items:center; gap:12px; font-size:12.5px; font-weight:400; color:#a89e91; }
+    /* Type set as the Brand list sets it: the company as the title (like
+       .pli-title), the role under it (.pli-category), dates like .pli-year,
+       the notes like .pli-desc - in the site's own font settings. */
+    .xtl-co { display:flex; align-items:center; gap:12px; }
+    .xtl-title { font-family:var(--font-title); font-size:17px; font-weight:600; line-height:1.3; color:#1a1a1a; margin:0; }
+    .xtl-cat { font-family:var(--font-body); font-size:12.5px; color:#a89e91; margin-top:4px; }
     /* Set like the avatars elsewhere on the site (.avg-avatar): a 42px white
        disc inside a white rim and a hairline ring, the mark drawn in ink.
        It stays put on hover; only the mark takes its colour. */
@@ -4587,15 +4590,14 @@
     .xtl-co i.xtl-ink img { filter:brightness(0); opacity:.85; }
     .xtl-item:hover .xtl-co i.xtl-ink img { opacity:1; }
     .xtl-co i.xtl-initial { font-weight:700; font-size:15px; line-height:1; font-style:normal; }
-    .xtl-role { font-size:17px; font-weight:600; line-height:1.3; color:#1a1a1a; margin:10px 0 0; }
-    .xtl-date { display:flex; align-items:center; gap:6px; margin-top:5px; font-size:11.5px; color:#b3aaa0; font-variant-numeric:tabular-nums; }
+    .xtl-date { display:flex; align-items:center; gap:6px; margin-top:10px; font-family:var(--font-body); font-size:11.5px; color:#b3aaa0; font-variant-numeric:tabular-nums; }
     .xtl-date svg { width:13px; height:13px; }
     .xtl-date b { font-weight:500; color:#2e7d4f; background:rgba(46,125,79,.09); border-radius:99px; padding:1px 8px; font-size:11px; }
     /* Still going, but remote and by the project: a quieter tag than the job held now. */
     .xtl-date b.xtl-remote { color:#4a5a78; background:rgba(74,90,120,.09); }
     body.dark .xtl-date b { color:#7fd3a3; background:rgba(127,211,163,.12); }
     body.dark .xtl-date b.xtl-remote { color:#a9b6cf; background:rgba(169,182,207,.12); }
-    .xtl-pts { margin:12px 0 0; padding:0; list-style:none; font-size:13.5px; line-height:1.55; color:#5a5148; }
+    .xtl-pts { margin:12px 0 0; padding:0; list-style:none; font-family:var(--font-body); font-size:13.5px; line-height:1.55; color:#5a5148; }
     .xtl-pts li { position:relative; padding-left:14px; }
     .xtl-pts li::before { content:""; position:absolute; left:0; top:.72em; width:5px; height:1.5px; background:#bdbdbd; }
     .xtl-sub { margin:56px 0 0; font:600 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing:.14em; text-transform:uppercase; color:rgba(82,82,82,.55); }
@@ -4603,9 +4605,9 @@
     body.dark .xtl-list::before { border-color:var(--d-line-2); }
     body.dark .xtl-dot { border-color:var(--d-text); background:var(--d-bg); box-shadow:0 0 0 6px var(--d-bg); }
     body.dark .xtl-item.now .xtl-dot { background:var(--d-text); }
-    body.dark .xtl-co { color:var(--d-text-3); }
+    body.dark .xtl-title { color:var(--d-text); }
+    body.dark .xtl-cat { color:var(--d-text-3); }
     body.dark .xtl-co i { background:var(--d-surface); border-color:var(--d-surface); color:var(--d-text-2); box-shadow:0 0 0 1px var(--d-line); }
-    body.dark .xtl-role { color:var(--d-text); }
     body.dark .xtl-date, body.dark .xtl-pts { color:var(--d-text-3); }
     body.dark .xtl-pts { color:var(--d-text-2); }
     body.dark .xtl-sub { color:var(--d-text-3); }
@@ -18687,8 +18689,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const item = e => {
     const now = /Present/.test(e.date) && !e.remote;   // a filled dot only for the job held now
     return `<li class="xtl-item${now ? ' now' : ''}"><span class="xtl-dot" aria-hidden="true"></span>
-      <div class="xtl-co">${mark(e)}${esc(e.co)}</div>
-      <h3 class="xtl-role">${esc(e.role)}</h3>
+      <div class="xtl-co">${mark(e)}<div><h3 class="xtl-title">${esc(e.edu ? e.role : e.co)}</h3><div class="xtl-cat">${esc(e.edu ? e.co : e.role)}</div></div></div>
       <div class="xtl-date">${cal}<span>${esc(e.date)}</span>${e.badge ? `<b class="${e.remote ? 'xtl-remote' : ''}">${esc(e.badge)}</b>` : ''}</div>
       ${e.pts ? `<ul class="xtl-pts">${e.pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}</li>`;
   };
