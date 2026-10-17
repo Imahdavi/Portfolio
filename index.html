@@ -4532,66 +4532,31 @@
     /* The display name is its own element from the editable one, and it
        carries the only hardcoded near-black left on the home page. */
     body.dark .profile-name-display { color:var(--d-text); }
-    /* ── About sketchbook ── */
-    .skb { width:100%; margin:0 auto; }
-    .skb-book {
-      position:relative; display:grid; grid-template-columns:1fr 1fr;
-      background:#f5f0e3;
-      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
-      border-radius:14px 14px 12px 12px;
-      box-shadow:0 1px 0 #e3dccb, 0 3px 0 #ece6d6, 0 4px 0 #ddd5c2, 0 6px 0 #e9e2d1, 0 7px 0 #d7cfbb, 0 22px 40px -18px rgba(60,45,20,.35);
-    }
-    /* The fold: a dip of shade either side of a hairline. */
-    .skb-book::after { content:""; position:absolute; top:0; bottom:0; left:50%; width:64px; transform:translateX(-50%); pointer-events:none;
-      background:linear-gradient(90deg, transparent, rgba(80,60,30,.05) 38%, rgba(80,60,30,.16) 49.5%, rgba(120,40,40,.28) 50%, rgba(80,60,30,.16) 50.5%, rgba(80,60,30,.05) 62%, transparent); }
-    .skb-page { position:relative; padding:28px 22px 24px; min-width:0; }
-    .skb-left { display:flex; flex-direction:column; }
-    .skb-left .skb-grid { flex:1; align-content:space-between; }
-    .skb-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:9px 8px; }
-    .skb-frame { position:relative; margin:0; aspect-ratio:4/3; border:1.6px solid #2d2a26; border-radius:1px; overflow:hidden; background:#efe9da; }
-    .skb-frame:nth-child(3n) { transform:rotate(-.6deg); }
-    .skb-frame:nth-child(4n+1) { transform:rotate(.5deg); }
-    .skb-frame canvas { width:100%; height:100%; display:block; mix-blend-mode:multiply; }
-    .skb-frame img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; opacity:0; transition:opacity .5s; }
-    /* Pencil hatching over each frame, lifting off under the pointer. */
-    .skb-frame::after { content:""; position:absolute; inset:0; pointer-events:none; transition:opacity .5s;
-      background:repeating-linear-gradient(112deg, rgba(40,35,30,.16) 0 1px, transparent 1px 4px); mix-blend-mode:multiply; }
-    .skb-frame:hover img { opacity:1; }
-    .skb-frame:hover::after { opacity:0; }
-    .skb-pencil { position:absolute; top:10px; right:30px; width:min(400px, 84%); transform:rotate(-1.2deg); filter:drop-shadow(0 4px 3px rgba(0,0,0,.22)); }
-    /* The note, in marker pen: Caveat on a 1.36 line, near-black ink, an
-       amber highlighter that sits low on the word, rings and strikes drawn
-       over it (after crafterui's "Handwritten Response"). */
-    .skb-note { margin-top:22px; color:#151412; font-family:var(--font-heading); font-weight:500; font-size:18px; line-height:1.36; }
-    .skb-title { font-family:var(--font-heading); font-size:27px; font-weight:700; margin:0 0 4px; color:#151412; line-height:1.2; }
-    .skb-note p { margin:0 0 6px; }
+    /* ── Who I am, in marker pen (crafterui "Handwritten Response") ──
+       Caveat 500 at 1.75rem on a 2.375rem line, theme ink, a #f5e1a8
+       highlighter that sits low on the word and runs past both ends
+       (thinned in dark mode), rings and strikes drawn over the words. */
+    .hw-note { max-width:560px; margin:0 auto; text-align:center; text-wrap:balance;
+      font-family:'Caveat', cursive; font-weight:500; font-size:1.75rem; line-height:2.375rem; color:#0a0a0a; }
+    .hw-note p { margin:0; }
+    .hw-note p + p { margin-top:.6em; }
+    body.dark .hw-note { color:var(--d-text); }
     .hw-w { display:inline-block; white-space:pre; }
     .hw-k { position:relative; display:inline-block; }
     .hw-k > .hw-in { position:relative; }
     .hw-swipe { position:absolute; left:-.24em; right:-.24em; bottom:.12em; height:.6em; border-radius:99px; background:#f5e1a8; }
+    body.dark .hw-swipe { background:rgba(245,225,168,.4); }
     .hw-ring { position:absolute; top:.04em; left:-.26em; width:calc(100% + .52em); height:calc(100% - .08em); overflow:visible; pointer-events:none; }
     .hw-strike { position:absolute; left:0; bottom:.30em; width:100%; height:.34em; overflow:visible; pointer-events:none; }
     @keyframes hw-write {
-      from { clip-path:inset(-.4em calc(100% + .6em) -.4em -.6em); }
-      to   { clip-path:inset(-.4em -.25em -.4em -.6em); }
+      from { clip-path:inset(-.4em calc(100% + .25em) -.4em -.25em); }
+      to   { clip-path:inset(-.4em -.25em -.4em -.25em); }
     }
     @keyframes hw-draw { from { stroke-dashoffset:1; } to { stroke-dashoffset:0; } }
-    /* Held on the first frame (the words not yet written) until the note
-       scrolls into view. */
-    .skb-note:not(.go) [data-ink], .skb-note:not(.go) [data-draw] { animation-play-state:paused !important; }
+    /* Held on the first frame (nothing written yet) until it scrolls into view. */
+    .hw-note:not(.go) [data-ink], .hw-note:not(.go) [data-draw] { animation-play-state:paused !important; }
     @media (prefers-reduced-motion:reduce) {
-      .skb-note [data-ink], .skb-note [data-draw] { animation:none !important; clip-path:none !important; stroke-dashoffset:0 !important; }
-    }
-    body.dark .skb-book { box-shadow:0 1px 0 #cfc7b3, 0 3px 0 #ddd5c2, 0 4px 0 #c4bba5, 0 6px 0 #d6cdb8, 0 7px 0 #b9af97, 0 24px 44px -16px rgba(0,0,0,.7); }
-    @media (max-width:760px) {
-      .skb-book { grid-template-columns:1fr; }
-      .skb-book::after { display:none; }
-      .skb-page { padding:26px 18px 22px; }
-      .skb-left { padding-bottom:0; }
-      .skb-grid { gap:8px 7px; }
-      .skb-right { padding-top:16px; }
-      .skb-pencil { position:relative; top:auto; right:auto; display:block; width:78%; margin:0 auto 4px; }
-      .skb-note { font-size:19px; margin-top:10px; }
+      .hw-note [data-ink], .hw-note [data-draw] { animation:none !important; clip-path:none !important; stroke-dashoffset:0 !important; }
     }
     /* ── Experience timeline (shadcnui-blocks timeline-01) ── */
     .xtl { max-width:560px; margin:0 auto; text-align:center; }
@@ -5611,46 +5576,15 @@ one keyframe at a time</div>
       <div class="tools-stack" id="tools-stack"></div>
     </div>
     <div class="sec-gap" aria-hidden="true"></div>
-    <!-- About — an open sketchbook: a page of storyboard frames on the left
-         (the site's own work, drawn over in pencil by a filter, coming up
-         in colour under the pointer), the rest of the frames and a
-         handwritten note on the right, a mechanical pencil resting on top. -->
-    <section class="skb" aria-label="Who I am">
-      <div class="skb-book">
-        <div class="skb-page skb-left"><div class="skb-grid" id="skb-left"></div></div>
-        <div class="skb-page skb-right">
-          <svg class="skb-pencil" viewBox="0 0 460 34" aria-hidden="true">
-            <defs>
-              <linearGradient id="skbMetal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#e9e9ea"/><stop offset=".45" stop-color="#a9abae"/><stop offset=".55" stop-color="#8d9094"/><stop offset="1" stop-color="#c9cacc"/>
-              </linearGradient>
-              <linearGradient id="skbGrip" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#cfd0d2"/><stop offset=".5" stop-color="#7d8085"/><stop offset="1" stop-color="#b5b7ba"/>
-              </linearGradient>
-            </defs>
-            <path d="M2 17 L24 15.5 L24 18.5 Z" fill="#555"/>
-            <path d="M24 13 L60 11 L60 23 L24 21 Z" fill="url(#skbMetal)"/>
-            <rect x="60" y="8" width="70" height="18" rx="3" fill="url(#skbGrip)"/>
-            <g stroke="rgba(0,0,0,.18)" stroke-width="1">
-              <line x1="66" y1="9" x2="66" y2="25"/><line x1="72" y1="9" x2="72" y2="25"/><line x1="78" y1="9" x2="78" y2="25"/><line x1="84" y1="9" x2="84" y2="25"/><line x1="90" y1="9" x2="90" y2="25"/><line x1="96" y1="9" x2="96" y2="25"/><line x1="102" y1="9" x2="102" y2="25"/><line x1="108" y1="9" x2="108" y2="25"/><line x1="114" y1="9" x2="114" y2="25"/><line x1="120" y1="9" x2="120" y2="25"/>
-            </g>
-            <rect x="130" y="9" width="270" height="16" rx="2" fill="url(#skbMetal)"/>
-            <rect x="300" y="4" width="78" height="6" rx="2" fill="url(#skbGrip)"/>
-            <text x="250" y="20.5" font-size="7" font-family="ui-sans-serif, system-ui, sans-serif" font-weight="600" fill="rgba(0,0,0,.42)" letter-spacing=".6">MOTION · 0.5 · HB</text>
-            <rect x="400" y="10" width="40" height="14" rx="2" fill="url(#skbGrip)"/>
-            <rect x="440" y="12" width="16" height="10" rx="2" fill="url(#skbMetal)"/>
-          </svg>
-          <!-- The note is written out by hand when it scrolls into view (see
-               "Handwritten note" in the script). data-hw carries the marks:
-               ==highlighter==, ((ring)), ~~crossed out~~. -->
-          <div class="skb-note" id="skb-note">
-            <h2 class="skb-title" data-hw="Who I am">Who I am</h2>
-            <p data-hw="I’m ==Alireza==, a ((motion designer)).">I’m Alireza, a motion designer.</p>
-            <p data-hw="It all started back in high school, when I first came across motion design. I began making content for ~~a page~~ a personal brand of my own — ==pop art and typography==, and the ways they could move.">It all started back in high school, when I first came across motion design. I began making content for a personal brand of my own — pop art and typography, and the ways they could move.</p>
-            <p data-hw="Two or three years in, I slowly found my way into real business and client projects, and since then I’ve had the chance to work with ((brands)) across all kinds of fields.">Two or three years in, I slowly found my way into real business and client projects, and since then I’ve had the chance to work with brands across all kinds of fields.</p>
-          </div>
-        </div>
-      </div>
+    <!-- Who I am — written out by hand when it scrolls into view, set the
+         way crafterui's "Handwritten Response" sets it (see "Handwritten
+         note" in the script). data-hw carries the marks: ==highlighter==,
+         ((ring)), ~~crossed out~~. -->
+    <section class="hw-note" id="hw-note" aria-label="Who I am">
+      <p data-hw="Who I am —">Who I am —</p>
+      <p data-hw="I’m ==Alireza==, a ((motion designer)).">I’m Alireza, a motion designer.</p>
+      <p data-hw="It all started back in high school, when I first came across motion design. I began making content for ~~a page~~ a personal brand of my own — ==pop art and typography==, and the ways they could move.">It all started back in high school, when I first came across motion design. I began making content for a personal brand of my own — pop art and typography, and the ways they could move.</p>
+      <p data-hw="Two or three years in, I slowly found my way into real business and client projects, and since then I’ve had the chance to work with ((brands)) across all kinds of fields.">Two or three years in, I slowly found my way into real business and client projects, and since then I’ve had the chance to work with brands across all kinds of fields.</p>
     </section>
     <div class="sec-gap" aria-hidden="true"></div>
     <!-- Career — the résumé's experience and education, as shadcnui-blocks'
@@ -18579,51 +18513,6 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 
 
-// About sketchbook: the work as storyboard frames, pencilled over.
-(function () {
-  const L = document.getElementById('skb-left');
-  if (!L) return;
-  const U = '/media/Portfolio/uploads/thumb_';
-  // Every distinct cover once (several uploads are the same picture).
-  const all = ['1788170755835_35hs4bs.jfif','1789451354152_7gw2ekd.jfif','1788170775957_d040zru.jfif','1790236148890_uyqzl7m.webp',
-    '1790236154890_odabr30.webp','1788172036111_p02uj77.jfif','1790236160892_7f279py.webp','1790236132787_yrdv04d.webp',
-    '1788430983380_i0i80c1.webp','1790236138887_7794y95.webp','1790236143885_yz4vllg.webp','1788170762158_jvaact2.jfif',
-    '1788170827674_spvt483.jfif','1788170839422_panj5vb.png','1789450755374_n9fszsi.webp','1788170735383_vhcw3tg.png',
-    '1788171524218_5kdq03g.png','1788171527597_awqhwvg.png','1788177847424_lswl852.png','1788171606973_fvd919s.png'];
-  const frame = f => `<figure class="skb-frame"><canvas width="240" height="180"></canvas><img src="${U + f}" alt="" decoding="async"></figure>`;
-  L.innerHTML = all.slice(0, 16).map(frame).join('');
-
-  /* Each cover is redrawn in pencil on its canvas: the picture's edges
-     (a Sobel pass over its greys) become dark strokes, its tones a light
-     wash under them, with a little grain. The colour original sits on top
-     at zero opacity and comes up under the pointer. */
-  const W = 240, H = 180;
-  const sketch = (img, cv) => {
-    const x = cv.getContext('2d', { willReadFrequently: true });
-    const s = Math.max(W / img.naturalWidth, H / img.naturalHeight);
-    const w = img.naturalWidth * s, h = img.naturalHeight * s;
-    x.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
-    const d = x.getImageData(0, 0, W, H), p = d.data, g = new Float32Array(W * H);
-    for (let i = 0; i < W * H; i++) g[i] = (p[i * 4] * .299 + p[i * 4 + 1] * .587 + p[i * 4 + 2] * .114) / 255;
-    for (let y = 0; y < H; y++) for (let X = 0; X < W; X++) {
-      const at = (dx, dy) => g[Math.min(H - 1, Math.max(0, y + dy)) * W + Math.min(W - 1, Math.max(0, X + dx))];
-      const gx = at(1, -1) + 2 * at(1, 0) + at(1, 1) - at(-1, -1) - 2 * at(-1, 0) - at(-1, 1);
-      const gy = at(-1, 1) + 2 * at(0, 1) + at(1, 1) - at(-1, -1) - 2 * at(0, -1) - at(1, -1);
-      const edge = Math.min(1, Math.hypot(gx, gy) * 1.6);
-      const wash = .72 + .28 * g[y * W + X];
-      const v = Math.max(0, Math.min(1, wash * (1 - edge * .85) + (Math.random() - .5) * .06)) * 255;
-      const i = (y * W + X) * 4;
-      p[i] = v; p[i + 1] = v * .99; p[i + 2] = v * .96; p[i + 3] = 255;
-    }
-    x.putImageData(d, 0, 0);
-  };
-  document.querySelectorAll('.skb-frame').forEach(fig => {
-    const img = fig.querySelector('img'), cv = fig.querySelector('canvas');
-    const go = () => { try { sketch(img, cv); } catch (e) { cv.remove(); } };
-    if (img.complete && img.naturalWidth) go(); else img.addEventListener('load', go, { once: true });
-  });
-})();
-
 /* Handwritten note — a vanilla port of crafterui's "Handwritten Response".
    Every word is wiped on left to right at one steady nib speed (pen time
    is charged per character, gaps included), the highlighter travels under
@@ -18632,9 +18521,9 @@ document.addEventListener('DOMContentLoaded', () => {
    title and the paragraphs share one cursor, so the whole note reads as a
    single pen working down the page. Nothing runs until it is on screen. */
 (function () {
-  const note = document.getElementById('skb-note');
+  const note = document.getElementById('hw-note');
   if (!note) return;
-  const AVG_WORD = 5, DURATION = 0.18, OVERLAY = 7, MAX_SPREAD = 7;
+  const AVG_WORD = 5, DURATION = 0.18, OVERLAY = 7, MAX_SPREAD = 6;
   const SYNTAX = /==(.+?)==|\(\((.+?)\)\)|~~(.+?)~~/g;
   const SVG = 'http://www.w3.org/2000/svg';
   const els = [...note.querySelectorAll('[data-hw]')];
