@@ -4700,8 +4700,6 @@
     #bg-toggle-btn .lamp-halo { opacity:0; transition:opacity .35s ease; }
     body.dark #bg-toggle-btn .lamp-light { opacity:1; }
     body.dark #bg-toggle-btn .lamp-halo  { opacity:.9; }
-    /* The spark is drawn on the lit glass, so it goes dark to show on it. */
-    body.dark #bg-toggle-btn .lamp-spark { fill:#26282a; }
     /* A second, softer halo for reach — the blur alone stays tight to the
        shade at this size and reads as an outline rather than light. */
     body.dark #bg-toggle-btn .lamp { filter:drop-shadow(0 0 4px rgba(255,255,255,.35)); }
@@ -6160,24 +6158,26 @@ one keyframe at a time</div>
  <div class="bottom-nav-group">
   <button id="bg-toggle-btn" onclick="toggleDarkMode()" aria-label="Toggle dark mode">
   <span class="nav-tip">Dark mode</span>
-  <!-- Iconly "Lamp charge" (a light bulb with a spark in it). The theme is
-       the light in the room: in dark mode the bulb is lit, a white glass
-       with a blurred copy of it glowing behind, filtered in SVG rather
-       than with CSS drop-shadow, which is not applied to shapes inside an
-       SVG everywhere. The glass shapes are drawn to sit inside the outline. -->
+  <!-- A table lamp with a pull cord, in the same 2px rounded stroke as the
+       rest of the nav. The theme is the light in the room: pull the cord
+       and the page goes dark, and the shade comes on with it.
+
+       The glow is its own blurred copy of the shade behind the lit one,
+       filtered in SVG rather than with CSS drop-shadow — CSS filters on
+       shapes inside an SVG are not applied everywhere, and this has to
+       read the same on every browser. -->
   <svg class="lamp" viewBox="0 0 24 24" fill="none">
     <defs>
       <filter id="lampGlow" x="-100%" y="-100%" width="300%" height="300%">
         <feGaussianBlur stdDeviation="2.4"/>
       </filter>
     </defs>
-    <path class="lamp-halo"  d="M12 2.4C7.9 2.4 4.3 5.5 4.3 9.9C4.3 12.6 6 15.2 8.3 16.6V18.6H15.7V16.6C18.1 15.2 19.7 12.6 19.7 9.9C19.7 5.5 16.1 2.4 12 2.4Z" fill="#ffffff" filter="url(#lampGlow)"/>
-    <path class="lamp-light" d="M12 2.4C7.9 2.4 4.3 5.5 4.3 9.9C4.3 12.6 6 15.2 8.3 16.6V18.6H15.7V16.6C18.1 15.2 19.7 12.6 19.7 9.9C19.7 5.5 16.1 2.4 12 2.4Z" fill="#ffffff"/>
-    <g fill="currentColor">
-      <path class="lamp-spark" d="M12.0001 13.8509C11.8701 13.8509 11.7401 13.8209 11.6301 13.7509C11.2701 13.5409 11.1501 13.0809 11.3501 12.7309L12.2001 11.2509H11.3601C10.8601 11.2509 10.4501 11.0309 10.2301 10.6609C10.0101 10.2809 10.0301 9.82088 10.2801 9.38088L11.3501 7.52088C11.5601 7.16088 12.0201 7.04088 12.3701 7.24088C12.7301 7.45088 12.8501 7.91088 12.6501 8.26088L11.8001 9.75088H12.6401C13.1401 9.75088 13.5501 9.97088 13.7701 10.3409C13.9901 10.7209 13.9701 11.1809 13.7201 11.6209L12.6501 13.4809C12.5101 13.7209 12.2601 13.8509 12.0001 13.8509Z"/>
-      <path d="M14.7701 19.7503H9.26012C8.82012 19.7503 8.26012 19.7003 7.89012 19.3203C7.53012 18.9503 7.54012 18.4903 7.55012 18.1803V17.2903C5.03012 15.6103 3.37012 12.6903 3.37012 9.91029C3.37012 7.28029 4.55012 4.82029 6.60012 3.17029C8.65012 1.52029 11.3401 0.900291 13.9701 1.48029C16.4701 2.03029 18.6301 3.70029 19.7501 5.95029C21.9201 10.3203 19.8301 15.0503 16.4901 17.3003V18.0503C16.5001 18.3403 16.5101 18.8703 16.1001 19.2903C15.7901 19.5903 15.3501 19.7503 14.7701 19.7503ZM9.04012 18.2403C9.09012 18.2403 9.16012 18.2503 9.25012 18.2503H14.7701C14.8701 18.2503 14.9401 18.2403 14.9801 18.2303C14.9801 18.2003 14.9801 18.1603 14.9801 18.1303V16.8703C14.9801 16.6103 15.1201 16.3603 15.3401 16.2303C18.3001 14.4403 20.2601 10.3503 18.3901 6.60029C17.4701 4.75029 15.6901 3.38029 13.6301 2.93029C11.4501 2.45029 9.22012 2.96029 7.52012 4.33029C5.82012 5.70029 4.85012 7.73029 4.85012 9.91029C4.85012 12.6903 6.77012 15.0903 8.67012 16.2403C8.90012 16.3803 9.03012 16.6203 9.03012 16.8803V18.2303C9.04012 18.2303 9.04012 18.2303 9.04012 18.2403Z"/>
-      <path d="M15.5 22.7495C15.43 22.7495 15.36 22.7395 15.29 22.7195C13.13 22.0995 10.86 22.0995 8.70001 22.7195C8.30001 22.8295 7.89001 22.5995 7.77001 22.1995C7.65001 21.7995 7.89001 21.3895 8.29001 21.2695C10.71 20.5795 13.28 20.5795 15.7 21.2695C16.1 21.3795 16.33 21.7995 16.22 22.1995C16.13 22.5395 15.83 22.7495 15.5 22.7495Z"/>
-    </g>
+    <path class="lamp-halo"  d="M8.5 3.5h7l3.5 8h-14z" fill="#ffffff" filter="url(#lampGlow)"/>
+    <path class="lamp-light" d="M8.5 3.5h7l3.5 8h-14z" fill="#ffffff"/>
+    <path d="M8.5 3.5h7l3.5 8h-14z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M12 11.5v9M8.5 20.5h7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <path class="lamp-cord-line" d="M16.6 11.5v2.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    <circle class="lamp-cord-bead" cx="16.6" cy="15.3" r="1.05" fill="currentColor"/>
   </svg>
   </button>
   <button id="sound-toggle-btn" class="muted" onclick="toggleWebSound()" aria-label="Toggle spider sound">
