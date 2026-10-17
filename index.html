@@ -4577,8 +4577,7 @@
        the notes like .pli-desc - in the site's own font settings. */
     .xtl-co { display:flex; align-items:center; gap:12px; }
     .xtl-title { font-family:var(--font-title); font-size:17px; font-weight:600; line-height:1.3; color:#1a1a1a; margin:0; }
-    /* Instead of a dot: a flash for work still going (the job held now and
-       the remote work), a half-spent flash for work that ended. */
+    /* Instead of a dot: the pen tool, for every role. */
     .xtl-dot.xtl-dot-job, .xtl-item.now .xtl-dot.xtl-dot-job { width:20px; height:20px; top:11px; border:0; border-radius:0; background:#fff; box-shadow:0 0 0 4px #fff; color:#0a0a0a; display:grid; place-items:center; }
     .xtl-dot-job .xtl-job { width:20px; height:20px; display:block; }
     body.dark .xtl-dot.xtl-dot-job, body.dark .xtl-item.now .xtl-dot.xtl-dot-job { background:var(--d-bg); box-shadow:0 0 0 4px var(--d-bg); color:var(--d-text); }
@@ -18675,11 +18674,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Iconly "Teacher" (graduation cap), drawn as filled outlines.
   const cap = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.0101 16.9993C11.1601 16.9993 10.3001 16.7793 9.63007 16.3493L3.61007 12.4193C2.49007 11.6893 1.82007 10.4593 1.82007 9.1193C1.82007 7.7793 2.49007 6.5493 3.61007 5.8193L9.64007 1.8993C10.9801 1.0293 13.0701 1.0293 14.4001 1.9093L20.3901 5.8393C21.5001 6.5693 22.1701 7.7993 22.1701 9.1293C22.1701 10.4593 21.5001 11.6893 20.3901 12.4193L14.4001 16.3493C13.7301 16.7893 12.8701 16.9993 12.0101 16.9993ZM12.0101 2.7493C11.4401 2.7493 10.8701 2.8793 10.4601 3.1593L4.44007 7.0793C3.74007 7.5393 3.33007 8.2793 3.33007 9.1193C3.33007 9.9593 3.73007 10.6993 4.44007 11.1593L10.4601 15.0893C11.2901 15.6293 12.7501 15.6293 13.5801 15.0893L19.5701 11.1593C20.2701 10.6993 20.6701 9.9593 20.6701 9.1193C20.6701 8.2793 20.2701 7.5393 19.5701 7.0793L13.5801 3.1493C13.1601 2.8893 12.5901 2.7493 12.0101 2.7493Z"/><path d="M11.9999 22.7501C11.5599 22.7501 11.1099 22.6901 10.7499 22.5701L7.55994 21.5101C6.04994 21.0101 4.85994 19.3601 4.86994 17.7701L4.87994 13.0801C4.87994 12.6701 5.21994 12.3301 5.62994 12.3301C6.03994 12.3301 6.37994 12.6701 6.37994 13.0801L6.36994 17.7701C6.36994 18.7101 7.14994 19.7901 8.03994 20.0901L11.2299 21.1501C11.6299 21.2801 12.3699 21.2801 12.7699 21.1501L15.9599 20.0901C16.8499 19.7901 17.6299 18.7101 17.6299 17.7801V13.1401C17.6299 12.7301 17.9699 12.3901 18.3799 12.3901C18.7899 12.3901 19.1299 12.7301 19.1299 13.1401V17.7801C19.1299 19.3701 17.9499 21.0101 16.4399 21.5201L13.2499 22.5801C12.8899 22.6901 12.4399 22.7501 11.9999 22.7501Z"/><path d="M21.3999 15.75C20.9899 15.75 20.6499 15.41 20.6499 15V9C20.6499 8.59 20.9899 8.25 21.3999 8.25C21.8099 8.25 22.1499 8.59 22.1499 9V15C22.1499 15.41 21.8099 15.75 21.3999 15.75Z"/></svg>';
   const cal = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>';
-  // Iconly "Flash", on the rail for work still going: the job held now and
-  // the remote work that continues.
-  const bolt = '<svg class="xtl-job" viewBox="0 0 24 24" fill="currentColor" aria-label="Ongoing" role="img"><path d="M17.91 10.7209H14.82V3.52087C14.82 1.84087 13.91 1.50087 12.8 2.76087L12 3.67087L5.23001 11.3709C4.30001 12.4209 4.69001 13.2809 6.09001 13.2809H9.18001V20.4809C9.18001 22.1609 10.09 22.5009 11.2 21.2409L12 20.3309L18.77 12.6309C19.7 11.5809 19.31 10.7209 17.91 10.7209Z"/></svg>';
-  // Iconly "Flash", two-tone: half spent, for work that has ended.
-  const spent = '<svg class="xtl-job" viewBox="0 0 24 24" fill="currentColor" aria-label="Ended" role="img"><path d="M12 3.66992V20.3299L11.2 21.2399C10.09 22.4999 9.18001 22.1599 9.18001 20.4799V13.2799H6.09001C4.69001 13.2799 4.30001 12.4199 5.23001 11.3699L12 3.66992Z"/><path opacity="0.4" d="M18.77 12.6309L12 20.3309V3.67087L12.8 2.76087C13.91 1.50087 14.82 1.84087 14.82 3.52087V10.7209H17.91C19.31 10.7209 19.7 11.5809 18.77 12.6309Z"/></svg>';
+  // Iconly "Bezier" (the pen tool), on the rail in place of the dot for
+  // every role.
+  const pen = '<svg class="xtl-job" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9C4.10457 9 5 8.10457 5 7C5 5.89543 4.10457 5 3 5C1.89543 5 1 5.89543 1 7C1 8.10457 1.89543 9 3 9Z"/><path d="M21 9C22.1046 9 23 8.10457 23 7C23 5.89543 22.1046 5 21 5C19.8954 5 19 5.89543 19 7C19 8.10457 19.8954 9 21 9Z"/><path d="M19 7H15"/><path d="M9 7H5"/><path d="M7.5 16.5V18.5C7.5 19.11 7.13 19.64 6.61 19.86C6.42 19.95 6.22 20 6 20H4C3.17 20 2.5 19.33 2.5 18.5V16.5C2.5 15.67 3.17 15 4 15H6C6.83 15 7.5 15.67 7.5 16.5Z"/><path d="M21.5 16.5V18.5C21.5 19.33 20.83 20 20 20H18C17.78 20 17.58 19.95 17.39 19.86C16.87 19.64 16.5 19.11 16.5 18.5V16.5C16.5 15.67 17.17 15 18 15H20C20.83 15 21.5 15.67 21.5 16.5Z"/><path d="M15 5.5V8.5C15 9.32 14.32 10 13.5 10H10.5C9.68 10 9 9.32 9 8.5V5.5C9 4.68 9.68 4 10.5 4H13.5C14.32 4 15 4.68 15 5.5Z"/><path opacity="0.4" d="M15 7.73047C17.37 8.93047 19 11.5105 19 14.5005C19 14.6705 18.99 14.8305 18.97 15.0005"/><path opacity="0.4" d="M5.03 15.0005C5.01 14.8305 5 14.6705 5 14.5005C5 11.5105 6.63 8.93047 9 7.73047"/></svg>';
   const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
   // Each company's own symbol, cut out of its logo into media/site/marks
   // (transparent, trimmed to the symbol), and set whole inside the disc
@@ -18705,8 +18702,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   const item = e => {
     const now = /Present/.test(e.date) && !e.remote;   // the job held now
-    const live = /Present/.test(e.date) && e.remote;   // still going, remotely
-    return `<li class="xtl-item${now ? ' now' : ''}">${now || live ? `<span class="xtl-dot xtl-dot-job">${bolt}</span>` : !e.edu ? `<span class="xtl-dot xtl-dot-job">${spent}</span>` : '<span class="xtl-dot" aria-hidden="true"></span>'}
+    return `<li class="xtl-item${now ? ' now' : ''}">${!e.edu ? `<span class="xtl-dot xtl-dot-job">${pen}</span>` : '<span class="xtl-dot" aria-hidden="true"></span>'}
       <div class="xtl-co">${mark(e)}<div><h3 class="xtl-title">${esc(e.edu ? e.role : e.co)}</h3><div class="xtl-cat">${esc(e.edu ? e.co : e.role)}</div></div></div>
       <div class="xtl-date">${cal}<span>${esc(e.date)}</span>${e.badge ? `<b class="${e.remote ? 'xtl-remote' : ''}">${esc(e.badge)}</b>` : ''}</div>
       ${e.pts ? `<ul class="xtl-pts">${e.pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}</li>`;
