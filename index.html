@@ -4571,12 +4571,10 @@
     .xtl-item.now .xtl-dot { background:#1a1a1a; }
     .xtl-co { display:flex; align-items:center; gap:12px; font-size:14px; font-weight:500; color:#3a3a3a; }
     /* Set like the avatars elsewhere on the site (.avg-avatar): a 42px white
-       disc inside a white rim and a hairline ring, the mark drawn in ink,
-       lifting with a little overshoot when its entry is hovered. */
+       disc inside a white rim and a hairline ring, the mark drawn in ink.
+       It stays put on hover; only the mark takes its colour. */
     .xtl-co i { position:relative; width:42px; height:42px; box-sizing:border-box; border-radius:50%; background:#fff; border:3px solid #fff;
-      box-shadow:0 0 0 1px rgba(0,0,0,.08); display:grid; place-items:center; color:#2a2a2a; flex:none; overflow:hidden;
-      transition:transform .35s cubic-bezier(.34,1.56,.64,1); }
-    .xtl-item:hover .xtl-co i { transform:translateY(-30%); }
+      box-shadow:0 0 0 1px rgba(0,0,0,.08); display:grid; place-items:center; color:#2a2a2a; flex:none; overflow:hidden; }
     .xtl-co i svg { width:19px; height:19px; }
     /* The whole symbol, contained and centred like an .avg-avatar logo. Grey
        until the entry is hovered. */
