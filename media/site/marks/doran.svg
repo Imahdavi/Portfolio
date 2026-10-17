@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="80 82 350 243" width="350" height="243">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="80 82 338 243" width="338" height="243">
   <title>Doran</title>
   <path fill="#111111" fill-rule="evenodd" d="M90 92H226C300 92 346 139 346 203.5S300 315 226 315H90ZM148 140V267H222C265 267 289 242 289 203.5S265 140 222 140Z"/>
-  <circle cx="392" cy="288" r="28" fill="#D2191B"/>
+  <circle cx="381" cy="288" r="28" fill="#D2191B"/>
 </svg>
