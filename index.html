@@ -6584,11 +6584,6 @@ const USE_CUSTOM_CURSOR = true;
   });
   document.addEventListener('mousedown', e => {
     cur.classList.add('pressing');
-    // Deliberately unconditional, unlike the web shot. The burst is a
-    // cursor flourish that lands where you pressed and is gone in 400ms;
-    // the shot is a rope slung across the page from the avatar. Only the
-    // second one is worth suppressing anywhere (see NO_SHOOT).
-    spiderSense(e.clientX, e.clientY);
     // Grabbing the Projects media strip doesn't fire a web (see NO_SHOOT),
     // so it shouldn't play the shot sound either — otherwise every drag
     // thwips with nothing to show for it.
@@ -6762,7 +6757,6 @@ const USE_CUSTOM_CURSOR = true;
     var t = e.changedTouches[0];
     var dx = t.clientX - stx, dy = t.clientY - sty;
     if (dx * dx + dy * dy > 12 * 12) return; // was a scroll, not a tap
-    spiderSense(t.clientX, t.clientY);
     if (window._playWebShot) window._playWebShot();
   }, {passive: true});
 })();
