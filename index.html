@@ -4547,7 +4547,10 @@
     .hw-k > .hw-in { position:relative; }
     .hw-swipe { position:absolute; left:-.24em; right:-.24em; bottom:.12em; height:.6em; border-radius:99px; background:#f5e1a8; }
     body.dark .hw-swipe { background:rgba(245,225,168,.4); }
-    .hw-ring { position:absolute; top:.04em; left:-.26em; width:calc(100% + .52em); height:calc(100% - .08em); overflow:visible; pointer-events:none; }
+    /* Drawn a size up from crafterui's, so the ring clears the first and
+       last letters, and the ringed words keep a little room either side. */
+    .hw-ring { position:absolute; top:-.12em; left:-.42em; width:calc(100% + .84em); height:calc(100% + .14em); overflow:visible; pointer-events:none; }
+    .hw-k-ring { margin:0 .22em; }
     .hw-strike { position:absolute; left:0; bottom:.30em; width:100%; height:.34em; overflow:visible; pointer-events:none; }
     @keyframes hw-write {
       from { clip-path:inset(-.4em calc(100% + .25em) -.4em -.25em); }
@@ -18541,7 +18544,11 @@ document.addEventListener('DOMContentLoaded', () => {
 (function () {
   const note = document.getElementById('hw-note');
   if (!note) return;
-  const AVG_WORD = 5, DURATION = 0.18, OVERLAY = 7, MAX_SPREAD = 6;
+  // Quicker than crafterui's pen (0.18s a word, 6s at most), and the marks
+  // drawn on smooth curves over a floor of time of their own, so a fast
+  // nib never makes them snap.
+  const AVG_WORD = 5, DURATION = 0.12, OVERLAY = 7, MAX_SPREAD = 4;
+  const EASE = 'cubic-bezier(.45,0,.2,1)';
   const SYNTAX = /==(.+?)==|\(\((.+?)\)\)|~~(.+?)~~/g;
   const SVG = 'http://www.w3.org/2000/svg';
   const els = [...note.querySelectorAll('[data-hw]')];
@@ -18574,7 +18581,7 @@ document.addEventListener('DOMContentLoaded', () => {
     p.setAttribute('vector-effect', 'non-scaling-stroke'); p.setAttribute('pathLength', '1');
     p.setAttribute('stroke-dasharray', '1'); p.setAttribute('data-draw', '');
     if (extra) p.setAttribute('opacity', extra);
-    p.style.animation = `hw-draw ${dur}s ease-out ${delay}s both`;
+    p.style.animation = `hw-draw ${dur}s ${EASE} ${delay}s both`;
     return p;
   };
   const svg = (cls, vb) => {
@@ -18602,16 +18609,16 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       if (t.mark === 'plain') { el.append(words); return; }
 
-      const k = document.createElement('span'); k.className = 'hw-k';
+      const k = document.createElement('span'); k.className = 'hw-k' + (t.mark === 'circle' ? ' hw-k-ring' : '');
       if (t.mark === 'mark') {
         const sw = document.createElement('span');
         sw.className = 'hw-swipe'; sw.setAttribute('data-ink', ''); sw.setAttribute('aria-hidden', 'true');
-        sw.style.animation = `hw-write ${Math.max(cursor - from, 1) * perChar}s linear ${from * perChar}s both`;
+        sw.style.animation = `hw-write ${Math.max((cursor - from) * perChar, .4)}s ${EASE} ${from * perChar}s both`;
         k.append(sw);
       }
       const inner = document.createElement('span'); inner.className = 'hw-in'; inner.append(words);
       k.append(inner);
-      const delay = cursor * perChar, dur = OVERLAY * perChar;
+      const delay = cursor * perChar, dur = Math.max(OVERLAY * perChar, .55);
       if (t.mark === 'circle') {
         // Not an ellipse: it starts low-left and overshoots the closure.
         const s = svg('hw-ring', '0 0 100 100');
