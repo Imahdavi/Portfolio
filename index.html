@@ -6320,6 +6320,13 @@ one keyframe at a time</div>
          and Experience icons: once on load, again on every tap. -->
     <div class="nav-lottie-icon" id="nb-soon-icon" aria-hidden="true"></div>
   </button>
+  <!-- Invoice maker: open to everyone for now (was admin-only, an-nav-btn). -->
+  <button class="nav-btn" id="nb-invoice" onclick="goView('view-invoice',this)">
+    <span class="nav-tip">Invoice</span>
+    <!-- Iconly "Receipt bill check" Lottie (/receipt-icon.json), played like
+         the Experience star: once on load, again on every tap. -->
+    <div class="nav-lottie-icon" id="nb-invoice-icon" aria-hidden="true"></div>
+  </button>
   <button class="nav-btn an-nav-btn" id="nb-analytics" onclick="goView('view-analytics',this)">
     <span class="nav-tip">Analytics</span>
     <svg viewBox="0 0 24 24" fill="none">
@@ -6341,14 +6348,6 @@ one keyframe at a time</div>
   </div>
  </div>
  <div class="bottom-nav-group">
-  <!-- Invoice maker: open to everyone, in the right-hand group beside the
-       theme switch; the limelight follows it over (see positionNavLimelight). -->
-  <button class="nav-btn" id="nb-invoice" onclick="goView('view-invoice',this)">
-    <span class="nav-tip">Invoice</span>
-    <!-- Iconly "Receipt bill check" Lottie (/receipt-icon.json), played like
-         the Experience star: once on load, again on every tap. -->
-    <div class="nav-lottie-icon" id="nb-invoice-icon" aria-hidden="true"></div>
-  </button>
   <button id="bg-toggle-btn" onclick="toggleDarkMode()" aria-label="Toggle dark mode">
   <span class="nav-tip">Dark mode</span>
   <!-- A table lamp with a pull cord, in the same 2px rounded stroke as the
@@ -13369,13 +13368,6 @@ function positionNavLimelight(instant) {
   const bar = document.getElementById('navLimelight');
   const activeBtn = document.querySelector('.nav-btn.active');
   if (!bar || !activeBtn) return;
-  // The nav is two pills (Invoice sits in the right-hand one), and the bar
-  // is placed in its pill's own coordinates — so it moves into the active
-  // button's pill first, and arrives there without sliding across the gap.
-  if (bar.parentElement !== activeBtn.parentElement) {
-    activeBtn.parentElement.appendChild(bar);
-    instant = true;
-  }
   const left = activeBtn.offsetLeft + activeBtn.offsetWidth / 2 - bar.offsetWidth / 2;
   if (instant) bar.classList.remove('ready');
   bar.style.left = left + 'px';
