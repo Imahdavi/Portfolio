@@ -4589,7 +4589,11 @@
       .hw-note [data-ink], .hw-note [data-draw] { animation:none !important; clip-path:none !important; stroke-dashoffset:0 !important; }
     }
     /* ── Experience timeline (shadcnui-blocks timeline-01) ── */
-    .xtl { max-width:560px; margin:0 auto; text-align:center; }
+    /* The gap above the section and the one under its label are set from
+       edit mode by drag handles (xtlTopGap, xtlLabelGap in settings). */
+    .xtl { max-width:560px; margin:var(--xtl-top, 36px) auto 0; text-align:center; }
+    .xtl > .xtl-list:first-of-type { margin-top:var(--xtl-label-gap, 24px); }
+    #sg-exp.exp-edit-on ~ .xtl .xtl-label-handle { display:flex; margin-top:6px; }
     .xtl .tools-label { margin-bottom:0; }
     .xtl-list { list-style:none; margin:40px 0 0; padding:0 0 0 30px; position:relative; text-align:left; }
     .xtl-list::before { content:""; position:absolute; left:6px; top:16px; bottom:8px; border-left:1.5px dashed rgba(0,0,0,.14); }
@@ -5637,7 +5641,10 @@ one keyframe at a time</div>
       <p data-hw="It all started back in high school, when I first came across motion design. I began making content for ~~a page~~ a personal brand of my own — ==pop art and typography==, and the ways they could move.">It all started back in high school, when I first came across motion design. I began making content for a personal brand of my own — pop art and typography, and the ways they could move.</p>
       <p data-hw="Two or three years in, I slowly found my way into real business and client projects, and since then I’ve had the chance to work with ((brands)) across all kinds of fields, with more than ==four years== of experience in motion design.">Two or three years in, I slowly found my way into real business and client projects, and since then I’ve had the chance to work with brands across all kinds of fields, with more than four years of experience in motion design.</p>
     </section>
-    <div class="sec-gap" aria-hidden="true"></div>
+    <!-- Edit mode: drag to set the gap between the note and the timeline. -->
+    <div class="section-gap-handle" id="xtlTopHandle" title="Drag to adjust spacing before this section">
+      <svg viewBox="0 0 24 8"><line x1="2" y1="2" x2="22" y2="2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="2" y1="6" x2="22" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </div>
     <!-- Career — the résumé's experience and education, as shadcnui-blocks'
          "Experience Timeline" (timeline-01, MIT): a hairline down the left,
          a ringed dot per entry, the company over the role, the dates, and
@@ -5655,6 +5662,10 @@ one keyframe at a time</div>
         <span class="db-dot bottom left"></span>
         <div class="tools-label">experience</div>
       </span>
+      <!-- Edit mode: drag to set the gap under the label. -->
+      <div class="section-gap-handle xtl-label-handle" id="xtlLabelHandle" title="Drag to adjust spacing under the label">
+        <svg viewBox="0 0 24 8"><line x1="2" y1="2" x2="22" y2="2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="2" y1="6" x2="22" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
       <ol class="xtl-list" id="xtl-work"></ol>
       <div class="xtl-sub">education</div>
       <ol class="xtl-list" id="xtl-edu"></ol>
@@ -10018,6 +10029,11 @@ async function loadSettings() {
     if (s.toolsLabel) {
       const toolsLabel = document.querySelector('.tools-label');
       if (toolsLabel) toolsLabel.textContent = s.toolsLabel;
+    }
+    if (s.xtlTopGap != null || s.xtlLabelGap != null) {
+      const xtl = document.querySelector('.xtl');
+      if (xtl && s.xtlTopGap != null) xtl.style.setProperty('--xtl-top', s.xtlTopGap + 'px');
+      if (xtl && s.xtlLabelGap != null) xtl.style.setProperty('--xtl-label-gap', s.xtlLabelGap + 'px');
     }
     if (s.toolsGap != null) {
       const toolsWrap = document.querySelector('.tools-wrap');
@@ -17758,6 +17774,47 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   handle.addEventListener('pointerup', endDrag);
   handle.addEventListener('pointercancel', endDrag);
+});
+
+/* ─── Experience timeline gap handles ─────────────────────
+   The same drag as the gap handles above, for the space between the
+   Who am I? note and the timeline (--xtl-top) and the space under the
+   timeline's label (--xtl-label-gap), both set on .xtl. */
+document.addEventListener('DOMContentLoaded', () => {
+  const xtl = document.querySelector('.xtl');
+  if (!xtl) return;
+  [['xtlTopHandle', '--xtl-top', 'xtlTopGap', 36], ['xtlLabelHandle', '--xtl-label-gap', 'xtlLabelGap', 24]].forEach(([id, prop, key, def]) => {
+    const handle = document.getElementById(id);
+    if (!handle) return;
+    let startY = 0, startGap = def, dragging = false;
+    const readGap = () => {
+      const v = parseFloat(getComputedStyle(xtl).getPropertyValue(prop));
+      return Number.isNaN(v) ? def : v;
+    };
+    handle.addEventListener('pointerdown', (e) => {
+      if (!editMode) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dragging = true;
+      startY = e.clientY;
+      startGap = readGap();
+      handle.setPointerCapture(e.pointerId);
+    });
+    handle.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const gap = Math.max(0, Math.min(160, startGap + (e.clientY - startY)));
+      xtl.style.setProperty(prop, gap + 'px');
+    });
+    const endDrag = () => {
+      if (!dragging) return;
+      dragging = false;
+      if (!_cachedSettings) _cachedSettings = {};
+      _cachedSettings[key] = readGap();
+      saveSettings();
+    };
+    handle.addEventListener('pointerup', endDrag);
+    handle.addEventListener('pointercancel', endDrag);
+  });
 });
 
 /* ─── Scroll-to-top ──────────────────────────────────────
