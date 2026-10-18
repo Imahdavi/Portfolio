@@ -4545,12 +4545,24 @@
     .hw-w { display:inline-block; white-space:pre; }
     .hw-k { position:relative; display:inline-block; }
     .hw-k > .hw-in { position:relative; }
-    .hw-swipe { position:absolute; left:-.24em; right:-.24em; bottom:.12em; height:.6em; border-radius:99px; background:#f5e1a8; }
-    body.dark .hw-swipe { background:rgba(245,225,168,.4); }
+    .hw-swipe { position:absolute; left:-.24em; right:-.24em; bottom:.12em; height:.6em; border-radius:99px; background:var(--hw-marker, #f5e1a8); }
+    body.dark .hw-swipe { opacity:.4; }
     /* Drawn a size up from crafterui's, so the ring clears the first and
        last letters, and the ringed words keep a little room either side. */
     .hw-ring { position:absolute; top:-.12em; left:-.42em; width:calc(100% + .84em); height:calc(100% + .14em); overflow:visible; pointer-events:none; }
     .hw-k-ring { margin:0 .22em; }
+    /* Edit mode: the note's markup in a box, a hint, and the marker swatch. */
+    .hw-note.hw-editing > p { display:none; }
+    .hw-edit-text { display:block; width:100%; box-sizing:border-box; min-height:180px; resize:vertical; padding:12px 14px;
+      font:400 14px/1.6 var(--font-body); color:#1a1a1a; background:#fff; border:1px solid rgba(0,0,0,.12); border-radius:10px; outline:none; }
+    .hw-edit-text:focus { border-color:rgba(0,0,0,.3); }
+    .hw-edit-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:8px;
+      font:400 12px/1.4 var(--font-body); color:#8a8480; }
+    .hw-edit-hint code { font:500 11.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background:rgba(0,0,0,.05); border-radius:5px; padding:1px 5px; }
+    .hw-edit-marker { display:inline-flex; align-items:center; gap:8px; }
+    body.dark .hw-edit-text { color:var(--d-text); background:var(--d-surface); border-color:var(--d-line-2); }
+    body.dark .hw-edit-bar { color:var(--d-text-3); }
+    body.dark .hw-edit-hint code { background:var(--d-raised); }
     .hw-strike { position:absolute; left:0; bottom:.30em; width:100%; height:.34em; overflow:visible; pointer-events:none; }
     @keyframes hw-write {
       from { clip-path:inset(-.4em calc(100% + .25em) -.4em -.25em); }
@@ -9987,6 +9999,8 @@ async function loadSettings() {
       const brandWrap = document.querySelector('.brand-grid-wrap');
       if (brandWrap) brandWrap.style.setProperty('--trusted-gap', s.trustedByGap + 'px');
     }
+    // The Who am I? note: its words and marker colour, if they were edited.
+    if (window.hwNoteApply) window.hwNoteApply(s.whoAmI);
     if (s.toolsLabel) {
       const toolsLabel = document.querySelector('.tools-label');
       if (toolsLabel) toolsLabel.textContent = s.toolsLabel;
@@ -13400,6 +13414,7 @@ function updateExpEditUI() {
   if (toolsLabel) toolsLabel.contentEditable = editMode ? 'true' : 'false';
   if (!editMode) toolsSelection.clear();
   renderToolsStack();
+  if (window.hwNoteEdit) window.hwNoteEdit(editMode);   // the Who am I? note
   if (editMode) {
     _wireExpDelBtns();
   } else {
@@ -18543,8 +18558,13 @@ document.addEventListener('DOMContentLoaded', () => {
    is charged per character, gaps included), the highlighter travels under
    its words as they are written, and a ring or a strike is stroked on
    straight after the words it covers, costing pen time of its own. The
-   title and the paragraphs share one cursor, so the whole note reads as a
-   single pen working down the page. Nothing runs until it is on screen. */
+   paragraphs share one cursor, so the whole note reads as a single pen
+   working down the page. Nothing runs until it is on screen.
+
+   The words and the marker colour are editable in edit mode and kept in
+   settings (whoAmI: { text, marker }). The text is the same markup the
+   page is written in: ==highlighter==, ((ring)), ~~crossed out~~, and a
+   blank line between paragraphs. The markup in the HTML is the default. */
 (function () {
   const note = document.getElementById('hw-note');
   if (!note) return;
@@ -18555,7 +18575,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const EASE = 'cubic-bezier(.45,0,.2,1)';
   const SYNTAX = /==(.+?)==|\(\((.+?)\)\)|~~(.+?)~~/g;
   const SVG = 'http://www.w3.org/2000/svg';
-  const els = [...note.querySelectorAll('[data-hw]')];
+  const DEFAULT_MARKER = '#f5e1a8';
+  const DEFAULT_TEXT = [...note.querySelectorAll('[data-hw]')].map(el => el.dataset.hw).join('\n\n');
+  let text = DEFAULT_TEXT, marker = DEFAULT_MARKER;
 
   const parse = src => {
     const out = []; let last = 0;
@@ -18567,16 +18589,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (last < src.length) out.push({ text: src.slice(last), mark: 'plain' });
     return out.map(t => ({ ...t, parts: t.text.split(/(\s+)/).filter(Boolean) }));
   };
-  const parsed = els.map(el => parse(el.dataset.hw));
-
-  // Cost the whole note first, so it can be compressed evenly if writing
-  // it at the natural pace would run past MAX_SPREAD.
-  let pending = 0;
-  parsed.forEach(tokens => tokens.forEach(t => {
-    t.parts.forEach(p => { pending += p.length; });
-    if (t.mark === 'circle' || t.mark === 'strike') pending += OVERLAY;
-  }));
-  const perChar = Math.min(DURATION / AVG_WORD, MAX_SPREAD / Math.max(1, pending));
+  const plainOf = src => src.replace(SYNTAX, (_, a, b, c) => a ?? b ?? c);
 
   const path = (d, w, delay, dur, extra) => {
     const p = document.createElementNS(SVG, 'path');
@@ -18595,49 +18608,131 @@ document.addEventListener('DOMContentLoaded', () => {
     return s;
   };
 
-  let cursor = 0;   // characters of pen time spent so far
-  els.forEach((el, n) => {
-    el.setAttribute('aria-label', el.textContent);
-    el.textContent = '';
-    parsed[n].forEach(t => {
-      const from = cursor;
-      const words = document.createDocumentFragment();
-      t.parts.forEach(part => {
-        if (/^\s+$/.test(part)) { cursor += part.length; words.append(part); return; }
-        const w = document.createElement('span');
-        w.className = 'hw-w'; w.setAttribute('data-ink', ''); w.setAttribute('aria-hidden', 'true');
-        w.textContent = part;
-        w.style.animation = `hw-write ${part.length * perChar}s linear ${cursor * perChar}s both`;
-        cursor += part.length;
-        words.append(w);
-      });
-      if (t.mark === 'plain') { el.append(words); return; }
+  // Writes the note out from markup, replacing whatever paragraphs are there.
+  function render() {
+    note.querySelectorAll(':scope > p').forEach(p => p.remove());
+    const sources = text.split(/\n\s*\n/).map(s => s.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean);
+    const parsed = sources.map(parse);
 
-      const k = document.createElement('span'); k.className = 'hw-k' + (t.mark === 'circle' ? ' hw-k-ring' : '');
-      if (t.mark === 'mark') {
-        const sw = document.createElement('span');
-        sw.className = 'hw-swipe'; sw.setAttribute('data-ink', ''); sw.setAttribute('aria-hidden', 'true');
-        sw.style.animation = `hw-write ${Math.max((cursor - from) * perChar, .4)}s ${EASE} ${from * perChar}s both`;
-        k.append(sw);
-      }
-      const inner = document.createElement('span'); inner.className = 'hw-in'; inner.append(words);
-      k.append(inner);
-      const delay = cursor * perChar, dur = Math.max(OVERLAY * perChar, .55);
-      if (t.mark === 'circle') {
-        // Not an ellipse: it starts low-left and overshoots the closure.
-        const s = svg('hw-ring', '0 0 100 100');
-        s.append(path('M8 54 C6 26 30 8 52 7 C76 6 95 20 95 46 C95 74 72 93 48 93 C24 93 7 78 6 52 C6 34 16 20 34 12', 2, delay, dur));
-        k.append(s); cursor += OVERLAY;
-      } else if (t.mark === 'strike') {
-        // Two passes at slightly different heights, the second trailing.
-        const s = svg('hw-strike', '0 0 100 10');
-        s.append(path('M1 4 C24 2 46 7 68 4 C82 2 92 6 99 4', 1.6, delay, dur * .7));
-        s.append(path('M2 7 C26 5 44 9 66 6 C80 4 92 8 98 6', 1.3, delay + dur * .3, dur * .7, '.8'));
-        k.append(s); cursor += OVERLAY;
-      }
-      el.append(k);
+    // Cost the whole note first, so it can be compressed evenly if writing
+    // it at the natural pace would run past MAX_SPREAD.
+    let pending = 0;
+    parsed.forEach(tokens => tokens.forEach(t => {
+      t.parts.forEach(p => { pending += p.length; });
+      if (t.mark === 'circle' || t.mark === 'strike') pending += OVERLAY;
+    }));
+    const perChar = Math.min(DURATION / AVG_WORD, MAX_SPREAD / Math.max(1, pending));
+
+    let cursor = 0;   // characters of pen time spent so far
+    const panel = note.querySelector('.hw-edit');
+    parsed.forEach((tokens, n) => {
+      const el = document.createElement('p');
+      el.setAttribute('aria-label', plainOf(sources[n]));
+      tokens.forEach(t => {
+        const from = cursor;
+        const words = document.createDocumentFragment();
+        t.parts.forEach(part => {
+          if (/^\s+$/.test(part)) { cursor += part.length; words.append(part); return; }
+          const w = document.createElement('span');
+          w.className = 'hw-w'; w.setAttribute('data-ink', ''); w.setAttribute('aria-hidden', 'true');
+          w.textContent = part;
+          w.style.animation = `hw-write ${part.length * perChar}s linear ${cursor * perChar}s both`;
+          cursor += part.length;
+          words.append(w);
+        });
+        if (t.mark === 'plain') { el.append(words); return; }
+
+        const k = document.createElement('span'); k.className = 'hw-k' + (t.mark === 'circle' ? ' hw-k-ring' : '');
+        if (t.mark === 'mark') {
+          const sw = document.createElement('span');
+          sw.className = 'hw-swipe'; sw.setAttribute('data-ink', ''); sw.setAttribute('aria-hidden', 'true');
+          sw.style.animation = `hw-write ${Math.max((cursor - from) * perChar, .4)}s ${EASE} ${from * perChar}s both`;
+          k.append(sw);
+        }
+        const inner = document.createElement('span'); inner.className = 'hw-in'; inner.append(words);
+        k.append(inner);
+        const delay = cursor * perChar, dur = Math.max(OVERLAY * perChar, .55);
+        if (t.mark === 'circle') {
+          // Not an ellipse: it starts low-left and overshoots the closure.
+          const s = svg('hw-ring', '0 0 100 100');
+          s.append(path('M8 54 C6 26 30 8 52 7 C76 6 95 20 95 46 C95 74 72 93 48 93 C24 93 7 78 6 52 C6 34 16 20 34 12', 2, delay, dur));
+          k.append(s); cursor += OVERLAY;
+        } else if (t.mark === 'strike') {
+          // Two passes at slightly different heights, the second trailing.
+          const s = svg('hw-strike', '0 0 100 10');
+          s.append(path('M1 4 C24 2 46 7 68 4 C82 2 92 6 99 4', 1.6, delay, dur * .7));
+          s.append(path('M2 7 C26 5 44 9 66 6 C80 4 92 8 98 6', 1.3, delay + dur * .3, dur * .7, '.8'));
+          k.append(s); cursor += OVERLAY;
+        }
+        el.append(k);
+      });
+      note.insertBefore(el, panel);
     });
-  });
+  }
+
+  const paintMarker = () => note.style.setProperty('--hw-marker', marker);
+
+  // Settings arrive after the first render; take them when they do.
+  window.hwNoteApply = (saved) => {
+    const t = saved && typeof saved.text === 'string' && saved.text.trim() ? saved.text : DEFAULT_TEXT;
+    const m = (saved && saved.marker) || DEFAULT_MARKER;
+    const changed = t !== text;
+    text = t; marker = m;
+    paintMarker();
+    if (changed) render();
+  };
+
+  /* Edit mode: the rendered note gives way to a box holding its markup, a
+     line saying what the marks are, and a swatch for the marker colour.
+     Leaving edit mode writes it out again and saves it. */
+  window.hwNoteEdit = (on) => {
+    let panel = note.querySelector('.hw-edit');
+    if (on) {
+      if (panel) return;
+      panel = document.createElement('div');
+      panel.className = 'hw-edit';
+      panel.innerHTML =
+        '<textarea class="hw-edit-text" spellcheck="true" aria-label="Who am I? text"></textarea>' +
+        '<div class="hw-edit-bar">' +
+          '<span class="hw-edit-hint"><code>==highlight==</code> <code>((circle))</code> <code>~~strike~~</code> · blank line = new paragraph</span>' +
+          '<span class="hw-edit-marker">Marker <button type="button" class="nav-color-input hw-marker-swatch" title="Marker colour" aria-label="Choose the marker colour"></button></span>' +
+        '</div>';
+      note.append(panel);
+      note.classList.add('hw-editing');
+      const ta = panel.querySelector('textarea');
+      ta.value = text;
+      const fit = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+      ta.addEventListener('input', fit);
+      requestAnimationFrame(fit);
+      const sw = panel.querySelector('.hw-marker-swatch');
+      sw.style.background = marker;
+      sw.addEventListener('pointerdown', e => e.stopPropagation());
+      sw.addEventListener('click', () => {
+        if (typeof openColorPicker !== 'function') return;
+        openColorPicker(sw, marker, (hex, committed) => {
+          marker = hex; sw.style.background = hex; paintMarker();
+          if (committed) save();
+        });
+      });
+    } else {
+      if (!panel) return;
+      const t = panel.querySelector('textarea').value.replace(/\r/g, '').trim();
+      panel.remove();
+      note.classList.remove('hw-editing');
+      if (t && t !== text) { text = t; render(); save(); }
+    }
+  };
+
+  function save() {
+    if (typeof _cachedSettings === 'undefined') return;
+    if (!_cachedSettings) _cachedSettings = {};
+    _cachedSettings.whoAmI = { text, marker };
+    if (typeof saveSettings === 'function') saveSettings();
+  }
+
+  render();
+  if (typeof _cachedSettings !== 'undefined' && _cachedSettings && _cachedSettings.whoAmI) window.hwNoteApply(_cachedSettings.whoAmI);
+  else paintMarker();
 
   const go = () => note.classList.add('go');
   if (!('IntersectionObserver' in window)) return go();
