@@ -4551,11 +4551,25 @@
        last letters, and the ringed words keep a little room either side. */
     .hw-ring { position:absolute; top:-.12em; left:-.42em; width:calc(100% + .84em); height:calc(100% + .14em); overflow:visible; pointer-events:none; }
     .hw-k-ring { margin:0 .22em; }
+    .hw-k-ring-wide { margin:0 .38em; }
+    .hw-k-ring-wide > .hw-ring { top:-.24em; left:-.66em; width:calc(100% + 1.32em); height:calc(100% + .36em); }
     /* Edit mode: the note's markup in a box, a hint, and the marker swatch. */
     .hw-note.hw-editing > p { display:none; }
     .hw-edit-text { display:block; width:100%; box-sizing:border-box; min-height:180px; resize:vertical; padding:12px 14px;
       font:400 14px/1.6 var(--font-body); color:#1a1a1a; background:#fff; border:1px solid rgba(0,0,0,.12); border-radius:10px; outline:none; }
     .hw-edit-text:focus { border-color:rgba(0,0,0,.3); }
+    .hw-edit-tools { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+    .hw-edit-tools button { font:500 12.5px/1 var(--font-body); color:#2a2a2a; background:#fff; border:1px solid rgba(0,0,0,.12); border-radius:99px; padding:6px 12px; cursor:pointer; transition:background .15s, border-color .15s; }
+    .hw-edit-tools button:hover { background:#f6f4f1; border-color:rgba(0,0,0,.22); }
+    /* Each button shows its mark on its own label, in the note's hand. */
+    .hw-edit-tools button span { font-family:'Caveat', cursive; font-size:16px; font-weight:600; }
+    .hw-tool-mark { background:linear-gradient(transparent 52%, var(--hw-marker, #f5e1a8) 52%, var(--hw-marker, #f5e1a8) 92%, transparent 92%); padding:0 2px; }
+    .hw-tool-ring { border:1.4px solid currentColor; border-radius:50%; padding:0 5px; }
+    .hw-tool-strike { text-decoration:line-through; text-decoration-thickness:1.4px; }
+    .hw-edit-tip { font:400 11.5px/1.3 var(--font-body); color:#a39c95; margin-left:4px; }
+    body.dark .hw-edit-tools button { color:var(--d-text); background:var(--d-surface); border-color:var(--d-line-2); }
+    body.dark .hw-edit-tools button:hover { background:var(--d-raised); }
+    body.dark .hw-edit-tip { color:var(--d-text-3); }
     .hw-edit-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:8px;
       font:400 12px/1.4 var(--font-body); color:#8a8480; }
     .hw-edit-hint code { font:500 11.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background:rgba(0,0,0,.05); border-radius:5px; padding:1px 5px; }
@@ -18642,7 +18656,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         if (t.mark === 'plain') { el.append(words); return; }
 
-        const k = document.createElement('span'); k.className = 'hw-k' + (t.mark === 'circle' ? ' hw-k-ring' : '');
+        // A ring round a long phrase is pulled wider and taller, so its tapering
+        // ends clear the first and last letters instead of cutting them.
+        const k = document.createElement('span'); k.className = 'hw-k' + (t.mark === 'circle' ? ' hw-k-ring' + (t.text.length > 8 ? ' hw-k-ring-wide' : '') : '');
         if (t.mark === 'mark') {
           const sw = document.createElement('span');
           sw.className = 'hw-swipe'; sw.setAttribute('data-ink', ''); sw.setAttribute('aria-hidden', 'true');
@@ -18692,6 +18708,12 @@ document.addEventListener('DOMContentLoaded', () => {
       panel = document.createElement('div');
       panel.className = 'hw-edit';
       panel.innerHTML =
+        '<div class="hw-edit-tools" role="toolbar" aria-label="Marks">' +
+          '<button type="button" data-mark="==|==" title="Highlight the selection (Ctrl+Shift+H)"><span class="hw-tool-mark">Marker</span></button>' +
+          '<button type="button" data-mark="((|))" title="Ring the selection (Ctrl+Shift+O)"><span class="hw-tool-ring">Circle</span></button>' +
+          '<button type="button" data-mark="~~|~~" title="Cross out the selection (Ctrl+Shift+X)"><span class="hw-tool-strike">Strike</span></button>' +
+          '<span class="hw-edit-tip">Select words, then pick a mark. Pick it again to take it off.</span>' +
+        '</div>' +
         '<textarea class="hw-edit-text" spellcheck="true" aria-label="Who am I? text"></textarea>' +
         '<div class="hw-edit-bar">' +
           '<span class="hw-edit-hint"><code>==highlight==</code> <code>((circle))</code> <code>~~strike~~</code> · blank line = new paragraph</span>' +
@@ -18704,6 +18726,53 @@ document.addEventListener('DOMContentLoaded', () => {
       const fit = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
       ta.addEventListener('input', fit);
       requestAnimationFrame(fit);
+
+      // The mark buttons work like bold and italic: they wrap the selection
+      // in the mark's markup, or unwrap it if it is already marked. Spaces at
+      // the edges of a selection are left outside the mark. A selection that
+      // overlaps marks of the same kind takes them in whole, so marks merge
+      // rather than nest or break each other's markup.
+      const esc = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const toggle = (open, close) => {
+        let s = ta.selectionStart, e = ta.selectionEnd;
+        const v = ta.value;
+        while (s < e && /\s/.test(v[s])) s++;
+        while (e > s && /\s/.test(v[e - 1])) e--;
+        if (s === e) { ta.focus(); return; }
+        const re = new RegExp(esc(open) + '(.+?)' + esc(close), 'g');
+        const hits = [];
+        for (const m of v.matchAll(re)) {
+          const ms = m.index, me = m.index + m[0].length;
+          if (ms < e && me > s) hits.push([ms, me]);
+        }
+        let out, a, b;
+        if (hits.length === 1 && hits[0][0] <= s && hits[0][1] >= e) {
+          // Inside one mark: take it off.
+          const [ms, me] = hits[0];
+          const inner = v.slice(ms + open.length, me - close.length);
+          out = v.slice(0, ms) + inner + v.slice(me);
+          a = ms; b = ms + inner.length;
+        } else {
+          for (const [ms, me] of hits) { s = Math.min(s, ms); e = Math.max(e, me); }
+          const inner = v.slice(s, e).split(open).join('').split(close).join('');
+          out = v.slice(0, s) + open + inner + close + v.slice(e);
+          a = s + open.length; b = a + inner.length;
+        }
+        ta.value = out;
+        ta.focus();
+        ta.setSelectionRange(a, b);
+        fit();
+      };
+      panel.querySelectorAll('.hw-edit-tools button').forEach(btn => {
+        btn.addEventListener('mousedown', e => e.preventDefault());   // keep the selection
+        btn.addEventListener('click', () => { const [o, c] = btn.dataset.mark.split('|'); toggle(o, c); });
+      });
+      ta.addEventListener('keydown', e => {
+        if (!(e.ctrlKey || e.metaKey) || !e.shiftKey) return;
+        const k = e.key.toLowerCase();
+        const m = k === 'h' ? ['==', '=='] : k === 'o' ? ['((', '))'] : k === 'x' ? ['~~', '~~'] : null;
+        if (m) { e.preventDefault(); toggle(m[0], m[1]); }
+      });
       const sw = panel.querySelector('.hw-marker-swatch');
       sw.style.background = marker;
       sw.addEventListener('pointerdown', e => e.stopPropagation());
