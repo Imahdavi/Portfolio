@@ -34,6 +34,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/contact",
+      "destination": "/index.html"
+    },
+    {
       "source": "/media/:path*",
       "destination": "https://imahdavi.github.io/Portfolio/media/:path*"
     }

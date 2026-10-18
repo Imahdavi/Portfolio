@@ -13373,10 +13373,10 @@ function showView(toId, anim) {
    straight onto it. Aliases are friendlier spellings that land on the
    same section and are rewritten to its address. vercel.json serves
    index.html for every one of them. */
-// /exp is Experience's old, short address and /soon the Ticket section's;
-// both are kept so earlier links still land.
-const VIEW_PATHS = { 'view-exp':'/experience', 'view-soon':'/ticket', 'view-invoice':'/invoice' };
-const VIEW_PATH_ALIASES = { '/exp':'/experience', '/soon':'/ticket', '/invoices':'/invoice' };
+// /exp is Experience's old, short address, and /ticket and /soon the
+// Contact section's old ones; all are kept so earlier links still land.
+const VIEW_PATHS = { 'view-exp':'/experience', 'view-soon':'/contact', 'view-invoice':'/invoice' };
+const VIEW_PATH_ALIASES = { '/exp':'/experience', '/ticket':'/contact', '/soon':'/contact', '/invoices':'/invoice' };
 function viewForPath(path) {
   let p = (path.replace(/\/+$/, '') || '/').toLowerCase();
   p = VIEW_PATH_ALIASES[p] || p;
