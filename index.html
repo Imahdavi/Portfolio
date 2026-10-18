@@ -117,6 +117,47 @@
       src: url(/fonts/hilda.ttf) format('truetype');
       unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
     }
+    /* Pofak: another Persian face to try for the note (Tanin is its own family). */
+    @font-face {
+      font-family: 'Pofak';
+      font-style: normal;
+      font-weight: 300;
+      font-display: swap;
+      src: url(/fonts/pofak-light.ttf) format('truetype');
+      unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+    }
+    @font-face {
+      font-family: 'Pofak';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url(/fonts/pofak-regular.ttf) format('truetype');
+      unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+    }
+    @font-face {
+      font-family: 'Pofak';
+      font-style: normal;
+      font-weight: 500;
+      font-display: swap;
+      src: url(/fonts/pofak-medium.ttf) format('truetype');
+      unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+    }
+    @font-face {
+      font-family: 'Pofak';
+      font-style: normal;
+      font-weight: 600;
+      font-display: swap;
+      src: url(/fonts/pofak-demibold.ttf) format('truetype');
+      unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+    }
+    @font-face {
+      font-family: 'Pofak Tanin';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url(/fonts/pofak-tanin.ttf) format('truetype');
+      unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+    }
     /* Fira Code latin-ext */
     @font-face {
       font-family: 'Fira Code';
@@ -4656,7 +4697,7 @@
       from { clip-path:inset(-.4em -.25em -.4em calc(100% + .25em)); }
       to   { clip-path:inset(-.4em -.25em -.4em -.25em); }
     }
-    .hw-note[dir="rtl"] { font-family:'Hilda', 'Ravi', var(--font-body); font-weight:400; font-size:1.5rem; line-height:1.65; text-align:right; }
+    .hw-note[dir="rtl"] { font-family:'Pofak', 'Ravi', var(--font-body); font-weight:500; font-size:1.12rem; line-height:1.8; text-align:right; }
     .hw-note[dir="rtl"] .hw-strike { transform:scaleX(-1); }   /* struck from the right too */
     /* The language switch: the Home page's switch, smaller, centred above
        the note in both languages so it does not jump when switched. */
