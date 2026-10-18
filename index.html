@@ -615,6 +615,9 @@
 
     /* ─────────────────── SECTION TITLE ─────────────────── */
     .sec-label { font-family:var(--font-heading); font-size:27px; font-weight:600; margin-bottom:18px; }
+    .sec-label[data-tag]::after { content:attr(data-tag); display:inline-block; vertical-align:middle; margin-left:12px; transform:translateY(-2px);
+      font:500 11px/1 var(--font-body); letter-spacing:.01em; color:#6f6a64; background:rgba(0,0,0,.05); border-radius:99px; padding:4px 9px; }
+    body.dark .sec-label[data-tag]::after { color:var(--d-text-2); background:var(--d-raised); }
 
     /* ─────────────────── CARD GRID ─────────────────── */
     /* Fixed-size columns (auto-fill), not 3 stretchy fr columns — cards
@@ -13122,10 +13125,14 @@ function renderHomeSections(sections) {
     return;
   }
 
-  sections.forEach(sec => {
+  sections.forEach((sec, si) => {
     const label = document.createElement('div');
     label.className = 'sec-label';
     label.textContent = sec.title;
+    // What kind of work the row is: the first is the in-house jobs, the
+    // rest project-based and outsourced. Drawn by CSS from data-tag, so it
+    // stays out of the editable title text.
+    label.dataset.tag = si === 0 ? 'In-house' : 'Project-based · Outsourced';
     container.appendChild(label);
 
     const grid = document.createElement('div');
