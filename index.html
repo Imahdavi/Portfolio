@@ -4683,6 +4683,9 @@
       font:400 12px/1.4 var(--font-body); color:#8a8480; }
     .hw-edit-hint code { font:500 11.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background:rgba(0,0,0,.05); border-radius:5px; padding:1px 5px; }
     .hw-edit-marker { display:inline-flex; align-items:center; gap:8px; }
+    .hw-edit-font { display:inline-flex; align-items:center; gap:8px; }
+    .hw-font-select { font:500 12.5px var(--font-body); color:#2a2a2a; background:#fff; border:1px solid rgba(0,0,0,.12); border-radius:8px; padding:4px 8px; cursor:pointer; }
+    body.dark .hw-font-select { color:var(--d-text); background:var(--d-surface); border-color:var(--d-line-2); }
     body.dark .hw-edit-text { color:var(--d-text); background:var(--d-surface); border-color:var(--d-line-2); }
     body.dark .hw-edit-bar { color:var(--d-text-3); }
     body.dark .hw-edit-hint code { background:var(--d-raised); }
@@ -4697,7 +4700,7 @@
       from { clip-path:inset(-.4em -.25em -.4em calc(100% + .25em)); }
       to   { clip-path:inset(-.4em -.25em -.4em -.25em); }
     }
-    .hw-note[dir="rtl"] { font-family:'Pofak', 'Ravi', var(--font-body); font-weight:500; font-size:1.12rem; line-height:1.8; text-align:right; }
+    .hw-note[dir="rtl"] { font-family:var(--fa-font, 'Hilda'), var(--font-body); font-weight:var(--fa-weight, 400); font-size:var(--fa-size, 1.5rem); line-height:var(--fa-line, 1.65); text-align:right; }
     .hw-note[dir="rtl"] .hw-strike { transform:scaleX(-1); }   /* struck from the right too */
     /* The language switch: the Home page's switch, smaller, centred above
        the note in both languages so it does not jump when switched. */
@@ -18787,6 +18790,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // visitor). Persian is written right to left in Doran.
   const texts = { en: DEFAULT_TEXT, fa: DEFAULT_TEXT_FA };
   let lang = 'en', marker = DEFAULT_MARKER, dirty = false;
+  // The Persian faces on offer in edit mode (whoAmI.faFont); Hilda unless picked.
+  const FA_FONTS = {
+    hilda: { name: 'Hilda', family: "'Hilda'", weight: 400, size: '1.5rem', line: 1.65 },
+    doran: { name: 'Doran', family: "'Doran'", weight: 500, size: '1.12rem', line: 1.8 },
+    ravi:  { name: 'Ravi',  family: "'Ravi'",  weight: 500, size: '1.12rem', line: 1.8 },
+    pofak: { name: 'Pofak', family: "'Pofak'", weight: 500, size: '1.12rem', line: 1.8 },
+  };
+  const DEFAULT_FA_FONT = 'hilda';
+  let faFont = DEFAULT_FA_FONT;
   try { if (localStorage.getItem('hwLang') === 'fa') lang = 'fa'; } catch (e) {}
 
   const parse = src => {
@@ -18887,6 +18899,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const paintMarker = () => note.style.setProperty('--hw-marker', marker);
+  // The Persian face, as picked in edit mode: family, weight, and the size
+  // and line that make it sit level with the English.
+  const paintFont = () => {
+    const f = FA_FONTS[faFont] || FA_FONTS[DEFAULT_FA_FONT];
+    note.style.setProperty('--fa-font', f.family);
+    note.style.setProperty('--fa-weight', f.weight);
+    note.style.setProperty('--fa-size', f.size);
+    note.style.setProperty('--fa-line', f.line);
+  };
 
   // Settings arrive after the first render; take them when they do.
   window.hwNoteApply = (saved) => {
@@ -18895,6 +18916,8 @@ document.addEventListener('DOMContentLoaded', () => {
     texts.en = pick(saved && saved.text, DEFAULT_TEXT);
     texts.fa = pick(saved && saved.textFa, DEFAULT_TEXT_FA);
     marker = (saved && saved.marker) || DEFAULT_MARKER;
+    faFont = (saved && FA_FONTS[saved.faFont]) ? saved.faFont : DEFAULT_FA_FONT;
+    paintFont();
     paintMarker();
     if (texts[lang] !== before) render();
   };
@@ -18928,6 +18951,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (panel) return;
       panel = document.createElement('div');
       panel.className = 'hw-edit';
+      panel.dir = 'ltr';   // the controls stay put; only the text box follows the language
       panel.innerHTML =
         '<div class="hw-edit-tools" role="toolbar" aria-label="Marks">' +
           '<button type="button" data-mark="==|==" title="Highlight the selection (Ctrl+Shift+H)"><span class="hw-tool-mark">Marker</span></button>' +
@@ -18938,6 +18962,7 @@ document.addEventListener('DOMContentLoaded', () => {
         '<textarea class="hw-edit-text" spellcheck="true" aria-label="Who am I? text"></textarea>' +
         '<div class="hw-edit-bar">' +
           '<span class="hw-edit-hint"><code>==highlight==</code> <code>((circle))</code> <code>~~strike~~</code> · blank line = new paragraph</span>' +
+          '<label class="hw-edit-font">Persian font <select class="hw-font-select">' + Object.keys(FA_FONTS).map(k => '<option value="' + k + '">' + FA_FONTS[k].name + '</option>').join('') + '</select></label>' +
           '<span class="hw-edit-marker">Marker <button type="button" class="nav-color-input hw-marker-swatch" title="Marker colour" aria-label="Choose the marker colour"></button></span>' +
         '</div>';
       note.append(panel);
@@ -18995,6 +19020,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const m = k === 'h' ? ['==', '=='] : k === 'o' ? ['((', '))'] : k === 'x' ? ['~~', '~~'] : null;
         if (m) { e.preventDefault(); toggle(m[0], m[1]); }
       });
+      const fsel = panel.querySelector('.hw-font-select');
+      fsel.value = faFont;
+      fsel.addEventListener('change', () => { faFont = fsel.value; paintFont(); save(); });
       const sw = panel.querySelector('.hw-marker-swatch');
       sw.style.background = marker;
       sw.addEventListener('pointerdown', e => e.stopPropagation());
@@ -19018,13 +19046,13 @@ document.addEventListener('DOMContentLoaded', () => {
   function save() {
     if (typeof _cachedSettings === 'undefined') return;
     if (!_cachedSettings) _cachedSettings = {};
-    _cachedSettings.whoAmI = { text: texts.en, textFa: texts.fa, marker };
+    _cachedSettings.whoAmI = { text: texts.en, textFa: texts.fa, marker, faFont };
     if (typeof saveSettings === 'function') saveSettings();
   }
 
   render();
   if (typeof _cachedSettings !== 'undefined' && _cachedSettings && _cachedSettings.whoAmI) window.hwNoteApply(_cachedSettings.whoAmI);
-  else paintMarker();
+  else { paintMarker(); paintFont(); }
 
   const go = () => note.classList.add('go');
   if (!('IntersectionObserver' in window)) return go();
