@@ -4601,11 +4601,11 @@
     }
     .hw-note[dir="rtl"] { font-family:'Aref Ruqaa', 'Caveat', cursive; font-weight:400; font-size:1.5rem; line-height:1.55; text-align:right; }
     .hw-note[dir="rtl"] .hw-strike { transform:scaleX(-1); }   /* struck from the right too */
-    /* The language switch: the Home page's switch, smaller, above the note. */
-    .hw-lang { height:32px; margin:0 0 18px; padding:3px; font-family:var(--font-body); font-weight:400; line-height:normal; }
+    /* The language switch: the Home page's switch, smaller, centred above
+       the note in both languages so it does not jump when switched. */
+    .hw-lang { height:32px; margin:0 auto 18px; padding:3px; font-family:var(--font-body); font-weight:400; line-height:normal; }
     .hw-lang .vsw-opt > span { font-size:12.5px; padding:0 11px; }
     .hw-lang .hw-lang-fa { font-family:var(--font-body); font-size:12.5px; }
-    .hw-note[dir="rtl"] .hw-lang { margin-left:auto; }
     /* Held on the first frame (nothing written yet) until it scrolls into view. */
     .hw-note:not(.go) [data-ink], .hw-note:not(.go) [data-draw] { animation-play-state:paused !important; }
     @media (prefers-reduced-motion:reduce) {
