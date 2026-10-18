@@ -49,6 +49,17 @@
       src: url(/fonts/caveat-latin.woff2) format('woff2');
       unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
     }
+    /* Aref Ruqaa arabic: the Persian hand for the Who am I? note (Ruqaa is
+       everyday Persian handwriting, as Caveat is English). Self-hosted like
+       the rest. */
+    @font-face {
+      font-family: 'Aref Ruqaa';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url(/fonts/arefruqaa-arabic-400.woff2) format('woff2');
+      unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+    }
     /* Fira Code latin-ext */
     @font-face {
       font-family: 'Fira Code';
@@ -4583,6 +4594,18 @@
       to   { clip-path:inset(-.4em -.25em -.4em -.25em); }
     }
     @keyframes hw-draw { from { stroke-dashoffset:1; } to { stroke-dashoffset:0; } }
+    /* Persian: written right to left, so the nib opens from the right. */
+    @keyframes hw-write-rtl {
+      from { clip-path:inset(-.4em -.25em -.4em calc(100% + .25em)); }
+      to   { clip-path:inset(-.4em -.25em -.4em -.25em); }
+    }
+    .hw-note[dir="rtl"] { font-family:'Aref Ruqaa', 'Caveat', cursive; font-weight:400; font-size:1.5rem; line-height:1.55; text-align:right; }
+    .hw-note[dir="rtl"] .hw-strike { transform:scaleX(-1); }   /* struck from the right too */
+    /* The language switch: the Home page's switch, smaller, above the note. */
+    .hw-lang { height:32px; margin:0 0 18px; padding:3px; font-family:var(--font-body); font-weight:400; line-height:normal; }
+    .hw-lang .vsw-opt > span { font-size:12.5px; padding:0 11px; }
+    .hw-lang .hw-lang-fa { font-family:var(--font-body); font-size:12.5px; }
+    .hw-note[dir="rtl"] .hw-lang { margin-left:auto; }
     /* Held on the first frame (nothing written yet) until it scrolls into view. */
     .hw-note:not(.go) [data-ink], .hw-note:not(.go) [data-draw] { animation-play-state:paused !important; }
     @media (prefers-reduced-motion:reduce) {
@@ -5636,6 +5659,18 @@ one keyframe at a time</div>
          note" in the script). data-hw carries the marks: ==highlighter==,
          ((ring)), ~~crossed out~~. -->
     <section class="hw-note" id="hw-note" aria-label="Who I am">
+      <!-- English / Persian, as the Home page's Category / Brand switch. -->
+      <div class="view-switch hw-lang" dir="ltr" role="radiogroup" aria-label="Language">
+        <label class="vsw-opt"><input type="radio" name="hw-lang" value="en" checked aria-label="English"><span>English</span></label>
+        <label class="vsw-opt"><input type="radio" name="hw-lang" value="fa" aria-label="فارسی"><span class="hw-lang-fa">فارسی</span></label>
+      </div>
+      <!-- The Persian note, in the same markup. -->
+      <template id="hw-note-fa">
+        <p data-hw="من کی‌ام؟"></p>
+        <p data-hw="من ==علیرضا==م، یه ((موشن دیزاینر))."></p>
+        <p data-hw="از دوران دبیرستان با موشن دیزاین آشنا شدم و شروع کردم به ساختن محتوا برای ~~یه پیج~~ یه برند شخصی؛ ==پاپ‌آرت و تایپوگرافی== و جون دادن بهشون با حرکت."></p>
+        <p data-hw="دو سه سال بعد، کم‌کم وارد کار جدی و پروژه‌های واقعی شدم و از اون موقع تا حالا با ((برندهای)) مختلف توی حوزه‌های متفاوت کار کردم؛ با بیش از ==چهار سال== تجربه در موشن دیزاین."></p>
+      </template>
       <p data-hw="Who am I?">Who am I?</p>
       <p data-hw="I’m ==Alireza==, a ((motion designer)).">I’m Alireza, a motion designer.</p>
       <p data-hw="It all started back in high school, when I first came across motion design. I began making content for ~~a page~~ a personal brand of my own — ==pop art and typography==, and the ways they could move.">It all started back in high school, when I first came across motion design. I began making content for a personal brand of my own — pop art and typography, and the ways they could move.</p>
@@ -18633,7 +18668,7 @@ document.addEventListener('DOMContentLoaded', () => {
    working down the page. Nothing runs until it is on screen.
 
    The words and the marker colour are editable in edit mode and kept in
-   settings (whoAmI: { text, marker }). The text is the same markup the
+   settings (whoAmI: { text, textFa, marker }). The text is the same markup the
    page is written in: ==highlighter==, ((ring)), ~~crossed out~~, and a
    blank line between paragraphs. The markup in the HTML is the default. */
 (function () {
@@ -18647,8 +18682,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const SYNTAX = /==(.+?)==|\(\((.+?)\)\)|~~(.+?)~~/g;
   const SVG = 'http://www.w3.org/2000/svg';
   const DEFAULT_MARKER = '#f5e1a8';
-  const DEFAULT_TEXT = [...note.querySelectorAll('[data-hw]')].map(el => el.dataset.hw).join('\n\n');
-  let text = DEFAULT_TEXT, marker = DEFAULT_MARKER;
+  const DEFAULT_TEXT = [...note.querySelectorAll(':scope > [data-hw]')].map(el => el.dataset.hw).join('\n\n');
+  const faTpl = document.getElementById('hw-note-fa');
+  const DEFAULT_TEXT_FA = faTpl ? [...faTpl.content.querySelectorAll('[data-hw]')].map(el => el.dataset.hw).join('\n\n') : DEFAULT_TEXT;
+  // The note in each language, and which one is showing (remembered per
+  // visitor). Persian is written right to left in Aref Ruqaa.
+  const texts = { en: DEFAULT_TEXT, fa: DEFAULT_TEXT_FA };
+  let lang = 'en', marker = DEFAULT_MARKER, dirty = false;
+  try { if (localStorage.getItem('hwLang') === 'fa') lang = 'fa'; } catch (e) {}
 
   const parse = src => {
     const out = []; let last = 0;
@@ -18682,7 +18723,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Writes the note out from markup, replacing whatever paragraphs are there.
   function render() {
     note.querySelectorAll(':scope > p').forEach(p => p.remove());
-    const sources = text.split(/\n\s*\n/).map(s => s.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean);
+    // Persian is wiped on right to left, the way it is written.
+    const rtl = lang === 'fa', W = rtl ? 'hw-write-rtl' : 'hw-write';
+    note.dir = rtl ? 'rtl' : 'ltr';
+    note.lang = lang;
+    const sources = texts[lang].split(/\n\s*\n/).map(s => s.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean);
     const parsed = sources.map(parse);
 
     // Cost the whole note first, so it can be compressed evenly if writing
@@ -18707,7 +18752,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const w = document.createElement('span');
           w.className = 'hw-w'; w.setAttribute('data-ink', ''); w.setAttribute('aria-hidden', 'true');
           w.textContent = part;
-          w.style.animation = `hw-write ${part.length * perChar}s linear ${cursor * perChar}s both`;
+          w.style.animation = `${W} ${part.length * perChar}s linear ${cursor * perChar}s both`;
           cursor += part.length;
           words.append(w);
         });
@@ -18719,7 +18764,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (t.mark === 'mark') {
           const sw = document.createElement('span');
           sw.className = 'hw-swipe'; sw.setAttribute('data-ink', ''); sw.setAttribute('aria-hidden', 'true');
-          sw.style.animation = `hw-write ${Math.max((cursor - from) * perChar, .4)}s ${EASE} ${from * perChar}s both`;
+          sw.style.animation = `${W} ${Math.max((cursor - from) * perChar, .4)}s ${EASE} ${from * perChar}s both`;
           k.append(sw);
         }
         const inner = document.createElement('span'); inner.className = 'hw-in'; inner.append(words);
@@ -18747,13 +18792,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Settings arrive after the first render; take them when they do.
   window.hwNoteApply = (saved) => {
-    const t = saved && typeof saved.text === 'string' && saved.text.trim() ? saved.text : DEFAULT_TEXT;
-    const m = (saved && saved.marker) || DEFAULT_MARKER;
-    const changed = t !== text;
-    text = t; marker = m;
+    const pick = (v, d) => (typeof v === 'string' && v.trim() ? v : d);
+    const before = texts[lang];
+    texts.en = pick(saved && saved.text, DEFAULT_TEXT);
+    texts.fa = pick(saved && saved.textFa, DEFAULT_TEXT_FA);
+    marker = (saved && saved.marker) || DEFAULT_MARKER;
     paintMarker();
-    if (changed) render();
+    if (texts[lang] !== before) render();
   };
+
+  // The English / Persian switch. Switching while editing keeps what was
+  // typed in the box for the language being left.
+  const radios = [...note.querySelectorAll('input[name="hw-lang"]')];
+  radios.forEach(r => {
+    r.checked = r.value === lang;
+    r.addEventListener('change', () => {
+      if (!r.checked || r.value === lang) return;
+      const panel = note.querySelector('.hw-edit');
+      const ta = panel && panel.querySelector('textarea');
+      if (ta) {
+        const t = ta.value.replace(/\r/g, '').trim();
+        if (t && t !== texts[lang]) { texts[lang] = t; dirty = true; }
+      }
+      lang = r.value;
+      try { localStorage.setItem('hwLang', lang); } catch (e) {}
+      render();
+      if (ta) { ta.value = texts[lang]; ta.dir = note.dir; ta.dispatchEvent(new Event('input')); }
+    });
+  });
 
   /* Edit mode: the rendered note gives way to a box holding its markup, a
      line saying what the marks are, and a swatch for the marker colour.
@@ -18779,7 +18845,8 @@ document.addEventListener('DOMContentLoaded', () => {
       note.append(panel);
       note.classList.add('hw-editing');
       const ta = panel.querySelector('textarea');
-      ta.value = text;
+      ta.value = texts[lang];
+      ta.dir = note.dir;
       const fit = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
       ta.addEventListener('input', fit);
       requestAnimationFrame(fit);
@@ -18845,14 +18912,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const t = panel.querySelector('textarea').value.replace(/\r/g, '').trim();
       panel.remove();
       note.classList.remove('hw-editing');
-      if (t && t !== text) { text = t; render(); save(); }
+      if (t && t !== texts[lang]) { texts[lang] = t; dirty = true; }
+      if (dirty) { dirty = false; render(); save(); }
     }
   };
 
   function save() {
     if (typeof _cachedSettings === 'undefined') return;
     if (!_cachedSettings) _cachedSettings = {};
-    _cachedSettings.whoAmI = { text, marker };
+    _cachedSettings.whoAmI = { text: texts.en, textFa: texts.fa, marker };
     if (typeof saveSettings === 'function') saveSettings();
   }
 
