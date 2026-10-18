@@ -4704,41 +4704,15 @@
     .hw-note[dir="rtl"] .hw-strike { transform:scaleX(-1); }   /* struck from the right too */
     /* The language switch: the Home page's switch, smaller, centred above
        the note in both languages so it does not jump when switched. */
-    /* ── Me, on cards (21st.dev "Display Cards") ── */
-    .dcards { display:grid; grid-template-areas:'stack'; place-items:center; width:max-content; margin:44px auto 0; padding:0 8rem 6rem 0; }
-    .dcard { grid-area:stack; position:relative; display:flex; flex-direction:column; justify-content:space-between; gap:4px;
-      width:22rem; height:9rem; padding:12px 16px; box-sizing:border-box; user-select:none;
-      border:2px solid rgba(0,0,0,.08); border-radius:12px; background:rgba(244,243,241,.7); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
-      font-family:var(--font-body); color:#1a1a1a; text-align:left;
-      transform:skewY(-8deg); transition:transform .7s, filter .7s, border-color .7s, background .7s; }
-    /* The card fades into the page on its right, as in the source. */
-    .dcard::after { content:''; position:absolute; right:-4px; top:-5%; height:110%; width:20rem; pointer-events:none; background:linear-gradient(to left, #fff, transparent); }
-    .dcard:hover { border-color:rgba(0,0,0,.16); background:rgba(236,234,231,1); }
-    .dcard > * { display:flex; align-items:center; gap:8px; position:relative; z-index:1; margin:0; }
-    .dcard-ic { width:42px; height:42px; flex:none; border-radius:50%; overflow:hidden; background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.08); }
-    .dcard-ic img { width:100%; height:100%; object-fit:cover; display:block; }
-    .dcard-title { font-size:17px; font-weight:600; color:#1a1a1a; }
-    .dcard-desc { font-size:17px; white-space:nowrap; color:#3a3a3a; }
-    .dcard-date { font-size:13px; color:#a89e91; }
-    /* The two behind: grey, under a wash, until hovered. */
-    .dcard-back, .dcard-mid { filter:grayscale(1); }
-    .dcard-back::before, .dcard-mid::before { content:''; position:absolute; inset:0; border-radius:10px; background:rgba(255,255,255,.5); z-index:2; pointer-events:none; transition:opacity .7s; }
-    .dcard-back:hover, .dcard-mid:hover { filter:none; }
-    .dcard-back:hover::before, .dcard-mid:hover::before { opacity:0; }
-    .dcard-back  { transform:skewY(-8deg); }
-    .dcard-back:hover  { transform:skewY(-8deg) translateY(-2.5rem); }
-    .dcard-mid   { transform:skewY(-8deg) translate(4rem, 2.5rem); }
-    .dcard-mid:hover   { transform:skewY(-8deg) translate(4rem, -.25rem); }
-    .dcard-front { transform:skewY(-8deg) translate(8rem, 5rem); }
-    .dcard-front:hover { transform:skewY(-8deg) translate(8rem, 2.5rem); }
-    body.dark .dcard { color:var(--d-text); border-color:var(--d-line-2); background:rgba(29,30,32,.7); }
-    body.dark .dcard:hover { background:var(--d-surface); border-color:rgba(255,255,255,.2); }
-    body.dark .dcard::after { background:linear-gradient(to left, var(--d-bg), transparent); }
-    body.dark .dcard-back::before, body.dark .dcard-mid::before { background:rgba(20,21,22,.5); }
-    body.dark .dcard-title { color:var(--d-text); }
-    body.dark .dcard-desc { color:var(--d-text-2); }
-    body.dark .dcard-date { color:var(--d-text-3); }
-    @media (max-width:560px) { .dcards { zoom:.78; } }
+    /* ── Me (one card from 21st.dev "Display Cards") ── */
+    .dcards { display:flex; justify-content:center; margin:56px auto 36px; }
+    .dcard-photo { width:min(20rem, 78vw); aspect-ratio:1; padding:8px; box-sizing:border-box;
+      border:2px solid rgba(0,0,0,.08); border-radius:14px; background:rgba(244,243,241,.7); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
+      transform:skewY(-8deg); transition:transform .7s, border-color .7s, background .7s; }
+    .dcard-photo:hover { transform:skewY(-8deg) translateY(-.6rem); border-color:rgba(0,0,0,.16); background:rgba(236,234,231,1); }
+    .dcard-photo img { width:100%; height:100%; object-fit:cover; display:block; border-radius:8px; }
+    body.dark .dcard-photo { border-color:var(--d-line-2); background:rgba(29,30,32,.7); }
+    body.dark .dcard-photo:hover { background:var(--d-surface); border-color:rgba(255,255,255,.2); }
     .hw-lang { height:32px; margin:0 auto 18px; padding:3px; font-family:var(--font-body); font-weight:400; line-height:normal; }
     .hw-lang .vsw-opt > span { font-size:12.5px; padding:0 11px; }
     .hw-lang .hw-lang-fa { font-family:'Ravi', 'Doran', var(--font-body); font-size:12.5px; }
@@ -5812,26 +5786,11 @@ one keyframe at a time</div>
       <p data-hw="It all started back in high school, when I first came across motion design. I began making content for ~~a page~~ a personal brand of my own — ==pop art and typography==, and the ways they could move.">It all started back in high school, when I first came across motion design. I began making content for a personal brand of my own — pop art and typography, and the ways they could move.</p>
       <p data-hw="Two or three years in, the work I kept making had built up my experience, and little by little I moved into more business-minded projects; since then I’ve had the chance to work with ((brands)) across all kinds of fields, with more than ==four years== of experience in motion design.">Two or three years in, the work I kept making had built up my experience, and little by little I moved into more business-minded projects; since then I’ve had the chance to work with brands across all kinds of fields, with more than four years of experience in motion design.</p>
     </section>
-    <!-- Me, on cards — 21st.dev's "Display Cards": three skewed cards stacked
-         on one grid cell, stepping down and to the right; the two behind are
-         grey under a wash until hovered, and each lifts when hovered. Here
-         they carry my photo, the doodle I draw of myself, and my mark. -->
+    <!-- Me — a single card from 21st.dev's "Display Cards": its border, its
+         frosted fill and its skew, holding just my photo, square, and lifting
+         a little when hovered. -->
     <div class="dcards" aria-label="Me">
-      <div class="dcard dcard-back">
-        <div class="dcard-top"><span class="dcard-ic"><img src="/media/site/cards/mark.png" alt="" loading="lazy"></span><p class="dcard-title">The mark</p></div>
-        <p class="dcard-desc">AM, as I sign my work</p>
-        <p class="dcard-date">Logo</p>
-      </div>
-      <div class="dcard dcard-mid">
-        <div class="dcard-top"><span class="dcard-ic"><img src="/media/site/cards/doodle.png" alt="" loading="lazy"></span><p class="dcard-title">The doodle</p></div>
-        <p class="dcard-desc">How I draw myself</p>
-        <p class="dcard-date">Sketch</p>
-      </div>
-      <div class="dcard dcard-front">
-        <div class="dcard-top"><span class="dcard-ic"><img src="/media/site/cards/photo.jpg" alt="Alireza Mahdavi" loading="lazy"></span><p class="dcard-title">Alireza Mahdavi</p></div>
-        <p class="dcard-desc">Motion Designer, Tehran</p>
-        <p class="dcard-date">That’s me</p>
-      </div>
+      <div class="dcard dcard-photo"><img src="/media/site/cards/photo.jpg" alt="Alireza Mahdavi" loading="lazy" decoding="async"></div>
     </div>
     <!-- Edit mode: drag to set the gap between the note and the timeline. -->
     <div class="section-gap-handle" id="xtlTopHandle" title="Drag to adjust spacing before this section">
