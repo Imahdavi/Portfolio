@@ -59,6 +59,22 @@
       src: url(/fonts/doran-regular.ttf) format('truetype');
       unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
     }
+    @font-face {
+      font-family: 'Doran';
+      font-style: normal;
+      font-weight: 500;
+      font-display: swap;
+      src: url(/fonts/doran-medium.ttf) format('truetype');
+      unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+    }
+    @font-face {
+      font-family: 'Doran';
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+      src: url(/fonts/doran-bold.ttf) format('truetype');
+      unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+    }
     /* Fira Code latin-ext */
     @font-face {
       font-family: 'Fira Code';
@@ -4598,7 +4614,7 @@
       from { clip-path:inset(-.4em -.25em -.4em calc(100% + .25em)); }
       to   { clip-path:inset(-.4em -.25em -.4em -.25em); }
     }
-    .hw-note[dir="rtl"] { font-family:'Doran', var(--font-body); font-weight:400; font-size:1.3rem; line-height:1.75; text-align:right; }
+    .hw-note[dir="rtl"] { font-family:'Doran', var(--font-body); font-weight:700; font-size:1.3rem; line-height:1.75; text-align:right; }
     .hw-note[dir="rtl"] .hw-strike { transform:scaleX(-1); }   /* struck from the right too */
     /* The language switch: the Home page's switch, smaller, centred above
        the note in both languages so it does not jump when switched. */
