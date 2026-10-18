@@ -49,15 +49,14 @@
       src: url(/fonts/caveat-latin.woff2) format('woff2');
       unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
     }
-    /* Aref Ruqaa arabic: the Persian hand for the Who am I? note (Ruqaa is
-       everyday Persian handwriting, as Caveat is English). Self-hosted like
-       the rest. */
+    /* Doran (Fereshte Iranshahi, Reza Bakhtiarifard): the Persian face for
+       the Who am I? note. Self-hosted like the rest; its own TTF, as sent. */
     @font-face {
-      font-family: 'Aref Ruqaa';
+      font-family: 'Doran';
       font-style: normal;
       font-weight: 400;
       font-display: swap;
-      src: url(/fonts/arefruqaa-arabic-400.woff2) format('woff2');
+      src: url(/fonts/doran-regular.ttf) format('truetype');
       unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
     }
     /* Fira Code latin-ext */
@@ -4599,13 +4598,13 @@
       from { clip-path:inset(-.4em -.25em -.4em calc(100% + .25em)); }
       to   { clip-path:inset(-.4em -.25em -.4em -.25em); }
     }
-    .hw-note[dir="rtl"] { font-family:'Aref Ruqaa', 'Caveat', cursive; font-weight:400; font-size:1.5rem; line-height:1.55; text-align:right; }
+    .hw-note[dir="rtl"] { font-family:'Doran', var(--font-body); font-weight:400; font-size:1.3rem; line-height:1.75; text-align:right; }
     .hw-note[dir="rtl"] .hw-strike { transform:scaleX(-1); }   /* struck from the right too */
     /* The language switch: the Home page's switch, smaller, centred above
        the note in both languages so it does not jump when switched. */
     .hw-lang { height:32px; margin:0 auto 18px; padding:3px; font-family:var(--font-body); font-weight:400; line-height:normal; }
     .hw-lang .vsw-opt > span { font-size:12.5px; padding:0 11px; }
-    .hw-lang .hw-lang-fa { font-family:var(--font-body); font-size:12.5px; }
+    .hw-lang .hw-lang-fa { font-family:'Doran', var(--font-body); font-size:12.5px; }
     /* Held on the first frame (nothing written yet) until it scrolls into view. */
     .hw-note:not(.go) [data-ink], .hw-note:not(.go) [data-draw] { animation-play-state:paused !important; }
     @media (prefers-reduced-motion:reduce) {
@@ -18686,7 +18685,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const faTpl = document.getElementById('hw-note-fa');
   const DEFAULT_TEXT_FA = faTpl ? [...faTpl.content.querySelectorAll('[data-hw]')].map(el => el.dataset.hw).join('\n\n') : DEFAULT_TEXT;
   // The note in each language, and which one is showing (remembered per
-  // visitor). Persian is written right to left in Aref Ruqaa.
+  // visitor). Persian is written right to left in Doran.
   const texts = { en: DEFAULT_TEXT, fa: DEFAULT_TEXT_FA };
   let lang = 'en', marker = DEFAULT_MARKER, dirty = false;
   try { if (localStorage.getItem('hwLang') === 'fa') lang = 'fa'; } catch (e) {}
