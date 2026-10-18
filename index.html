@@ -75,6 +75,39 @@
       src: url(/fonts/doran-bold.ttf) format('truetype');
       unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
     }
+    /* Ravi: a second Persian face to try for the note. */
+    @font-face {
+      font-family: 'Ravi';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url(/fonts/ravi-regular.ttf) format('truetype');
+      unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+    }
+    @font-face {
+      font-family: 'Ravi';
+      font-style: normal;
+      font-weight: 500;
+      font-display: swap;
+      src: url(/fonts/ravi-medium.ttf) format('truetype');
+      unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+    }
+    @font-face {
+      font-family: 'Ravi';
+      font-style: normal;
+      font-weight: 600;
+      font-display: swap;
+      src: url(/fonts/ravi-semibold.ttf) format('truetype');
+      unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+    }
+    @font-face {
+      font-family: 'Ravi';
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+      src: url(/fonts/ravi-bold.ttf) format('truetype');
+      unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+    }
     /* Fira Code latin-ext */
     @font-face {
       font-family: 'Fira Code';
@@ -4614,13 +4647,13 @@
       from { clip-path:inset(-.4em -.25em -.4em calc(100% + .25em)); }
       to   { clip-path:inset(-.4em -.25em -.4em -.25em); }
     }
-    .hw-note[dir="rtl"] { font-family:'Doran', var(--font-body); font-weight:500; font-size:1.12rem; line-height:1.8; text-align:right; }
+    .hw-note[dir="rtl"] { font-family:'Ravi', 'Doran', var(--font-body); font-weight:500; font-size:1.12rem; line-height:1.8; text-align:right; }
     .hw-note[dir="rtl"] .hw-strike { transform:scaleX(-1); }   /* struck from the right too */
     /* The language switch: the Home page's switch, smaller, centred above
        the note in both languages so it does not jump when switched. */
     .hw-lang { height:32px; margin:0 auto 18px; padding:3px; font-family:var(--font-body); font-weight:400; line-height:normal; }
     .hw-lang .vsw-opt > span { font-size:12.5px; padding:0 11px; }
-    .hw-lang .hw-lang-fa { font-family:'Doran', var(--font-body); font-size:12.5px; }
+    .hw-lang .hw-lang-fa { font-family:'Ravi', 'Doran', var(--font-body); font-size:12.5px; }
     /* Held on the first frame (nothing written yet) until it scrolls into view. */
     .hw-note:not(.go) [data-ink], .hw-note:not(.go) [data-draw] { animation-play-state:paused !important; }
     @media (prefers-reduced-motion:reduce) {
