@@ -4790,6 +4790,35 @@
     body.dark .xtl-sub { color:var(--d-text-3); }
     @media (prefers-reduced-motion:reduce) { .xtl-item { opacity:1; transform:none; transition:none; } }
 
+    /* Chapter scrubber in the Experience page's left margin (see its
+       script). Ticks are 2px bars whose width, opacity and thickness the
+       script drives each frame; the card rides beside them. */
+    .xsc { position:fixed; z-index:20; width:54px; transition:opacity .35s ease, visibility .35s; }
+    .xsc.xsc-off { display:none; }
+    .xsc.xsc-hidden { opacity:0; visibility:hidden; pointer-events:none; }
+    .xsc-list { display:flex; flex-direction:column; width:100%; }
+    .xsc-ch { display:flex; flex-direction:column; width:100%; padding:0; border:0; background:transparent; cursor:pointer; border-radius:3px; outline:none; }
+    .xsc-ch:focus-visible { outline:2px solid #1a1a1a; outline-offset:3px; }
+    .xsc-tick { display:block; height:9px; position:relative; }
+    .xsc-tick::before { content:''; position:absolute; left:0; top:3.5px; width:100%; height:2px; border-radius:99px; background:#1a1a1a; }
+    .xsc-ch[aria-selected="true"] .xsc-tick::before { background:#2e7d4f; }
+    .xsc-card {
+      position:absolute; right:calc(54px + 18px); width:220px; box-sizing:border-box; padding:12px 16px 13px;
+      border-radius:16px; border:1px solid rgba(0,0,0,.08); background:#fff; color:#1a1a1a; pointer-events:none; opacity:0;
+      transform-origin:right center; box-shadow:0 2px 6px -2px rgba(0,0,0,.08), 0 16px 36px -12px rgba(0,0,0,.22); font-family:var(--font-body);
+    }
+    /* Opens into the margin, to the left; flips right only when that is short. */
+    .xsc.xsc-flip .xsc-card { right:auto; left:calc(54px + 18px); transform-origin:left center; }
+    .xsc-meta { font-size:11.5px; font-weight:500; color:#a89e91; font-variant-numeric:tabular-nums; margin-bottom:3px; }
+    .xsc-title { font-family:var(--font-title); font-size:14px; font-weight:600; letter-spacing:-.01em; line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .xsc-desc { font-size:12.5px; line-height:1.5; color:#7d746b; margin-top:2px; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+    body.dark .xsc-tick::before { background:var(--d-text); }
+    body.dark .xsc-ch[aria-selected="true"] .xsc-tick::before { background:#7fd3a3; }
+    body.dark .xsc-card { background:var(--d-surface); border-color:var(--d-line); color:var(--d-text); box-shadow:0 2px 6px -2px rgba(0,0,0,.4), 0 16px 36px -12px rgba(0,0,0,.6); }
+    body.dark .xsc-meta { color:var(--d-text-3); }
+    body.dark .xsc-desc { color:var(--d-text-2); }
+    body.dark .xsc-ch:focus-visible { outline-color:var(--d-text); }
+
     /* Brands via an agency: a folded avatar stack that opens into a tree
        (see the client-tree script). The marks are the timeline's own discs,
        smaller: white rim, hairline ring, logo grey until hovered. */
@@ -19298,6 +19327,177 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
   }), { rootMargin: '0px 0px -8% 0px' });
   items.forEach(i => io.observe(i));
+})();
+
+/* ── Experience chapter scrubber ─────────────────────────
+   21st.dev's "Chapter Scrubber" in plain JS, as a navigator in the left
+   margin of the Experience page (desktop only, where there is a margin).
+   Each role or degree is a chapter of a few thin ticks. One pointer value
+   and one strength value, both on springs, drive every tick: a tick's rise
+   is the strength times a raised-cosine bump of its distance from the
+   pointer, so the wave swells under the cursor with no seams. A card beside
+   the rail names the chapter under the pointer; a click scrolls to it; the
+   chapter being read is the "current" one, its ticks darker. Arrow keys,
+   Home/End and Enter work on the rail. */
+(function () {
+  const view = document.getElementById('view-exp');
+  const items = [...document.querySelectorAll('#view-exp .xtl-item')];
+  if (!view || !items.length) return;
+
+  const TICKS = 3, ROW = 9, REST = 12, PEAK = 54, RADIUS = 4.5, CARD_W = 220, GAP = 18;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const chapters = items.map(it => ({
+    el: it,
+    title: (it.querySelector('.xtl-title') || {}).textContent || '',
+    sub: (it.querySelector('.xtl-cat') || {}).textContent || '',
+    date: ((it.querySelector('.xtl-date span') || {}).textContent || '').trim(),
+  }));
+
+  const rail = document.createElement('nav');
+  rail.className = 'xsc';
+  rail.setAttribute('aria-label', 'Experience chapters');
+  rail.innerHTML = `<div class="xsc-list" role="listbox" aria-orientation="vertical" aria-label="Roles and education"></div>
+    <div class="xsc-card" aria-hidden="true"><div class="xsc-meta"></div><div class="xsc-title"></div><div class="xsc-desc"></div></div>`;
+  view.appendChild(rail);
+  const list = rail.querySelector('.xsc-list'), card = rail.querySelector('.xsc-card');
+
+  // Ticks: TICKS per chapter, the first of each a little longer at rest so
+  // the chapters read as groups. One button per chapter carries focus.
+  const ticks = [];
+  chapters.forEach((c, ci) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'xsc-ch'; b.setAttribute('role', 'option');
+    b.setAttribute('aria-label', `${c.title}, ${c.sub}, ${c.date}`);
+    b.tabIndex = ci === 0 ? 0 : -1;
+    for (let k = 0; k < TICKS; k++) {
+      const s = document.createElement('span');
+      s.className = 'xsc-tick';
+      b.appendChild(s);
+      ticks.push({ el: s, ci, lead: k === 0 });
+    }
+    b.addEventListener('click', () => go(ci));
+    b.addEventListener('focus', () => { focused = ci; engage(ci * TICKS + 1, ci); });
+    list.appendChild(b);
+  });
+  const btns = [...list.children], last = ticks.length - 1;
+
+  // Springs (the original's: pointer stiff and near-critically damped, the
+  // rise softer). Plain semi-implicit Euler at the frame rate.
+  const spring = (k, c, m) => ({ x: 0, v: 0, to: 0, k, c, m });
+  const P = spring(700, 52, .5), S = spring(260, 30, .6);
+  const step = (s, dt) => { const a = (-s.k * (s.x - s.to) - s.c * s.v) / s.m; s.v += a * dt; s.x += s.v * dt; };
+  const bump = d => d >= RADIUS ? 0 : .5 * (1 + Math.cos(Math.PI * d / RADIUS));
+
+  let active = 0, current = -1, engaged = false, focused = null, hovering = false, raf = 0, lastT = 0;
+  function frame(t) {
+    const dt = Math.min(.032, lastT ? (t - lastT) / 1000 : .016); lastT = t;
+    if (reduce) { P.x = P.to; S.x = S.to; P.v = S.v = 0; }
+    else for (let i = 0; i < 4; i++) { step(P, dt / 4); step(S, dt / 4); }
+    const p = P.x, st = Math.max(0, Math.min(1, S.x));
+    for (let i = 0; i < ticks.length; i++) {
+      const tk = ticks[i], rise = st * bump(Math.abs(i - p));
+      const cur = tk.ci === current, rest = tk.lead ? REST + 6 : REST;
+      const base = cur ? .62 : (tk.lead ? .3 : .18);
+      tk.el.style.width = (rest + rise * (PEAK - rest)).toFixed(2) + 'px';
+      tk.el.style.opacity = (base + rise * (1 - base)).toFixed(3);
+      tk.el.style.transform = `scaleY(${(1 + rise * .4).toFixed(3)})`;
+    }
+    // The card rides with the pointer, kept inside the rail's height.
+    const H = ticks.length * ROW, ch = card.offsetHeight, half = ch / 2;
+    const centre = Math.min(Math.max((p + .5) * ROW, half), Math.max(half, H - half));
+    card.style.top = (centre - half).toFixed(1) + 'px';
+    card.style.opacity = st.toFixed(3);
+    card.style.transform = `translateX(${((1 - st) * (rail.classList.contains('xsc-flip') ? -6 : 6)).toFixed(2)}px) scale(${(.97 + st * .03).toFixed(4)})`;
+    const moving = Math.abs(P.v) > .01 || Math.abs(S.v) > .01 || Math.abs(P.x - P.to) > .002 || Math.abs(S.x - S.to) > .002;
+    raf = moving ? requestAnimationFrame(frame) : 0;
+    if (!moving) lastT = 0;
+  }
+  const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
+
+  function setActive(ci) {
+    ci = Math.max(0, Math.min(chapters.length - 1, ci));
+    if (ci === active && engaged) return;
+    active = ci;
+    const c = chapters[ci];
+    card.querySelector('.xsc-meta').textContent = c.date;
+    card.querySelector('.xsc-title').textContent = c.title;
+    card.querySelector('.xsc-desc').textContent = c.sub;
+    list.setAttribute('aria-activedescendant', '');
+  }
+  function engage(row, ci) {
+    P.to = row; S.to = 1;
+    if (!engaged) { engaged = true; placeCard(); }
+    setActive(ci); kick();
+  }
+  function disengage() { S.to = 0; engaged = false; kick(); }
+
+  list.addEventListener('pointermove', e => {
+    const r = list.getBoundingClientRect();
+    const row = Math.max(-.5, Math.min(last + .5, (e.clientY - r.top) / ROW - .5));
+    hovering = true;
+    engage(row, Math.floor(Math.max(0, Math.min(last, Math.round(row))) / TICKS));
+  });
+  list.addEventListener('pointerleave', () => {
+    hovering = false;
+    if (focused != null) { P.to = focused * TICKS + 1; kick(); } else disengage();
+  });
+  list.addEventListener('focusout', e => {
+    if (!list.contains(e.relatedTarget)) { focused = null; if (!hovering) disengage(); }
+  });
+  list.addEventListener('keydown', e => {
+    let n = focused ?? active;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') n = Math.min(chapters.length - 1, n + 1);
+    else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') n = Math.max(0, n - 1);
+    else if (e.key === 'Home') n = 0;
+    else if (e.key === 'End') n = chapters.length - 1;
+    else return;
+    e.preventDefault();
+    btns.forEach((b, i) => { b.tabIndex = i === n ? 0 : -1; });
+    btns[n].focus();
+  });
+
+  function go(ci) {
+    const el = chapters[ci].el;
+    const top = el.getBoundingClientRect().top - view.getBoundingClientRect().top + view.scrollTop - view.clientHeight * .28;
+    view.scrollTo({ top, behavior: reduce ? 'auto' : 'smooth' });
+  }
+
+  // The card opens toward whichever side has room for it.
+  function placeCard() {
+    const r = rail.getBoundingClientRect();
+    rail.classList.toggle('xsc-flip', r.left < CARD_W + GAP + 8);
+  }
+
+  // Where the rail sits: in the margin left of the page column, centred
+  // in the window, and only while the timeline is on screen.
+  const app = document.getElementById('app'), xtl = view.querySelector('.xtl');
+  function layout() {
+    const a = (app || view).getBoundingClientRect();
+    const room = a.left;
+    const fits = room >= PEAK + 70;
+    rail.classList.toggle('xsc-off', !fits);
+    if (!fits) return;
+    rail.style.left = Math.round(a.left - PEAK - 44) + 'px';
+    rail.style.top = Math.round((window.innerHeight - ticks.length * ROW) / 2) + 'px';
+    const x = xtl && xtl.getBoundingClientRect();
+    rail.classList.toggle('xsc-hidden', !x || x.bottom < 80 || x.top > window.innerHeight * .7);
+    // The chapter being read: the last one whose top has passed 40% of the window.
+    let cur = 0; const line = window.innerHeight * .4;
+    chapters.forEach((c, i) => { if (c.el.getBoundingClientRect().top < line) cur = i; });
+    if (cur !== current) {
+      current = cur;
+      btns.forEach((b, i) => { b.setAttribute('aria-selected', String(i === cur)); if (focused == null) b.tabIndex = i === cur ? 0 : -1; });
+      kick();
+      // An idle rail still needs one paint to show the new "current" ticks.
+      if (!raf) requestAnimationFrame(frame);
+    }
+  }
+  let lq = 0;
+  const queue = () => { if (!lq) lq = requestAnimationFrame(() => { lq = 0; layout(); }); };
+  view.addEventListener('scroll', queue, { passive: true });
+  window.addEventListener('resize', queue);
+  new MutationObserver(queue).observe(view, { attributes: true, attributeFilter: ['class'] });
+  setActive(0); layout(); frame(performance.now());
 })();
 
 
