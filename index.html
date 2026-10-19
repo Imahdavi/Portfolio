@@ -4812,6 +4812,7 @@
     .xcl-mark svg, .xcl-mark img { width:72%; height:72%; object-fit:contain; display:block; filter:grayscale(1) contrast(1.15); transition:filter .3s; }
     .xcl-head:hover .xcl-mark svg, .xcl-head:hover .xcl-mark img,
     .xcl-row.on .xcl-mark svg, .xcl-row.on .xcl-mark img { filter:none; }
+    .xcl-mark.xcl-ink svg { filter:brightness(0); opacity:.85; }
     .xcl-mark.xcl-cover { border-width:0; }
     .xcl-mark.xcl-cover img { width:100%; height:100%; object-fit:cover; }
     .xcl-initial { font-family:var(--font-title); font-weight:700; font-size:12px; color:#5a5148; background:#f3f1ee; }
@@ -19176,11 +19177,23 @@ document.addEventListener('DOMContentLoaded', () => {
         { name: 'Persil', mark: 'Persil' },
         { name: 'Tazh', mark: 'Tazh' },
         { name: 'Irancell', mark: 'Irancell' },
+        { name: 'Danone', mark: 'Danone' },
+        { name: 'Fanta', mark: 'Fanta' },
+        { name: 'Qlean', mark: 'Qlean' },
+        { name: 'Schauma', mark: 'Schauma' },
       ] },
     { co: 'Vam30', role: 'Visual & Motion Designer', date: 'Oct 2023 – Dec 2024',
       pts: ['Tutorial motion, web interactions and web animation, within the product’s technical team.'] },
     { co: 'Doran Office (Outsourced)', role: 'Motion Designer', date: 'Mar 2023 – Present', badge: 'Ongoing · Remote, project-based', remote: true,
-      pts: ['Motion videos for social media and other platforms, for a range of brands, as part of the Doran agency team.'] },
+      pts: ['Motion videos for social media and other platforms, for a range of brands, as part of the Doran agency team.'],
+      clients: [
+        // Monly's wordmark is hairlines across a wide box and vanishes in a
+        // 30px disc: only its M, cropped, and set in solid ink.
+        { name: 'Monly', mark: 'Monly', crop: '-1 11.5 44 39', ink: true },
+        { name: 'Digit', mark: 'Digit' },
+        { name: 'Nila', did: 'Logo motion' },
+        { name: 'Foresight' },
+      ] },
     { co: 'Freelance', role: 'Freelance Motion Designer', date: 'Apr 2019 – Mar 2023',
       pts: ['Worked on freelance projects across a range of mediums, including social media, logo motion, and video.'] },
   ];
@@ -19236,7 +19249,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const chev = '<svg class="xcl-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
   const clientMark = c => {
     const m = c.mark && window.BRAND_MARKS && window.BRAND_MARKS[c.mark];
-    if (m && m.svg) return `<i class="xcl-mark">${m.svg}</i>`;
+    if (m && m.svg) return `<i class="xcl-mark${c.ink ? ' xcl-ink' : ''}">${c.crop ? m.svg.replace(/viewBox="[^"]*"/, `viewBox="${c.crop}"`) : m.svg}</i>`;
     const src = (m && m.img) || c.img;
     if (src) return `<i class="xcl-mark${c.cover ? ' xcl-cover' : ''}"><img src="${src}" alt="" loading="lazy" decoding="async"></i>`;
     return `<i class="xcl-mark xcl-initial">${esc(c.name.charAt(0))}</i>`;
