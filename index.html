@@ -4789,6 +4789,62 @@
     body.dark .xtl-pts { color:var(--d-text-2); }
     body.dark .xtl-sub { color:var(--d-text-3); }
     @media (prefers-reduced-motion:reduce) { .xtl-item { opacity:1; transform:none; transition:none; } }
+
+    /* Brands via an agency: a folded avatar stack that opens into a tree
+       (see the client-tree script). The marks are the timeline's own discs,
+       smaller: white rim, hairline ring, logo grey until hovered. */
+    .xcl { margin-top:14px; font-family:var(--font-body); }
+    .xcl-head { display:inline-flex; align-items:center; gap:10px; padding:4px 10px 4px 4px; margin-left:-4px; border:0; border-radius:99px; background:transparent; cursor:pointer; color:#5a5148; font:inherit; font-size:12.5px; transition:background .2s; }
+    .xcl-head:hover { background:rgba(0,0,0,.04); }
+    .xcl-head:focus-visible { outline:2px solid #1a1a1a; outline-offset:2px; }
+    .xcl-stack { display:flex; }
+    .xcl-stack .xcl-mark { width:28px; height:28px; margin-left:-8px; transition:margin .3s cubic-bezier(.22,1,.36,1), transform .3s; }
+    .xcl-stack .xcl-mark:first-child { margin-left:0; }
+    .xcl-head:hover .xcl-stack .xcl-mark { margin-left:-3px; }
+    .xcl-head:hover .xcl-stack .xcl-mark:first-child { margin-left:0; }
+    .xcl-label { font-weight:500; }
+    .xcl-label em { font-style:normal; font-size:10.5px; font-weight:600; margin-left:6px; padding:1px 6px; border-radius:99px; background:rgba(0,0,0,.06); color:#6b635a; }
+    .xcl-chev { width:14px; height:14px; color:#a89e91; transition:transform .3s cubic-bezier(.22,1,.36,1); }
+    .xcl.open .xcl-chev { transform:rotate(90deg); }
+
+    .xcl-mark { position:relative; display:grid; place-items:center; flex:none; box-sizing:border-box; border-radius:50%; background:#fff; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.09); overflow:hidden; font-style:normal; }
+    .xcl-mark svg, .xcl-mark img { width:72%; height:72%; object-fit:contain; display:block; filter:grayscale(1) contrast(1.15); transition:filter .3s; }
+    .xcl-head:hover .xcl-mark svg, .xcl-head:hover .xcl-mark img,
+    .xcl-row.on .xcl-mark svg, .xcl-row.on .xcl-mark img { filter:none; }
+    .xcl-initial { font-family:var(--font-title); font-weight:700; font-size:12px; color:#5a5148; background:#f3f1ee; }
+
+    /* Opens by height (grid rows 0fr -> 1fr), then the lines draw in. */
+    .xcl-body { display:grid; grid-template-rows:0fr; transition:grid-template-rows .45s cubic-bezier(.22,1,.36,1); }
+    .xcl.open .xcl-body { grid-template-rows:1fr; }
+    .xcl-inner { position:relative; overflow:hidden; min-height:0; padding-left:13px; }
+    .xcl-lines { position:absolute; left:13px; top:0; overflow:visible; pointer-events:none; }
+    .xcl-lines path { fill:none; stroke-width:1; stroke-dasharray:1; stroke-dashoffset:1; vector-effect:non-scaling-stroke; }
+    .xcl-trunk, .xcl-branch { stroke:rgba(0,0,0,.16); }
+    .xcl.open .xcl-trunk { stroke-dashoffset:0; transition:stroke-dashoffset .5s .1s ease-out; }
+    .xcl.open .xcl-branch { stroke-dashoffset:0; transition:stroke-dashoffset .35s ease-out; transition-delay:calc(.25s + var(--i) * .08s); }
+    .xcl-trace { stroke:#1a1a1a; stroke-width:1.5; stroke-linecap:round; transition:stroke-dashoffset .35s ease-out; }
+    .xcl-trace.on { stroke-dashoffset:0; }
+    .xcl-list { position:relative; list-style:none; margin:0; padding:8px 0 4px 24px; display:grid; gap:2px; }
+    .xcl-pill { position:absolute; left:37px; right:0; top:0; height:0; border-radius:10px; background:rgba(0,0,0,.04); opacity:0; pointer-events:none; transition:transform .35s cubic-bezier(.22,1,.36,1), height .35s cubic-bezier(.22,1,.36,1), opacity .2s; }
+    .xcl-pill.on { opacity:1; }
+    .xcl-row { position:relative; display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:10px; opacity:0; transform:translateX(-6px); transition:opacity .35s, transform .35s cubic-bezier(.22,1,.36,1); }
+    .xcl.open .xcl-row { opacity:1; transform:none; transition-delay:calc(.3s + var(--i) * .08s); }
+    .xcl-row .xcl-mark { width:30px; height:30px; }
+    .xcl-text { display:grid; gap:1px; min-width:0; font-size:12.5px; line-height:1.4; color:#8a8178; }
+    .xcl-text b { font-family:var(--font-title); font-size:13.5px; font-weight:600; color:#1a1a1a; }
+
+    body.dark .xcl-head { color:var(--d-text-2); }
+    body.dark .xcl-head:hover, body.dark .xcl-pill { background:rgba(255,255,255,.06); }
+    body.dark .xcl-label em { background:rgba(255,255,255,.08); color:var(--d-text-2); }
+    body.dark .xcl-mark { background:var(--d-surface); border-color:var(--d-surface); box-shadow:0 0 0 1px var(--d-line); }
+    body.dark .xcl-initial { color:var(--d-text-2); }
+    body.dark .xcl-trunk, body.dark .xcl-branch { stroke:var(--d-line-2); }
+    body.dark .xcl-trace { stroke:var(--d-text); }
+    body.dark .xcl-text { color:var(--d-text-3); }
+    body.dark .xcl-text b { color:var(--d-text); }
+    @media (prefers-reduced-motion:reduce) {
+      .xcl-body, .xcl-row, .xcl-lines path, .xcl-pill { transition:none !important; }
+    }
     body.dark .tools-label { color:rgba(255,255,255,.55); }
     body.dark .dot-border {
       --dot-color:rgba(255,255,255,.7);
@@ -10269,6 +10325,8 @@ function renderWorkExp(items) {
     { name:'Schauma',     svg:SSCHAUMA },
     { name:'Raj',         svg:SRAJ },
   ];
+  // The same marks, by name, for the Experience page's client trees.
+  window.BRAND_MARKS = Object.fromEntries(BRAND_DEFAULTS.map(b => [b.name, b]));
 
   /* Which logos are on the sphere. The defaults above ship with the page;
      edit mode can take any of them off (brandLogosHidden, by name) and put
@@ -19095,13 +19153,25 @@ document.addEventListener('DOMContentLoaded', () => {
     { co: 'Lina Food — Lina Industrial Group', role: 'Motion Designer', date: 'Dec 2025 – Present', badge: 'Currently working here',
       pts: ['Motion content for social media and branding across Lina and its sub-brands, such as Eli, within the marketing team.'] },
     { co: 'Raj (Outsourced)', role: 'Motion Designer', date: 'Jul 2026 – Present', badge: 'Ongoing · Remote, project-based', remote: true,
-      pts: ['Collaboration on branding and social projects, such as presentations and logo motion.'] },
+      pts: ['Collaboration on branding and social projects, such as presentations and logo motion.'],
+      // Brands worked on through the agency: a name, the mark (a key into
+      // BRAND_MARKS, the trusted-by sphere's logos, or an img path; none
+      // falls back to an initial), and an optional line on what was done.
+      clients: [
+        { name: 'Bite Burger' },
+        { name: 'Moghaddam' },
+      ] },
     { co: 'Tosan Tools', role: 'Motion Designer & Editor', date: 'Feb 2025 – Oct 2025',
       pts: ['Motion content and edits of raw product footage for Tosan’s social media.',
             'Helped the video editor add visual effects to product teasers.'] },
     { co: 'Netbina (Outsourced)', role: 'Motion Designer', date: 'Oct 2023 – Present', badge: 'Ongoing · Remote, project-based', remote: true,
       pts: ['Collaborate with Netbina agency on an outsourced basis, delivering motion design for social media and web.',
-            'Create motion content for Cubox gaming devices and other display formats.'] },
+            'Create motion content for Cubox gaming devices and other display formats.'],
+      clients: [
+        { name: 'Persil', mark: 'Persil' },
+        { name: 'Tazh', mark: 'Tazh' },
+        { name: 'Irancell', mark: 'Irancell' },
+      ] },
     { co: 'Vam30', role: 'Visual & Motion Designer', date: 'Oct 2023 – Dec 2024',
       pts: ['Tutorial motion, web interactions and web animation, within the product’s technical team.'] },
     { co: 'Doran Office (Outsourced)', role: 'Motion Designer', date: 'Mar 2023 – Present', badge: 'Ongoing · Remote, project-based', remote: true,
@@ -19149,12 +19219,79 @@ document.addEventListener('DOMContentLoaded', () => {
     return `<li class="xtl-item${now ? ' now' : ''}">${!e.edu ? `<span class="xtl-dot xtl-dot-job">${pen}</span>` : '<span class="xtl-dot" aria-hidden="true"></span>'}
       <div class="xtl-co">${mark(e)}<div><h3 class="xtl-title">${esc(e.edu ? e.role : e.co)}</h3><div class="xtl-cat">${esc(e.edu ? e.co : e.role)}</div></div></div>
       <div class="xtl-date">${cal}<span>${esc(e.date)}</span>${e.badge ? `<b class="${e.remote ? 'xtl-remote' : ''}">${esc(e.badge)}</b>` : ''}</div>
-      ${e.pts ? `<ul class="xtl-pts">${e.pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}</li>`;
+      ${e.pts ? `<ul class="xtl-pts">${e.pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}${clients(e)}</li>`;
   };
+
+  /* The brands an agency role reached, after 21st.dev's "Animated File Tree"
+     (@arunachalam): folded, a row of overlapping round marks (like an avatar
+     stack) with a count; opened, a tree whose branch lines draw in, one
+     brand per branch with its mark, name and what was done. Hovering a row
+     glides a pill to it and traces its branch from the trunk. The lines are
+     measured from the rows, so they fit any wrap. */
+  const chev = '<svg class="xcl-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+  const clientMark = c => {
+    const m = c.mark && window.BRAND_MARKS && window.BRAND_MARKS[c.mark];
+    if (m && m.svg) return `<i class="xcl-mark">${m.svg}</i>`;
+    const src = (m && m.img) || c.img;
+    if (src) return `<i class="xcl-mark"><img src="${src}" alt="" loading="lazy" decoding="async"></i>`;
+    return `<i class="xcl-mark xcl-initial">${esc(c.name.charAt(0))}</i>`;
+  };
+  let xclSeq = 0;
+  const clients = e => {
+    if (!e.clients || !e.clients.length) return '';
+    const id = 'xcl-' + (++xclSeq), via = e.co.replace(/\s*\(.*\)\s*$/, '');
+    return `<div class="xcl">
+      <button type="button" class="xcl-head" aria-expanded="false" aria-controls="${id}">
+        <span class="xcl-stack" aria-hidden="true">${e.clients.map(clientMark).join('')}</span>
+        <span class="xcl-label">Brands via ${esc(via)}<em>${e.clients.length}</em></span>${chev}
+      </button>
+      <div class="xcl-body" id="${id}"><div class="xcl-inner">
+        <svg class="xcl-lines" aria-hidden="true"></svg>
+        <span class="xcl-pill" aria-hidden="true"></span>
+        <ul class="xcl-list">${e.clients.map((c, i) => `<li class="xcl-row" style="--i:${i}">${clientMark(c)}<span class="xcl-text"><b>${esc(c.name)}</b>${c.did ? `<span>${esc(c.did)}</span>` : ''}</span></li>`).join('')}</ul>
+      </div></div>
+    </div>`;
+  };
+
   const w = document.getElementById('xtl-work'), d = document.getElementById('xtl-edu');
   if (!w || !d) return;
   w.innerHTML = work.map(item).join('');
   d.innerHTML = edu.map(item).join('');
+
+  const NS = 'http://www.w3.org/2000/svg';
+  // Trunk down the left, and a rounded elbow out to each row (the reference's
+  // M0.5 y-5 Q0.5 y 5.5 y H…); plus one hidden "trace" per row, trunk to
+  // that row, that hover draws in.
+  function drawLines(box) {
+    const svg = box.querySelector('.xcl-lines'), rows = [...box.querySelectorAll('.xcl-row')];
+    if (!rows.length) return;
+    const ys = rows.map(r => r.offsetTop + r.offsetHeight / 2), H = ys[ys.length - 1] + 1, X = 22;
+    svg.setAttribute('viewBox', `0 0 ${X + 1} ${H}`);
+    svg.setAttribute('width', X + 1); svg.setAttribute('height', H);
+    const elbow = y => `V${y - 6} Q0.5 ${y} 6.5 ${y} H${X}`;
+    let html = `<path class="xcl-trunk" pathLength="1" d="M0.5 0 V${ys[ys.length - 1] - 6}"/>`;
+    ys.forEach((y, i) => { html += `<path class="xcl-branch" pathLength="1" style="--i:${i}" d="M0.5 ${y - 6} ${elbow(y).replace(/^V[^ ]+ /, '')}"/>`; });
+    ys.forEach((y, i) => { html += `<path class="xcl-trace" data-i="${i}" pathLength="1" d="M0.5 0 ${elbow(y)}"/>`; });
+    svg.innerHTML = html;
+  }
+  document.querySelectorAll('.xcl').forEach(box => {
+    const head = box.querySelector('.xcl-head'), list = box.querySelector('.xcl-list'), pill = box.querySelector('.xcl-pill');
+    head.addEventListener('click', () => {
+      const open = !box.classList.contains('open');
+      if (open) drawLines(box);
+      box.classList.toggle('open', open);
+      head.setAttribute('aria-expanded', String(open));
+    });
+    const light = row => {
+      box.querySelectorAll('.xcl-trace').forEach(p => p.classList.toggle('on', row && p.dataset.i === row.style.getPropertyValue('--i')));
+      box.querySelectorAll('.xcl-row').forEach(r => r.classList.toggle('on', r === row));
+      if (row) { pill.style.transform = `translateY(${row.offsetTop}px)`; pill.style.height = row.offsetHeight + 'px'; pill.classList.add('on'); }
+      else pill.classList.remove('on');
+    };
+    list.addEventListener('pointerover', ev => { const r = ev.target.closest('.xcl-row'); if (r) light(r); });
+    list.addEventListener('pointerleave', () => light(null));
+    if ('ResizeObserver' in window) new ResizeObserver(() => { if (box.classList.contains('open')) drawLines(box); }).observe(list);
+  });
   const items = document.querySelectorAll('.xtl-item');
   if (!('IntersectionObserver' in window)) { items.forEach(i => i.classList.add('in')); return; }
   const io = new IntersectionObserver(es => es.forEach(e => {
