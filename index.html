@@ -4809,7 +4809,8 @@
     .xcl.open .xcl-chev { transform:rotate(90deg); }
 
     .xcl-mark { position:relative; display:grid; place-items:center; flex:none; box-sizing:border-box; border-radius:50%; background:#fff; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.09); overflow:hidden; font-style:normal; }
-    .xcl-mark svg, .xcl-mark img { width:72%; height:72%; object-fit:contain; display:block; filter:grayscale(1) contrast(1.15); transition:filter .3s; }
+    /* The marks fill most of the disc; at 72% they sat in a ring of white. */
+    .xcl-mark svg, .xcl-mark img { width:86%; height:86%; object-fit:contain; display:block; filter:grayscale(1) contrast(1.15); transition:filter .3s; }
     .xcl-head:hover .xcl-mark svg, .xcl-head:hover .xcl-mark img,
     .xcl-row.on .xcl-mark svg, .xcl-row.on .xcl-mark img { filter:none; }
     .xcl-mark.xcl-ink svg { filter:brightness(0); opacity:.85; }
