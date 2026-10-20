@@ -4748,6 +4748,9 @@
        the notes like .pli-desc - in the site's own font settings. */
     .xtl-co { display:flex; align-items:center; gap:12px; }
     .xtl-title { font-family:var(--font-title); font-size:17px; font-weight:600; line-height:1.3; color:#1a1a1a; margin:0; }
+    /* "Outsourced" after an agency's name: a quiet aside, smaller and lighter than the name. */
+    .xtl-title .xtl-out { font-size:11.5px; font-weight:500; color:#b3aaa0; margin-left:4px; vertical-align:1px; }
+    body.dark .xtl-title .xtl-out { color:var(--d-text-3); }
     .xtl-cat { font-family:var(--font-body); font-size:12.5px; color:#a89e91; margin-top:4px; }
     /* Set like the avatars elsewhere on the site (.avg-avatar): a 42px white
        disc inside a white rim and a hairline ring, the mark drawn in ink.
@@ -19254,7 +19257,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const item = e => {
     const now = /Present/.test(e.date) && !e.remote;   // the job held now
     return `<li class="xtl-item${now ? ' now' : ''}"><span class="xtl-dot" aria-hidden="true"></span>
-      <div class="xtl-co">${mark(e)}<div><h3 class="xtl-title">${esc(e.edu ? e.role : e.co)}</h3><div class="xtl-cat">${esc(e.edu ? e.co : e.role)}</div></div></div>
+      <div class="xtl-co">${mark(e)}<div><h3 class="xtl-title">${e.edu ? esc(e.role) : esc(e.co).replace(/\s*\((Outsourced)\)$/, ' <span class="xtl-out">$1</span>')}</h3><div class="xtl-cat">${esc(e.edu ? e.co : e.role)}</div></div></div>
       <div class="xtl-date">${cal}<span>${esc(e.date)}</span>${e.badge ? `<b class="${e.remote ? 'xtl-remote' : ''}">${esc(e.badge)}</b>` : ''}</div>
       ${e.pts ? `<ul class="xtl-pts">${e.pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}${clients(e)}</li>`;
   };
