@@ -4806,10 +4806,6 @@
     .xcl-mark svg, .xcl-mark img { width:86%; height:86%; object-fit:contain; display:block; filter:grayscale(1) contrast(1.15); transition:filter .3s; }
     .xcl-head:hover .xcl-mark svg, .xcl-head:hover .xcl-mark img,
     .xcl-row.on .xcl-mark svg, .xcl-row.on .xcl-mark img { filter:none; }
-    /* Scrolled to the middle of the screen, an entry's brands come up in colour
-       the way hovering does (see the timeline
-       script); it goes grey again once scrolled past. */
-    .xtl-item.lit .xcl .xcl-mark svg, .xtl-item.lit .xcl .xcl-mark img { filter:none; opacity:1; }
     .xcl-mark.xcl-ink svg { filter:brightness(0); opacity:.85; }
     .xcl-mark.xcl-wide svg { width:90%; height:auto; }
     .xcl-mark.xcl-cover { border-width:0; }
@@ -19345,11 +19341,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
   }), { rootMargin: '0px 0px -8% 0px' });
   items.forEach(i => io.observe(i));
-  // The entry crossing the middle of the screen is lit (in colour): a band
-  // a twelfth of the screen tall, so one entry at a time holds it.
-  const lit = new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('lit', e.isIntersecting)),
-    { rootMargin: '-46% 0px -46% 0px' });
-  items.forEach(i => lit.observe(i));
 })();
 
 
