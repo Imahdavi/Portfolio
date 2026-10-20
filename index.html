@@ -4755,14 +4755,10 @@
     .xtl-co i { position:relative; width:42px; height:42px; box-sizing:border-box; border-radius:50%; background:#fff; border:3px solid #fff;
       box-shadow:0 0 0 1px rgba(0,0,0,.08); display:grid; place-items:center; color:#2a2a2a; flex:none; overflow:hidden; }
     .xtl-co i svg { width:19px; height:19px; }
-    /* The whole symbol, contained and centred like an .avg-avatar logo. Grey
-       until the entry is hovered. */
-    .xtl-co i.xtl-logo img { max-width:80%; max-height:80%; width:auto; height:auto; object-fit:contain; display:block; filter:grayscale(1) contrast(1.2); transition:filter .35s; }
-    .xtl-item:hover .xtl-co i.xtl-logo img { filter:none; }
-    /* A single-colour mark, set in solid ink to sit with the line icons;
-       its own colour comes back on hover. */
-    .xtl-co i.xtl-ink img { filter:brightness(0); opacity:.85; }
-    .xtl-item:hover .xtl-co i.xtl-ink img { opacity:1; }
+    /* The whole symbol, contained and centred like an .avg-avatar logo, in
+       its own colours: the companies worked for lead the section, and only
+       the brands under them wait in grey for a hover. */
+    .xtl-co i.xtl-logo img { max-width:80%; max-height:80%; width:auto; height:auto; object-fit:contain; display:block; }
     .xtl-co i.xtl-initial { font-weight:700; font-size:15px; line-height:1; font-style:normal; }
     .xtl-date { display:flex; align-items:center; gap:6px; margin-top:10px; font-family:var(--font-body); font-size:11.5px; color:#b3aaa0; font-variant-numeric:tabular-nums; }
     .xtl-date svg { width:13px; height:13px; }
@@ -4810,10 +4806,10 @@
     .xcl-mark svg, .xcl-mark img { width:86%; height:86%; object-fit:contain; display:block; filter:grayscale(1) contrast(1.15); transition:filter .3s; }
     .xcl-head:hover .xcl-mark svg, .xcl-head:hover .xcl-mark img,
     .xcl-row.on .xcl-mark svg, .xcl-row.on .xcl-mark img { filter:none; }
-    /* Scrolled to the middle of the screen, an entry comes up in colour —
-       its own mark and its brands — the way hovering does (see the timeline
+    /* Scrolled to the middle of the screen, an entry's brands come up in colour
+       the way hovering does (see the timeline
        script); it goes grey again once scrolled past. */
-    .xtl-item.lit .xtl-co i.xtl-logo img, .xtl-item.lit .xcl .xcl-mark svg, .xtl-item.lit .xcl .xcl-mark img { filter:none; opacity:1; }
+    .xtl-item.lit .xcl .xcl-mark svg, .xtl-item.lit .xcl .xcl-mark img { filter:none; opacity:1; }
     .xcl-mark.xcl-ink svg { filter:brightness(0); opacity:.85; }
     .xcl-mark.xcl-wide svg { width:90%; height:auto; }
     .xcl-mark.xcl-cover { border-width:0; }
