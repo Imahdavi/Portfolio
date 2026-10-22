@@ -5085,10 +5085,13 @@
     #hw-layer { position:fixed; inset:0; z-index:150; pointer-events:none; display:none; overflow:hidden; }
     body.halloween #hw-layer { display:block; }
     #hw-layer .hw-glow { position:absolute; left:50%; bottom:-30vh; width:120vw; height:60vh; transform:translateX(-50%); background:radial-gradient(closest-side, rgba(255,110,20,.16), rgba(255,110,20,0)); }
-    #hw-layer .hw-moon { position:absolute; top:5vh; right:6vw; width:74px; height:74px; border-radius:50%; background:radial-gradient(circle at 38% 38%, #fff6dc, #f1d59a 60%, #c99b4c); box-shadow:0 0 40px 8px rgba(255,214,140,.22); opacity:.85; }
+    /* The moon: plain white, slowly blushing to a blood moon and back. */
+    #hw-layer .hw-moon { position:absolute; top:5vh; right:6vw; width:74px; height:74px; border-radius:50%; background:radial-gradient(circle at 38% 38%, #ffffff, #eef0f3 55%, #c9ccd3); opacity:.9; animation:hwMoonGlow 16s ease-in-out infinite; }
+    #hw-layer .hw-moon::after { content:""; position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle at 38% 38%, #ffb3a3, #e0452f 55%, #8e1a12); opacity:0; animation:hwMoonRed 16s ease-in-out infinite; }
+    @keyframes hwMoonRed { 0%, 30% { opacity:0; } 55%, 70% { opacity:.9; } 100% { opacity:0; } }
+    @keyframes hwMoonGlow { 0%, 30% { box-shadow:0 0 40px 8px rgba(255,255,255,.2); } 55%, 70% { box-shadow:0 0 46px 10px rgba(230,60,40,.3); } 100% { box-shadow:0 0 40px 8px rgba(255,255,255,.2); } }
     #hw-layer .hw-web { position:absolute; top:0; width:min(220px, 30vw); height:auto; opacity:.32; stroke:#e9d8c4; fill:none; stroke-width:.8; }
     #hw-layer .hw-web.l { left:0; }
-    #hw-layer .hw-web.r { right:0; transform:scaleX(-1); }
     /* White, inverted against what's behind: white over the dark page,
        dark over a white card, so a bat always shows. */
     #hw-bats { position:fixed; inset:0; z-index:150; pointer-events:none; display:none; overflow:hidden; mix-blend-mode:difference; }
@@ -5108,7 +5111,7 @@
     @media (max-width:600px) { #hw-layer .hw-ghost { width:34px; height:38px; } }
     @keyframes hwFlap { from { transform:scaleY(1); } to { transform:scaleY(.45); } }
     @media (prefers-reduced-motion:reduce) {
-      #hw-btn, #hw-bats .hw-bat, #hw-bats .hw-bat path, body.halloween #hw-btn .hw-face { animation:none; }
+      #hw-btn, #hw-layer .hw-moon, #hw-layer .hw-moon::after, #hw-bats .hw-bat, #hw-bats .hw-bat path, body.halloween #hw-btn .hw-face { animation:none; }
     }
 
     #bottom-nav {
@@ -7848,7 +7851,7 @@ function toggleDarkMode() {
   })();
   const bat = '<svg class="hw-bat" viewBox="0 0 64 34"><path d="M32 12c1.6-3 3.4-3 5 0 3-6 11-9 19-8-4 3-5 7-4 11-4-2-8-1-10 3-2-3-5-4-7-2-1 2-2 4-3 6-1-2-2-4-3-6-2-2-5-1-7 2-2-4-6-5-10-3 1-4 0-8-4-11 8-1 16 2 19 8 1.6-3 3.4-3 5 0Z"/></svg>';
   layer.innerHTML = `<div class="hw-glow"></div><div class="hw-moon"></div>
-    <svg class="hw-web l" viewBox="0 0 170 170">${web}</svg><svg class="hw-web r" viewBox="0 0 170 170">${web}</svg>`;
+    <svg class="hw-web l" viewBox="0 0 170 170">${web}</svg>`;
   body.appendChild(layer);
   // The bats get a layer of their own, blended (difference) with the page
   // so they're white on the dark and dark on anything white.
@@ -7927,12 +7930,12 @@ function toggleDarkMode() {
   // frame; the ripple runs along the hem and the sheet sways a little).
   function hem(p) {
     const B = 23.4, n = 4, w = 20 / n;
-    let d = `M12 2C6.5 2 2 6.58 2 12.18L${(2 + Math.sin(p) * .35).toFixed(2)} ${B.toFixed(2)}`;
+    let d = `M12 2C6.5 2 2 6.58 2 12.18L${(2 + Math.sin(p) * .6).toFixed(2)} ${B.toFixed(2)}`;
     for (let i = 0; i < n; i++) {
       const x0 = 2 + i * w, x1 = x0 + w, ph = p * 1.0 - i * 1.1;
-      const cy = B + 1.9 + Math.sin(ph) * .55, ey = B - .15 + Math.sin(ph - .9) * .35;
-      const sx = Math.sin(p + i * .7) * .35;
-      d += `Q${(x0 + w / 2 + sx).toFixed(2)} ${cy.toFixed(2)} ${(x1 + (i === n - 1 ? Math.sin(p) * .35 : sx)).toFixed(2)} ${(i === n - 1 ? B : ey).toFixed(2)}`;
+      const cy = B + 2 + Math.sin(ph) * 1.2, ey = B - .3 + Math.sin(ph - .9) * .75;
+      const sx = Math.sin(p + i * .7) * .7;
+      d += `Q${(x0 + w / 2 + sx).toFixed(2)} ${cy.toFixed(2)} ${(x1 + (i === n - 1 ? Math.sin(p) * .6 : sx)).toFixed(2)} ${(i === n - 1 ? B : ey).toFixed(2)}`;
     }
     return d + 'L22 12.18C22 6.58 17.5 2 12 2Z';
   }
@@ -8024,6 +8027,39 @@ function toggleDarkMode() {
     ghost.classList.remove('booing'); void ghost.offsetWidth; ghost.classList.add('booing');
     SPIN.v += 120;
   }
+  // The Halloween ambience (sfx/halloween-loop.mp3, 25s, its ends silent so
+  // it loops clean): kept low under everything, faded in while it's
+  // Halloween and the visitor has touched the page, faded out when it
+  // isn't; the audio is suspended while the tab is hidden.
+  let ambBuf = null, amb = null;
+  async function ambience() {
+    const want = heard && body.classList.contains('halloween');
+    if (want === !!amb) return;
+    try {
+      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+      const now = actx.currentTime;
+      if (!want) {
+        const a = amb; amb = null;
+        a.g.gain.cancelScheduledValues(now); a.g.gain.setValueAtTime(a.g.gain.value, now); a.g.gain.linearRampToValueAtTime(0, now + .8);
+        a.src.stop(now + .85);
+        return;
+      }
+      amb = { src: actx.createBufferSource(), g: actx.createGain() };
+      const a = amb;
+      if (!ambBuf) ambBuf = await fetch('/sfx/halloween-loop.mp3').then(r => r.arrayBuffer()).then(b => actx.decodeAudioData(b));
+      if (amb !== a) return;   // switched off while it loaded
+      a.src.buffer = ambBuf; a.src.loop = true;
+      a.g.gain.setValueAtTime(0, actx.currentTime); a.g.gain.linearRampToValueAtTime(.12, actx.currentTime + 2.5);
+      a.src.connect(a.g); a.g.connect(actx.destination); a.src.start();
+    } catch (e) { amb = null; }
+  }
+  addEventListener('pointerdown', () => ambience(), { passive: true });
+  new MutationObserver(() => ambience()).observe(body, { attributes: true, attributeFilter: ['class'] });
+  document.addEventListener('visibilitychange', () => {
+    if (!actx) return;
+    if (document.visibilityState === 'hidden') actx.suspend(); else actx.resume();
+  });
   // How open the mouth is, 0..1, from the sound playing now.
   function loud() {
     if (!booAn) return 0;
@@ -8076,7 +8112,7 @@ function toggleDarkMode() {
     teeth.setAttribute('d', mouthOpen > .12 ? fangs(sx, sy, Math.min(1, (mouthOpen - .12) / .3)) : '');
     if (t >= nextBoo && heard) {
       if (document.visibilityState === 'visible') boo();
-      nextBoo = t + rnd(9000, 11000);
+      nextBoo = t + 12000;
     }
     raf = requestAnimationFrame(frame);
   }
