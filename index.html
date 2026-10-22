@@ -5074,6 +5074,12 @@
     #hw-layer .hw-bat { position:absolute; width:34px; height:18px; fill:#0a060c; opacity:.85; animation:hwBat linear infinite; }
     #hw-layer .hw-bat path { animation:hwFlap .18s ease-in-out infinite alternate; transform-origin:50% 60%; }
     @keyframes hwBat { 0% { transform:translate(-12vw, 0) scale(var(--s,1)); } 50% { transform:translate(50vw, -6vh) scale(var(--s,1)); } 100% { transform:translate(112vw, 4vh) scale(var(--s,1)); } }
+    #hw-layer .hw-ghost { position:absolute; left:0; top:0; width:44px; height:44px; will-change:transform, opacity; filter:drop-shadow(0 0 10px rgba(240,226,255,.35)) drop-shadow(0 6px 10px rgba(0,0,0,.4)); }
+    #hw-layer .hw-ghost svg { display:block; width:100%; height:100%; overflow:visible; }
+    #hw-layer .hw-ghost-body { fill:#f4ecff; }
+    #hw-layer .hw-ghost-socket { fill:#1b1320; }
+    #hw-layer .hw-ghost-pupil { fill:#ff9a3c; filter:drop-shadow(0 0 1.2px #ffb35c); }
+    @media (max-width:600px) { #hw-layer .hw-ghost { width:34px; height:34px; } }
     @keyframes hwFlap { from { transform:scaleY(1); } to { transform:scaleY(.45); } }
     @media (prefers-reduced-motion:reduce) {
       #hw-btn, #hw-layer .hw-bat, #hw-layer .hw-bat path, body.halloween #hw-btn .hw-face { animation:none; }
@@ -6480,7 +6486,7 @@ one keyframe at a time</div>
  </div>
  <!-- Halloween: a jack-o'-lantern floating in the gap between the two
       pills, not inside either. A tap turns the page into a dark,
-      Halloween-themed one with spooky sounds (see the Halloween script). -->
+      Halloween-themed one (see the Halloween script). -->
  <button type="button" id="hw-btn" aria-pressed="false" aria-label="Halloween mode" onclick="toggleHalloween()">
   <span class="hw-tip">Halloween</span>
   <svg viewBox="0 0 48 48" aria-hidden="true">
@@ -7790,11 +7796,9 @@ function toggleDarkMode() {
    The jack-o'-lantern between the nav pills switches it. On: the page goes
    dark with the Halloween palette (body.dark.halloween), a still layer of
    cobwebs, a moon and a few bats sits behind the nav, the nav glow turns
-   pumpkin orange, and every sound the site makes is swapped for a spooky
-   one — the interaction sounds (everything that goes through Cuelume.play)
-   and the Spider Sound web shot alike. The spooky set is synthesised here
-   with Web Audio, so nothing is downloaded. Off: the theme the visitor had
-   before comes back. Remembered per visitor (pf_halloween). */
+   pumpkin orange, and a ghost keeps the visitor company (see below). The
+   site's sounds stay as they are. Off: the theme the visitor had before
+   comes back. Remembered per visitor (pf_halloween). */
 (function () {
   const body = document.body;
 
@@ -7822,137 +7826,6 @@ function toggleDarkMode() {
       bat.replace('class="hw-bat"', `class="hw-bat" style="top:${top}vh;--s:${s};animation-duration:${dur}s;animation-delay:${delay}s"`)).join('')}`;
   body.appendChild(layer);
 
-  // ── Spooky sounds ──
-  let ctx = null, out = null, verb = null;
-  function audio() {
-    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return ctx; }
-    ctx = new (window.AudioContext || window.webkitAudioContext)();
-    out = ctx.createGain(); out.gain.value = .5; out.connect(ctx.destination);
-    // A long, dark hall: a noise impulse decaying over ~2.2s, low-passed.
-    verb = ctx.createConvolver();
-    const len = Math.floor(ctx.sampleRate * 2.2), ir = ctx.createBuffer(2, len, ctx.sampleRate);
-    for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
-    verb.buffer = ir;
-    const vlp = ctx.createBiquadFilter(); vlp.type = 'lowpass'; vlp.frequency.value = 2600;
-    const vg = ctx.createGain(); vg.gain.value = .55;
-    verb.connect(vlp); vlp.connect(vg); vg.connect(out);
-    return ctx;
-  }
-  // A voice's gain node, sent dry and (by `wet`) into the hall.
-  function bus(vol, wet) {
-    const g = ctx.createGain(); g.gain.value = 0;
-    g.connect(out);
-    if (wet) { const s = ctx.createGain(); s.gain.value = wet; g.connect(s); s.connect(verb); }
-    return g;
-  }
-  function env(g, t, a, peak, rel) { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(.0001, t + a + rel); }
-  function noise(dur) {
-    const b = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate), d = b.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    const s = ctx.createBufferSource(); s.buffer = b; return s;
-  }
-  const SPOOK = {
-    // A hollow bone knock: a short filtered tap over a low wooden tone.
-    knock(v) {
-      const t = ctx.currentTime, g = bus(.32 * v, .25);
-      const n = noise(.06), bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 700; bp.Q.value = 3;
-      n.connect(bp); bp.connect(g); n.start(t);
-      const o = ctx.createOscillator(); o.frequency.setValueAtTime(190, t); o.frequency.exponentialRampToValueAtTime(110, t + .08);
-      const og = ctx.createGain(); og.gain.value = .6; o.connect(og); og.connect(g); o.start(t); o.stop(t + .12);
-      env(g, t, .003, .32 * v, .09);
-    },
-    // A ghost's "wooo": two voices gliding down with a slow wobble.
-    ghost(v, from = 560, to = 330, len = .55) {
-      const t = ctx.currentTime, g = bus(.16 * v, .6);
-      const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 5.5; lg.gain.value = 10; lfo.connect(lg);
-      [1, 1.5].forEach((m, i) => {
-        const o = ctx.createOscillator(); o.type = i ? 'triangle' : 'sine';
-        o.frequency.setValueAtTime(from * m, t); o.frequency.exponentialRampToValueAtTime(to * m, t + len);
-        lg.connect(o.frequency);
-        const og = ctx.createGain(); og.gain.value = i ? .35 : 1; o.connect(og); og.connect(g);
-        o.start(t); o.stop(t + len + .4);
-      });
-      lfo.start(t); lfo.stop(t + len + .4);
-      env(g, t, .08, .16 * v, len + .25);
-    },
-    // A door creaking open: a rough saw through a narrow band, its pitch
-    // jittering in small steps.
-    creak(v) {
-      const t = ctx.currentTime, g = bus(.13 * v, .3), len = .32;
-      const o = ctx.createOscillator(); o.type = 'sawtooth';
-      for (let k = 0, f = 62; k < 22; k++) { f = Math.max(40, f + (Math.random() - .45) * 22); o.frequency.setValueAtTime(f, t + k * len / 22); }
-      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1150; bp.Q.value = 9;
-      o.connect(bp); bp.connect(g); o.start(t); o.stop(t + len + .05);
-      env(g, t, .02, .13 * v, len);
-    },
-    // A cracked church bell: inharmonic partials with a long tail.
-    bell(v) {
-      const t = ctx.currentTime, g = bus(.14 * v, .7);
-      [[1, 1], [2.32, .5], [4.07, .3], [5.4, .18]].forEach(([m, a]) => {
-        [-6, 6].forEach(dt => {
-          const o = ctx.createOscillator(); o.frequency.value = 196 * m; o.detune.value = dt;
-          const og = ctx.createGain(); og.gain.value = a / 2; o.connect(og); og.connect(g); o.start(t); o.stop(t + 2.6);
-        });
-      });
-      env(g, t, .004, .14 * v, 2.3);
-    },
-    // Bats: three quick high chirps.
-    bats(v) {
-      const t0 = ctx.currentTime;
-      [0, .07, .15].forEach((dt, i) => {
-        const t = t0 + dt, g = bus(.07 * v, .2), o = ctx.createOscillator();
-        o.frequency.setValueAtTime(4800 + i * 300, t); o.frequency.exponentialRampToValueAtTime(7600, t + .035);
-        o.connect(g); o.start(t); o.stop(t + .06);
-        env(g, t, .002, .07 * v, .04);
-      });
-    },
-    // The web shot, Halloween cut: a wind gust with a theremin wail on top.
-    shot(v) {
-      const t = ctx.currentTime, g = bus(.22 * v, .5), len = .38;
-      const n = noise(len + .1), bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.4;
-      bp.frequency.setValueAtTime(380, t); bp.frequency.exponentialRampToValueAtTime(2600, t + len);
-      const ng = ctx.createGain(); ng.gain.value = .55; n.connect(bp); bp.connect(ng); ng.connect(g); n.start(t);
-      const o = ctx.createOscillator(); o.frequency.setValueAtTime(1150, t); o.frequency.exponentialRampToValueAtTime(420, t + len);
-      const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 7; lg.gain.value = 18; lfo.connect(lg); lg.connect(o.frequency);
-      const og = ctx.createGain(); og.gain.value = .3; o.connect(og); og.connect(g); o.start(t); o.stop(t + len + .1); lfo.start(t); lfo.stop(t + len + .1);
-      env(g, t, .02, .22 * v, len);
-    },
-    // Switching it on: the bell, then a ghost rising out of it.
-    enter() { SPOOK.bell(1.1); setTimeout(() => SPOOK.ghost(1, 260, 520, .9), 180); },
-  };
-  // Each of Cuelume's sounds has a spooky counterpart.
-  const MAP = { tick: 'knock', press: 'knock', release: 'bats', scan: 'ghost', toggle: 'creak', chime: 'bell', pulse: 'bats' };
-  function spook(name, vol) {
-    try { audio(); (SPOOK[MAP[name] || name] || SPOOK.ghost)(vol == null ? 1 : vol); } catch (e) {}
-  }
-
-  // Cuelume stays in charge of whether interaction sounds are on (Spider
-  // Sound turns them off); while it's Halloween, what plays is ours.
-  let uiOn = true;
-  function wrapSounds() {
-    const C = window.Cuelume;
-    if (C && !C._hw) {
-      const play = C.play, setEnabled = C.setEnabled;
-      C.setEnabled = function (on) { uiOn = !!on; return setEnabled.apply(this, arguments); };
-      C.play = function (name, opts) {
-        if (!body.classList.contains('halloween')) return play.apply(this, arguments);
-        if (uiOn) spook(name, opts && opts.volume != null ? opts.volume : 1);   // the site's volumes are multipliers
-      };
-      C._hw = true;
-    }
-    const shot = window._playWebShot;
-    if (shot && !shot._hw) {
-      window._playWebShot = function () {
-        if (!body.classList.contains('halloween')) return shot.apply(this, arguments);
-        if (typeof editMode !== 'undefined' && editMode) return;
-        if (window._webShotMuted) return;
-        spook('shot');
-      };
-      window._playWebShot._hw = true;
-    }
-  }
-  wrapSounds();
-
   // ── Switching ──
   const btn = document.getElementById('hw-btn');
   // The nav glow is re-applied whenever settings load or the theme flips;
@@ -7976,7 +7849,7 @@ function toggleDarkMode() {
     if (typeof window.applyNavGlowColor === 'function') window.applyNavGlowColor();
     else if (on) document.documentElement.style.setProperty('--nav-limelight-rgb', '255, 138, 30');
   }
-  function setHalloween(on, quiet) {
+  function setHalloween(on) {
     body.classList.toggle('halloween', on);
     let dark = on;
     if (!on) { try { dark = localStorage.getItem('pf_theme') === 'dark'; } catch (e) { dark = false; } }
@@ -7984,7 +7857,6 @@ function toggleDarkMode() {
     if (typeof applyOrbitColours === 'function') applyOrbitColours();
     paint(on);
     try { localStorage.setItem('pf_halloween', on ? '1' : '0'); } catch (e) {}
-    if (on && !quiet) spook('enter');
   }
   window.toggleHalloween = () => setHalloween(!body.classList.contains('halloween'));
   // The lamp still works: pulling it while it's Halloween leaves Halloween
@@ -7995,6 +7867,74 @@ function toggleDarkMode() {
     return lamp.apply(this, arguments);
   };
   if (body.classList.contains('halloween')) paint(true);
+
+  // ── The ghost ──
+  // Floats at the right edge, out of the way, wherever the visitor goes.
+  // Scrolling (any view) pushes it along the way you scroll and tips it
+  // over; it springs back with a sway. Changing page makes it whirl round
+  // once. Its eye follows the pointer, and it drifts aside (and fades)
+  // when the pointer comes near, so it never sits on what you're reading.
+  const ghost = document.createElement('div');
+  ghost.className = 'hw-ghost';
+  ghost.innerHTML = `<svg viewBox="0 0 24 24">
+    <path class="hw-ghost-body" d="M12 2C6.5 2 2 6.58 2 12.18V20.07C2 21.33 2.75 21.67 3.67 20.83L4.67 19.92C5.04 19.58 5.64 19.58 6.01 19.92L8.01 21.75C8.38 22.09 8.98 22.09 9.35 21.75L11.35 19.92C11.72 19.58 12.32 19.58 12.69 19.92L14.69 21.75C15.06 22.09 15.66 22.09 16.03 21.75L18.03 19.92C18.4 19.58 19 19.58 19.37 19.92L20.37 20.83C21.29 21.67 22.04 21.33 22.04 20.07V12.18C22 6.58 17.5 2 12 2ZM12 6.62C13.31 6.62 14.38 7.69 14.38 9C14.38 10.31 13.31 11.38 12 11.38C10.69 11.38 9.62 10.31 9.62 9C9.62 7.69 10.69 6.62 12 6.62ZM16.45 14.6C15.14 15.58 13.57 16.07 12 16.07C10.43 16.07 8.86 15.58 7.55 14.6C7.22 14.35 7.15 13.88 7.4 13.55C7.65 13.22 8.12 13.15 8.45 13.4C10.54 14.97 13.46 14.97 15.55 13.4C15.88 13.15 16.35 13.22 16.6 13.55C16.85 13.88 16.78 14.35 16.45 14.6Z"/>
+    <circle class="hw-ghost-socket" cx="12" cy="9" r="2.38"/>
+    <circle class="hw-ghost-pupil" cx="12" cy="9" r="1.05"/>
+  </svg>`;
+  layer.appendChild(ghost);
+  const pupil = ghost.querySelector('.hw-ghost-pupil');
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const sp = (k, c) => ({ x: 0, v: 0, to: 0, k, c });
+  const stepS = (s, dt) => { s.v += (-s.k * (s.x - s.to) - s.c * s.v) * dt; s.x += s.v * dt; };
+  const Y = sp(70, 9), X = sp(60, 10), TILT = sp(90, 8), SPIN = sp(40, 9), FADE = sp(120, 22);
+  FADE.x = FADE.to = 1;
+  let mx = -1e4, my = -1e4, raf = 0, last = 0, t0 = performance.now();
+  addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; }, { passive: true });
+  // Every scroller on the site (the views scroll, not the window).
+  const tops = new WeakMap();
+  addEventListener('scroll', e => {
+    if (!body.classList.contains('halloween') || still) return;
+    const el = e.target === document ? document.scrollingElement : e.target;
+    if (!el || el.scrollTop == null) return;
+    const prev = tops.get(el), now = el.scrollTop;
+    tops.set(el, now);
+    if (prev == null) return;
+    const d = Math.max(-60, Math.min(60, now - prev));
+    Y.v += d * 9; TILT.v += d * 5;
+  }, { capture: true, passive: true });
+  // (Not for the page's own opening of its first view.)
+  function whirl() { if (body.classList.contains('halloween') && !still && performance.now() - t0 > 2500) SPIN.to += 360; }
+  document.addEventListener('DOMContentLoaded', () => {
+    const go = window.goView;
+    if (typeof go === 'function') window.goView = function () { whirl(); return go.apply(this, arguments); };
+  });
+  function frame(t) {
+    raf = 0;
+    if (!body.classList.contains('halloween')) return;
+    const dt = Math.min(.033, last ? (t - last) / 1000 : .016); last = t;
+    // Home: the right edge, a little above the middle of the lower half.
+    const size = ghost.offsetWidth || 44, hx = innerWidth - size - (innerWidth < 600 ? 10 : 26), hy = innerHeight * .58;
+    const cx = hx + size / 2 + X.x, cy = hy + size / 2 + Y.x;
+    // Shy of the pointer: slide left/up out of its way and fade.
+    const dx = mx - cx, dy = my - cy, dist = Math.hypot(dx, dy), near = Math.max(0, 1 - dist / 150);
+    X.to = -near * 70; Y.to = (dy > 0 ? -1 : 1) * near * 50;
+    FADE.to = 1 - near * .7;
+    Y.x = Math.max(-140, Math.min(140, Y.x)); TILT.x = Math.max(-40, Math.min(40, TILT.x));
+    for (let i = 0; i < 4; i++) [Y, X, TILT, SPIN, FADE].forEach(s => stepS(s, dt / 4));
+    const s = (t - t0) / 1000, bob = still ? 0 : Math.sin(s * 1.7) * 7, sway = still ? 0 : Math.sin(s * .9) * 5;
+    ghost.style.transform = `translate(${(hx + X.x + sway).toFixed(1)}px, ${(hy + Y.x + bob).toFixed(1)}px) rotate(${(TILT.x + SPIN.x + sway * .8).toFixed(1)}deg)`;
+    ghost.style.opacity = Math.max(.25, Math.min(1, FADE.x)).toFixed(3);
+    // The eye: the pupil slides toward the pointer, inside its socket.
+    if (mx > -1e3) {
+      const len = Math.max(1, dist), k = Math.min(1, dist / 40) * 1.15;
+      pupil.setAttribute('cx', (12 + dx / len * k).toFixed(2));
+      pupil.setAttribute('cy', (9 + dy / len * k).toFixed(2));
+    }
+    raf = requestAnimationFrame(frame);
+  }
+  const wake = () => { if (!raf && body.classList.contains('halloween')) { last = 0; raf = requestAnimationFrame(frame); } };
+  new MutationObserver(wake).observe(body, { attributes: true, attributeFilter: ['class'] });
+  wake();
 })();
 
 
