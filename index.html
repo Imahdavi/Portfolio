@@ -5078,6 +5078,9 @@
     #hw-layer .hw-ghost svg { display:block; width:100%; height:100%; overflow:visible; }
     #hw-layer .hw-ghost-body { fill:#f4ecff; }
     #hw-layer .hw-ghost-eye { fill:#1b1320; }
+    #hw-layer .hw-boo { position:absolute; left:50%; bottom:100%; margin-bottom:6px; padding:3px 8px; border-radius:10px 10px 10px 2px; background:#f4ecff; color:#1b1320; font:700 12px/1.2 var(--font-title, sans-serif); white-space:nowrap; opacity:0; transform:translate(-20%, 6px) scale(.6); transform-origin:left bottom; pointer-events:none; }
+    #hw-layer .hw-ghost.booing .hw-boo { animation:hwBoo 1.6s ease-out; }
+    @keyframes hwBoo { 0% { opacity:0; transform:translate(-20%, 6px) scale(.6); } 12% { opacity:1; transform:translate(-20%, 0) scale(1.08); } 22% { transform:translate(-20%, 0) scale(1); } 75% { opacity:1; } 100% { opacity:0; transform:translate(-20%, -8px) scale(1); } }
     @media (max-width:600px) { #hw-layer .hw-ghost { width:34px; height:34px; } }
     @keyframes hwFlap { from { transform:scaleY(1); } to { transform:scaleY(.45); } }
     @media (prefers-reduced-motion:reduce) {
@@ -7868,15 +7871,15 @@ function toggleDarkMode() {
   if (body.classList.contains('halloween')) paint(true);
 
   // ── The ghost ──
-  // Floats free over the page, wherever the visitor goes. With a pointer it
-  // keeps company at arm's length: circling slowly a little way off, never
-  // right on it. Scrolling sends it weaving across the screen, zigzagging
-  // right to left and back as the page moves; when the scrolling stops it
-  // drifts back to the pointer. Changing page makes it whirl round once.
-  // Its eye (the dark circle itself) looks toward the pointer.
+  // Floats free over the page, wherever the visitor goes, wandering from
+  // one random spot to the next across the whole width, right to left and
+  // back. Now and then it comes over to the pointer, but stops a little way
+  // off it and never sits on it. Scrolling makes it dart from side to side.
+  // Changing page makes it whirl round once. Its eye (the dark circle
+  // itself) looks toward the pointer. Every so often it says "boo".
   const ghost = document.createElement('div');
   ghost.className = 'hw-ghost';
-  ghost.innerHTML = `<svg viewBox="0 0 24 24">
+  ghost.innerHTML = `<span class="hw-boo">Boo!</span><svg viewBox="0 0 24 24">
     <path class="hw-ghost-body" d="M12 2C6.5 2 2 6.58 2 12.18V20.07C2 21.33 2.75 21.67 3.67 20.83L4.67 19.92C5.04 19.58 5.64 19.58 6.01 19.92L8.01 21.75C8.38 22.09 8.98 22.09 9.35 21.75L11.35 19.92C11.72 19.58 12.32 19.58 12.69 19.92L14.69 21.75C15.06 22.09 15.66 22.09 16.03 21.75L18.03 19.92C18.4 19.58 19 19.58 19.37 19.92L20.37 20.83C21.29 21.67 22.04 21.33 22.04 20.07V12.18C22 6.58 17.5 2 12 2ZM16.45 14.6C15.14 15.58 13.57 16.07 12 16.07C10.43 16.07 8.86 15.58 7.55 14.6C7.22 14.35 7.15 13.88 7.4 13.55C7.65 13.22 8.12 13.15 8.45 13.4C10.54 14.97 13.46 14.97 15.55 13.4C15.88 13.15 16.35 13.22 16.6 13.55C16.85 13.88 16.78 14.35 16.45 14.6Z"/>
     <circle class="hw-ghost-eye" cx="12" cy="9" r="2.38"/>
   </svg>`;
@@ -7885,10 +7888,12 @@ function toggleDarkMode() {
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const sp = (k, c) => ({ x: 0, v: 0, to: 0, k, c });
   const stepS = (s, dt) => { s.v += (-s.k * (s.x - s.to) - s.c * s.v) * dt; s.x += s.v * dt; };
-  const X = sp(9, 5), Y = sp(9, 5), SPIN = sp(40, 9), FADE = sp(60, 16), EX = sp(120, 16), EY = sp(120, 16);
-  X.x = innerWidth * .7; Y.x = innerHeight * .45; FADE.x = FADE.to = .9;
+  const X = sp(5, 3.2), Y = sp(5, 3.2), SPIN = sp(40, 9), FADE = sp(60, 16), EX = sp(120, 16), EY = sp(120, 16);
+  X.x = X.to = innerWidth * .7; Y.x = Y.to = innerHeight * .45; FADE.x = FADE.to = .9;
   let mx = null, my = null, raf = 0, last = 0, t0 = performance.now();
-  let travel = 0, lastScroll = -1e4, sweepDir = 1;
+  let lastScroll = -1e4, nextPick = 0, side = Math.random() < .5;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const KEEP = 110;   // how close it lets itself get to the pointer
   addEventListener('pointermove', e => { if (e.pointerType === 'mouse') { mx = e.clientX; my = e.clientY; } }, { passive: true });
   // Every scroller on the site (the views scroll, not the window).
   const tops = new WeakMap();
@@ -7898,8 +7903,9 @@ function toggleDarkMode() {
     if (!el || el.scrollTop == null) return;
     const prev = tops.get(el), now = el.scrollTop;
     tops.set(el, now);
-    if (prev == null) return;
-    travel += Math.min(80, Math.abs(now - prev));
+    if (prev == null || Math.abs(now - prev) < 2) return;
+    // A fresh scroll sends it off to the other side straight away.
+    if (performance.now() - lastScroll > 900) nextPick = 0;
     lastScroll = performance.now();
   }, { capture: true, passive: true });
   // (Not for the page's own opening of its first view.)
@@ -7908,40 +7914,108 @@ function toggleDarkMode() {
     const go = window.goView;
     if (typeof go === 'function') window.goView = function () { whirl(); return go.apply(this, arguments); };
   });
+  // The next place to float to.
+  function pick(t) {
+    const W = innerWidth, H = innerHeight;
+    let tx, ty, wait;
+    if (t - lastScroll < 900) {
+      // Scrolling: darting across, alternating sides.
+      side = !side;
+      tx = W * (side ? rnd(.68, .92) : rnd(.08, .32)); ty = H * rnd(.18, .68); wait = rnd(500, 950);
+    } else if (mx != null && Math.random() < .45) {
+      // Coming over to the pointer, but stopping short of it.
+      const a = rnd(0, Math.PI * 2), d = rnd(KEEP + 20, KEEP + 90);
+      tx = mx + Math.cos(a) * d; ty = my + Math.sin(a) * d * .75; wait = rnd(1600, 3000);
+    } else {
+      // Anywhere, often the far side from where it is.
+      tx = Math.random() < .6 ? (X.x > W / 2 ? W * rnd(.06, .45) : W * rnd(.55, .94)) : W * rnd(.06, .94);
+      ty = H * rnd(.12, .72); wait = rnd(1800, 3800);
+    }
+    // Never a stop right on the pointer.
+    if (mx != null) {
+      const dx = tx - mx, dy = ty - my, d = Math.hypot(dx, dy);
+      if (d < KEEP) { const k = KEEP / (d || 1); tx = mx + (d ? dx : 1) * k; ty = my + dy * k; }
+    }
+    X.to = tx; Y.to = ty;
+    nextPick = t + wait;
+  }
+
+  // ── "Boo" ──
+  // Synthesised: a voice saying "boo" (a buzz through the formants of an
+  // "oo", opening from a closed "b", the pitch sliding down with a ghostly
+  // wobble), an octave-up whisper of itself, and an echo. Only after the
+  // visitor has touched the page (browsers keep audio locked until then).
+  let actx = null, heard = false, nextBoo = performance.now() + rnd(6000, 11000);
+  addEventListener('pointerdown', () => { heard = true; if (actx && actx.state === 'suspended') actx.resume(); }, { capture: true, passive: true });
+  function boo() {
+    try {
+      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+      const c = actx, t = c.currentTime + .02, len = rnd(.9, 1.3), f0 = rnd(190, 240);
+      const out = c.createGain(); out.gain.value = .22; out.connect(c.destination);
+      // Echo.
+      const dl = c.createDelay(1), fb = c.createGain(), dlp = c.createBiquadFilter();
+      dl.delayTime.value = .21; fb.gain.value = .32; dlp.type = 'lowpass'; dlp.frequency.value = 1400;
+      dl.connect(dlp); dlp.connect(fb); fb.connect(dl); dlp.connect(out);
+      const voice = c.createGain(); voice.connect(out); voice.connect(dl);
+      // The "b": the mouth opening.
+      const lip = c.createBiquadFilter(); lip.type = 'lowpass';
+      lip.frequency.setValueAtTime(250, t); lip.frequency.exponentialRampToValueAtTime(2200, t + .07);
+      lip.connect(voice);
+      // The voice: a buzz, and a whisper an octave up, sliding down with a wobble.
+      const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 5.2; lg.gain.value = 7; lfo.connect(lg);
+      lfo.start(t); lfo.stop(t + len + .1);
+      const src = [[1, 'sawtooth', 1], [2.01, 'triangle', .25]].map(([m, type, g]) => {
+        const o = c.createOscillator(); o.type = type;
+        o.frequency.setValueAtTime(f0 * m * 1.08, t); o.frequency.exponentialRampToValueAtTime(f0 * m, t + .18);
+        o.frequency.exponentialRampToValueAtTime(f0 * m * .7, t + len);
+        lg.connect(o.frequency);
+        const og = c.createGain(); og.gain.value = g; o.connect(og);
+        o.start(t); o.stop(t + len + .1);
+        return og;
+      });
+      // Through the formants of an "oo".
+      [[320, 6, 1], [800, 7, .45], [2300, 9, .07]].forEach(([f, q, g]) => {
+        const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q;
+        const bg = c.createGain(); bg.gain.value = g * 3; bp.connect(bg); bg.connect(lip);
+        src.forEach(o => o.connect(bp));
+      });
+      voice.gain.setValueAtTime(0, t);
+      voice.gain.linearRampToValueAtTime(1, t + .05);
+      voice.gain.setValueAtTime(1, t + len * .45);
+      voice.gain.exponentialRampToValueAtTime(.001, t + len);
+    } catch (e) {}
+    ghost.classList.remove('booing'); void ghost.offsetWidth; ghost.classList.add('booing');
+    SPIN.v += 120;
+  }
+
   function frame(t) {
     raf = 0;
     if (!body.classList.contains('halloween')) return;
     const dt = Math.min(.033, last ? (t - last) / 1000 : .016); last = t;
-    const s = (t - t0) / 1000, W = innerWidth, H = innerHeight, size = ghost.offsetWidth || 44, m = size + 16;
-    let tx, ty;
-    if (t - lastScroll < 900) {
-      // Weaving: across the screen and back as the page scrolls (a
-      // triangle wave of the distance scrolled), bobbing up and down.
-      const u = travel / Math.max(500, W * .9), tri = Math.abs((u % 2) - 1);
-      tx = m + (1 - tri) * (W - 2 * m);
-      ty = H * .42 + Math.sin(travel / 110) * H * .14;
-    } else if (mx != null) {
-      // Company: circling a little way off the pointer.
-      const a = s * .45;
-      tx = mx + Math.cos(a) * 130; ty = my + Math.sin(a) * 80 - 50;
-    } else {
-      // No pointer (touch): a slow wander.
-      tx = W * (.5 + .34 * Math.sin(s * .21)); ty = H * (.42 + .18 * Math.sin(s * .29 + 1));
-    }
-    X.to = Math.max(m, Math.min(W - m, tx)); Y.to = Math.max(m, Math.min(H - m - 70, ty));
+    const s = (t - t0) / 1000, W = innerWidth, H = innerHeight, size = ghost.offsetWidth || 44, m = size + 12;
+    if (t >= nextPick) pick(t);
+    // If the pointer comes onto it, it slips away at once.
+    if (mx != null && Math.hypot(mx - X.x, my - Y.x) < KEEP * .7 && t > nextPick - 400) { nextPick = 0; }
+    X.to = Math.max(m, Math.min(W - m, X.to)); Y.to = Math.max(m, Math.min(H - m - 70, Y.to));
     if (still) { X.x = X.to; Y.x = Y.to; X.v = Y.v = 0; }
-    // Never on the pointer itself: fade when it comes close.
     const dx = mx == null ? 0 : mx - X.x, dy = my == null ? 0 : my - Y.x, dist = mx == null ? 1e4 : Math.hypot(dx, dy);
     FADE.to = dist < 70 ? .35 : .9;
     // The eye looks toward the pointer (or where it's heading, without one).
     const lx = mx == null ? X.v : dx, ly = mx == null ? Y.v : dy, ll = Math.hypot(lx, ly) || 1, reach = Math.min(1, ll / 60) * 1.6;
     EX.to = lx / ll * reach; EY.to = ly / ll * reach;
     for (let i = 0; i < 4; i++) [X, Y, SPIN, FADE, EX, EY].forEach(q => stepS(q, dt / 4));
-    const bob = still ? 0 : Math.sin(s * 1.8) * 6, tilt = Math.max(-28, Math.min(28, X.v * .045));
-    ghost.style.transform = `translate(${(X.x - size / 2).toFixed(1)}px, ${(Y.x - size / 2 + bob).toFixed(1)}px) rotate(${(tilt + SPIN.x).toFixed(1)}deg)`;
+    // A drifting wobble on top, so even its straight lines aren't.
+    const wx = still ? 0 : Math.sin(s * 1.3) * 10 + Math.sin(s * 3.1) * 3, wy = still ? 0 : Math.sin(s * 1.8) * 7 + Math.cos(s * 2.6) * 3;
+    const tilt = Math.max(-28, Math.min(28, X.v * .05));
+    ghost.style.transform = `translate(${(X.x - size / 2 + wx).toFixed(1)}px, ${(Y.x - size / 2 + wy).toFixed(1)}px) rotate(${(tilt + SPIN.x).toFixed(1)}deg)`;
     ghost.style.opacity = Math.max(.2, Math.min(1, FADE.x)).toFixed(3);
     eye.setAttribute('cx', (12 + EX.x).toFixed(2));
     eye.setAttribute('cy', (9 + EY.x).toFixed(2));
+    if (t >= nextBoo) {
+      if (heard && document.visibilityState === 'visible') boo();
+      nextBoo = t + rnd(22000, 45000);
+    }
     raf = requestAnimationFrame(frame);
   }
   const wake = () => { if (!raf && body.classList.contains('halloween')) { last = 0; raf = requestAnimationFrame(frame); } };
