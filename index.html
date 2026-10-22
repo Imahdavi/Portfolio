@@ -5084,8 +5084,12 @@
     #hw-layer .hw-web { position:absolute; top:0; width:min(220px, 30vw); height:auto; opacity:.32; stroke:#e9d8c4; fill:none; stroke-width:.8; }
     #hw-layer .hw-web.l { left:0; }
     #hw-layer .hw-web.r { right:0; transform:scaleX(-1); }
-    #hw-layer .hw-bat { position:absolute; width:34px; height:18px; fill:#0a060c; opacity:.85; animation:hwBat linear infinite; }
-    #hw-layer .hw-bat path { animation:hwFlap .18s ease-in-out infinite alternate; transform-origin:50% 60%; }
+    /* White, inverted against what's behind: white over the dark page,
+       dark over a white card, so a bat always shows. */
+    #hw-bats { position:fixed; inset:0; z-index:150; pointer-events:none; display:none; overflow:hidden; mix-blend-mode:difference; }
+    body.halloween #hw-bats { display:block; }
+    #hw-bats .hw-bat { position:absolute; width:34px; height:18px; fill:#fff; opacity:.9; animation:hwBat linear infinite; }
+    #hw-bats .hw-bat path { animation:hwFlap .18s ease-in-out infinite alternate; transform-origin:50% 60%; }
     @keyframes hwBat { 0% { transform:translate(-12vw, 0) scale(var(--s,1)); } 50% { transform:translate(50vw, -6vh) scale(var(--s,1)); } 100% { transform:translate(112vw, 4vh) scale(var(--s,1)); } }
     #hw-layer .hw-ghost { position:absolute; left:0; top:0; width:44px; height:44px; will-change:transform, opacity; filter:drop-shadow(0 0 10px rgba(240,226,255,.35)) drop-shadow(0 6px 10px rgba(0,0,0,.4)); }
     #hw-layer .hw-ghost svg { display:block; width:100%; height:100%; overflow:visible; }
@@ -5097,7 +5101,7 @@
     @media (max-width:600px) { #hw-layer .hw-ghost { width:34px; height:34px; } }
     @keyframes hwFlap { from { transform:scaleY(1); } to { transform:scaleY(.45); } }
     @media (prefers-reduced-motion:reduce) {
-      #hw-btn, #hw-layer .hw-bat, #hw-layer .hw-bat path, body.halloween #hw-btn .hw-face { animation:none; }
+      #hw-btn, #hw-bats .hw-bat, #hw-bats .hw-bat path, body.halloween #hw-btn .hw-face { animation:none; }
     }
 
     #bottom-nav {
@@ -7836,10 +7840,16 @@ function toggleDarkMode() {
   })();
   const bat = '<svg class="hw-bat" viewBox="0 0 64 34"><path d="M32 12c1.6-3 3.4-3 5 0 3-6 11-9 19-8-4 3-5 7-4 11-4-2-8-1-10 3-2-3-5-4-7-2-1 2-2 4-3 6-1-2-2-4-3-6-2-2-5-1-7 2-2-4-6-5-10-3 1-4 0-8-4-11 8-1 16 2 19 8 1.6-3 3.4-3 5 0Z"/></svg>';
   layer.innerHTML = `<div class="hw-glow"></div><div class="hw-moon"></div>
-    <svg class="hw-web l" viewBox="0 0 170 170">${web}</svg><svg class="hw-web r" viewBox="0 0 170 170">${web}</svg>
-    ${[[14, 11, 1, 0], [26, 15, .7, -4], [40, 19, .85, -9], [58, 23, .6, -15]].map(([top, dur, s, delay]) =>
-      bat.replace('class="hw-bat"', `class="hw-bat" style="top:${top}vh;--s:${s};animation-duration:${dur}s;animation-delay:${delay}s"`)).join('')}`;
+    <svg class="hw-web l" viewBox="0 0 170 170">${web}</svg><svg class="hw-web r" viewBox="0 0 170 170">${web}</svg>`;
   body.appendChild(layer);
+  // The bats get a layer of their own, blended (difference) with the page
+  // so they're white on the dark and dark on anything white.
+  const bats = document.createElement('div');
+  bats.id = 'hw-bats';
+  bats.setAttribute('aria-hidden', 'true');
+  bats.innerHTML = [[14, 11, 1, 0], [26, 15, .7, -4], [40, 19, .85, -9], [58, 23, .6, -15]].map(([top, dur, s, delay]) =>
+    bat.replace('class="hw-bat"', `class="hw-bat" style="top:${top}vh;--s:${s};animation-duration:${dur}s;animation-delay:${delay}s"`)).join('');
+  body.appendChild(bats);
 
   // ── Switching ──
   const btn = document.getElementById('hw-btn');
