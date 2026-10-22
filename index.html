@@ -5091,15 +5091,16 @@
     #hw-bats .hw-bat { position:absolute; width:34px; height:18px; fill:#fff; opacity:.9; animation:hwBat linear infinite; }
     #hw-bats .hw-bat path { animation:hwFlap .18s ease-in-out infinite alternate; transform-origin:50% 60%; }
     @keyframes hwBat { 0% { transform:translate(-12vw, 0) scale(var(--s,1)); } 50% { transform:translate(50vw, -6vh) scale(var(--s,1)); } 100% { transform:translate(112vw, 4vh) scale(var(--s,1)); } }
-    #hw-layer .hw-ghost { position:absolute; left:0; top:0; width:44px; height:44px; will-change:transform, opacity; filter:drop-shadow(0 0 10px rgba(240,226,255,.35)) drop-shadow(0 6px 10px rgba(0,0,0,.4)); }
+    #hw-layer .hw-ghost { position:absolute; left:0; top:0; width:44px; height:50px; will-change:transform, opacity; filter:drop-shadow(0 0 10px rgba(240,226,255,.35)) drop-shadow(0 6px 10px rgba(0,0,0,.4)); }
     #hw-layer .hw-ghost svg { display:block; width:100%; height:100%; overflow:visible; }
     #hw-layer .hw-ghost-body { fill:#f4ecff; }
     #hw-layer .hw-ghost-eye { fill:#1b1320; }
     #hw-layer .hw-ghost-mouth { fill:#1b1320; transform-box:fill-box; transform-origin:50% 0; }
+    #hw-layer .hw-ghost-teeth { fill:#f4ecff; }
     #hw-layer .hw-boo { position:absolute; left:50%; bottom:100%; margin-bottom:6px; padding:3px 8px; border-radius:10px 10px 10px 2px; background:#f4ecff; color:#1b1320; font:700 12px/1.2 var(--font-title, sans-serif); white-space:nowrap; opacity:0; transform:translate(-20%, 6px) scale(.6); transform-origin:left bottom; pointer-events:none; }
     #hw-layer .hw-ghost.booing .hw-boo { animation:hwBoo 1.6s ease-out; }
     @keyframes hwBoo { 0% { opacity:0; transform:translate(-20%, 6px) scale(.6); } 12% { opacity:1; transform:translate(-20%, 0) scale(1.08); } 22% { transform:translate(-20%, 0) scale(1); } 75% { opacity:1; } 100% { opacity:0; transform:translate(-20%, -8px) scale(1); } }
-    @media (max-width:600px) { #hw-layer .hw-ghost { width:34px; height:34px; } }
+    @media (max-width:600px) { #hw-layer .hw-ghost { width:34px; height:38px; } }
     @keyframes hwFlap { from { transform:scaleY(1); } to { transform:scaleY(.45); } }
     @media (prefers-reduced-motion:reduce) {
       #hw-btn, #hw-bats .hw-bat, #hw-bats .hw-bat path, body.halloween #hw-btn .hw-face { animation:none; }
@@ -7911,15 +7912,31 @@ function toggleDarkMode() {
   // off it and never sits on it. Scrolling makes it dart from side to side.
   // Changing page makes it whirl round once. Its eye (the dark circle
   // itself) looks toward the pointer. Every so often it says "boo".
+  // Its body: the dome of the icon, carried down to a longer sheet whose
+  // hem is four scallops that ripple like cloth (phase p, moved on each
+  // frame; the ripple runs along the hem and the sheet sways a little).
+  function hem(p) {
+    const B = 23.4, n = 4, w = 20 / n;
+    let d = `M12 2C6.5 2 2 6.58 2 12.18L${(2 + Math.sin(p) * .35).toFixed(2)} ${B.toFixed(2)}`;
+    for (let i = 0; i < n; i++) {
+      const x0 = 2 + i * w, x1 = x0 + w, ph = p * 1.0 - i * 1.1;
+      const cy = B + 1.9 + Math.sin(ph) * .55, ey = B - .15 + Math.sin(ph - .9) * .35;
+      const sx = Math.sin(p + i * .7) * .35;
+      d += `Q${(x0 + w / 2 + sx).toFixed(2)} ${cy.toFixed(2)} ${(x1 + (i === n - 1 ? Math.sin(p) * .35 : sx)).toFixed(2)} ${(i === n - 1 ? B : ey).toFixed(2)}`;
+    }
+    return d + 'L22 12.18C22 6.58 17.5 2 12 2Z';
+  }
   const ghost = document.createElement('div');
   ghost.className = 'hw-ghost';
-  ghost.innerHTML = `<span class="hw-boo">Boo!</span><svg viewBox="0 0 24 24">
-    <path class="hw-ghost-body" d="M12 2C6.5 2 2 6.58 2 12.18V20.07C2 21.33 2.75 21.67 3.67 20.83L4.67 19.92C5.04 19.58 5.64 19.58 6.01 19.92L8.01 21.75C8.38 22.09 8.98 22.09 9.35 21.75L11.35 19.92C11.72 19.58 12.32 19.58 12.69 19.92L14.69 21.75C15.06 22.09 15.66 22.09 16.03 21.75L18.03 19.92C18.4 19.58 19 19.58 19.37 19.92L20.37 20.83C21.29 21.67 22.04 21.33 22.04 20.07V12.18C22 6.58 17.5 2 12 2Z"/>
+  ghost.innerHTML = `<span class="hw-boo">Boo!</span><svg viewBox="0 0 24 27">
+    <path class="hw-ghost-body" d="${hem(0)}"/>
     <circle class="hw-ghost-eye" cx="12" cy="9" r="2.38"/>
     <path class="hw-ghost-mouth" d="M16.45 14.6C15.14 15.58 13.57 16.07 12 16.07C10.43 16.07 8.86 15.58 7.55 14.6C7.22 14.35 7.15 13.88 7.4 13.55C7.65 13.22 8.12 13.15 8.45 13.4C10.54 14.97 13.46 14.97 15.55 13.4C15.88 13.15 16.35 13.22 16.6 13.55C16.85 13.88 16.78 14.35 16.45 14.6Z"/>
+    <path class="hw-ghost-teeth" d=""/>
   </svg>`;
   layer.appendChild(ghost);
-  const eye = ghost.querySelector('.hw-ghost-eye'), mouth = ghost.querySelector('.hw-ghost-mouth');
+  const ghostBody = ghost.querySelector('.hw-ghost-body');
+  const eye = ghost.querySelector('.hw-ghost-eye'), mouth = ghost.querySelector('.hw-ghost-mouth'), teeth = ghost.querySelector('.hw-ghost-teeth');
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const sp = (k, c) => ({ x: 0, v: 0, to: 0, k, c });
   const stepS = (s, dt) => { s.v += (-s.k * (s.x - s.to) - s.c * s.v) * dt; s.x += s.v * dt; };
@@ -8005,6 +8022,18 @@ function toggleDarkMode() {
     return Math.max(0, Math.min(1, (20 * Math.log10(Math.sqrt(s / booData.length) + 1e-6) + 42) / 30));
   }
 
+  // A jagged, jack-o'-lantern grin while it laughs: a row of teeth hanging
+  // from the top of the open mouth and a few pointing up from the bottom,
+  // following the mouth as it stretches (it scales from its top, y 13.15).
+  function fangs(sx, sy, k) {
+    const X = x => (12 + (x - 12) * sx).toFixed(2), Y = y => (13.15 + (y - 13.15) * sy).toFixed(2);
+    const top = x => 13.4 + 1.18 * (1 - ((x - 12) / 3.55) ** 2), bot = x => 14.6 + 1.47 * (1 - ((x - 12) / 4.45) ** 2);
+    const h = .7 * k;
+    let d = '';
+    [[9.3, 10.9], [11.2, 12.8], [13.1, 14.7]].forEach(([a, b]) => { const m = (a + b) / 2; d += `M${X(a)} ${Y(top(a)) - .05}L${X(b)} ${Y(top(b)) - .05}L${X(m)} ${(+Y(top(m)) + h).toFixed(2)}Z`; });
+    [[10.1, 11.7], [12.3, 13.9]].forEach(([a, b]) => { const m = (a + b) / 2; d += `M${X(a)} ${(+Y(bot(a)) + .05).toFixed(2)}L${X(b)} ${(+Y(bot(b)) + .05).toFixed(2)}L${X(m)} ${(+Y(bot(m)) - h * .85).toFixed(2)}Z`; });
+    return d;
+  }
   function frame(t) {
     raf = 0;
     if (!body.classList.contains('halloween')) return;
@@ -8026,15 +8055,18 @@ function toggleDarkMode() {
     const tilt = Math.max(-28, Math.min(28, X.v * .05));
     ghost.style.transform = `translate(${(X.x - size / 2 + wx).toFixed(1)}px, ${(Y.x - size / 2 + wy).toFixed(1)}px) rotate(${(tilt + SPIN.x).toFixed(1)}deg)`;
     ghost.style.opacity = Math.max(.2, Math.min(1, FADE.x)).toFixed(3);
+    if (!still) ghostBody.setAttribute('d', hem(s * 3.2));
     eye.setAttribute('cx', (12 + EX.x).toFixed(2));
     eye.setAttribute('cy', (9 + EY.x).toFixed(2));
     // The mouth: quick to open with the sound, a touch slower to close.
     const o = loud();
     mouthOpen += (o - mouthOpen) * (o > mouthOpen ? .6 : .25);
-    mouth.style.transform = mouthOpen > .01 ? `scale(${(1 + mouthOpen * .15).toFixed(3)}, ${(1 + mouthOpen * 2.2).toFixed(3)})` : '';
+    const sx = 1 + mouthOpen * .15, sy = 1 + mouthOpen * 2.2;
+    mouth.style.transform = mouthOpen > .01 ? `scale(${sx.toFixed(3)}, ${sy.toFixed(3)})` : '';
+    teeth.setAttribute('d', mouthOpen > .12 ? fangs(sx, sy, Math.min(1, (mouthOpen - .12) / .3)) : '');
     if (t >= nextBoo && heard) {
       if (document.visibilityState === 'visible') boo();
-      nextBoo = t + rnd(22000, 45000);
+      nextBoo = t + rnd(9000, 11000);
     }
     raf = requestAnimationFrame(frame);
   }
