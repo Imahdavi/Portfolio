@@ -5086,8 +5086,23 @@
     body.halloween #hw-layer { display:block; }
     #hw-layer .hw-glow { position:absolute; left:50%; bottom:-30vh; width:120vw; height:60vh; transform:translateX(-50%); background:radial-gradient(closest-side, rgba(255,110,20,.16), rgba(255,110,20,0)); }
     /* The moon: plain white, slowly blushing to a blood moon and back. */
-    #hw-layer .hw-moon { position:absolute; top:5vh; right:6vw; width:74px; height:74px; border-radius:50%; background:radial-gradient(circle at 38% 38%, #ffffff, #eef0f3 55%, #c9ccd3); opacity:.9; animation:hwMoonGlow 16s ease-in-out infinite; }
-    #hw-layer .hw-moon::after { content:""; position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle at 38% 38%, #ffb3a3, #e0452f 55%, #8e1a12); opacity:0; animation:hwMoonRed 16s ease-in-out infinite; }
+    #hw-layer .hw-moon { position:absolute; top:5vh; right:6vw; width:74px; height:74px; border-radius:50%; overflow:hidden; opacity:.9; animation:hwMoonGlow 16s ease-in-out infinite;
+      /* Its face: soft grey seas, a few craters (a dark pit with a lit rim
+         below-right), and a shade toward the lower right, over the white. */
+      background:
+        radial-gradient(circle at 70% 72%, transparent 38%, rgba(70,74,86,.28) 75%),
+        radial-gradient(circle at 31% 34%, rgba(120,126,140,.5) 0 7%, rgba(255,255,255,.55) 8.5%, transparent 10%),
+        radial-gradient(circle at 64% 27%, rgba(120,126,140,.45) 0 4.5%, rgba(255,255,255,.5) 6%, transparent 7.5%),
+        radial-gradient(circle at 44% 74%, rgba(120,126,140,.42) 0 4%, rgba(255,255,255,.45) 5.5%, transparent 7%),
+        radial-gradient(circle at 78% 52%, rgba(120,126,140,.38) 0 3%, rgba(255,255,255,.4) 4.2%, transparent 5.5%),
+        radial-gradient(circle at 22% 60%, rgba(120,126,140,.35) 0 2.5%, transparent 4%),
+        radial-gradient(ellipse 26% 18% at 40% 47%, rgba(150,156,170,.45), transparent),
+        radial-gradient(ellipse 20% 15% at 60% 60%, rgba(150,156,170,.4), transparent),
+        radial-gradient(ellipse 16% 22% at 55% 38%, rgba(160,166,180,.35), transparent),
+        radial-gradient(circle at 38% 38%, #ffffff, #eef0f3 55%, #c9ccd3);
+    }
+    /* The blood moon multiplies over that face, so its texture stays. */
+    #hw-layer .hw-moon::after { content:""; position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle at 38% 38%, #ffb3a3, #e0452f 55%, #8e1a12); mix-blend-mode:multiply; opacity:0; animation:hwMoonRed 16s ease-in-out infinite; }
     @keyframes hwMoonRed { 0%, 30% { opacity:0; } 55%, 70% { opacity:.9; } 100% { opacity:0; } }
     @keyframes hwMoonGlow { 0%, 30% { box-shadow:0 0 40px 8px rgba(255,255,255,.2); } 55%, 70% { box-shadow:0 0 46px 10px rgba(230,60,40,.3); } 100% { box-shadow:0 0 40px 8px rgba(255,255,255,.2); } }
     #hw-layer .hw-web { position:absolute; top:0; width:min(220px, 30vw); height:auto; opacity:.32; stroke:#e9d8c4; fill:none; stroke-width:.8; }
