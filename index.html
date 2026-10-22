@@ -6396,8 +6396,8 @@ one keyframe at a time</div>
          and Experience icons: once on load, again on every tap. -->
     <div class="nav-lottie-icon" id="nb-soon-icon" aria-hidden="true"></div>
   </button>
-  <!-- Invoice maker: open to everyone for now (was admin-only, an-nav-btn). -->
-  <button class="nav-btn" id="nb-invoice" onclick="goView('view-invoice',this)">
+  <!-- Invoice maker: admin-only (an-nav-btn hides it from visitors). -->
+  <button class="nav-btn an-nav-btn" id="nb-invoice" onclick="goView('view-invoice',this)">
     <span class="nav-tip">Invoice</span>
     <!-- Iconly "Receipt bill check" Lottie (/receipt-icon.json), played like
          the Experience star: once on load, again on every tap. -->
@@ -8997,6 +8997,8 @@ function invTomanEq(total) {
 }
 
 function openInvoice() {
+  // Admin-only: a visitor who gets here (an old link) goes home instead.
+  if (!document.body.classList.contains('is-admin')) { goView('view-home', document.getElementById('nb-home')); return; }
   initInvoice();
   invPrintIn();
   if (!window.qrcode) invLoadQr().then(renderInvoicePaper).catch(() => {});
@@ -13409,6 +13411,11 @@ function viewForPath(path) {
 function goViewForPath(path) {
   const v = viewForPath(path);
   if (!v) return false;
+  // The invoice maker is admin-only; for anyone else /invoice is just home.
+  if (v === 'view-invoice' && !document.body.classList.contains('is-admin')) {
+    history.replaceState({ view: 'home' }, '', '/');
+    return false;
+  }
   if (location.pathname !== VIEW_PATHS[v]) history.replaceState({ view: v }, '', VIEW_PATHS[v]);
   goView(v, document.getElementById(NAV_MAP[v]));
   return true;
