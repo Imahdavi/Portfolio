@@ -5077,8 +5077,7 @@
     #hw-layer .hw-ghost { position:absolute; left:0; top:0; width:44px; height:44px; will-change:transform, opacity; filter:drop-shadow(0 0 10px rgba(240,226,255,.35)) drop-shadow(0 6px 10px rgba(0,0,0,.4)); }
     #hw-layer .hw-ghost svg { display:block; width:100%; height:100%; overflow:visible; }
     #hw-layer .hw-ghost-body { fill:#f4ecff; }
-    #hw-layer .hw-ghost-socket { fill:#1b1320; }
-    #hw-layer .hw-ghost-pupil { fill:#ff9a3c; filter:drop-shadow(0 0 1.2px #ffb35c); }
+    #hw-layer .hw-ghost-eye { fill:#1b1320; }
     @media (max-width:600px) { #hw-layer .hw-ghost { width:34px; height:34px; } }
     @keyframes hwFlap { from { transform:scaleY(1); } to { transform:scaleY(.45); } }
     @media (prefers-reduced-motion:reduce) {
@@ -7869,38 +7868,39 @@ function toggleDarkMode() {
   if (body.classList.contains('halloween')) paint(true);
 
   // ── The ghost ──
-  // Floats at the right edge, out of the way, wherever the visitor goes.
-  // Scrolling (any view) pushes it along the way you scroll and tips it
-  // over; it springs back with a sway. Changing page makes it whirl round
-  // once. Its eye follows the pointer, and it drifts aside (and fades)
-  // when the pointer comes near, so it never sits on what you're reading.
+  // Floats free over the page, wherever the visitor goes. With a pointer it
+  // keeps company at arm's length: circling slowly a little way off, never
+  // right on it. Scrolling sends it weaving across the screen, zigzagging
+  // right to left and back as the page moves; when the scrolling stops it
+  // drifts back to the pointer. Changing page makes it whirl round once.
+  // Its eye (the dark circle itself) looks toward the pointer.
   const ghost = document.createElement('div');
   ghost.className = 'hw-ghost';
   ghost.innerHTML = `<svg viewBox="0 0 24 24">
-    <path class="hw-ghost-body" d="M12 2C6.5 2 2 6.58 2 12.18V20.07C2 21.33 2.75 21.67 3.67 20.83L4.67 19.92C5.04 19.58 5.64 19.58 6.01 19.92L8.01 21.75C8.38 22.09 8.98 22.09 9.35 21.75L11.35 19.92C11.72 19.58 12.32 19.58 12.69 19.92L14.69 21.75C15.06 22.09 15.66 22.09 16.03 21.75L18.03 19.92C18.4 19.58 19 19.58 19.37 19.92L20.37 20.83C21.29 21.67 22.04 21.33 22.04 20.07V12.18C22 6.58 17.5 2 12 2ZM12 6.62C13.31 6.62 14.38 7.69 14.38 9C14.38 10.31 13.31 11.38 12 11.38C10.69 11.38 9.62 10.31 9.62 9C9.62 7.69 10.69 6.62 12 6.62ZM16.45 14.6C15.14 15.58 13.57 16.07 12 16.07C10.43 16.07 8.86 15.58 7.55 14.6C7.22 14.35 7.15 13.88 7.4 13.55C7.65 13.22 8.12 13.15 8.45 13.4C10.54 14.97 13.46 14.97 15.55 13.4C15.88 13.15 16.35 13.22 16.6 13.55C16.85 13.88 16.78 14.35 16.45 14.6Z"/>
-    <circle class="hw-ghost-socket" cx="12" cy="9" r="2.38"/>
-    <circle class="hw-ghost-pupil" cx="12" cy="9" r="1.05"/>
+    <path class="hw-ghost-body" d="M12 2C6.5 2 2 6.58 2 12.18V20.07C2 21.33 2.75 21.67 3.67 20.83L4.67 19.92C5.04 19.58 5.64 19.58 6.01 19.92L8.01 21.75C8.38 22.09 8.98 22.09 9.35 21.75L11.35 19.92C11.72 19.58 12.32 19.58 12.69 19.92L14.69 21.75C15.06 22.09 15.66 22.09 16.03 21.75L18.03 19.92C18.4 19.58 19 19.58 19.37 19.92L20.37 20.83C21.29 21.67 22.04 21.33 22.04 20.07V12.18C22 6.58 17.5 2 12 2ZM16.45 14.6C15.14 15.58 13.57 16.07 12 16.07C10.43 16.07 8.86 15.58 7.55 14.6C7.22 14.35 7.15 13.88 7.4 13.55C7.65 13.22 8.12 13.15 8.45 13.4C10.54 14.97 13.46 14.97 15.55 13.4C15.88 13.15 16.35 13.22 16.6 13.55C16.85 13.88 16.78 14.35 16.45 14.6Z"/>
+    <circle class="hw-ghost-eye" cx="12" cy="9" r="2.38"/>
   </svg>`;
   layer.appendChild(ghost);
-  const pupil = ghost.querySelector('.hw-ghost-pupil');
+  const eye = ghost.querySelector('.hw-ghost-eye');
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const sp = (k, c) => ({ x: 0, v: 0, to: 0, k, c });
   const stepS = (s, dt) => { s.v += (-s.k * (s.x - s.to) - s.c * s.v) * dt; s.x += s.v * dt; };
-  const Y = sp(70, 9), X = sp(60, 10), TILT = sp(90, 8), SPIN = sp(40, 9), FADE = sp(120, 22);
-  FADE.x = FADE.to = 1;
-  let mx = -1e4, my = -1e4, raf = 0, last = 0, t0 = performance.now();
-  addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; }, { passive: true });
+  const X = sp(9, 5), Y = sp(9, 5), SPIN = sp(40, 9), FADE = sp(60, 16), EX = sp(120, 16), EY = sp(120, 16);
+  X.x = innerWidth * .7; Y.x = innerHeight * .45; FADE.x = FADE.to = .9;
+  let mx = null, my = null, raf = 0, last = 0, t0 = performance.now();
+  let travel = 0, lastScroll = -1e4, sweepDir = 1;
+  addEventListener('pointermove', e => { if (e.pointerType === 'mouse') { mx = e.clientX; my = e.clientY; } }, { passive: true });
   // Every scroller on the site (the views scroll, not the window).
   const tops = new WeakMap();
   addEventListener('scroll', e => {
-    if (!body.classList.contains('halloween') || still) return;
+    if (!body.classList.contains('halloween')) return;
     const el = e.target === document ? document.scrollingElement : e.target;
     if (!el || el.scrollTop == null) return;
     const prev = tops.get(el), now = el.scrollTop;
     tops.set(el, now);
     if (prev == null) return;
-    const d = Math.max(-60, Math.min(60, now - prev));
-    Y.v += d * 9; TILT.v += d * 5;
+    travel += Math.min(80, Math.abs(now - prev));
+    lastScroll = performance.now();
   }, { capture: true, passive: true });
   // (Not for the page's own opening of its first view.)
   function whirl() { if (body.classList.contains('halloween') && !still && performance.now() - t0 > 2500) SPIN.to += 360; }
@@ -7912,24 +7912,36 @@ function toggleDarkMode() {
     raf = 0;
     if (!body.classList.contains('halloween')) return;
     const dt = Math.min(.033, last ? (t - last) / 1000 : .016); last = t;
-    // Home: the right edge, a little above the middle of the lower half.
-    const size = ghost.offsetWidth || 44, hx = innerWidth - size - (innerWidth < 600 ? 10 : 26), hy = innerHeight * .58;
-    const cx = hx + size / 2 + X.x, cy = hy + size / 2 + Y.x;
-    // Shy of the pointer: slide left/up out of its way and fade.
-    const dx = mx - cx, dy = my - cy, dist = Math.hypot(dx, dy), near = Math.max(0, 1 - dist / 150);
-    X.to = -near * 70; Y.to = (dy > 0 ? -1 : 1) * near * 50;
-    FADE.to = 1 - near * .7;
-    Y.x = Math.max(-140, Math.min(140, Y.x)); TILT.x = Math.max(-40, Math.min(40, TILT.x));
-    for (let i = 0; i < 4; i++) [Y, X, TILT, SPIN, FADE].forEach(s => stepS(s, dt / 4));
-    const s = (t - t0) / 1000, bob = still ? 0 : Math.sin(s * 1.7) * 7, sway = still ? 0 : Math.sin(s * .9) * 5;
-    ghost.style.transform = `translate(${(hx + X.x + sway).toFixed(1)}px, ${(hy + Y.x + bob).toFixed(1)}px) rotate(${(TILT.x + SPIN.x + sway * .8).toFixed(1)}deg)`;
-    ghost.style.opacity = Math.max(.25, Math.min(1, FADE.x)).toFixed(3);
-    // The eye: the pupil slides toward the pointer, inside its socket.
-    if (mx > -1e3) {
-      const len = Math.max(1, dist), k = Math.min(1, dist / 40) * 1.15;
-      pupil.setAttribute('cx', (12 + dx / len * k).toFixed(2));
-      pupil.setAttribute('cy', (9 + dy / len * k).toFixed(2));
+    const s = (t - t0) / 1000, W = innerWidth, H = innerHeight, size = ghost.offsetWidth || 44, m = size + 16;
+    let tx, ty;
+    if (t - lastScroll < 900) {
+      // Weaving: across the screen and back as the page scrolls (a
+      // triangle wave of the distance scrolled), bobbing up and down.
+      const u = travel / Math.max(500, W * .9), tri = Math.abs((u % 2) - 1);
+      tx = m + (1 - tri) * (W - 2 * m);
+      ty = H * .42 + Math.sin(travel / 110) * H * .14;
+    } else if (mx != null) {
+      // Company: circling a little way off the pointer.
+      const a = s * .45;
+      tx = mx + Math.cos(a) * 130; ty = my + Math.sin(a) * 80 - 50;
+    } else {
+      // No pointer (touch): a slow wander.
+      tx = W * (.5 + .34 * Math.sin(s * .21)); ty = H * (.42 + .18 * Math.sin(s * .29 + 1));
     }
+    X.to = Math.max(m, Math.min(W - m, tx)); Y.to = Math.max(m, Math.min(H - m - 70, ty));
+    if (still) { X.x = X.to; Y.x = Y.to; X.v = Y.v = 0; }
+    // Never on the pointer itself: fade when it comes close.
+    const dx = mx == null ? 0 : mx - X.x, dy = my == null ? 0 : my - Y.x, dist = mx == null ? 1e4 : Math.hypot(dx, dy);
+    FADE.to = dist < 70 ? .35 : .9;
+    // The eye looks toward the pointer (or where it's heading, without one).
+    const lx = mx == null ? X.v : dx, ly = mx == null ? Y.v : dy, ll = Math.hypot(lx, ly) || 1, reach = Math.min(1, ll / 60) * 1.6;
+    EX.to = lx / ll * reach; EY.to = ly / ll * reach;
+    for (let i = 0; i < 4; i++) [X, Y, SPIN, FADE, EX, EY].forEach(q => stepS(q, dt / 4));
+    const bob = still ? 0 : Math.sin(s * 1.8) * 6, tilt = Math.max(-28, Math.min(28, X.v * .045));
+    ghost.style.transform = `translate(${(X.x - size / 2).toFixed(1)}px, ${(Y.x - size / 2 + bob).toFixed(1)}px) rotate(${(tilt + SPIN.x).toFixed(1)}deg)`;
+    ghost.style.opacity = Math.max(.2, Math.min(1, FADE.x)).toFixed(3);
+    eye.setAttribute('cx', (12 + EX.x).toFixed(2));
+    eye.setAttribute('cy', (9 + EY.x).toFixed(2));
     raf = requestAnimationFrame(frame);
   }
   const wake = () => { if (!raf && body.classList.contains('halloween')) { last = 0; raf = requestAnimationFrame(frame); } };
