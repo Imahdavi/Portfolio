@@ -5031,6 +5031,19 @@
        bobbing on its own; lit, its face glows. The theme itself is the
        dark one re-pitched (body.dark.halloween re-defines the dark tokens)
        plus a still layer of cobwebs, a moon and a few bats behind the nav. */
+    /* A smaller pumpkin perched on the top edge of the Home page's
+       Category / Brand switch, rocking a little (Halloween only). */
+    body.halloween #homeViewToggle { position:relative; }
+    .hwp-perch { display:none; position:absolute; right:16px; bottom:calc(100% - 6px); width:24px; height:24px; pointer-events:none; transform-origin:50% 92%; animation:hwpRock 3.2s ease-in-out infinite; filter:drop-shadow(0 0 8px rgba(255,120,20,.4)) drop-shadow(0 3px 3px rgba(0,0,0,.45)); }
+    body.halloween .hwp-perch { display:block; }
+    .hwp-perch svg { display:block; width:100%; height:100%; overflow:visible; }
+    .hwp-perch .hw-body { fill:#ff8a1e; }
+    .hwp-perch .hw-rib { fill:none; stroke:#d9620b; stroke-width:1.6; stroke-linecap:round; opacity:.8; }
+    .hwp-perch .hw-stem { fill:#5b7a2c; }
+    .hwp-perch .hw-leaf { fill:#7da23b; }
+    .hwp-perch .hw-face { fill:#ffd36b; filter:drop-shadow(0 0 2px #ffb02e); animation:hwFlicker 3.4s steps(1) infinite; }
+    @keyframes hwpRock { 0%, 100% { transform:rotate(-5deg); } 50% { transform:rotate(5deg); } 72% { transform:rotate(1deg) translateY(-3px); } 80% { transform:rotate(-1deg) translateY(0); } }
+    @media (prefers-reduced-motion:reduce) { .hwp-perch, .hwp-perch .hw-face { animation:none; } }
     #hw-btn {
       position:relative; width:38px; height:38px; padding:0; margin:0 2px; border:0; background:transparent; cursor:pointer;
       display:grid; place-items:center; -webkit-tap-highlight-color:transparent;
@@ -7869,6 +7882,16 @@ function toggleDarkMode() {
     return lamp.apply(this, arguments);
   };
   if (body.classList.contains('halloween')) paint(true);
+
+  // A copy of the jack-o'-lantern, perched on the Category / Brand switch.
+  const sw = document.getElementById('homeViewToggle'), pk = document.querySelector('#hw-btn svg');
+  if (sw && pk) {
+    const perch = document.createElement('span');
+    perch.className = 'hwp-perch';
+    perch.setAttribute('aria-hidden', 'true');
+    perch.appendChild(pk.cloneNode(true));
+    sw.appendChild(perch);
+  }
 
   // ── The ghost ──
   // Floats free over the page, wherever the visitor goes, wandering from
