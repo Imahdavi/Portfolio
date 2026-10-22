@@ -2,6 +2,14 @@
   "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . \":(exclude)media\"",
   "rewrites": [
     {
+      "source": "/api/projects",
+      "destination": "https://portfolio-api.alireza-mahdavi.workers.dev/api/projects"
+    },
+    {
+      "source": "/api/settings",
+      "destination": "https://portfolio-api.alireza-mahdavi.workers.dev/api/settings"
+    },
+    {
       "source": "/project/:key",
       "destination": "/index.html"
     },
