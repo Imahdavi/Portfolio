@@ -8027,7 +8027,12 @@ function toggleDarkMode() {
   // the first time), and its mouth moves with the sound: the loudness,
   // read off an analyser each frame, opens it. Only after the visitor has
   // touched the page (browsers keep audio locked until then).
-  let mouthOpen = 0, actx = null, booBuf = null, booAn = null, booData = null, heard = false, nextBoo = performance.now() + rnd(6000, 11000);
+  let mouthOpen = 0, actx = null, booBuf = null, booAn = null, booData = null, heard = false, nextBoo = performance.now() + 3000;
+  // The first laugh comes 3s after Halloween starts (switched on, or the
+  // page opening in it), then every 12s.
+  let wasHw = body.classList.contains('halloween');
+  new MutationObserver(() => { const on = body.classList.contains('halloween'); if (on && !wasHw) nextBoo = performance.now() + 3000; wasHw = on; })
+    .observe(body, { attributes: true, attributeFilter: ['class'] });
   addEventListener('pointerdown', () => { heard = true; if (actx && actx.state === 'suspended') actx.resume(); }, { capture: true, passive: true });
   const loadClip = url => fetch(url).then(r => r.arrayBuffer()).then(b => actx.decodeAudioData(b));
   function speak(buf, then) {
@@ -8073,6 +8078,8 @@ function toggleDarkMode() {
         a.src.stop(now + .85);
         return;
       }
+      // The laugh is loaded now too, so the first one lands on time.
+      if (!booBuf) loadClip('/sfx/ghost-boo.mp3').then(b => { booBuf = booBuf || b; }).catch(() => {});
       amb = { src: actx.createBufferSource(), g: actx.createGain() };
       const a = amb;
       if (!ambBuf) ambBuf = await fetch('/sfx/coraline-loop.mp3').then(r => r.arrayBuffer()).then(b => actx.decodeAudioData(b));
@@ -8141,7 +8148,8 @@ function toggleDarkMode() {
     const sx = 1 + mouthOpen * .15, sy = 1 + mouthOpen * 2.2;
     mouth.style.transform = mouthOpen > .01 ? `scale(${sx.toFixed(3)}, ${sy.toFixed(3)})` : '';
     teeth.setAttribute('d', mouthOpen > .12 ? fangs(sx, sy, Math.min(1, (mouthOpen - .12) / .3)) : '');
-    if (t >= nextBoo && heard) {
+    // (Sound needs the page touched first, or a browser that lets it play.)
+    if (t >= nextBoo && (heard || (actx && actx.state === 'running'))) {
       if (document.visibilityState === 'visible') boo();
       nextBoo = t + 12000;
     }
