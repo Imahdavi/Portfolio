@@ -5087,28 +5087,15 @@
     #hw-layer { position:fixed; inset:0; z-index:150; pointer-events:none; display:none; overflow:hidden; }
     body.halloween #hw-layer { display:block; }
     #hw-layer .hw-glow { position:absolute; left:50%; bottom:-30vh; width:120vw; height:60vh; transform:translateX(-50%); background:radial-gradient(closest-side, rgba(255,110,20,.16), rgba(255,110,20,0)); }
-    /* The moon: plain white, slowly blushing to a blood moon and back, with
-       two button eyes sewn on (Coraline): black four-hole buttons, an X of
-       thread through each. */
-    #hw-layer .hw-moon { position:absolute; top:5vh; right:6vw; width:78px; height:78px; border-radius:50%; overflow:hidden; opacity:.9; animation:hwMoonGlow 16s ease-in-out infinite;
-      /* Its face: soft grey seas, a few craters (a dark pit with a lit rim
-         below-right), and a shade toward the lower right, over the white. */
-      background:
-        radial-gradient(circle at 70% 72%, transparent 38%, rgba(70,74,86,.28) 75%),
-        radial-gradient(circle at 31% 34%, rgba(120,126,140,.5) 0 7%, rgba(255,255,255,.55) 8.5%, transparent 10%),
-        radial-gradient(circle at 64% 27%, rgba(120,126,140,.45) 0 4.5%, rgba(255,255,255,.5) 6%, transparent 7.5%),
-        radial-gradient(circle at 44% 74%, rgba(120,126,140,.42) 0 4%, rgba(255,255,255,.45) 5.5%, transparent 7%),
-        radial-gradient(circle at 78% 52%, rgba(120,126,140,.38) 0 3%, rgba(255,255,255,.4) 4.2%, transparent 5.5%),
-        radial-gradient(circle at 22% 60%, rgba(120,126,140,.35) 0 2.5%, transparent 4%),
-        radial-gradient(ellipse 26% 18% at 40% 47%, rgba(150,156,170,.45), transparent),
-        radial-gradient(ellipse 20% 15% at 60% 60%, rgba(150,156,170,.4), transparent),
-        radial-gradient(ellipse 16% 22% at 55% 38%, rgba(160,166,180,.35), transparent),
-        radial-gradient(circle at 38% 38%, #ffffff, #eef0f3 55%, #c9ccd3);
-    }
-    /* The blood moon multiplies over that face, so its texture stays. */
-    #hw-layer .hw-moon::after { content:""; position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle at 38% 38%, #ffb3a3, #e0452f 55%, #8e1a12); mix-blend-mode:multiply; opacity:0; animation:hwMoonRed 16s ease-in-out infinite; }
-    @keyframes hwMoonRed { 0%, 30% { opacity:0; } 55%, 70% { opacity:.9; } 100% { opacity:0; } }
-    #hw-layer .hw-moon svg { position:absolute; inset:0; width:100%; height:100%; }
+    /* The moon is a button, the kind sewn on for eyes in Coraline: a black
+       four-hole button with a raised rim, swaying a little; its halo turns
+       slowly from moonlight to blood red and back. Beside it floats a
+       needle, its thread trailing and drifting. */
+    #hw-layer .hw-moon { position:absolute; top:5vh; right:6vw; width:78px; height:78px; border-radius:50%; animation:hwMoonGlow 16s ease-in-out infinite, hwMoonSway 7s ease-in-out infinite; }
+    #hw-layer .hw-moon svg { display:block; width:100%; height:100%; overflow:visible; }
+    @keyframes hwMoonSway { 0%, 100% { transform:rotate(-5deg); } 50% { transform:rotate(5deg); } }
+    #hw-layer .hw-needle { position:absolute; top:calc(5vh - 14px); right:calc(6vw + 92px); width:30px; height:96px; overflow:visible; animation:hwNeedle 5.5s ease-in-out infinite; filter:drop-shadow(0 4px 6px rgba(0,0,0,.45)); }
+    @keyframes hwNeedle { 0%, 100% { transform:translateY(0) rotate(14deg); } 50% { transform:translateY(-9px) rotate(22deg); } }
     @keyframes hwMoonGlow { 0%, 30% { box-shadow:0 0 40px 8px rgba(255,255,255,.2); } 55%, 70% { box-shadow:0 0 46px 10px rgba(230,60,40,.3); } 100% { box-shadow:0 0 40px 8px rgba(255,255,255,.2); } }
     #hw-layer .hw-web { position:absolute; top:0; width:min(220px, 30vw); height:auto; opacity:.32; stroke:#e9d8c4; fill:none; stroke-width:.8; }
     #hw-layer .hw-web.l { left:0; }
@@ -5131,7 +5118,7 @@
     @media (max-width:600px) { #hw-layer .hw-ghost { width:34px; height:38px; } }
     @keyframes hwFlap { from { transform:scaleY(1); } to { transform:scaleY(.45); } }
     @media (prefers-reduced-motion:reduce) {
-      #hw-btn, #hw-layer .hw-moon, #hw-layer .hw-moon::after, #hw-bats .hw-bat, #hw-bats .hw-bat path, body.halloween #hw-btn .hw-face { animation:none; }
+      #hw-btn, #hw-layer .hw-moon, #hw-layer .hw-needle, #hw-bats .hw-bat, #hw-bats .hw-bat path, body.halloween #hw-btn .hw-face { animation:none; }
     }
 
     #bottom-nav {
@@ -7870,7 +7857,7 @@ function toggleDarkMode() {
     return `<path d="${d}"/>`;
   })();
   const bat = '<svg class="hw-bat" viewBox="0 0 64 34"><path d="M32 12c1.6-3 3.4-3 5 0 3-6 11-9 19-8-4 3-5 7-4 11-4-2-8-1-10 3-2-3-5-4-7-2-1 2-2 4-3 6-1-2-2-4-3-6-2-2-5-1-7 2-2-4-6-5-10-3 1-4 0-8-4-11 8-1 16 2 19 8 1.6-3 3.4-3 5 0Z"/></svg>';
-  layer.innerHTML = `<div class="hw-glow"></div><div class="hw-moon"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><radialGradient id="hwbB" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#4a4955"/><stop offset=".45" stop-color="#17161d"/><stop offset="1" stop-color="#050507"/></radialGradient><linearGradient id="hwbR" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a98a8" stop-opacity=".7"/><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".6"/></linearGradient><symbol id="hwBtn" overflow="visible"><circle r="48" fill="url(#hwbB)"/><circle r="46.5" fill="none" stroke="url(#hwbR)" stroke-width="3"/><circle r="33" fill="#0d0d12"/><circle r="33" fill="none" stroke="#8e8c9c" stroke-opacity=".3" stroke-width="1.5"/><circle cx="-11" cy="-11" r="5.5" fill="#000"/><circle cx="11" cy="-11" r="5.5" fill="#000"/><circle cx="-11" cy="11" r="5.5" fill="#000"/><circle cx="11" cy="11" r="5.5" fill="#000"/><path d="M-11 -11L11 11M11 -11L-11 11" stroke="#e9e0d0" stroke-width="5" stroke-linecap="round"/><ellipse cx="-16" cy="-24" rx="14" ry="6" transform="rotate(-32 -16 -24)" fill="#fff" opacity=".35"/></symbol></defs><g transform="translate(33 42) rotate(-8) scale(0.2708333333333333)"><use href="#hwBtn"/></g><g transform="translate(66 40) rotate(10) scale(0.2708333333333333)"><use href="#hwBtn"/></g></svg></div>
+  layer.innerHTML = `<div class="hw-glow"></div><div class="hw-moon"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><radialGradient id="hwbB" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#3d3c46"/><stop offset=".5" stop-color="#16151b"/><stop offset="1" stop-color="#060608"/></radialGradient><radialGradient id="hwbD" cx="62%" cy="68%" r="70%"><stop offset="0" stop-color="#24232b"/><stop offset="1" stop-color="#08080b"/></radialGradient><linearGradient id="hwbR" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a9a7b8" stop-opacity=".75"/><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".6"/></linearGradient><linearGradient id="hwbI" x1="1" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#a9a7b8" stop-opacity=".45"/><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".7"/></linearGradient></defs><circle cx="50" cy="50" r="48" fill="url(#hwbB)"/><circle cx="50" cy="50" r="46.5" fill="none" stroke="url(#hwbR)" stroke-width="3"/><circle cx="50" cy="50" r="34" fill="url(#hwbD)"/><circle cx="50" cy="50" r="34" fill="none" stroke="url(#hwbI)" stroke-width="2.5"/><circle cx="39" cy="39" r="5.6" fill="#000"/><path d="M34.7 40.6a4.5 4.5 0 0 0 8.6 0" fill="none" stroke="#5d5b68" stroke-opacity=".55" stroke-width="1"/><circle cx="61" cy="39" r="5.6" fill="#000"/><path d="M56.7 40.6a4.5 4.5 0 0 0 8.6 0" fill="none" stroke="#5d5b68" stroke-opacity=".55" stroke-width="1"/><circle cx="39" cy="61" r="5.6" fill="#000"/><path d="M34.7 62.6a4.5 4.5 0 0 0 8.6 0" fill="none" stroke="#5d5b68" stroke-opacity=".55" stroke-width="1"/><circle cx="61" cy="61" r="5.6" fill="#000"/><path d="M56.7 62.6a4.5 4.5 0 0 0 8.6 0" fill="none" stroke="#5d5b68" stroke-opacity=".55" stroke-width="1"/><ellipse cx="32" cy="22" rx="9" ry="3.2" transform="rotate(-34 32 22)" fill="#fff" opacity=".3"/></svg></div><svg class="hw-needle" viewBox="0 0 30 96" aria-hidden="true"><defs><linearGradient id="hwnS" x1="0" x2="1"><stop offset="0" stop-color="#8d939e"/><stop offset=".45" stop-color="#f4f6fa"/><stop offset="1" stop-color="#6e7480"/></linearGradient></defs><path fill="none" stroke="#d8cdbd" stroke-width="1.6" stroke-linecap="round" d="M15 9C25 6 27 22 20 34S6 58 14 74S25 88 20 95"><animate attributeName="d" dur="4.5s" repeatCount="indefinite" calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1" values="M15 9C25 6 27 22 20 34S6 58 14 74S25 88 20 95;M15 9C27 8 30 24 23 36S10 56 17 72S29 86 25 94;M15 9C25 6 27 22 20 34S6 58 14 74S25 88 20 95"/></path><path d="M13.6 6Q15 1.5 16.4 6L16.1 60Q15 70 13.9 60Z" fill="url(#hwnS)"/><ellipse cx="15" cy="8.5" rx=".7" ry="2.4" fill="#1b1320"/></svg>
     <svg class="hw-web l" viewBox="0 0 170 170">${web}</svg>`;
   body.appendChild(layer);
   // The bats get a layer of their own, blended (difference) with the page
