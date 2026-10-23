@@ -8115,7 +8115,7 @@ function toggleDarkMode() {
       if (actx.state === 'suspended') actx.resume();
       if (!booBuf) booBuf = await fetch('/sfx/ghost-boo.mp3').then(r => r.arrayBuffer()).then(b => actx.decodeAudioData(b));
       const src = actx.createBufferSource(), g = actx.createGain();
-      src.buffer = booBuf; g.gain.value = .35;   // about -4 dB from .55
+      src.buffer = booBuf; g.gain.value = .28;   // about -6 dB from the first .55
       booAn = actx.createAnalyser(); booAn.fftSize = 512; booData = new Float32Array(booAn.fftSize);
       src.connect(g); g.connect(actx.destination); src.connect(booAn);
       src.onended = () => { booAn = null; };
@@ -8151,7 +8151,7 @@ function toggleDarkMode() {
       if (amb !== a) return;   // switched off while it loaded
       a.src.buffer = ambBuf; a.src.loop = true;
       a.src.loopStart = 0; a.src.loopEnd = Math.min(ambBuf.duration, 21.02);
-      a.g.gain.setValueAtTime(0, actx.currentTime); a.g.gain.linearRampToValueAtTime(.034, actx.currentTime + 3);   // -5 dB from .06
+      a.g.gain.setValueAtTime(0, actx.currentTime); a.g.gain.linearRampToValueAtTime(.024, actx.currentTime + 3);   // -8 dB from the first .06
       a.src.connect(a.g); a.g.connect(actx.destination); a.src.start();
     } catch (e) { amb = null; }
   }
