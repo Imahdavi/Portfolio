@@ -5095,13 +5095,14 @@
        four-hole button with a raised rim, swaying a little; its halo turns
        slowly from moonlight to blood red and back. Beside it floats a
        needle, its thread trailing and drifting. */
-    /* Its size follows the screen: 78px on a phone, growing with the width
-       to 130px on a wide one; the needle keeps its place and size beside it. */
-    #hw-layer { --mb:clamp(78px, 7.2vw, 130px); }
-    #hw-layer .hw-moon { position:absolute; top:5vh; right:6vw; width:var(--mb); height:var(--mb); border-radius:50%; animation:hwMoonGlow 16s ease-in-out infinite, hwMoonSway 7s ease-in-out infinite; }
+    /* Its size follows the screen: 84px on a phone, growing with the width
+       to 170px on a wide one, and it sits in from the edge (--mr); the
+       needle keeps its place and size beside it. */
+    #hw-layer { --mb:clamp(84px, 9.5vw, 170px); --mr:clamp(18px, 12vw, 240px); }
+    #hw-layer .hw-moon { position:absolute; top:6vh; right:var(--mr); width:var(--mb); height:var(--mb); border-radius:50%; animation:hwMoonGlow 16s ease-in-out infinite, hwMoonSway 7s ease-in-out infinite; }
     #hw-layer .hw-moon svg { display:block; width:100%; height:100%; overflow:visible; }
     @keyframes hwMoonSway { 0%, 100% { transform:rotate(-5deg); } 50% { transform:rotate(5deg); } }
-    #hw-layer .hw-needle { position:absolute; top:calc(5vh - var(--mb) * .1); right:calc(6vw + var(--mb) * .795); width:calc(var(--mb) * .385); height:calc(var(--mb) * 1.23); overflow:visible; animation:hwNeedle 5.5s ease-in-out infinite; filter:drop-shadow(0 4px 6px rgba(0,0,0,.45)); }
+    #hw-layer .hw-needle { position:absolute; top:calc(6vh - var(--mb) * .1); right:calc(var(--mr) + var(--mb) * .795); width:calc(var(--mb) * .385); height:calc(var(--mb) * 1.23); overflow:visible; animation:hwNeedle 5.5s ease-in-out infinite; filter:drop-shadow(0 4px 6px rgba(0,0,0,.45)); }
     @keyframes hwNeedle { 0%, 100% { transform:translateY(0) rotate(14deg); } 50% { transform:translateY(-9px) rotate(22deg); } }
     @keyframes hwMoonGlow { 0%, 30% { box-shadow:0 0 40px 8px rgba(var(--hwb-rgb, 90,140,255),.32); } 55%, 70% { box-shadow:0 0 46px 10px rgba(230,60,40,.3); } 100% { box-shadow:0 0 40px 8px rgba(var(--hwb-rgb, 90,140,255),.32); } }
     #hw-layer .hw-web { position:absolute; top:0; width:min(220px, 30vw); height:auto; opacity:.32; stroke:#e9d8c4; fill:none; stroke-width:.8; }
@@ -5861,7 +5862,13 @@ one keyframe at a time</div>
         <div class="efc-tile efc-wide nav-color-ctrl" id="hwButtonCtrl">
           <span class="efc-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="9.5" cy="9.5" r="1"/><circle cx="14.5" cy="9.5" r="1"/><circle cx="9.5" cy="14.5" r="1"/><circle cx="14.5" cy="14.5" r="1"/></svg></span>
           <span class="efc-text"><span class="efc-name nav-color-lbl">Halloween button</span><span class="efc-note">The button moon's colour</span></span>
-          <button type="button" class="nav-color-input" id="hwButtonInput" aria-label="Choose the Halloween button colour" style="background:#2c4166"></button>
+          <span class="orb-color-pair">
+            <!-- One-tap presets: the slate blue of the reference button eyes (the
+                 default) and Coraline's hair blue. -->
+            <button type="button" class="nav-color-input hw-btn-preset" data-hex="#2c4166" title="Default slate blue" aria-label="Use the default slate blue" style="background:#2c4166"></button>
+            <button type="button" class="nav-color-input hw-btn-preset" data-hex="#2f5fd0" title="Coraline blue" aria-label="Use Coraline blue" style="background:#2f5fd0"></button>
+            <button type="button" class="nav-color-input" title="Any colour" id="hwButtonInput" aria-label="Choose the Halloween button colour" style="background:#2c4166"></button>
+          </span>
         </div>
       </div>
     </section>
@@ -20417,6 +20424,17 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+  // The presets set the colour straight away.
+  document.querySelectorAll('.hw-btn-preset').forEach(b => {
+    b.addEventListener('pointerdown', (e) => e.stopPropagation());
+    b.addEventListener('click', () => {
+      if (!_cachedSettings) _cachedSettings = {};
+      _cachedSettings.hwButtonColor = b.dataset.hex;
+      _hwButtonPreview = null;
+      applyHwButtonColour();
+      saveSettings();
+    });
+  });
   applyHwButtonColour();
 });
 
