@@ -8029,6 +8029,11 @@ function toggleDarkMode() {
   // touched the page (browsers keep audio locked until then).
   let mouthOpen = 0, actx = null, booBuf = null, booAn = null, booData = null, heard = false, nextBoo = performance.now() + rnd(6000, 11000);
   addEventListener('pointerdown', () => { heard = true; if (actx && actx.state === 'suspended') actx.resume(); }, { capture: true, passive: true });
+  // Then, the laugh done, it says «نترس کوچولو!» (don't be scared, little
+  // one): the site owner's own recording, pitched up a cartoonish four
+  // semitones with a little echo (sfx/ghost-natars.mp3), its mouth moving
+  // with that too.
+  let natarsBuf = null;
   const loadClip = url => fetch(url).then(r => r.arrayBuffer()).then(b => actx.decodeAudioData(b));
   function speak(buf, then) {
     const src = actx.createBufferSource(), g = actx.createGain();
@@ -8043,7 +8048,8 @@ function toggleDarkMode() {
       if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
       if (actx.state === 'suspended') actx.resume();
       if (!booBuf) booBuf = await loadClip('/sfx/ghost-boo.mp3');
-      speak(booBuf);
+      if (!natarsBuf) natarsBuf = await loadClip('/sfx/ghost-natars.mp3').catch(() => null);
+      speak(booBuf, () => { if (natarsBuf) setTimeout(() => speak(natarsBuf), 250); });
     } catch (e) { return; }
     ghost.classList.remove('booing'); void ghost.offsetWidth; ghost.classList.add('booing');
     SPIN.v += 120;
