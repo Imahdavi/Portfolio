@@ -5097,8 +5097,7 @@
     #hw-layer .hw-moon { position:absolute; top:5vh; right:6vw; width:78px; height:78px; border-radius:50%; animation:hwMoonGlow 16s ease-in-out infinite, hwMoonSway 7s ease-in-out infinite; }
     #hw-layer .hw-moon svg { display:block; width:100%; height:100%; overflow:visible; }
     @keyframes hwMoonSway { 0%, 100% { transform:rotate(-5deg); } 50% { transform:rotate(5deg); } }
-    #hw-layer .hw-needle { position:absolute; top:calc(5vh - 14px); right:calc(6vw + 53px); width:38px; height:122px; overflow:visible; animation:hwNeedle 5.5s ease-in-out infinite; filter:drop-shadow(0 4px 6px rgba(0,0,0,.45)); }
-    #hw-layer .hw-ink { fill:#ece6dc; }
+    #hw-layer .hw-needle { position:absolute; top:calc(5vh - 8px); right:calc(6vw + 62px); width:30px; height:96px; overflow:visible; animation:hwNeedle 5.5s ease-in-out infinite; filter:drop-shadow(0 4px 6px rgba(0,0,0,.45)); }
     @keyframes hwNeedle { 0%, 100% { transform:translateY(0) rotate(14deg); } 50% { transform:translateY(-9px) rotate(22deg); } }
     @keyframes hwMoonGlow { 0%, 30% { box-shadow:0 0 40px 8px rgba(255,255,255,.2); } 55%, 70% { box-shadow:0 0 46px 10px rgba(230,60,40,.3); } 100% { box-shadow:0 0 40px 8px rgba(255,255,255,.2); } }
     #hw-layer .hw-web { position:absolute; top:0; width:min(220px, 30vw); height:auto; opacity:.32; stroke:#e9d8c4; fill:none; stroke-width:.8; }
@@ -7914,79 +7913,6 @@ function toggleDarkMode() {
     return lamp.apply(this, arguments);
   };
   if (body.classList.contains('halloween')) paint(true);
-
-  // ── The hand holding the needle ──
-  // The Other Mother's hand as Coraline's poster draws it: thin ink-brush
-  // fingers, each three sharp-jointed bones, sweeping out to the left of
-  // the needle it grips, a thumb hooked over the shaft, and a long tapering
-  // wrist running down beside it. Drawn into the needle's own frame (30 x
-  // 96, the shaft at x 15), so it sways with it; the fingers flex slowly,
-  // each a little out of step. Pale, so it reads on the dark.
-  (function () {
-    const NS = 'http://www.w3.org/2000/svg';
-    const nsvg = layer.querySelector('.hw-needle');
-    if (!nsvg) return;
-    const g = document.createElementNS(NS, 'g');
-    g.setAttribute('class', 'hw-ink');
-    nsvg.appendChild(g);
-    const ink = d => { const p = document.createElementNS(NS, 'path'); p.setAttribute('d', d); g.appendChild(p); return p; };
-    // A brush stroke along points pts, its width w[i] at each, tapering to
-    // nothing at the end, with a little thorn on the outside of each joint.
-    function brush(pts, w) {
-      const L = [], Rr = [], thorns = [];
-      for (let i = 0; i < pts.length; i++) {
-        const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
-        let nx = -(b[1] - a[1]), ny = b[0] - a[0]; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
-        L.push([pts[i][0] + nx * w[i] / 2, pts[i][1] + ny * w[i] / 2]);
-        Rr.push([pts[i][0] - nx * w[i] / 2, pts[i][1] - ny * w[i] / 2]);
-        if (i > 0 && i < pts.length - 1) {
-          const tx = (b[0] - a[0]) / (Math.hypot(b[0] - a[0], b[1] - a[1]) || 1), ty = (b[1] - a[1]) / (Math.hypot(b[0] - a[0], b[1] - a[1]) || 1);
-          const o = [pts[i][0] + nx * (w[i] / 2 + 1.6) - tx * .6, pts[i][1] + ny * (w[i] / 2 + 1.6) - ty * .6];
-          thorns.push(`M${(pts[i][0] - tx * 1.4).toFixed(2)} ${(pts[i][1] - ty * 1.4).toFixed(2)}L${o[0].toFixed(2)} ${o[1].toFixed(2)}L${(pts[i][0] + tx * .9).toFixed(2)} ${(pts[i][1] + ty * .9).toFixed(2)}Z`);
-        }
-      }
-      const f = q => q[0].toFixed(2) + ' ' + q[1].toFixed(2);
-      return 'M' + L.map(f).join('L') + 'L' + Rr.reverse().map(f).join('L') + 'Z' + thorns.join('');
-    }
-    // Wrist and palm stay put; the fingers are redrawn as they flex.
-    ink(brush([[11.5, 42], [12.6, 56], [13.6, 72], [14.6, 90]], [2.8, 2.1, 1.2, 0]));
-    ink('M5.2 34L12.6 32.4L14.4 35.6L12.8 43L7.4 43.4L5 39.2Z');
-    // Fingers: root on the palm, then each bone's direction (deg; 0 is
-    // right, 90 down) and length; the thumb hooks over the shaft.
-    const FINGERS = [
-      { at: [5.5, 34], a: [-165, -135, -100], l: [12, 10, 8], w: 1.9 },
-      { at: [4.8, 36.8], a: [178, 158, 128], l: [14, 12, 9], w: 1.9 },
-      { at: [4.8, 39.6], a: [168, 146, 116], l: [14, 11, 9], w: 1.8 },
-      { at: [5.6, 42.6], a: [152, 128, 98], l: [12, 10, 8], w: 1.7 },
-      { at: [13.2, 32.4], a: [-58, -8, 42], l: [7, 6, 5], w: 1.6 },
-    ].map((F, i) => ({ ...F, el: ink(''), ph: i * 1.3 }));
-    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    function draw(t) {
-      const s = t / 1000;
-      FINGERS.forEach(F => {
-        let p = F.at, ang = 0;
-        const pts = [p];
-        F.a.forEach((a, j) => {
-          // Each joint curls a little more, and back, slowly.
-          ang = a + (still ? 0 : Math.sin(s * 1.3 + F.ph + j * .7) * (5 + j * 3));
-          const r = ang * Math.PI / 180;
-          p = [p[0] + Math.cos(r) * F.l[j], p[1] + Math.sin(r) * F.l[j]];
-          pts.push(p);
-        });
-        F.el.setAttribute('d', brush(pts, [F.w, F.w * .85, F.w * .6, 0]));
-      });
-    }
-    let raf = 0;
-    function frame(t) {
-      raf = 0;
-      if (!body.classList.contains('halloween')) return;
-      draw(t);
-      raf = requestAnimationFrame(frame);
-    }
-    const go = () => { if (!still && !raf && body.classList.contains('halloween')) raf = requestAnimationFrame(frame); };
-    new MutationObserver(go).observe(body, { attributes: true, attributeFilter: ['class'] });
-    draw(0); go();
-  })();
 
   // The bat at the pumpkin's shoulder, flapping on a loop.
   const batBox = document.querySelector('#hw-btn .hw-btn-bat');
