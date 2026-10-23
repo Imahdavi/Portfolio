@@ -8047,7 +8047,11 @@ function toggleDarkMode() {
   // isn't; the audio is suspended while the tab is hidden.
   let ambBuf = null, amb = null;
   async function ambience() {
-    const want = heard && body.classList.contains('halloween');
+    // Started as soon as it is Halloween, without waiting for a touch: the
+    // file loads and decodes at once, and where the browser lets a page
+    // play straight away it does; elsewhere the context waits, suspended,
+    // and the first touch or key (below) lets it go, already loaded.
+    const want = body.classList.contains('halloween');
     if (want === !!amb) return;
     try {
       if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
@@ -8065,11 +8069,13 @@ function toggleDarkMode() {
       if (amb !== a) return;   // switched off while it loaded
       a.src.buffer = ambBuf; a.src.loop = true;
       a.src.loopStart = 0; a.src.loopEnd = Math.min(ambBuf.duration, 21.02);
-      a.g.gain.setValueAtTime(0, actx.currentTime); a.g.gain.linearRampToValueAtTime(.0135, actx.currentTime + 3);   // -13 dB from the first .06
+      a.g.gain.setValueAtTime(0, actx.currentTime); a.g.gain.linearRampToValueAtTime(.0135, actx.currentTime + .8);   // -13 dB from the first .06
       a.src.connect(a.g); a.g.connect(actx.destination); a.src.start();
     } catch (e) { amb = null; }
   }
   addEventListener('pointerdown', () => ambience(), { passive: true });
+  ['keydown', 'touchstart'].forEach(ev => addEventListener(ev, () => { if (actx && actx.state === 'suspended' && document.visibilityState === 'visible') actx.resume(); }, { capture: true, passive: true }));
+  ambience();
   new MutationObserver(() => ambience()).observe(body, { attributes: true, attributeFilter: ['class'] });
   document.addEventListener('visibilitychange', () => {
     if (!actx) return;
