@@ -2421,6 +2421,11 @@
     .anb-panel .an-sh { color:#737373; letter-spacing:.1em; margin-bottom:14px; }
     .an-row-2 { gap:12px; margin-bottom:0; }
     .an-row-2 .anb-panel .an-bitem-lbl { width:64px; }
+    /* Traffic sources: names wide enough to read, and each row's share. */
+    .an-ref .an-bitem-lbl { width:150px; }
+    .an-ref-pct { font-size:11px; color:#b3aca4; width:34px; text-align:right; flex-shrink:0; font-variant-numeric:tabular-nums; }
+    body.dark .an-ref-pct { color:var(--d-text-3); }
+    @media (max-width:520px) { .an-ref .an-bitem-lbl { width:108px; } }
 
     .an-ctry { display:flex; align-items:center; gap:10px; padding:7px 0; }
     .an-flag { width:22px; height:16px; flex:none; border-radius:3px; object-fit:cover; box-shadow:0 0 0 1px rgba(0,0,0,.08); }
@@ -10071,7 +10076,33 @@ async function loadAnalytics(hours, btn) {
   });
   const referrerMap = {};
   Object.values(refByVisitor).forEach(ref => { referrerMap[ref] = (referrerMap[ref]||0)+1; });
-  renderBreakdown('an-referrers', referrerMap, 6);
+  // Named, not raw hostnames: l.instagram.com is Instagram, an Android
+  // app's package (com.something.app) says which app, and so on. The raw
+  // source stays in the tooltip; each row shows its share too.
+  const SRC = [
+    [/(^|\.)instagram\.com$|^com\.instagram\./, 'Instagram'], [/(^|\.)facebook\.com$|^com\.facebook\./, 'Facebook'],
+    [/^t\.co$|(^|\.)(x|twitter)\.com$|^com\.twitter\./, 'X (Twitter)'], [/(^|\.)linkedin\.com$|^lnkd\.in$|^com\.linkedin\./, 'LinkedIn'],
+    [/^t\.me$|telegram|^org\.thunderdog\./, 'Telegram'], [/(^|\.)google\.|^com\.google\./, 'Google'], [/(^|\.)bing\.com$/, 'Bing'],
+    [/duckduckgo/, 'DuckDuckGo'], [/yandex/, 'Yandex'], [/(^|\.)behance\.net$/, 'Behance'], [/(^|\.)dribbble\.com$/, 'Dribbble'],
+    [/(^|\.)whatsapp\.|^com\.whatsapp/, 'WhatsApp'], [/(^|\.)github\.com$/, 'GitHub'], [/^(ble\.ir|web\.bale\.ai)$|^ir\.nasim\./, 'Bale'],
+  ];
+  const escH = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const srcName = k => {
+    if (k === 'direct') return 'Direct (link / typed)';
+    if (k === 'internal') return 'This site';
+    for (const [re, n] of SRC) if (re.test(k)) return n;
+    // An app's package name (no real TLD): say it's an app, by its middle part.
+    const p = k.split('.');
+    if (/^(com|org|net|ir|io)$/.test(p[0]) && p.length >= 3) return 'App: ' + p[1];
+    return k;
+  };
+  const named = {}, raws = {};
+  Object.entries(referrerMap).forEach(([k, v]) => { const n = srcName(k); named[n] = (named[n] || 0) + v; (raws[n] = raws[n] || []).push(k); });
+  const totalRef = Object.values(named).reduce((a, b) => a + b, 0) || 1;
+  const refData = Object.entries(named).sort((a, b) => b[1] - a[1]).slice(0, 6), refMax = refData[0]?.[1] || 1;
+  document.getElementById('an-referrers').innerHTML = refData.length
+    ? refData.map(([n, v]) => `<div class="an-bitem an-ref"><div class="an-bitem-lbl" title="${escH(raws[n].join(', '))}">${escH(n)}</div><div class="an-bitem-bar-wrap"><div class="an-bitem-bar" style="width:${Math.round(v / refMax * 100)}%"></div></div><div class="an-bitem-cnt">${v}</div><div class="an-ref-pct">${Math.round(v / totalRef * 100)}%</div></div>`).join('')
+    : '<div class="an-empty">No data</div>';
 
   // page views — the main tabs (project=null is Home; exp/note are special keys)
   // The stored key stays 'note' — renaming it would split the history in
