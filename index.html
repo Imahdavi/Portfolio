@@ -8043,13 +8043,19 @@ function toggleDarkMode() {
     src.onended = () => { booAn = null; if (then) then(); };
     src.start();
   }
+  // One laugh at a time, and only into running audio: a laugh started on a
+  // suspended context waits there, and several waiting would all go off
+  // together, loud, the moment it resumed.
+  let booBusy = false;
   async function boo() {
+    if (booBusy) return;
+    booBusy = true;
     try {
       if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
-      if (actx.state === 'suspended') actx.resume();
       if (!booBuf) booBuf = await loadClip('/sfx/ghost-boo.mp3');
-      speak(booBuf);
-    } catch (e) { return; }
+      if (actx.state !== 'running') { booBusy = false; return; }
+      speak(booBuf, () => { booBusy = false; });
+    } catch (e) { booBusy = false; return; }
     ghost.classList.remove('booing'); void ghost.offsetWidth; ghost.classList.add('booing');
     SPIN.v += 120;
   }
@@ -8149,7 +8155,7 @@ function toggleDarkMode() {
     mouth.style.transform = mouthOpen > .01 ? `scale(${sx.toFixed(3)}, ${sy.toFixed(3)})` : '';
     teeth.setAttribute('d', mouthOpen > .12 ? fangs(sx, sy, Math.min(1, (mouthOpen - .12) / .3)) : '');
     // (Sound needs the page touched first, or a browser that lets it play.)
-    if (t >= nextBoo && (heard || (actx && actx.state === 'running'))) {
+    if (t >= nextBoo && actx && actx.state === 'running' && !booBusy) {
       if (document.visibilityState === 'visible') boo();
       nextBoo = t + 12000;
     }
