@@ -5094,13 +5094,11 @@
        four-hole button with a raised rim, swaying a little; its halo turns
        slowly from moonlight to blood red and back. Beside it floats a
        needle, its thread trailing and drifting. */
-    #hw-layer .hw-moon { position:absolute; top:calc(5vh + 56px); right:6vw; width:78px; height:78px; border-radius:50%; animation:hwMoonGlow 16s ease-in-out infinite; }
-    /* The hand walking on it (see "The hand on the button"): its 160 x 170
-       frame put so the button sits at (80, 115) in it. */
-    #hw-layer .hw-hand { position:absolute; top:calc(5vh - 20px); right:calc(6vw - 41px); width:160px; height:170px; overflow:visible; filter:drop-shadow(0 3px 4px rgba(0,0,0,.5)); }
+    #hw-layer .hw-moon { position:absolute; top:5vh; right:6vw; width:78px; height:78px; border-radius:50%; animation:hwMoonGlow 16s ease-in-out infinite, hwMoonSway 7s ease-in-out infinite; }
     #hw-layer .hw-moon svg { display:block; width:100%; height:100%; overflow:visible; }
     @keyframes hwMoonSway { 0%, 100% { transform:rotate(-5deg); } 50% { transform:rotate(5deg); } }
-    #hw-layer .hw-needle { position:absolute; top:calc(5vh + 48px); right:calc(6vw + 62px); width:30px; height:96px; overflow:visible; animation:hwNeedle 5.5s ease-in-out infinite; filter:drop-shadow(0 4px 6px rgba(0,0,0,.45)); }
+    #hw-layer .hw-needle { position:absolute; top:calc(5vh - 14px); right:calc(6vw + 53px); width:38px; height:122px; overflow:visible; animation:hwNeedle 5.5s ease-in-out infinite; filter:drop-shadow(0 4px 6px rgba(0,0,0,.45)); }
+    #hw-layer .hw-ink { fill:#ece6dc; }
     @keyframes hwNeedle { 0%, 100% { transform:translateY(0) rotate(14deg); } 50% { transform:translateY(-9px) rotate(22deg); } }
     @keyframes hwMoonGlow { 0%, 30% { box-shadow:0 0 40px 8px rgba(255,255,255,.2); } 55%, 70% { box-shadow:0 0 46px 10px rgba(230,60,40,.3); } 100% { box-shadow:0 0 40px 8px rgba(255,255,255,.2); } }
     #hw-layer .hw-web { position:absolute; top:0; width:min(220px, 30vw); height:auto; opacity:.32; stroke:#e9d8c4; fill:none; stroke-width:.8; }
@@ -7917,86 +7915,75 @@ function toggleDarkMode() {
   };
   if (body.classList.contains('halloween')) paint(true);
 
-  // ── The hand on the button ──
-  // The Other Mother's needle-fingered hand (Coraline), walking on top of
-  // the button moon as on a wheel: the hand stays where it is, its five
-  // jointed fingers stepping, and the button turns under it. Each finger is
-  // two spindle-shaped bones solved by two-joint IK to a fingertip on the
-  // rim; a tip rides the rim backward while planted (at the rim's own
-  // speed), then lifts and steps forward. Drawn in a 160 x 170 frame with
-  // the button's centre at (80, 115), radius 39 (its CSS box, 1:1).
+  // ── The hand holding the needle ──
+  // The Other Mother's hand as Coraline's poster draws it: thin ink-brush
+  // fingers, each three sharp-jointed bones, sweeping out to the left of
+  // the needle it grips, a thumb hooked over the shaft, and a long tapering
+  // wrist running down beside it. Drawn into the needle's own frame (30 x
+  // 96, the shaft at x 15), so it sways with it; the fingers flex slowly,
+  // each a little out of step. Pale, so it reads on the dark.
   (function () {
-    const NS = 'http://www.w3.org/2000/svg', C = [80, 115], R = 37.4;   // the rim as drawn (48 of the button's 100 units)
-    const moonSvg = layer.querySelector('.hw-moon svg');
-    // The holes (and their lips) turn; the rim and its shine stay lit
-    // from the same side.
-    const holes = document.createElementNS(NS, 'g');
-    moonSvg.querySelectorAll('circle[r="5.6"], path').forEach(el => holes.appendChild(el));
-    moonSvg.insertBefore(holes, moonSvg.querySelector('ellipse'));
-    const rig = document.createElementNS(NS, 'svg');
-    rig.setAttribute('class', 'hw-hand'); rig.setAttribute('viewBox', '0 0 160 170'); rig.setAttribute('aria-hidden', 'true');
-    rig.innerHTML = '<defs><linearGradient id="hwhS" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef0f4"/><stop offset=".55" stop-color="#b4b8c2"/><stop offset="1" stop-color="#6f7480"/></linearGradient></defs>' +
-      '<g class="hw-hand-legs"></g>' +
-      '<g class="hw-hand-body">' +
-        // The wrist, rising up behind, wound with thread.
-        '<path d="M66 44L46 12" stroke="url(#hwhS)" stroke-width="7" stroke-linecap="round"/>' +
-        '<path d="M51 24l6-2M55 30l6-3M59 36l6-3M48 17l5-2" stroke="#2a2630" stroke-width="1.1" stroke-linecap="round"/>' +
-        // The back of the hand, long and flat, pointing the way it walks.
-        '<path d="M60 44Q72 34 94 36Q110 38 114 45Q106 53 90 54Q72 55 60 49Z" fill="url(#hwhS)"/>' +
-        '<path d="M70 42Q88 38 106 43" stroke="#ffffff" stroke-opacity=".5" stroke-width="1" fill="none"/>' +
-      '</g>';
-    layer.appendChild(rig);
-    const legsG = rig.querySelector('.hw-hand-legs'), bodyG = rig.querySelector('.hw-hand-body');
-    // Each finger: its knuckle on the hand, where its step is centred on the
-    // rim (radians from the top, + is forward), and when in the stride it is.
-    const LEGS = [[66, 49, -.62, 0], [76, 52, -.3, .4], [86, 53, 0, .8], [96, 52, .3, .2], [106, 49, .6, .6]]
-      .map(([x, y, c, ph]) => ({ hip: [x, y], c, ph, el: (() => { const p = document.createElementNS(NS, 'path'); p.setAttribute('fill', 'url(#hwhS)'); legsG.appendChild(p); return p; })() }));
-    const L1 = 24, L2 = 30, SPAN = .34, STANCE = .72, T = 1.5;   // bones, half a step (rad), share of the stride planted, stride (s)
-    const W = 2 * SPAN / (STANCE * T);                           // the rim's speed under a planted tip, rad/s
-    // A bone: a spindle from a to b, widest a third of the way along.
-    const bone = (a, b, w, tip) => {
-      const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l * w, ny = dx / l * w;
-      const m = [a[0] + dx * .35, a[1] + dy * .35], e = tip ? b : [b[0] - dx / l * .6, b[1] - dy / l * .6];
-      return `M${a[0].toFixed(1)} ${a[1].toFixed(1)}L${(m[0] + nx).toFixed(1)} ${(m[1] + ny).toFixed(1)}L${e[0].toFixed(1)} ${e[1].toFixed(1)}L${(m[0] - nx).toFixed(1)} ${(m[1] - ny).toFixed(1)}Z`;
-    };
-    function knee(h, f) {
-      let dx = f[0] - h[0], dy = f[1] - h[1], d = Math.hypot(dx, dy);
-      d = Math.min(d, L1 + L2 - .5);
-      const a = (L1 * L1 - L2 * L2 + d * d) / (2 * d), hh = Math.sqrt(Math.max(0, L1 * L1 - a * a));
-      const ux = dx / (Math.hypot(dx, dy) || 1), uy = dy / (Math.hypot(dx, dy) || 1);
-      const px = h[0] + ux * a, py = h[1] + uy * a;
-      const k1 = [px - uy * hh, py + ux * hh], k2 = [px + uy * hh, py - ux * hh];
-      return k1[1] < k2[1] ? k1 : k2;   // knees up, like a spider's
+    const NS = 'http://www.w3.org/2000/svg';
+    const nsvg = layer.querySelector('.hw-needle');
+    if (!nsvg) return;
+    const g = document.createElementNS(NS, 'g');
+    g.setAttribute('class', 'hw-ink');
+    nsvg.appendChild(g);
+    const ink = d => { const p = document.createElementNS(NS, 'path'); p.setAttribute('d', d); g.appendChild(p); return p; };
+    // A brush stroke along points pts, its width w[i] at each, tapering to
+    // nothing at the end, with a little thorn on the outside of each joint.
+    function brush(pts, w) {
+      const L = [], Rr = [], thorns = [];
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+        let nx = -(b[1] - a[1]), ny = b[0] - a[0]; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
+        L.push([pts[i][0] + nx * w[i] / 2, pts[i][1] + ny * w[i] / 2]);
+        Rr.push([pts[i][0] - nx * w[i] / 2, pts[i][1] - ny * w[i] / 2]);
+        if (i > 0 && i < pts.length - 1) {
+          const tx = (b[0] - a[0]) / (Math.hypot(b[0] - a[0], b[1] - a[1]) || 1), ty = (b[1] - a[1]) / (Math.hypot(b[0] - a[0], b[1] - a[1]) || 1);
+          const o = [pts[i][0] + nx * (w[i] / 2 + 1.6) - tx * .6, pts[i][1] + ny * (w[i] / 2 + 1.6) - ty * .6];
+          thorns.push(`M${(pts[i][0] - tx * 1.4).toFixed(2)} ${(pts[i][1] - ty * 1.4).toFixed(2)}L${o[0].toFixed(2)} ${o[1].toFixed(2)}L${(pts[i][0] + tx * .9).toFixed(2)} ${(pts[i][1] + ty * .9).toFixed(2)}Z`);
+        }
+      }
+      const f = q => q[0].toFixed(2) + ' ' + q[1].toFixed(2);
+      return 'M' + L.map(f).join('L') + 'L' + Rr.reverse().map(f).join('L') + 'Z' + thorns.join('');
     }
-    let turn = 0, last = 0, raf = 0;
+    // Wrist and palm stay put; the fingers are redrawn as they flex.
+    ink(brush([[11.5, 42], [12.6, 56], [13.6, 72], [14.6, 90]], [2.8, 2.1, 1.2, 0]));
+    ink('M5.2 34L12.6 32.4L14.4 35.6L12.8 43L7.4 43.4L5 39.2Z');
+    // Fingers: root on the palm, then each bone's direction (deg; 0 is
+    // right, 90 down) and length; the thumb hooks over the shaft.
+    const FINGERS = [
+      { at: [5.5, 34], a: [-165, -135, -100], l: [12, 10, 8], w: 1.9 },
+      { at: [4.8, 36.8], a: [178, 158, 128], l: [14, 12, 9], w: 1.9 },
+      { at: [4.8, 39.6], a: [168, 146, 116], l: [14, 11, 9], w: 1.8 },
+      { at: [5.6, 42.6], a: [152, 128, 98], l: [12, 10, 8], w: 1.7 },
+      { at: [13.2, 32.4], a: [-58, -8, 42], l: [7, 6, 5], w: 1.6 },
+    ].map((F, i) => ({ ...F, el: ink(''), ph: i * 1.3 }));
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
     function draw(t) {
       const s = t / 1000;
-      let bob = 0;
-      LEGS.forEach(L => {
-        const p = ((s / T) + L.ph) % 1;
-        let th, lift = 0;
-        if (p < STANCE) th = L.c + SPAN - 2 * SPAN * (p / STANCE);
-        else { const q = (p - STANCE) / (1 - STANCE); th = L.c - SPAN + 2 * SPAN * q; lift = Math.sin(Math.PI * q) * 7; bob += Math.sin(Math.PI * q); }
-        const r = R + lift, f = [C[0] + r * Math.sin(th), C[1] - r * Math.cos(th)];
-        const k = knee(L.hip, f);
-        L.el.setAttribute('d', bone(L.hip, k, 2.2, false) + bone(k, f, 1.8, true));
+      FINGERS.forEach(F => {
+        let p = F.at, ang = 0;
+        const pts = [p];
+        F.a.forEach((a, j) => {
+          // Each joint curls a little more, and back, slowly.
+          ang = a + (still ? 0 : Math.sin(s * 1.3 + F.ph + j * .7) * (5 + j * 3));
+          const r = ang * Math.PI / 180;
+          p = [p[0] + Math.cos(r) * F.l[j], p[1] + Math.sin(r) * F.l[j]];
+          pts.push(p);
+        });
+        F.el.setAttribute('d', brush(pts, [F.w, F.w * .85, F.w * .6, 0]));
       });
-      bodyG.setAttribute('transform', `translate(0 ${(-bob * .9).toFixed(2)})`);
-      holes.setAttribute('transform', `rotate(${turn.toFixed(2)} 50 50)`);
     }
+    let raf = 0;
     function frame(t) {
       raf = 0;
       if (!body.classList.contains('halloween')) return;
-      const dt = Math.min(.05, last ? (t - last) / 1000 : 0); last = t;
-      turn -= W * dt * 180 / Math.PI;   // the rim moves backward under the planted tips
       draw(t);
       raf = requestAnimationFrame(frame);
     }
-    const go = () => {
-      if (still) { draw(0); return; }
-      if (!raf && body.classList.contains('halloween')) { last = 0; raf = requestAnimationFrame(frame); }
-    };
+    const go = () => { if (!still && !raf && body.classList.contains('halloween')) raf = requestAnimationFrame(frame); };
     new MutationObserver(go).observe(body, { attributes: true, attributeFilter: ['class'] });
     draw(0); go();
   })();
