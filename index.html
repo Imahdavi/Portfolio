@@ -5117,9 +5117,7 @@
     #hw-layer .hw-ghost-mouth { fill:#1b1320; transform-box:fill-box; transform-origin:50% 0; }
     #hw-layer .hw-ghost-teeth { fill:#f4ecff; }
     #hw-layer .hw-boo { position:absolute; left:50%; bottom:100%; margin-bottom:6px; padding:3px 8px; border-radius:10px 10px 10px 2px; background:#f4ecff; color:#1b1320; font:700 12px/1.2 var(--font-title, sans-serif); white-space:nowrap; opacity:0; transform:translate(-20%, 6px) scale(.6); transform-origin:left bottom; pointer-events:none; }
-    #hw-layer .hw-ghost.booing .hw-boo:not(.hw-say) { animation:hwBoo 1.6s ease-out; }
-    #hw-layer .hw-say { font-family:"Vazirmatn", var(--font-body), sans-serif; font-weight:700; font-size:12px; }
-    #hw-layer .hw-ghost.saying .hw-say { animation:hwBoo 2.6s ease-out; }
+    #hw-layer .hw-ghost.booing .hw-boo { animation:hwBoo 1.6s ease-out; }
     @keyframes hwBoo { 0% { opacity:0; transform:translate(-20%, 6px) scale(.6); } 12% { opacity:1; transform:translate(-20%, 0) scale(1.08); } 22% { transform:translate(-20%, 0) scale(1); } 75% { opacity:1; } 100% { opacity:0; transform:translate(-20%, -8px) scale(1); } }
     @media (max-width:600px) { #hw-layer .hw-ghost { width:34px; height:38px; } }
     @keyframes hwFlap { from { transform:scaleY(1); } to { transform:scaleY(.45); } }
@@ -7960,7 +7958,7 @@ function toggleDarkMode() {
   }
   const ghost = document.createElement('div');
   ghost.className = 'hw-ghost';
-  ghost.innerHTML = `<span class="hw-boo">Boo!</span><span class="hw-boo hw-say" dir="rtl" lang="fa">نترس کوچولو!</span><svg viewBox="0 0 24 27">
+  ghost.innerHTML = `<span class="hw-boo">Boo!</span><svg viewBox="0 0 24 27">
     <path class="hw-ghost-body" d="${hem(0)}"/>
     <circle class="hw-ghost-eye" cx="12" cy="9" r="2.38"/>
     <path class="hw-ghost-mouth" d="M16.45 14.6C15.14 15.58 13.57 16.07 12 16.07C10.43 16.07 8.86 15.58 7.55 14.6C7.22 14.35 7.15 13.88 7.4 13.55C7.65 13.22 8.12 13.15 8.45 13.4C10.54 14.97 13.46 14.97 15.55 13.4C15.88 13.15 16.35 13.22 16.6 13.55C16.85 13.88 16.78 14.35 16.45 14.6Z"/>
@@ -8031,18 +8029,26 @@ function toggleDarkMode() {
   // touched the page (browsers keep audio locked until then).
   let mouthOpen = 0, actx = null, booBuf = null, booAn = null, booData = null, heard = false, nextBoo = performance.now() + rnd(6000, 11000);
   addEventListener('pointerdown', () => { heard = true; if (actx && actx.state === 'suspended') actx.resume(); }, { capture: true, passive: true });
+  // Then, the laugh done, it says «نترس کوچولو!» (don't be scared, little
+  // one) in a voice made to match the laugh (sfx/ghost-natars.mp3), its
+  // mouth moving with that too.
+  let natarsBuf = null;
+  const loadClip = url => fetch(url).then(r => r.arrayBuffer()).then(b => actx.decodeAudioData(b));
+  function speak(buf, then) {
+    const src = actx.createBufferSource(), g = actx.createGain();
+    src.buffer = buf; g.gain.value = .28;   // about -6 dB from the first .55
+    booAn = actx.createAnalyser(); booAn.fftSize = 512; booData = new Float32Array(booAn.fftSize);
+    src.connect(g); g.connect(actx.destination); src.connect(booAn);
+    src.onended = () => { booAn = null; if (then) then(); };
+    src.start();
+  }
   async function boo() {
     try {
       if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
       if (actx.state === 'suspended') actx.resume();
-      if (!booBuf) booBuf = await fetch('/sfx/ghost-boo.mp3').then(r => r.arrayBuffer()).then(b => actx.decodeAudioData(b));
-      const src = actx.createBufferSource(), g = actx.createGain();
-      src.buffer = booBuf; g.gain.value = .28;   // about -6 dB from the first .55
-      booAn = actx.createAnalyser(); booAn.fftSize = 512; booData = new Float32Array(booAn.fftSize);
-      src.connect(g); g.connect(actx.destination); src.connect(booAn);
-      // After the laugh, it reassures you (in a bubble).
-      src.onended = () => { booAn = null; ghost.classList.remove('saying'); void ghost.offsetWidth; ghost.classList.add('saying'); };
-      src.start();
+      if (!booBuf) booBuf = await loadClip('/sfx/ghost-boo.mp3');
+      if (!natarsBuf) natarsBuf = await loadClip('/sfx/ghost-natars.mp3').catch(() => null);
+      speak(booBuf, () => { if (natarsBuf) setTimeout(() => speak(natarsBuf), 250); });
     } catch (e) { return; }
     ghost.classList.remove('booing'); void ghost.offsetWidth; ghost.classList.add('booing');
     SPIN.v += 120;
