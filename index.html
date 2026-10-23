@@ -5096,9 +5096,10 @@
        slowly from moonlight to blood red and back. Beside it floats a
        needle, its thread trailing and drifting. */
     /* Its size follows the screen: 84px on a phone, growing with the width
-       to 170px on a wide one, and it sits in from the edge (--mr); the
+       to --mb-max (170px unless edit mode sets hwButtonMax), reached at a
+       1600px-wide screen (--mb-vw), and it sits in from the edge (--mr); the
        needle keeps its place and size beside it. */
-    #hw-layer { --mb:clamp(84px, 9.5vw, 170px); --mr:clamp(18px, 12vw, 240px); }
+    #hw-layer { --mb:clamp(84px, var(--mb-vw, 10.6vw), var(--mb-max, 170px)); --mr:clamp(18px, 12vw, 240px); }
     #hw-layer .hw-moon { position:absolute; top:6vh; right:var(--mr); width:var(--mb); height:var(--mb); border-radius:50%; animation:hwMoonGlow 16s ease-in-out infinite, hwMoonSway 7s ease-in-out infinite; }
     #hw-layer .hw-moon svg { display:block; width:100%; height:100%; overflow:visible; }
     @keyframes hwMoonSway { 0%, 100% { transform:rotate(-5deg); } 50% { transform:rotate(5deg); } }
@@ -5869,6 +5870,14 @@ one keyframe at a time</div>
             <button type="button" class="nav-color-input hw-btn-preset" data-hex="#2f5fd0" title="Coraline blue" aria-label="Use Coraline blue" style="background:#2f5fd0"></button>
             <button type="button" class="nav-color-input" title="Any colour" id="hwButtonInput" aria-label="Choose the Halloween button colour" style="background:#2c4166"></button>
           </span>
+        </div>
+        <!-- How big the button moon may grow on wide screens (it scales with
+             the width up to this). -->
+        <div class="efc-tile efc-wide site-width-ctrl" id="hwButtonSizeCtrl">
+          <span class="efc-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg></span>
+          <span class="efc-text"><span class="efc-name site-width-lbl">Halloween button size</span><span class="efc-note">Its largest, on wide screens</span></span>
+          <input type="range" class="site-width-slider" id="hwButtonSizeSlider" min="90" max="280" step="5" value="170">
+          <span class="site-width-val" id="hwButtonSizeVal">170px</span>
         </div>
       </div>
     </section>
@@ -20396,7 +20405,19 @@ function _mixHex(a, b, t) {
   const A = p(a), B = p(b);
   return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join('');
 }
+function setHwButtonMax(px) {
+  document.documentElement.style.setProperty('--mb-max', px + 'px');
+  document.documentElement.style.setProperty('--mb-vw', (px / 16).toFixed(2) + 'vw');   // reaches px at 1600px wide
+}
+function applyHwButtonSize() {
+  const px = +((_cachedSettings || {}).hwButtonMax) || 170;
+  setHwButtonMax(px);
+  const sl = document.getElementById('hwButtonSizeSlider'), v = document.getElementById('hwButtonSizeVal');
+  if (sl) sl.value = px;
+  if (v) v.textContent = px + 'px';
+}
 function applyHwButtonColour() {
+  applyHwButtonSize();
   const hex = hwButtonColor();
   const set = (sel, cols) => document.querySelectorAll(sel).forEach((st, i) => { if (cols[i]) st.setAttribute('stop-color', cols[i]); });
   set('#hwbB stop', [_mixHex(hex, '#ffffff', .45), hex, _mixHex(hex, '#000000', .55)]);
@@ -20422,6 +20443,17 @@ document.addEventListener('DOMContentLoaded', () => {
         _hwButtonPreview = null;
         saveSettings();
       });
+    });
+  }
+  // The size slider: live while dragging, saved on release.
+  const sl = document.getElementById('hwButtonSizeSlider'), sv = document.getElementById('hwButtonSizeVal');
+  if (sl && sv) {
+    sl.addEventListener('pointerdown', (e) => e.stopPropagation());
+    sl.addEventListener('input', () => { setHwButtonMax(+sl.value); sv.textContent = sl.value + 'px'; });
+    sl.addEventListener('change', () => {
+      if (!_cachedSettings) _cachedSettings = {};
+      _cachedSettings.hwButtonMax = +sl.value;
+      saveSettings();
     });
   }
   // The presets set the colour straight away.
