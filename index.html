@@ -8064,7 +8064,7 @@ function toggleDarkMode() {
       if (amb !== a) return;   // switched off while it loaded
       a.src.buffer = ambBuf; a.src.loop = true;
       a.src.loopStart = 0; a.src.loopEnd = Math.min(ambBuf.duration, 21.02);
-      a.g.gain.setValueAtTime(0, actx.currentTime); a.g.gain.linearRampToValueAtTime(.024, actx.currentTime + 3);   // -8 dB from the first .06
+      a.g.gain.setValueAtTime(0, actx.currentTime); a.g.gain.linearRampToValueAtTime(.0135, actx.currentTime + 3);   // -13 dB from the first .06
       a.src.connect(a.g); a.g.connect(actx.destination); a.src.start();
     } catch (e) { amb = null; }
   }
