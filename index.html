@@ -8037,8 +8037,11 @@ function toggleDarkMode() {
     ghost.classList.remove('booing'); void ghost.offsetWidth; ghost.classList.add('booing');
     SPIN.v += 120;
   }
-  // The Halloween ambience (sfx/halloween-loop.mp3, 25s, its ends silent so
-  // it loops clean): kept low under everything, faded in while it's
+  // The Halloween music (sfx/coraline-loop.mp3: twelve bars of Coraline's
+  // "Mice Circus" waltz, 14.22s-35.24s of the track, cut on the downbeats so
+  // the loop keeps time; loopEnd skips the encoder's padding). The earlier
+  // ambience, sfx/halloween-loop.mp3, is kept for going back. Very quiet,
+  // in the background: faded in while it's
   // Halloween and the visitor has touched the page, faded out when it
   // isn't; the audio is suspended while the tab is hidden.
   let ambBuf = null, amb = null;
@@ -8057,10 +8060,11 @@ function toggleDarkMode() {
       }
       amb = { src: actx.createBufferSource(), g: actx.createGain() };
       const a = amb;
-      if (!ambBuf) ambBuf = await fetch('/sfx/halloween-loop.mp3').then(r => r.arrayBuffer()).then(b => actx.decodeAudioData(b));
+      if (!ambBuf) ambBuf = await fetch('/sfx/coraline-loop.mp3').then(r => r.arrayBuffer()).then(b => actx.decodeAudioData(b));
       if (amb !== a) return;   // switched off while it loaded
       a.src.buffer = ambBuf; a.src.loop = true;
-      a.g.gain.setValueAtTime(0, actx.currentTime); a.g.gain.linearRampToValueAtTime(.12, actx.currentTime + 2.5);
+      a.src.loopStart = 0; a.src.loopEnd = Math.min(ambBuf.duration, 21.02);
+      a.g.gain.setValueAtTime(0, actx.currentTime); a.g.gain.linearRampToValueAtTime(.06, actx.currentTime + 3);
       a.src.connect(a.g); a.g.connect(actx.destination); a.src.start();
     } catch (e) { amb = null; }
   }
