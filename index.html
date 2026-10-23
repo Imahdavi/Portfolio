@@ -5036,6 +5036,9 @@
     /* A smaller pumpkin perched on the top edge of the Home page's
        Category / Brand switch, rocking a little (Halloween only). */
     body.halloween #homeViewToggle { position:relative; }
+    /* For now (trying it out): no avatar on the name, nor its orbits, while
+       it's Halloween. */
+    body.halloween .avatar-overlay-slot, body.halloween .hdr-orbits { display:none; }
     .hwp-perch { display:none; position:absolute; left:calc(42% - 15px); bottom:calc(100% - 7px); width:30px; height:30px; pointer-events:none; transform-origin:50% 92%; animation:hwpRock 3.2s ease-in-out infinite; filter:drop-shadow(0 0 8px rgba(255,120,20,.4)) drop-shadow(0 3px 3px rgba(0,0,0,.45)); }
     body.halloween .hwp-perch { display:block; }
     .hwp-perch svg { display:block; width:100%; height:100%; overflow:visible; }
