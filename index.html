@@ -7960,13 +7960,15 @@ function toggleDarkMode() {
   ghost.className = 'hw-ghost';
   ghost.innerHTML = `<span class="hw-boo">Boo!</span><svg viewBox="0 0 24 27">
     <path class="hw-ghost-body" d="${hem(0)}"/>
-    <circle class="hw-ghost-eye" cx="12" cy="9" r="2.38"/>
+    <circle class="hw-ghost-eye" cx="9.1" cy="9.4" r="1.85"/>
+    <circle class="hw-ghost-eye" cx="14.9" cy="9.4" r="1.85"/>
     <path class="hw-ghost-mouth" d="M16.45 14.6C15.14 15.58 13.57 16.07 12 16.07C10.43 16.07 8.86 15.58 7.55 14.6C7.22 14.35 7.15 13.88 7.4 13.55C7.65 13.22 8.12 13.15 8.45 13.4C10.54 14.97 13.46 14.97 15.55 13.4C15.88 13.15 16.35 13.22 16.6 13.55C16.85 13.88 16.78 14.35 16.45 14.6Z"/>
     <path class="hw-ghost-teeth" d=""/>
   </svg>`;
   layer.appendChild(ghost);
   const ghostBody = ghost.querySelector('.hw-ghost-body');
-  const eye = ghost.querySelector('.hw-ghost-eye'), mouth = ghost.querySelector('.hw-ghost-mouth'), teeth = ghost.querySelector('.hw-ghost-teeth');
+  // Two eyes (each at its own spot, both looking the same way).
+  const eyes = [...ghost.querySelectorAll('.hw-ghost-eye')].map(el => ({ el, x: +el.getAttribute('cx'), y: +el.getAttribute('cy') })), mouth = ghost.querySelector('.hw-ghost-mouth'), teeth = ghost.querySelector('.hw-ghost-teeth');
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const sp = (k, c) => ({ x: 0, v: 0, to: 0, k, c });
   const stepS = (s, dt) => { s.v += (-s.k * (s.x - s.to) - s.c * s.v) * dt; s.x += s.v * dt; };
@@ -8140,8 +8142,7 @@ function toggleDarkMode() {
     ghost.style.transform = `translate(${(X.x - size / 2 + wx).toFixed(1)}px, ${(Y.x - size / 2 + wy).toFixed(1)}px) rotate(${(tilt + SPIN.x).toFixed(1)}deg)`;
     ghost.style.opacity = Math.max(.2, Math.min(1, FADE.x)).toFixed(3);
     if (!still) ghostBody.setAttribute('d', hem(s * 3.2));
-    eye.setAttribute('cx', (12 + EX.x).toFixed(2));
-    eye.setAttribute('cy', (9 + EY.x).toFixed(2));
+    eyes.forEach(e => { e.el.setAttribute('cx', (e.x + EX.x * .7).toFixed(2)); e.el.setAttribute('cy', (e.y + EY.x * .7).toFixed(2)); });
     // The mouth: quick to open with the sound, a touch slower to close.
     const o = loud();
     mouthOpen += (o - mouthOpen) * (o > mouthOpen ? .6 : .25);
