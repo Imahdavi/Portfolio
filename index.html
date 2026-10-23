@@ -5094,10 +5094,13 @@
        four-hole button with a raised rim, swaying a little; its halo turns
        slowly from moonlight to blood red and back. Beside it floats a
        needle, its thread trailing and drifting. */
-    #hw-layer .hw-moon { position:absolute; top:5vh; right:6vw; width:78px; height:78px; border-radius:50%; animation:hwMoonGlow 16s ease-in-out infinite, hwMoonSway 7s ease-in-out infinite; }
+    #hw-layer .hw-moon { position:absolute; top:calc(5vh + 56px); right:6vw; width:78px; height:78px; border-radius:50%; animation:hwMoonGlow 16s ease-in-out infinite; }
+    /* The hand walking on it (see "The hand on the button"): its 160 x 170
+       frame put so the button sits at (80, 115) in it. */
+    #hw-layer .hw-hand { position:absolute; top:calc(5vh - 20px); right:calc(6vw - 41px); width:160px; height:170px; overflow:visible; filter:drop-shadow(0 3px 4px rgba(0,0,0,.5)); }
     #hw-layer .hw-moon svg { display:block; width:100%; height:100%; overflow:visible; }
     @keyframes hwMoonSway { 0%, 100% { transform:rotate(-5deg); } 50% { transform:rotate(5deg); } }
-    #hw-layer .hw-needle { position:absolute; top:calc(5vh - 8px); right:calc(6vw + 62px); width:30px; height:96px; overflow:visible; animation:hwNeedle 5.5s ease-in-out infinite; filter:drop-shadow(0 4px 6px rgba(0,0,0,.45)); }
+    #hw-layer .hw-needle { position:absolute; top:calc(5vh + 48px); right:calc(6vw + 62px); width:30px; height:96px; overflow:visible; animation:hwNeedle 5.5s ease-in-out infinite; filter:drop-shadow(0 4px 6px rgba(0,0,0,.45)); }
     @keyframes hwNeedle { 0%, 100% { transform:translateY(0) rotate(14deg); } 50% { transform:translateY(-9px) rotate(22deg); } }
     @keyframes hwMoonGlow { 0%, 30% { box-shadow:0 0 40px 8px rgba(255,255,255,.2); } 55%, 70% { box-shadow:0 0 46px 10px rgba(230,60,40,.3); } 100% { box-shadow:0 0 40px 8px rgba(255,255,255,.2); } }
     #hw-layer .hw-web { position:absolute; top:0; width:min(220px, 30vw); height:auto; opacity:.32; stroke:#e9d8c4; fill:none; stroke-width:.8; }
@@ -7913,6 +7916,90 @@ function toggleDarkMode() {
     return lamp.apply(this, arguments);
   };
   if (body.classList.contains('halloween')) paint(true);
+
+  // ── The hand on the button ──
+  // The Other Mother's needle-fingered hand (Coraline), walking on top of
+  // the button moon as on a wheel: the hand stays where it is, its five
+  // jointed fingers stepping, and the button turns under it. Each finger is
+  // two spindle-shaped bones solved by two-joint IK to a fingertip on the
+  // rim; a tip rides the rim backward while planted (at the rim's own
+  // speed), then lifts and steps forward. Drawn in a 160 x 170 frame with
+  // the button's centre at (80, 115), radius 39 (its CSS box, 1:1).
+  (function () {
+    const NS = 'http://www.w3.org/2000/svg', C = [80, 115], R = 37.4;   // the rim as drawn (48 of the button's 100 units)
+    const moonSvg = layer.querySelector('.hw-moon svg');
+    // The holes (and their lips) turn; the rim and its shine stay lit
+    // from the same side.
+    const holes = document.createElementNS(NS, 'g');
+    moonSvg.querySelectorAll('circle[r="5.6"], path').forEach(el => holes.appendChild(el));
+    moonSvg.insertBefore(holes, moonSvg.querySelector('ellipse'));
+    const rig = document.createElementNS(NS, 'svg');
+    rig.setAttribute('class', 'hw-hand'); rig.setAttribute('viewBox', '0 0 160 170'); rig.setAttribute('aria-hidden', 'true');
+    rig.innerHTML = '<defs><linearGradient id="hwhS" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef0f4"/><stop offset=".55" stop-color="#b4b8c2"/><stop offset="1" stop-color="#6f7480"/></linearGradient></defs>' +
+      '<g class="hw-hand-legs"></g>' +
+      '<g class="hw-hand-body">' +
+        // The wrist, rising up behind, wound with thread.
+        '<path d="M66 44L46 12" stroke="url(#hwhS)" stroke-width="7" stroke-linecap="round"/>' +
+        '<path d="M51 24l6-2M55 30l6-3M59 36l6-3M48 17l5-2" stroke="#2a2630" stroke-width="1.1" stroke-linecap="round"/>' +
+        // The back of the hand, long and flat, pointing the way it walks.
+        '<path d="M60 44Q72 34 94 36Q110 38 114 45Q106 53 90 54Q72 55 60 49Z" fill="url(#hwhS)"/>' +
+        '<path d="M70 42Q88 38 106 43" stroke="#ffffff" stroke-opacity=".5" stroke-width="1" fill="none"/>' +
+      '</g>';
+    layer.appendChild(rig);
+    const legsG = rig.querySelector('.hw-hand-legs'), bodyG = rig.querySelector('.hw-hand-body');
+    // Each finger: its knuckle on the hand, where its step is centred on the
+    // rim (radians from the top, + is forward), and when in the stride it is.
+    const LEGS = [[66, 49, -.62, 0], [76, 52, -.3, .4], [86, 53, 0, .8], [96, 52, .3, .2], [106, 49, .6, .6]]
+      .map(([x, y, c, ph]) => ({ hip: [x, y], c, ph, el: (() => { const p = document.createElementNS(NS, 'path'); p.setAttribute('fill', 'url(#hwhS)'); legsG.appendChild(p); return p; })() }));
+    const L1 = 24, L2 = 30, SPAN = .34, STANCE = .72, T = 1.5;   // bones, half a step (rad), share of the stride planted, stride (s)
+    const W = 2 * SPAN / (STANCE * T);                           // the rim's speed under a planted tip, rad/s
+    // A bone: a spindle from a to b, widest a third of the way along.
+    const bone = (a, b, w, tip) => {
+      const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l * w, ny = dx / l * w;
+      const m = [a[0] + dx * .35, a[1] + dy * .35], e = tip ? b : [b[0] - dx / l * .6, b[1] - dy / l * .6];
+      return `M${a[0].toFixed(1)} ${a[1].toFixed(1)}L${(m[0] + nx).toFixed(1)} ${(m[1] + ny).toFixed(1)}L${e[0].toFixed(1)} ${e[1].toFixed(1)}L${(m[0] - nx).toFixed(1)} ${(m[1] - ny).toFixed(1)}Z`;
+    };
+    function knee(h, f) {
+      let dx = f[0] - h[0], dy = f[1] - h[1], d = Math.hypot(dx, dy);
+      d = Math.min(d, L1 + L2 - .5);
+      const a = (L1 * L1 - L2 * L2 + d * d) / (2 * d), hh = Math.sqrt(Math.max(0, L1 * L1 - a * a));
+      const ux = dx / (Math.hypot(dx, dy) || 1), uy = dy / (Math.hypot(dx, dy) || 1);
+      const px = h[0] + ux * a, py = h[1] + uy * a;
+      const k1 = [px - uy * hh, py + ux * hh], k2 = [px + uy * hh, py - ux * hh];
+      return k1[1] < k2[1] ? k1 : k2;   // knees up, like a spider's
+    }
+    let turn = 0, last = 0, raf = 0;
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function draw(t) {
+      const s = t / 1000;
+      let bob = 0;
+      LEGS.forEach(L => {
+        const p = ((s / T) + L.ph) % 1;
+        let th, lift = 0;
+        if (p < STANCE) th = L.c + SPAN - 2 * SPAN * (p / STANCE);
+        else { const q = (p - STANCE) / (1 - STANCE); th = L.c - SPAN + 2 * SPAN * q; lift = Math.sin(Math.PI * q) * 7; bob += Math.sin(Math.PI * q); }
+        const r = R + lift, f = [C[0] + r * Math.sin(th), C[1] - r * Math.cos(th)];
+        const k = knee(L.hip, f);
+        L.el.setAttribute('d', bone(L.hip, k, 2.2, false) + bone(k, f, 1.8, true));
+      });
+      bodyG.setAttribute('transform', `translate(0 ${(-bob * .9).toFixed(2)})`);
+      holes.setAttribute('transform', `rotate(${turn.toFixed(2)} 50 50)`);
+    }
+    function frame(t) {
+      raf = 0;
+      if (!body.classList.contains('halloween')) return;
+      const dt = Math.min(.05, last ? (t - last) / 1000 : 0); last = t;
+      turn -= W * dt * 180 / Math.PI;   // the rim moves backward under the planted tips
+      draw(t);
+      raf = requestAnimationFrame(frame);
+    }
+    const go = () => {
+      if (still) { draw(0); return; }
+      if (!raf && body.classList.contains('halloween')) { last = 0; raf = requestAnimationFrame(frame); }
+    };
+    new MutationObserver(go).observe(body, { attributes: true, attributeFilter: ['class'] });
+    draw(0); go();
+  })();
 
   // The bat at the pumpkin's shoulder, flapping on a loop.
   const batBox = document.querySelector('#hw-btn .hw-btn-bat');
