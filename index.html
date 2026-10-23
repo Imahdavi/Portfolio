@@ -4780,7 +4780,9 @@
     body.dark .xtl-item.now .xtl-dot { background:var(--d-text); }
     body.dark .xtl-title { color:var(--d-text); }
     body.dark .xtl-cat { color:var(--d-text-3); }
-    body.dark .xtl-co i { background:var(--d-surface); border-color:var(--d-surface); color:var(--d-text-2); box-shadow:0 0 0 1px var(--d-line); }
+    /* Logos are drawn for a light ground, so in the dark their discs stay
+       a soft off-white (not the dark surface, where dark marks vanish). */
+    body.dark .xtl-co i { background:#ecebe7; border-color:#ecebe7; color:#5a5148; box-shadow:0 0 0 1px rgba(255,255,255,.08); }
     body.dark .xtl-date, body.dark .xtl-pts { color:var(--d-text-3); }
     body.dark .xtl-pts { color:var(--d-text-2); }
     body.dark .xtl-sub { color:var(--d-text-3); }
@@ -4852,8 +4854,8 @@
     body.dark .xcl-head { color:var(--d-text-2); }
     body.dark .xcl-head:hover, body.dark .xcl-pill { background:rgba(255,255,255,.06); }
     body.dark .xcl-label em { background:rgba(255,255,255,.08); color:var(--d-text-2); }
-    body.dark .xcl-mark { background:var(--d-surface); border-color:var(--d-surface); box-shadow:0 0 0 1px var(--d-line); }
-    body.dark .xcl-initial { color:var(--d-text-2); }
+    body.dark .xcl-mark { background:#ecebe7; border-color:#ecebe7; box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 0 0 2px var(--d-bg); }
+    body.dark .xcl-initial { color:#5a5148; }
     body.dark .xcl-trunk, body.dark .xcl-branch { stroke:var(--d-line-2); }
     body.dark .xcl-trace { stroke:var(--d-text); }
     body.dark .xcl-text { color:var(--d-text-3); }
