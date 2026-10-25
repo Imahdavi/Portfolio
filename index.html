@@ -9154,7 +9154,7 @@ function invTicketModel() {
   const stamp = s.status === 'none' ? null : {
     kind: s.status === 'paid' ? 'paid' : 'unpaid',
     text: s.status === 'paid' ? invT('rPaid') : invT('rUnpaid'),
-    sub: [s.number, date].filter(Boolean).join(' · ')
+    sub: ''
   };
   return {
     fa,
@@ -9164,9 +9164,10 @@ function invTicketModel() {
       head: [invT('tkInvoice'), '', s.number],
       cells: [
         [{ l: invT('rBillTo'), v: client, size: 1.45 }],
-        [{ l: invT('rNo'), v: s.number, size: 1.45 }],
+        // The number is in the head already; Due takes its cell.
+        [{ l: invT('rDue'), v: due, size: 1.45 }],
         [{ l: invT('rDate'), v: date, size: 1.45 }],
-        [{ l: invT('qFrom'), v: who, size: 1.3 }, { l: invT('rDue'), v: due, size: 1.3 }],
+        [{ l: invT('qFrom'), v: who, size: 1.45 }],
         [{ l: invT('tkItems'), v: invFmt(items.length), size: 2.25 },
          { l: invT('rTax'), v: T.taxPct ? invFmt(T.taxPct) + (fa ? '٪' : '%') : '—', size: 2.25 },
          { l: invT('tkDisc'), v: T.disc ? invMoney(T.disc, cur) : '—', size: 2.25 }],
@@ -9187,7 +9188,7 @@ function invTicketModel() {
       stamp
     },
     // The stub repeats nothing: it carries the scannable code.
-    stub: { qr: invQrSvg(invQrText()), caption: invT('rScan'), number: s.number }
+    stub: { qr: invQrSvg(invQrText()), caption: invT('rScan'), number: '' }
   };
 }
 
@@ -9257,7 +9258,6 @@ function renderInvoicePaper() {
   if (s.note) h += `<hr class="rc-rule"><div class="rc-pre rc-center rc-dim">${invLines(s.note)}</div>`;
   const qr = invQrSvg(invQrText());
   if (qr) h += `<div class="rc-qr">${qr}</div><div class="rc-center rc-small rc-dim">${invT('rScan')}</div>`;
-  h += `<div class="rc-center rc-small rc-dim" dir="ltr" style="letter-spacing:.3em">${invEsc(s.number)}</div>`;
   // A small credit, set sideways up the bottom-left edge; on the exports too.
   h += `<div class="rc-made" dir="ltr">made with <b>imahdavi.space</b></div>`;
   p.innerHTML = h;
