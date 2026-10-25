@@ -6319,9 +6319,9 @@ one keyframe at a time</div>
         </fieldset>
         <fieldset>
           <legend data-t="adjustments">Adjustments</legend>
+          <!-- Tax taken off the invoice: discount only. -->
           <div class="inv-grid2">
             <label><span><span data-t="discount">Discount</span> <span class="inv-opt" data-t="amount">amount</span></span><input name="discount" type="number" min="0" step="any" inputmode="decimal"></label>
-            <label><span><span data-t="tax">Tax</span> <span class="inv-opt">%</span></span><input name="tax" type="number" min="0" step="any" inputmode="decimal"></label>
           </div>
         </fieldset>
         <fieldset>
@@ -9060,7 +9060,7 @@ function invQrSvg(text) {
 function invTotals() {
   const sub = _inv.items.reduce((t, it) => t + invNum(it.qty || 0) * invNum(it.rate), 0);
   const disc = Math.min(invNum(_inv.discount), sub);
-  const taxPct = invNum(_inv.tax);
+  const taxPct = 0;   // tax is off the invoice; an old saved rate no longer counts
   const tax = (sub - disc) * taxPct / 100;
   return { sub, disc, taxPct, tax, total: sub - disc + tax };
 }
@@ -9169,7 +9169,6 @@ function invTicketModel() {
         [{ l: invT('rDate'), v: date, size: 1.45 }],
         [{ l: invT('qFrom'), v: who, size: 1.45 }],
         [{ l: invT('tkItems'), v: invFmt(items.length), size: 2.25 },
-         { l: invT('rTax'), v: T.taxPct ? invFmt(T.taxPct) + (fa ? '٪' : '%') : '—', size: 2.25 },
          { l: invT('tkDisc'), v: T.disc ? invMoney(T.disc, cur) : '—', size: 2.25 }],
         // The method, and under it the details — card number, IBAN, the
         // name on the account — a line each.
