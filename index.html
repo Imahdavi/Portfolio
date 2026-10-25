@@ -2070,6 +2070,8 @@
     .inv-item [data-f="desc"] { grid-column:1 / -1; }
     .inv-item label { font-size:11px; font-weight:400; color:#999; gap:3px; }
     .inv-item .inv-del { align-self:end; margin-bottom:4px; }
+    /* "One price for all": its own line under qty and rate. */
+    .inv-item .inv-pkg { grid-column:1 / -1; order:1; flex-direction:row; font-size:11.5px; }
     .inv-item input { padding:8px 9px; }
     .inv-del { width:30px; height:30px; border:0; border-radius:8px; background:transparent; color:#aaa; font-size:18px; line-height:1; cursor:pointer; }
     .inv-del:hover { background:#f0eeeb; color:#c0392b; }
@@ -8827,7 +8829,7 @@ const INV_I18N = {
     clientDetail:'Client details', clientDetailPh:'Email, phone or company', optional:'optional',
     invoice:'Invoice', number:'Number', status:'Status', unpaid:'Unpaid', paid:'Paid', noStatus:'None (no stamp)',
     date:'Date', due:'Due date', currency:'Currency', usd:'US dollar ($)', eur:'Euro (€)', cad:'Canadian dollar (CA$)', irt:'Toman (تومان)',
-    services:'Services', addService:'+ Add a service', service:'Service', qty:'Qty', rate:'Rate', remove:'Remove service',
+    services:'Services', addService:'+ Add a service', service:'Service', qty:'Qty', pkg:'One price for all', rPkg:'package', rate:'Rate', remove:'Remove service',
     adjustments:'Adjustments', discount:'Discount', amount:'amount', tax:'Tax',
     payment:'Payment', method:'Method', methodPh:'Card transfer, PayPal, crypto…',
     details:'Details', detailsPh:'Card number, IBAN / Sheba, account name…',
@@ -8862,7 +8864,7 @@ const INV_I18N = {
     clientDetail:'اطلاعات مشتری', clientDetailPh:'ایمیل، تلفن یا شرکت', optional:'اختیاری',
     invoice:'فاکتور', number:'شماره', status:'وضعیت', unpaid:'پرداخت نشده', paid:'پرداخت شده', noStatus:'هیچ‌کدام (بدون مهر)',
     date:'تاریخ', due:'سررسید', currency:'واحد پول', usd:'دلار آمریکا ($)', eur:'یورو (€)', cad:'دلار کانادا (CA$)', irt:'تومان',
-    services:'خدمات', addService:'+ افزودن خدمت', service:'خدمت', qty:'تعداد', rate:'مبلغ', remove:'حذف خدمت',
+    services:'خدمات', addService:'+ افزودن خدمت', service:'خدمت', qty:'تعداد', pkg:'یک قیمت برای همه', rPkg:'پکیج', rate:'مبلغ', remove:'حذف خدمت',
     adjustments:'تخفیف و مالیات', discount:'تخفیف', amount:'مبلغ', tax:'مالیات',
     payment:'پرداخت', method:'روش پرداخت', methodPh:'کارت به کارت، پی‌پال، کریپتو…',
     details:'جزئیات', detailsPh:'شماره کارت، شبا، نام صاحب حساب…',
@@ -9028,7 +9030,7 @@ function invQrText() {
   L.push('—');
   s.items.filter(it => (it.desc || '').trim() || invNum(it.rate)).forEach(it => {
     const q = invNum(it.qty || 0), r = invNum(it.rate);
-    L.push((it.desc || '—') + (q !== 1 ? ' ×' + invFmt(q) : '') + ': ' + m(q * r));
+    L.push((it.desc || '—') + (q !== 1 ? ' ×' + invFmt(q) : '') + (it.pkg ? ' (' + invT('rPkg') + ')' : '') + ': ' + m(invLineTotal(it)));
   });
   L.push('—');
   L.push(invT('rSub') + ': ' + m(T.sub));
@@ -9057,8 +9059,18 @@ function invQrSvg(text) {
   } catch (e) { return ''; }
 }
 
+// A line's amount: quantity × rate, or, when it is a package, the rate is
+// the price of the lot (two reels for one price) and the quantity only counts.
+function invLineTotal(it) {
+  const r = invNum(it.rate);
+  return it.pkg ? r : invNum(it.qty || 0) * r;
+}
+// Items on the ticket count the pieces of work, not the lines.
+function invItemCount(items) {
+  return items.reduce((t, it) => t + (invNum(it.qty || 0) || 1), 0);
+}
 function invTotals() {
-  const sub = _inv.items.reduce((t, it) => t + invNum(it.qty || 0) * invNum(it.rate), 0);
+  const sub = _inv.items.reduce((t, it) => t + invLineTotal(it), 0);
   const disc = Math.min(invNum(_inv.discount), sub);
   const taxPct = 0;   // tax is off the invoice; an old saved rate no longer counts
   const tax = (sub - disc) * taxPct / 100;
@@ -9148,7 +9160,7 @@ function invTicketModel() {
   const client = s.client || invT('rClient');
   const date = invDate(s.date), due = s.due ? invDate(s.due) : '—';
   // Three lines fit in the foot; the rest are counted.
-  const services = items.slice(0, 3).map(it => [it.desc || '—', invMoney(invNum(it.qty || 0) * invNum(it.rate), cur)]);
+  const services = items.slice(0, 3).map(it => [(it.desc || '—') + (invNum(it.qty || 0) > 1 ? ' ×' + invFmt(invNum(it.qty)) : ''), invMoney(invLineTotal(it), cur)]);
   if (items.length > 3) services.push(['+' + invFmt(items.length - 3) + ' ' + invT('tkMore'), '']);
   if (!services.length) services.push([invT('rNone'), '']);
   const stamp = s.status === 'none' ? null : {
@@ -9168,7 +9180,7 @@ function invTicketModel() {
         [{ l: invT('rDue'), v: due, size: 1.45 }],
         [{ l: invT('rDate'), v: date, size: 1.45 }],
         [{ l: invT('qFrom'), v: who, size: 1.45 }],
-        [{ l: invT('tkItems'), v: invFmt(items.length), size: 2.25 },
+        [{ l: invT('tkItems'), v: invFmt(invItemCount(items)), size: 2.25 },
          { l: invT('tkDisc'), v: T.disc ? invMoney(T.disc, cur) : '—', size: 2.25 }],
         // The method, and under it the details — card number, IBAN, the
         // name on the account — a line each.
@@ -9237,8 +9249,9 @@ function renderInvoicePaper() {
   if (!items.length) h += `<div class="rc-empty">${invT('rNone')}</div>`;
   items.forEach(it => {
     const q = invNum(it.qty || 0), r = invNum(it.rate);
-    h += `<div class="rc-item">${invLine(`<bdi dir="auto">${invEsc(it.desc) || '—'}</bdi>`, invEsc(invMoney(q * r, cur)))}`;
-    if (q !== 1) h += `<div class="rc-sub">${invFmt(q)} × ${invEsc(invMoney(r, cur))}</div>`;
+    h += `<div class="rc-item">${invLine(`<bdi dir="auto">${invEsc(it.desc) || '—'}</bdi>`, invEsc(invMoney(invLineTotal(it), cur)))}`;
+    if (it.pkg) h += `<div class="rc-sub">${invFmt(q)} · ${invT('rPkg')}</div>`;
+    else if (q !== 1) h += `<div class="rc-sub">${invFmt(q)} × ${invEsc(invMoney(r, cur))}</div>`;
     h += `</div>`;
   });
   h += `<hr class="rc-rule">`;
@@ -9271,6 +9284,7 @@ function renderInvoiceItems() {
       <input data-f="desc" type="text" dir="auto" placeholder="${invEsc(invT('servicePh'))}" value="${invEsc(it.desc)}">
       <label>${invT('qty')}<input data-f="qty" type="text" inputmode="decimal" dir="ltr" value="${invEsc(it.qty)}"></label>
       <label>${rate}<input data-f="rate" type="text" inputmode="decimal" dir="ltr" placeholder="500" value="${invEsc(it.rate)}"></label>
+      <label class="inv-check inv-pkg"><input data-f="pkg" type="checkbox"${it.pkg ? ' checked' : ''}><span>${invT('pkg')}</span></label>
       <button type="button" class="inv-del" title="${invEsc(invT('remove'))}" aria-label="${invEsc(invT('remove'))}">×</button>
     </div>`).join('');
 }
@@ -9344,7 +9358,7 @@ function initInvoice() {
   form.addEventListener('input', e => {
     const el = e.target;
     const row = el.closest('.inv-item');
-    if (row) _inv.items[+row.dataset.i][el.dataset.f] = el.value;
+    if (row) _inv.items[+row.dataset.i][el.dataset.f] = el.type === 'checkbox' ? el.checked : el.value;
     else if (el.name) _inv[el.name] = el.type === 'checkbox' ? el.checked : el.value;
     else return;
     invSave();
