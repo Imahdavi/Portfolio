@@ -11036,9 +11036,9 @@ function renderWorkExp(items) {
     const dt = Math.max(1, now - lastT);
     const dx = e.clientX - lastX, dy = e.clientY - lastY;
     // Signs set so the front of the sphere follows the hand.
-    rotY -= dx * DRAG_SENS;
+    rotY += dx * DRAG_SENS;
     rotX += dy * DRAG_SENS;
-    velY = (-dx * DRAG_SENS) / dt * 16;
+    velY = (dx * DRAG_SENS) / dt * 16;
     velX = (dy * DRAG_SENS) / dt * 16;
     lastX = e.clientX; lastY = e.clientY; lastT = now;
   });
@@ -11087,7 +11087,9 @@ function renderWorkExp(items) {
         const X = rx * R, Y = ry * R, Z = rz * R;
         const scale = P / (P + Z);
         cell.style.transform = `translate(${X.toFixed(1)}px,${Y.toFixed(1)}px) translate(-50%,-50%) scale(${scale.toFixed(3)})`;
-        cell.style.zIndex = Math.round((Z + R) * 10);
+        // The near side (negative Z: drawn larger) sits on top, so the logos
+        // in front are the ones that follow the drag.
+        cell.style.zIndex = Math.round((R - Z) * 10);
         cell.style.opacity = Math.max(.35, Math.min(1, (scale - .58) / .55));
       });
     } catch (e) {
