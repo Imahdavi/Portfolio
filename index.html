@@ -11035,10 +11035,11 @@ function renderWorkExp(items) {
     const now = performance.now();
     const dt = Math.max(1, now - lastT);
     const dx = e.clientX - lastX, dy = e.clientY - lastY;
-    rotY += dx * DRAG_SENS;
-    rotX -= dy * DRAG_SENS;
-    velY = (dx * DRAG_SENS) / dt * 16;
-    velX = (-dy * DRAG_SENS) / dt * 16;
+    // Signs set so the front of the sphere follows the hand.
+    rotY -= dx * DRAG_SENS;
+    rotX += dy * DRAG_SENS;
+    velY = (-dx * DRAG_SENS) / dt * 16;
+    velX = (dy * DRAG_SENS) / dt * 16;
     lastX = e.clientX; lastY = e.clientY; lastT = now;
   });
   const endDrag = () => { dragging = false; grid.style.cursor = 'grab'; };
