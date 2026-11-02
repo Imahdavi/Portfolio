@@ -2013,6 +2013,9 @@
        a barcode hashed from the invoice number. The paper stays white in
        either theme, like a real slip, so the export never changes colour. */
     #view-invoice { padding-top:40px; }
+    /* A file held over the page: dropping it opens it as an invoice. */
+    #view-invoice.inv-drop { outline:2px dashed rgba(0,0,0,.25); outline-offset:-8px; border-radius:20px; background:rgba(0,0,0,.02); }
+    body.dark #view-invoice.inv-drop { outline-color:rgba(255,255,255,.3); background:rgba(255,255,255,.03); }
     .inv-head { max-width:980px; margin:0 auto 22px; text-align:center; }
     .inv-title { font-family:var(--font-name); font-size:30px; line-height:38px; font-weight:700; text-transform:uppercase; letter-spacing:.02em; }
     .inv-sub { font-family:var(--font-intro); font-size:14.5px; line-height:22px; color:#666; margin-top:6px; }
@@ -9393,9 +9396,36 @@ function initInvoice() {
   // Open invoice: the data inside the file if it has it, else its QR code.
   const openFile = document.getElementById('invOpenFile');
   document.getElementById('invOpen').addEventListener('click', () => openFile.click());
-  openFile.addEventListener('change', async () => {
+  openFile.addEventListener('change', () => {
     const f = openFile.files[0];
     openFile.value = '';
+    invOpenFrom(f);
+  });
+  // The same, for an invoice dropped on the page or pasted (Ctrl+V).
+  const invView = document.getElementById('view-invoice');
+  const invFileOf = list => [...(list || [])].map(x => x.getAsFile ? (x.kind === 'file' ? x.getAsFile() : null) : x)
+    .find(x => x && (/^image\//.test(x.type) || x.type === 'application/pdf' || /\.pdf$/i.test(x.name)));
+  invView.addEventListener('dragover', e => {
+    if (![...e.dataTransfer.types].includes('Files')) return;
+    e.preventDefault();
+    invView.classList.add('inv-drop');
+  });
+  invView.addEventListener('dragleave', e => { if (!invView.contains(e.relatedTarget)) invView.classList.remove('inv-drop'); });
+  invView.addEventListener('drop', e => {
+    invView.classList.remove('inv-drop');
+    const f = invFileOf(e.dataTransfer.files);
+    if (!f) return;
+    e.preventDefault();
+    invOpenFrom(f);
+  });
+  document.addEventListener('paste', e => {
+    if (current !== 'view-invoice') return;
+    const f = invFileOf(e.clipboardData && e.clipboardData.items);
+    if (!f) return;   // pasted text goes into the field as usual
+    e.preventDefault();
+    invOpenFrom(f);
+  });
+  async function invOpenFrom(f) {
     if (!f) return;
     // Reading the code off a big picture takes a moment.
     const busy = showToast({ type:'loading', title: invT('openReading') });
@@ -9427,7 +9457,7 @@ function initInvoice() {
       console.warn('[invoice] open failed', e);
       showToast({ type:'error', title: invT('openFail'), desc: invT('openFailWhy'), duration: 9000 });
     }
-  });
+  }
 }
 
 function invPrintIn() {
