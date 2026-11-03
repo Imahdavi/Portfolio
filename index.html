@@ -730,8 +730,12 @@
        strip, the same one the Brand view uses (and the lightbox already
        knows its tiles). */
     .fld-item.is-open { grid-column:1 / -1; }
-    .pli-media-strip.fld-strip { align-self:stretch; height:0; margin:0; opacity:0; transform:translateY(24px); pointer-events:none; transition:height .5s cubic-bezier(.2,.8,.2,1), margin .5s cubic-bezier(.2,.8,.2,1), opacity .4s ease, transform .6s cubic-bezier(.2,.8,.2,1); }
-    .fld-item.is-open .fld-strip { height:220px; margin:0 0 28px; opacity:1; transform:none; pointer-events:auto; }
+    .pli-media-strip.fld-strip { align-self:stretch; height:0; margin:0; visibility:hidden; pointer-events:none; }
+    .fld-item.is-open .fld-strip { height:220px; margin:0 0 28px; visibility:visible; pointer-events:auto; }
+    /* While the pieces fly out of the folder they have to be seen outside
+       the strip's box; the row clips them sideways instead. */
+    .fld-item.is-flying { overflow-x:clip; }
+    .fld-item.is-flying .fld-strip { overflow:visible; pointer-events:none; }
     .fld-strip .pli-tile { border-radius:8px; }
     .fld {
       --fld-ink:#111; --fld-chip:rgba(255,255,255,.7); --fld-chip-b:#e2e2e2; --fld-chip-ink:#6b6b6b;
@@ -12214,16 +12218,55 @@ function buildProjectFolder(card, allMedia) {
       inner.style.filter = hi !== null && hi !== i ? 'saturate(.75) brightness(.85)' : '';
     });
   }
+  // The pieces travel: out of the folder's mouth up to their place in the
+  // strip on open, and back down into it on close. No fades.
+  let flight = null;
+  function fly(out) {
+    if (flight) flight.forEach(a => a.cancel());
+    const r = root.getBoundingClientRect();
+    const mx = r.left + r.width / 2, my = r.top + 70;
+    const ts = [...strip.children];
+    wrap.classList.add('is-flying');
+    flight = ts.map((t, j) => {
+      const b = t.getBoundingClientRect();
+      const k = j - (Math.min(ts.length, FLD_MAX) - 1) / 2;
+      const from = `translate(${mx - (b.left + b.width / 2)}px,${my - (b.top + b.height / 2)}px) scale(.4) rotate(${Math.max(-12, Math.min(12, k * 5))}deg)`;
+      const frames = [{ transform: from }, { transform: 'none' }];
+      return t.animate(out ? frames : frames.reverse(), {
+        duration: out ? 760 : 460,
+        delay: out ? j * 45 : (ts.length - 1 - j) * 25,
+        easing: out ? 'cubic-bezier(.2,.9,.25,1.08)' : 'cubic-bezier(.5,0,.75,0)',
+        fill: 'both',
+      });
+    });
+    const all = flight;
+    return Promise.all(all.map(a => a.finished)).then(() => {
+      if (flight !== all) return false;
+      all.forEach(a => a.cancel());
+      flight = null;
+      wrap.classList.remove('is-flying');
+      return true;
+    }, () => false);
+  }
   function setOpen(v) {
-    open = v; root.setAttribute('aria-expanded', String(v)); layout();
+    open = v; root.setAttribute('aria-expanded', String(v));
     strip.querySelectorAll('[data-fld-src]').forEach(el => {
       if (v) { el.src = el.dataset.fldSrc; el.removeAttribute('data-fld-src'); }
     });
     strip.querySelectorAll('video').forEach(vd => { if (v) vd.play().catch(() => {}); else vd.pause(); });
     if (v) {
+      layout();
       strip.scrollLeft = 0;
-      requestAnimationFrame(() => strip._paintParallax?.());
-      setTimeout(() => wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 120);
+      strip._paintParallax?.();
+      if (reduced) return;
+      fly(true);
+      setTimeout(() => wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 500);
+    } else if (reduced) {
+      layout();
+    } else {
+      // The row stays open until the pieces are back inside.
+      root.classList.remove('is-open');
+      fly(false).then(done => { if (done && !open) layout(); });
     }
   }
   // The glass takes its colour from the work: an average of each fanned
