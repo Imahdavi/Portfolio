@@ -754,8 +754,10 @@
     .fld-back { position:absolute; left:0; right:0; bottom:0; top:14px; background:var(--fld-back); }
     .fld-back path { fill:none; stroke:var(--fld-back-e); stroke-width:2; }
     .fld-fan { position:absolute; inset:0; pointer-events:none; }
-    .fld-tile { position:absolute; left:50%; top:42px; width:101px; height:101px; margin-left:-50.5px; border-radius:22px; opacity:0; transition:transform .6s cubic-bezier(.2,.8,.2,1), opacity .5s; }
-    .fld.is-open .fld-tile { width:120px; height:120px; margin-left:-60px; top:22px; }
+    .fld-tile { --fld-ar:1; --fld-h:101px; position:absolute; left:50%; top:42px; height:var(--fld-h); width:calc(var(--fld-h) * var(--fld-ar)); margin-left:calc(var(--fld-h) * var(--fld-ar) / -2); border-radius:18px; opacity:0; transition:transform .6s cubic-bezier(.2,.8,.2,1), opacity .5s, width .3s, margin .3s; }
+    .fld.is-open .fld-tile { --fld-h:120px; top:22px; }
+    .fld-date { max-width:420px; width:100%; margin-top:16px; font-size:12px; font-weight:500; color:#a89e91; font-variant-numeric:tabular-nums; }
+    .fld-date + .fld-desc { margin-top:6px; }
     .fld-tile-in { position:relative; width:100%; height:100%; border-radius:inherit; overflow:hidden; pointer-events:auto; background:#222; box-shadow:0 18px 40px var(--fld-shadow), 0 0 0 1px var(--fld-ring); transition:transform .45s cubic-bezier(.2,.8,.2,1), filter .3s ease; }
     .fld.is-open .fld-tile-in { cursor:zoom-in; }
     .fld-tile-in img, .fld-tile-in video { width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; }
@@ -12092,6 +12094,14 @@ function buildProjectFolder(card, allMedia) {
     if (m.type === 'video') { el.muted = true; el.loop = true; el.playsInline = true; el.preload = 'none'; el.dataset.lazySrc = m.src; }
     else { el.loading = 'lazy'; el.alt = ''; el.src = m.src; }
     el.draggable = false;
+    // Each card takes its file's own shape at a fixed height: known sizes
+    // at once, the rest when the file reports its own.
+    const fit = (w, hh) => {
+      if (!w || !hh) return;
+      t.style.setProperty('--fld-ar', Math.max(.5, Math.min(2, w / hh)).toFixed(3));
+    };
+    fit(m.w, m.h);
+    el.addEventListener(m.type === 'video' ? 'loadedmetadata' : 'load', () => fit(el.videoWidth || el.naturalWidth, el.videoHeight || el.naturalHeight));
     inner.appendChild(el);
     t.appendChild(inner);
     fan.appendChild(t);
@@ -12127,6 +12137,13 @@ function buildProjectFolder(card, allMedia) {
 
   root.append(back, fan, front);
   wrap.appendChild(root);
+  const when = [card.year, card.yearEnd].map(s => String(s || '').trim()).filter(Boolean).join(' – ');
+  if (when) {
+    const dt = document.createElement('div');
+    dt.className = 'fld-date';
+    dt.textContent = when;
+    wrap.appendChild(dt);
+  }
   if (card.desc) {
     const d = document.createElement('div');
     d.className = 'fld-desc';
