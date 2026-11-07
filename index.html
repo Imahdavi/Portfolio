@@ -2872,8 +2872,11 @@
     body.dark .block-divider .underline-path { stroke:rgba(255,255,255,.55); }
 
     /* Divider block — star sparkles */
-    .block-divider-line { width:100%; height:40px; display:flex; align-items:center; }
-    .block-divider-line::before { content:''; flex:1; height:1px; background:rgba(0,0,0,.1); }
+    /* Lower half deeper than the upper: the block above it (a tool stack, a
+       caption) carries a few pixels of its own space under its content, so
+       an evenly split box left the line visibly nearer the work below. */
+    .block-divider-line { width:100%; height:52px; box-sizing:border-box; padding-top:20px; display:flex; align-items:flex-start; }
+    .block-divider-line::before { content:''; flex:1; height:1px; margin-top:-.5px; background:rgba(0,0,0,.1); }
     body.dark .block-divider-line::before { background:rgba(255,255,255,.1); }
     .block-divider-star { display:flex; align-items:center; justify-content:center; width:100%; height:56px; padding:4px 0; }
     .block-divider-star svg { width:72px; height:auto; overflow:visible; display:block; cursor:pointer; }
