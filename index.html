@@ -2864,6 +2864,9 @@
     body.dark .block-divider .underline-path { stroke:rgba(255,255,255,.55); }
 
     /* Divider block — star sparkles */
+    .block-divider-line { width:100%; height:40px; display:flex; align-items:center; }
+    .block-divider-line::before { content:''; flex:1; height:1px; background:rgba(0,0,0,.1); }
+    body.dark .block-divider-line::before { background:rgba(255,255,255,.1); }
     .block-divider-star { display:flex; align-items:center; justify-content:center; width:100%; height:56px; padding:4px 0; }
     .block-divider-star svg { width:72px; height:auto; overflow:visible; display:block; cursor:pointer; }
     .block-divider-star .star-big  { fill:rgba(0,0,0,.85); transition:transform .5s cubic-bezier(.34,1.56,.64,1); transform-box:fill-box; transform-origin:center; }
@@ -4881,6 +4884,7 @@
     .xcl-mark { position:relative; display:grid; place-items:center; flex:none; box-sizing:border-box; border-radius:50%; background:#fff; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.09); overflow:hidden; font-style:normal; }
     /* The marks fill most of the disc; at 72% they sat in a ring of white. */
     .xcl-mark svg, .xcl-mark img { width:86%; height:86%; object-fit:contain; display:block; filter:grayscale(1) contrast(1.15); transition:filter .3s; }
+    .xtl-edit-on [data-xp-key] { cursor:pointer; outline:1.5px dashed #3b82f6; outline-offset:2px; }
     .xcl-mark.xcl-small svg, .xcl-mark.xcl-small img { width:64%; height:64%; }
     .xcl-head:hover .xcl-mark svg, .xcl-head:hover .xcl-mark img,
     .xcl.open .xcl-mark svg, .xcl.open .xcl-mark img { filter:none; }
@@ -6540,6 +6544,10 @@ one keyframe at a time</div>
       <button class="add-btn" onclick="addDivider()">
         <svg viewBox="0 0 24 24"><path d="M3 12 Q12 19 21 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="3" cy="12" r="1.4" fill="currentColor"/><circle cx="21" cy="12" r="1.4" fill="currentColor"/></svg>
         Add divider
+      </button>
+      <button class="add-btn" onclick="addLineDivider()">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/></svg>
+        Add line
       </button>
       <button class="add-btn" onclick="addStarDivider()">
         <svg viewBox="0 0 24 24"><path d="M12 2L13.5 9.5 20 8l-5.5 3.5L18 18l-6-3.5L6 18l3.5-6.5L4 8l6.5 1.5Z" fill="currentColor"/></svg>
@@ -10891,6 +10899,7 @@ async function loadSettings() {
     renderToolsStack();
     // Its logo list lives partly in settings, which have only just arrived.
     if (window.rebuildBrandSphere) window.rebuildBrandSphere();
+    if (window.renderExperience) window.renderExperience();
 
   } catch(e) {
     // The fetch already succeeded (or came from cache) by this point, so this
@@ -14595,6 +14604,8 @@ function updateExpEditUI() {
   document.getElementById('editLabel').textContent = editMode ? 'Done' : 'Edit';
   const container = document.getElementById('sg-exp');
   container.classList.toggle('exp-edit-on', editMode);
+  const xtl = document.getElementById('xtl-work');
+  if (xtl) xtl.classList.toggle('xtl-edit-on', editMode);
   container.querySelectorAll('.exp-co, .exp-role, .exp-y1, .exp-y2').forEach(el => {
     el.contentEditable = editMode ? 'true' : 'false';
   });
@@ -15856,6 +15867,7 @@ function syncBlockRows(list) {
     }
     if (!changed) break;
   }
+  alignBlocksInRows(list, els);
   pullInlineNeighbours(list, els);
 }
 
@@ -15891,6 +15903,32 @@ function inlineParts(el, type) {
     parts = [...el.querySelectorAll('.avg-seg')];
   }
   return parts.filter(Boolean).map(p => p.getBoundingClientRect()).filter(r => r.width && r.height);
+}
+
+/* A block shorter than its row sits at the row's top unless it was set to
+   the middle or bottom in its layout menu. Moved with `translate`, which
+   leaves offsetTop alone, so the row maths above still sees where each
+   block really starts. */
+function alignBlocksInRows(list, els) {
+  const proj = PROJECTS[activeKey];
+  if (!proj) return;
+  const byId = new Map(proj.blocks.map(b => [b.id, b]));
+  const ordered = els.filter(e => e.offsetHeight)
+                     .map(e => ({ e, top: e.offsetTop, h: e.offsetHeight }))
+                     .sort((a, b) => a.top - b.top);
+  for (let i = 0; i < ordered.length; ) {
+    let j = i + 1;
+    while (j < ordered.length && ordered[j].top - ordered[i].top <= ROW_TOP_TOLERANCE) j++;
+    const row = ordered.slice(i, j);
+    const bottom = Math.max(...row.map(r => r.top + r.h));
+    row.forEach(r => {
+      const v = (byId.get(r.e.dataset.id) || {})._valign;
+      const room = bottom - r.top - r.h;
+      const dy = v === 'middle' ? room / 2 : v === 'bottom' ? room : 0;
+      r.e.style.translate = dy > 0.5 ? `0 ${Math.round(dy)}px` : '';
+    });
+    i = j;
+  }
 }
 
 function pullInlineNeighbours(list, els) {
@@ -16136,7 +16174,9 @@ function makeBlockEl(block, proj) {
     body.appendChild(t);
   } else if (block.type === 'divider') {
     const dv = document.createElement('div');
-    if (block.dividerStyle === 'star') {
+    if (block.dividerStyle === 'line') {
+      dv.className = 'block-divider-line';
+    } else if (block.dividerStyle === 'star') {
       dv.className = 'block-divider-star';
       if (!block.content) block.content = generateStarSVG();
     } else {
@@ -16441,6 +16481,30 @@ function makeBlockEl(block, proj) {
         applyPreset(mw, block, p);
         menu.querySelectorAll('.rsz-opt').forEach(b => b.classList.remove('active'));
         opt.classList.add('active');
+        if (activeKey) saveProject(activeKey);
+        menu.classList.remove('open');
+      };
+      menu.appendChild(opt);
+    });
+
+    // — Vertical: where a block sits in a row taller than itself (the row
+    //   takes the height of its tallest block; see syncBlockRows). —
+    const vDiv = document.createElement('div');
+    vDiv.className = 'rsz-divider';
+    menu.appendChild(vDiv);
+    const vLbl = document.createElement('div');
+    vLbl.className = 'rsz-section-lbl';
+    vLbl.textContent = 'In its row';
+    menu.appendChild(vLbl);
+    [['top', 'Top'], ['middle', 'Middle'], ['bottom', 'Bottom']].forEach(([key, label]) => {
+      const opt = document.createElement('button');
+      opt.className = 'rsz-opt rsz-v' + ((block._valign || 'top') === key ? ' active' : '');
+      opt.textContent = label;
+      opt.onclick = (e) => {
+        e.stopPropagation();
+        if (key === 'top') delete block._valign; else block._valign = key;
+        menu.querySelectorAll('.rsz-v').forEach(b => b.classList.toggle('active', b === opt));
+        syncBlockRows(wrap.parentElement);
         if (activeKey) saveProject(activeKey);
         menu.classList.remove('open');
       };
@@ -17914,6 +17978,19 @@ function addDivider() {
   requestAnimationFrame(() => setBlockRowSpan(el));
   // Was avgSave(block), with no `block` in scope — a ReferenceError after
   // the divider was drawn, so it appeared and was never saved.
+  saveProject(activeKey);
+}
+
+// A plain hairline across the board, to part one run of work from the next.
+function addLineDivider() {
+  const proj = PROJECTS[activeKey];
+  const b = { id: uid(), type: 'divider', dividerStyle: 'line', content: '' };
+  proj.blocks.splice(takeInsertIndex(proj), 0, b);
+  const list = document.getElementById('block-list');
+  const el = makeBlockEl(b, proj);
+  el.classList.add('block-enter');
+  placeBlockEl(list, el, proj, b);
+  requestAnimationFrame(() => setBlockRowSpan(el));
   saveProject(activeKey);
 }
 
@@ -20181,13 +20258,19 @@ document.addEventListener('DOMContentLoaded', () => {
       .map(([co, l]) => ({ name: co.replace(/\s*(—|\().*$/, '').replace(/ Food$/, ''), src: l.src })),
     ...work.flatMap(e => e.clients || []).filter(c => c.img).map(c => ({ name: c.name, src: c.img })),
   ];
+  // A logo swapped in edit mode (any mark here can be clicked and replaced
+  // through the shared picker) is kept in settings by the company's name,
+  // or "company / client" for a client mark.
+  const swapped = () => ((typeof _cachedSettings !== 'undefined' && _cachedSettings && _cachedSettings.xpLogos) || {});
+  const keyAttr = k => ` data-xp-key="${esc(k)}"`;
   const mark = e => {
     if (e.edu) return `<i aria-hidden="true">${cap}</i>`;
-    const l = LOGOS[e.co];
-    if (!l) return `<i aria-hidden="true">${building}</i>`;
-    if (l.initial) return `<i class="xtl-logo xtl-initial" aria-hidden="true">${l.initial}</i>`;
+    const o = swapped()[e.co];
+    const l = o ? { src: o } : LOGOS[e.co];
+    if (!l) return `<i aria-hidden="true"${keyAttr(e.co)}>${building}</i>`;
+    if (l.initial) return `<i class="xtl-logo xtl-initial" aria-hidden="true"${keyAttr(e.co)}>${l.initial}</i>`;
     const st = (l.size ? `max-width:${l.size}%;max-height:${l.size}%;` : '') + (l.nudge ? `transform:translate(${l.nudge});` : '');
-    return `<i class="xtl-logo${l.ink ? ' xtl-ink' : ''}" aria-hidden="true"><img src="${l.src}" alt="" loading="lazy" decoding="async"${st ? ` style="${st}"` : ''}></i>`;
+    return `<i class="xtl-logo${l.ink ? ' xtl-ink' : ''}" aria-hidden="true"${keyAttr(e.co)}><img src="${l.src}" alt="" loading="lazy" decoding="async"${st ? ` style="${st}"` : ''}></i>`;
   };
   const item = e => {
     const now = /Present/.test(e.date) && !e.remote;   // the job held now
@@ -20204,7 +20287,12 @@ document.addEventListener('DOMContentLoaded', () => {
      glides a pill to it and traces its branch from the trunk. The lines are
      measured from the rows, so they fit any wrap. */
   const chev = '<svg class="xcl-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
-  const clientMark = c => {
+  const clientMark = (c, co) => {
+    const k = co + ' / ' + c.name, o = swapped()[k];
+    if (o) return `<i class="xcl-mark"${keyAttr(k)}><img src="${o}" alt="" loading="lazy" decoding="async"></i>`;
+    return clientMark0(c).replace('<i ', `<i${keyAttr(k)} `);
+  };
+  const clientMark0 = c => {
     const m = c.mark && window.BRAND_MARKS && window.BRAND_MARKS[c.mark];
     if (m && m.svg) {
       let svg = c.crop ? m.svg.replace(/viewBox="[^"]*"/, `viewBox="${c.crop}"`) : m.svg;
@@ -20223,19 +20311,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const id = 'xcl-' + (++xclSeq), via = e.co.replace(/\s*\(.*\)\s*$/, '');
     return `<div class="xcl">
       <button type="button" class="xcl-head" aria-expanded="false" aria-controls="${id}">
-        <span class="xcl-stack" aria-hidden="true">${e.clients.map(clientMark).join('')}</span>
+        <span class="xcl-stack" aria-hidden="true">${e.clients.map(c => clientMark(c, e.co)).join('')}</span>
         <span class="xcl-label">Brands via ${esc(via)}<em>${e.clients.length}</em></span>${chev}
       </button>
       <div class="xcl-body" id="${id}"><div class="xcl-inner">
         <svg class="xcl-lines" aria-hidden="true"></svg>
         <span class="xcl-pill" aria-hidden="true"></span>
-        <ul class="xcl-list">${e.clients.map((c, i) => `<li class="xcl-row" style="--i:${i}">${clientMark(c)}<span class="xcl-text"><b>${esc(c.name)}</b>${c.did ? `<span>${esc(c.did)}</span>` : ''}</span></li>`).join('')}</ul>
+        <ul class="xcl-list">${e.clients.map((c, i) => `<li class="xcl-row" style="--i:${i}">${clientMark(c, e.co)}<span class="xcl-text"><b>${esc(c.name)}</b>${c.did ? `<span>${esc(c.did)}</span>` : ''}</span></li>`).join('')}</ul>
       </div></div>
     </div>`;
   };
 
   const w = document.getElementById('xtl-work'), d = document.getElementById('xtl-edu');
   if (!w || !d) return;
+
+  // Edit mode: a click on any mark swaps it through the shared picker.
+  // Caught on the way down, so it doesn't also fold a client tree.
+  w.addEventListener('click', ev => {
+    if (typeof editMode === 'undefined' || !editMode) return;
+    const m = ev.target.closest('[data-xp-key]');
+    if (!m) return;
+    ev.preventDefault(); ev.stopPropagation();
+    const k = m.dataset.xpKey;
+    avgOpenImagePicker(src => {
+      if (!src) return;
+      if (!_cachedSettings) _cachedSettings = {};
+      _cachedSettings.xpLogos = { ...(_cachedSettings.xpLogos || {}), [k]: src };
+      saveSettings();
+      render();
+    });
+  }, true);
+
+  function render() {
+  xclSeq = 0;
   w.innerHTML = work.map(item).join('');
   d.innerHTML = edu.map(item).join('');
 
@@ -20279,6 +20387,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
   }), { rootMargin: '0px 0px -8% 0px' });
   items.forEach(i => io.observe(i));
+  }
+  render();
+  // Swapped logos live in settings, which arrive after this first paint.
+  window.renderExperience = render;
 })();
 
 
