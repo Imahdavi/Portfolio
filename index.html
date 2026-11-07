@@ -2001,10 +2001,11 @@
       /* Below the middle rather than on it: dead centre put the toast
          straight over the composer it is reporting on, and the point of
          leaving the composer up is that you can still see it. */
-      position:fixed; z-index:9999; left:50%; top:76%;
-      transform:translate(-50%,-50%);
-      display:flex; flex-direction:column; gap:12px;
-      width:calc(100% - var(--toast-inset)*2); max-width:360px;
+      /* Bottom right, as one stack: the newest in front and the rest
+         tucked behind it, fanned out on hover (restackToasts). A run of
+         deletes used to pile a column of them over the work. */
+      position:fixed; z-index:9999; right:var(--toast-inset); bottom:var(--toast-inset);
+      width:calc(100% - var(--toast-inset)*2); max-width:360px; height:0;
       /* The viewport spans the middle of the page; only the toasts in it
          are clickable, or it would swallow taps on the composer. */
       pointer-events:none;
@@ -2017,7 +2018,9 @@
       --toast-fg:#0a0a0a;
       --toast-muted:#737373;
       --toast-lip:0 1px rgba(0,0,0,.04);
-      pointer-events:auto; position:relative;
+      --i:0; --y:0px;
+      pointer-events:auto; position:absolute; right:0; bottom:0; width:100%; box-sizing:border-box;
+      z-index:calc(100 - var(--i));
       display:flex; align-items:flex-start; gap:8px;
       padding:12px 14px; border-radius:10px;
       border:1px solid var(--toast-edge);
@@ -2027,7 +2030,12 @@
       opacity:0; transform:translateY(10px) scale(.97);
       transition:transform .5s cubic-bezier(.22,1,.36,1), opacity .5s;
     }
-    .toast[data-in] { opacity:1; transform:none; }
+    .toast[data-in] { opacity:1; transform:translateY(calc(var(--i) * -10px)) scale(calc(1 - var(--i) * .05)); transform-origin:50% 100%; }
+    .toast[data-in][data-deep] { opacity:0; pointer-events:none; }
+    #toast-viewport:hover .toast[data-in] { transform:translateY(calc(var(--y) * -1)); }
+    #toast-viewport:hover .toast[data-in][data-deep] { opacity:1; pointer-events:auto; }
+    /* The fanned-out stack keeps the hover across the gaps between toasts. */
+    #toast-viewport:hover .toast::after { content:''; position:absolute; left:0; right:0; bottom:100%; height:12px; }
     body.dark .toast {
       --toast-bg:#171717;
       --toast-edge:rgba(255,255,255,.10);
@@ -14752,6 +14760,21 @@ const TOAST_ICONS = {
   error:   '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.4"/><path d="M8 4.7v3.9M8 11.2h.01" stroke-linecap="round"/></svg>'
 };
 
+/* Newest first: its place in the stack (--i), how far it rises when the
+   stack fans out (--y, the heights of the newer ones above it), and past
+   the third, hidden until then. */
+function restackToasts() {
+  const vp = document.getElementById('toast-viewport');
+  if (!vp) return;
+  let y = 0;
+  [...vp.querySelectorAll('.toast:not([data-out])')].reverse().forEach((t, i) => {
+    t.style.setProperty('--i', i);
+    t.style.setProperty('--y', y + 'px');
+    t.toggleAttribute('data-deep', i > 2);
+    y += t.offsetHeight + 10;
+  });
+}
+
 function showToast(opts) {
   const vp = document.getElementById('toast-viewport');
   if (!vp) return { update() {}, close() {} };
@@ -14792,6 +14815,8 @@ function showToast(opts) {
     closed = true;
     clearTimeout(timer);
     el.removeAttribute('data-in');
+    el.dataset.out = '1';
+    restackToasts();
     // The removal is timed rather than hung off transitionend, which
     // never fires if the toast is closed in a hidden tab.
     setTimeout(() => el.remove(), 600);
@@ -14800,6 +14825,7 @@ function showToast(opts) {
 
   vp.appendChild(el);
   update(opts);
+  restackToasts();
   // The resting state is the transition's destination, so the starting
   // one has to be painted for a frame before it is taken off.
   requestAnimationFrame(() => { el.dataset.in = '1'; });
@@ -18274,6 +18300,7 @@ const ADD_BLOCK_TYPES = [
   { fn: 'addMedia',            title: 'Image / video', desc: 'Upload a picture or a clip' },
   { fn: 'addLottie',           title: 'Animation',     desc: 'A Lottie from the library' },
   { fn: 'addDivider',          title: 'Divider',       desc: 'A soft curve between sections' },
+  { fn: 'addLineDivider',      title: 'Line',          desc: 'A plain hairline between sections' },
   { fn: 'addStarDivider',      title: 'Star divider',  desc: 'The star mark between sections' },
   { fn: 'addMagneticCarousel', title: 'Carousel',      desc: 'A draggable row of images' },
   { fn: 'addAvatars',          title: 'Avatars',       desc: 'Credit a brand or a collaborator' },
