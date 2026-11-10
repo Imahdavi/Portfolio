@@ -8154,6 +8154,11 @@ const SNAP_THRESHOLD = 0.07;
 function setupFreeCorner(corner, mw, block, snapLbl, wrap) {
   corner.addEventListener('mousedown', e => {
     mw.dataset.aspect = 'free';
+    // A drag makes the block freehand. Without this a block on a fixed
+    // preset (1:1, 4:3…) saved its new _freeAspect but kept preset '1-1',
+    // so every reload re-applied the preset and the resize looked lost.
+    block.preset = 'free';
+    if (wrap) wrap.querySelectorAll('.rsz-opt[data-key]').forEach(b => { if (LAYOUT_PRESETS.some(p => p.key === b.dataset.key)) b.classList.toggle('active', b.dataset.key === 'free'); });
     e.preventDefault();
     e.stopPropagation();
     const inner     = mw.querySelector('.media-inner');
