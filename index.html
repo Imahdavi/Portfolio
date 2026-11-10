@@ -721,6 +721,17 @@
 
     .vsw-mark { width:15px; height:15px; display:block; flex:none; }
 
+    .vsw-mark svg { display:block; width:100%; height:100%; }
+    /* One of these marks is drawn in fills and the other mostly in
+       strokes, so each is matched on the attribute lottie actually
+       wrote — forcing a stroke onto a fill-only shape would outline it. */
+    .vsw-mark svg [fill]:not([fill="none"])     { fill:currentColor !important; }
+    .vsw-mark svg [stroke]:not([stroke="none"]) { stroke:currentColor !important; }
+
+    .vsw-beta {
+      font-style:normal; font-size:8.5px; font-weight:700;
+      letter-spacing:.08em; text-transform:uppercase; opacity:.6;
+    }
     /* ── Projects list — an alternate write-up-style view of the same
        cards: year, title, category line, a short description, and a
        filmstrip of that project's own images. The strip's sizing is just
