@@ -720,79 +720,7 @@
     .vsw-opt input:focus-visible + span { outline:2px solid var(--vsw-on); outline-offset:1px; }
 
     .vsw-mark { width:15px; height:15px; display:block; flex:none; }
-    .vsw-opt.vsw-admin { display:none; }
-    body.is-admin .vsw-opt.vsw-admin { display:flex; }
 
-    /* ── Folders (see buildProjectFolder) ── */
-    .fld-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 460px), 1fr)); gap:64px 40px; padding:40px 0 20px; }
-    .fld-item { display:flex; flex-direction:column; align-items:center; }
-    /* Open, a folder takes the whole row: its work comes out above it as a
-       strip, the same one the Brand view uses (and the lightbox already
-       knows its tiles). */
-    .fld-item.is-open { grid-column:1 / -1; }
-    .pli-media-strip.fld-strip { align-self:stretch; height:0; margin:0; visibility:hidden; pointer-events:none; }
-    .fld-item.is-open .fld-strip { height:220px; margin:0 0 28px; visibility:visible; pointer-events:auto; }
-    /* While the pieces fly out of the folder they have to be seen outside
-       the strip's box; the row clips them sideways instead. */
-    .fld-item.is-flying { overflow-x:clip; }
-    .fld-item.is-flying .fld-strip { overflow:visible; pointer-events:none; }
-    .fld-strip .pli-tile { border-radius:8px; }
-    .fld {
-      --fld-ink:#111; --fld-chip:rgba(255,255,255,.7); --fld-chip-b:#e2e2e2; --fld-chip-ink:#6b6b6b;
-      --fld-back:linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.015) 60%); --fld-back-e:rgba(0,0,0,.08);
-      --fld-front:linear-gradient(160deg,rgba(255,255,255,.95),rgba(255,255,255,.55) 55%),rgba(240,240,238,.7);
-      --fld-e0:#fff; --fld-e1:rgba(0,0,0,.06); --fld-e2:rgba(0,0,0,.04);
-      --fld-glow:rgba(0,0,0,.06); --fld-pill:rgba(255,255,255,.8); --fld-pill-b:rgba(0,0,0,.08);
-      --fld-ring:rgba(0,0,0,.08); --fld-shadow:rgba(0,0,0,.18);
-      --fld-tint:linear-gradient(transparent, transparent);
-      position:relative; isolation:isolate; width:100%; max-width:560px; height:224px;
-      cursor:pointer; user-select:none; outline:none; color:var(--fld-ink);
-      opacity:0; transform:translateY(34px) scale(.92);
-      transition:transform .9s cubic-bezier(.2,.8,.2,1), opacity .6s ease;
-    }
-    body.dark .fld {
-      --fld-ink:#fff; --fld-chip:rgba(36,36,36,.7); --fld-chip-b:#282828; --fld-chip-ink:#9f9f9f;
-      --fld-back:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.008) 60%); --fld-back-e:rgba(255,255,255,.07);
-      --fld-front:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.015) 55%),rgba(12,12,12,.78);
-      --fld-e0:rgba(255,255,255,.38); --fld-e1:rgba(255,255,255,.1); --fld-e2:rgba(255,255,255,0);
-      --fld-glow:rgba(255,255,255,.10); --fld-pill:rgba(0,0,0,.55); --fld-pill-b:rgba(255,255,255,.08);
-      --fld-ring:rgba(255,255,255,.14); --fld-shadow:rgba(0,0,0,.55);
-    }
-    .fld.is-shown { opacity:1; transform:none; }
-    .fld.is-shown.is-lift { transform:translateY(-6px) scale(1.02); z-index:2; }
-    .fld:focus-visible { outline:1px solid var(--fld-chip-ink); outline-offset:4px; border-radius:24px; }
-    .fld::before { content:""; position:absolute; left:8%; right:8%; top:30px; height:160px; z-index:-1; border-radius:50%; filter:blur(18px); background:radial-gradient(closest-side, var(--fld-glow), transparent); pointer-events:none; }
-    .fld svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none; }
-    .fld-back { position:absolute; left:0; right:0; bottom:0; top:14px; background:var(--fld-tint), var(--fld-back); }
-    .fld-back path { fill:none; stroke:var(--fld-back-e); stroke-width:2; }
-    .fld-fan { position:absolute; inset:0; pointer-events:none; }
-    .fld-tile { --fld-ar:1; --fld-h:92px; position:absolute; left:50%; top:30px; height:var(--fld-h); width:calc(var(--fld-h) * var(--fld-ar)); margin-left:calc(var(--fld-h) * var(--fld-ar) / -2); border-radius:8px; opacity:0; transition:transform .6s cubic-bezier(.2,.8,.2,1), opacity .5s, width .3s, margin .3s; }
-    .fld-date { max-width:560px; width:100%; margin-top:16px; font-size:12px; font-weight:500; color:#a89e91; font-variant-numeric:tabular-nums; }
-    .fld-date + .fld-desc { margin-top:6px; }
-    .fld-tile-in { position:relative; width:100%; height:100%; border-radius:inherit; overflow:hidden; pointer-events:auto; background:#222; box-shadow:0 18px 40px var(--fld-shadow), 0 0 0 1px var(--fld-ring); transition:transform .45s cubic-bezier(.2,.8,.2,1), filter .3s ease; }
-        .fld-tile-in img, .fld-tile-in video { width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; }
-    .fld-front { position:absolute; left:0; right:0; bottom:0; height:136px; overflow:hidden; background:var(--fld-tint), var(--fld-front); -webkit-backdrop-filter:blur(18px) saturate(1.5); backdrop-filter:blur(18px) saturate(1.5); transition:transform .6s cubic-bezier(.2,.8,.2,1); }
-    .fld.is-lift .fld-front { transform:translateY(6px); }
-    .fld-front path { fill:none; stroke-width:2; }
-    .fld-e0 { stop-color:var(--fld-e0); } .fld-e1 { stop-color:var(--fld-e1); } .fld-e2 { stop-color:var(--fld-e2); }
-    .fld-title { margin:0; padding:30px 20px 0; font-family:var(--font-title); font-size:20px; font-weight:600; line-height:26px; letter-spacing:-.02em; }
-    .fld-tags { display:flex; flex-wrap:wrap; gap:6px; margin:12px 20px 0; }
-    .fld-tags span { height:24px; padding:2px 10px; border:1px solid var(--fld-chip-b); border-radius:99px; background:var(--fld-chip); color:var(--fld-chip-ink); font-size:12px; line-height:18px; white-space:nowrap; }
-    .fld-count { position:absolute; right:14px; bottom:14px; min-width:34px; height:28px; padding:0 10px; display:grid; place-items:center; border:1px solid var(--fld-pill-b); border-radius:99px; background:var(--fld-pill); font-size:12px; font-weight:600; }
-    .fld-desc { max-width:560px; width:100%; margin-top:18px; font-family:var(--font-body); font-size:13.5px; line-height:1.55; color:#5a5148; }
-    body.dark .fld-desc { color:var(--d-text-2, #a1a1a1); }
-    @media (prefers-reduced-motion: reduce) { .fld, .fld-tile, .fld-tile-in, .fld-front { transition:none; } }
-    .vsw-mark svg { display:block; width:100%; height:100%; }
-    /* One of these marks is drawn in fills and the other mostly in
-       strokes, so each is matched on the attribute lottie actually
-       wrote — forcing a stroke onto a fill-only shape would outline it. */
-    .vsw-mark svg [fill]:not([fill="none"])     { fill:currentColor !important; }
-    .vsw-mark svg [stroke]:not([stroke="none"]) { stroke:currentColor !important; }
-
-    .vsw-beta {
-      font-style:normal; font-size:8.5px; font-weight:700;
-      letter-spacing:.08em; text-transform:uppercase; opacity:.6;
-    }
     /* ── Projects list — an alternate write-up-style view of the same
        cards: year, title, category line, a short description, and a
        filmstrip of that project's own images. The strip's sizing is just
@@ -5807,14 +5735,8 @@ one keyframe at a time</div>
       </label>
       <label class="vsw-opt">
         <input type="radio" name="home-view" value="list"
-               aria-label="Brand, beta" onchange="setHomeView('list')">
-        <span><span class="vsw-mark" id="hvtBrandIcon" aria-hidden="true"></span>Brand<i class="vsw-beta">beta</i></span>
-      </label>
-      <!-- Folders: a work in progress, shown to the admin only for now. -->
-      <label class="vsw-opt vsw-admin">
-        <input type="radio" name="home-view" value="folders"
-               aria-label="Folders" onchange="setHomeView('folders')">
-        <span>Folders</span>
+               aria-label="Brand timeline" onchange="setHomeView('list')">
+        <span><span class="vsw-mark" id="hvtBrandIcon" aria-hidden="true"></span>Brand timeline</span>
       </label>
     </div>
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
@@ -11635,275 +11557,6 @@ function _wireStripDragScroll(strip) {
   });
 }
 
-/* ── Folders (admin-only preview of the Brand view) ──
-   Each board as a glass folder with its work fanned out of it, after
-   21st.dev's "Icon Folder" (@romanvasnev), redone without React. It pops
-   in on scroll and hover spreads the work. A click opens it: the folder
-   takes the whole row and every piece comes out above it as a Brand-style
-   strip, where a click shows one full screen (the lightbox already takes
-   .pli-tile). The glass is tinted from the work inside it, and the
-   write-up sits under it. */
-const FLD_MAX = 5;
-const fldPathL = (w, h, r, d, tw, s) =>
-  `M0 ${r}A${r} ${r} 0 0 1 ${r} 0L${tw} 0C${tw + s * .55} 0 ${tw + s * .45} ${d} ${tw + s} ${d}L${w - r} ${d}A${r} ${r} 0 0 1 ${w} ${d + r}L${w} ${h - r}A${r} ${r} 0 0 1 ${w - r} ${h}L${r} ${h}A${r} ${r} 0 0 1 0 ${h - r}Z`;
-const fldPathR = (w, h, r, d, tw, s) => {
-  const x = w - tw;
-  return `M0 ${d + r}A${r} ${r} 0 0 1 ${r} ${d}L${x - s} ${d}C${x - s * .45} ${d} ${x - s * .55} 0 ${x} 0L${w - r} 0A${r} ${r} 0 0 1 ${w} ${r}L${w} ${h - r}A${r} ${r} 0 0 1 ${w - r} ${h}L${r} ${h}A${r} ${r} 0 0 1 0 ${h - r}Z`;
-};
-function buildProjectFolder(card, allMedia) {
-  const media = allMedia.slice(0, FLD_MAX);
-  const n = media.length;
-  const title = card.listTitle || card.name || '';
-  const tags = String(card.category || '').split(/\s*[\/,·]\s*/).filter(Boolean);
-
-  const wrap = document.createElement('div');
-  wrap.className = 'fld-item';
-  const root = document.createElement('div');
-  root.className = 'fld';
-  root.tabIndex = 0;
-  root.setAttribute('role', 'button');
-  root.setAttribute('aria-expanded', 'false');
-  root.setAttribute('aria-label', title);
-
-  const back = document.createElement('div');
-  back.className = 'fld-back';
-  back.innerHTML = '<svg aria-hidden="true"><path/></svg>';
-
-  const fan = document.createElement('div');
-  fan.className = 'fld-fan';
-  const tiles = media.map((m, i) => {
-    const t = document.createElement('div');
-    t.className = 'fld-tile';
-    const inner = document.createElement('div');
-    inner.className = 'fld-tile-in';
-    const el = document.createElement(m.type === 'video' ? 'video' : 'img');
-    // Readable pixels for the tint (set before the src). A host that won't
-    // allow that still gets its file shown, just without a say in the colour.
-    el.crossOrigin = 'anonymous';
-    // Videos wait for their folder to come into view (see the observer below):
-    // twenty-odd folders of clips asking at once stalls the page.
-    if (m.type === 'video') { el.muted = true; el.loop = true; el.playsInline = true; el.preload = 'none'; el.dataset.lazySrc = m.src; }
-    else { el.loading = 'lazy'; el.alt = ''; el.src = m.src; }
-    el.addEventListener('error', () => {
-      if (!el.hasAttribute('crossorigin')) return;
-      el.removeAttribute('crossorigin');
-      if (el.getAttribute('src')) el.src = el.getAttribute('src');
-    });
-    el.addEventListener(m.type === 'video' ? 'loadeddata' : 'load', () => sample(el, i));
-    el.draggable = false;
-    // Each card takes its file's own shape at a fixed height: known sizes
-    // at once, the rest when the file reports its own.
-    const fit = (w, hh) => {
-      if (!w || !hh) return;
-      t.style.setProperty('--fld-ar', Math.max(.5, Math.min(2, w / hh)).toFixed(3));
-    };
-    fit(m.w, m.h);
-    el.addEventListener(m.type === 'video' ? 'loadedmetadata' : 'load', () => fit(el.videoWidth || el.naturalWidth, el.videoHeight || el.naturalHeight));
-    inner.appendChild(el);
-    t.appendChild(inner);
-    fan.appendChild(t);
-    inner.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') { hi = i; layout(); if (el.play) el.play().catch(() => {}); } });
-    inner.addEventListener('pointerleave', () => { if (hi === i) { hi = null; layout(); } if (el.pause) el.pause(); });
-    // Closed, a click on a piece opens the folder; open, it goes on to the
-    // lightbox (and must not also close the folder).
-    inner.addEventListener('click', e => { if (!open) { e.stopPropagation(); setOpen(true); } });
-    return t;
-  });
-
-  const front = document.createElement('div');
-  front.className = 'fld-front';
-  front.innerHTML = '<svg aria-hidden="true"><defs><linearGradient x1="0" y1="0" x2="0" y2="1">' +
-    '<stop offset="0" class="fld-e0"/><stop offset=".35" class="fld-e1"/><stop offset="1" class="fld-e2"/></linearGradient></defs><path/></svg>';
-  const gid = 'fld-' + card.key.replace(/[^\w-]/g, '') + '-' + Math.random().toString(36).slice(2, 7);
-  front.querySelector('linearGradient').id = gid;
-  front.querySelector('path').setAttribute('stroke', `url(#${gid})`);
-  const h = document.createElement('h3');
-  h.className = 'fld-title';
-  h.textContent = title;
-  front.appendChild(h);
-  if (tags.length) {
-    const chips = document.createElement('div');
-    chips.className = 'fld-tags';
-    tags.forEach(tg => { const s = document.createElement('span'); s.textContent = tg; chips.appendChild(s); });
-    front.appendChild(chips);
-  }
-  const count = document.createElement('span');
-  count.className = 'fld-count';
-  count.textContent = allMedia.length;
-  front.appendChild(count);
-
-  // All the work, not just the five in the fan, laid out like a Brand row.
-  const strip = document.createElement('div');
-  strip.className = 'pli-media-strip fld-strip';
-  allMedia.forEach(m => {
-    const tile = document.createElement('div');
-    tile.className = 'pli-tile';
-    tile.style.setProperty('--pli-uv', STRIP_UV_SCALE);
-    if (m.w && m.h) tile.style.aspectRatio = m.w + ' / ' + m.h;
-    else if (m.fa) tile.style.aspectRatio = String(m.fa);
-    const el = document.createElement(m.type === 'video' ? 'video' : 'img');
-    el.addEventListener(m.type === 'video' ? 'loadedmetadata' : 'load', () => {
-      const w = el.videoWidth || el.naturalWidth, hh = el.videoHeight || el.naturalHeight;
-      if (w && hh) { tile.style.aspectRatio = w + ' / ' + hh; strip._paintParallax?.(); }
-    });
-    // Nothing is fetched until the folder is first opened.
-    if (m.type === 'video') { el.muted = true; el.loop = true; el.playsInline = true; el.preload = 'none'; el.dataset.fldSrc = m.src; }
-    else { el.alt = ''; el.dataset.fldSrc = m.src; }
-    el.draggable = false;
-    tile.appendChild(el);
-    strip.appendChild(tile);
-  });
-  _wireStripDragScroll(strip);
-
-  root.append(back, fan, front);
-  wrap.append(strip, root);
-  const when = [card.year, card.yearEnd].map(s => String(s || '').trim()).filter(Boolean).join(' – ');
-  if (when) {
-    const dt = document.createElement('div');
-    dt.className = 'fld-date';
-    dt.textContent = when;
-    wrap.appendChild(dt);
-  }
-  if (card.desc) {
-    const d = document.createElement('div');
-    d.className = 'fld-desc';
-    d.innerHTML = card.desc;
-    wrap.appendChild(d);
-  }
-
-  let open = false, hover = false, hi = null, shown = false;
-  const SPREAD = 84, rs = n > 1 ? 25 / (n - 1) : 0;
-  function layout() {
-    const wide = !open && hover;
-    root.classList.toggle('is-lift', wide);
-    root.classList.toggle('is-open', open);
-    wrap.classList.toggle('is-open', open);
-    tiles.forEach((t, i) => {
-      const k = i - (n - 1) / 2;
-      const gap = wide ? SPREAD * 1.15 : SPREAD;
-      const y = k * k * 7 - (wide ? 4 : 0);
-      const rot = k * rs * (wide ? 1.2 : 1);
-      // Open, the fan sinks back in: its pieces are in the strip above now.
-      const out = shown && !open;
-      t.style.transform = out ? `translate3d(${k * gap}px,${y}px,0) rotate(${rot}deg)` : `translate3d(${k * SPREAD * .6}px,80px,0)`;
-      t.style.opacity = out ? 1 : 0;
-      t.style.transitionDelay = wide ? `${i * .04}s` : `${.35 + i * .08}s`;
-      t.style.zIndex = hi === i ? 5 : '';
-      const inner = t.firstChild;
-      inner.style.transform = hi === i ? `translateY(-26px) rotate(${-rot}deg) scale(1.1)` : hi !== null ? 'scale(.96)' : '';
-      inner.style.filter = hi !== null && hi !== i ? 'saturate(.75) brightness(.85)' : '';
-    });
-  }
-  // The pieces travel: out of the folder's mouth up to their place in the
-  // strip on open, and back down into it on close. No fades.
-  let flight = null;
-  function fly(out) {
-    if (flight) flight.forEach(a => a.cancel());
-    const r = root.getBoundingClientRect();
-    const mx = r.left + r.width / 2, my = r.top + 70;
-    const ts = [...strip.children];
-    wrap.classList.add('is-flying');
-    flight = ts.map((t, j) => {
-      const b = t.getBoundingClientRect();
-      const k = j - (Math.min(ts.length, FLD_MAX) - 1) / 2;
-      const from = `translate(${mx - (b.left + b.width / 2)}px,${my - (b.top + b.height / 2)}px) scale(.4) rotate(${Math.max(-12, Math.min(12, k * 5))}deg)`;
-      const frames = [{ transform: from }, { transform: 'none' }];
-      return t.animate(out ? frames : frames.reverse(), {
-        duration: out ? 760 : 460,
-        delay: out ? j * 45 : (ts.length - 1 - j) * 25,
-        easing: out ? 'cubic-bezier(.2,.9,.25,1.08)' : 'cubic-bezier(.5,0,.75,0)',
-        fill: 'both',
-      });
-    });
-    const all = flight;
-    return Promise.all(all.map(a => a.finished)).then(() => {
-      if (flight !== all) return false;
-      all.forEach(a => a.cancel());
-      flight = null;
-      wrap.classList.remove('is-flying');
-      return true;
-    }, () => false);
-  }
-  function setOpen(v) {
-    open = v; root.setAttribute('aria-expanded', String(v));
-    strip.querySelectorAll('[data-fld-src]').forEach(el => {
-      if (v) { el.src = el.dataset.fldSrc; el.removeAttribute('data-fld-src'); }
-    });
-    strip.querySelectorAll('video').forEach(vd => { if (v) vd.play().catch(() => {}); else vd.pause(); });
-    if (v) {
-      layout();
-      strip.scrollLeft = 0;
-      strip._paintParallax?.();
-      if (reduced) return;
-      fly(true);
-      setTimeout(() => wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 500);
-    } else if (reduced) {
-      layout();
-    } else {
-      // The row stays open until the pieces are back inside.
-      root.classList.remove('is-open');
-      fly(false).then(done => { if (done && !open) layout(); });
-    }
-  }
-  // The glass takes its colour from the work: an average of each fanned
-  // piece, laid in as a soft diagonal gradient under the frost.
-  const tints = [];
-  function sample(el, i) {
-    if (tints[i]) return;
-    try {
-      const c = document.createElement('canvas');
-      c.width = c.height = 16;
-      const x = c.getContext('2d', { willReadFrequently: true });
-      x.drawImage(el, 0, 0, 16, 16);
-      const d = x.getImageData(0, 0, 16, 16).data;
-      // Weighted by how colourful each pixel is, so a brand colour wins
-      // over the black or white it sits on; a plain average comes out grey.
-      let r = 0, g = 0, b = 0, k = 0;
-      for (let j = 0; j < d.length; j += 4) {
-        if (d[j + 3] < 40) continue;
-        const ch = Math.max(d[j], d[j + 1], d[j + 2]) - Math.min(d[j], d[j + 1], d[j + 2]);
-        const wt = .02 + ch * ch;
-        r += d[j] * wt; g += d[j + 1] * wt; b += d[j + 2] * wt; k += wt;
-      }
-      if (!k) return;
-      tints[i] = [r / k, g / k, b / k].map(Math.round);
-    } catch (e) { return; }   // a host that won't share its pixels
-    const cs = tints.filter(Boolean).slice(0, 3);
-    const a = document.body.classList.contains('dark') ? .32 : .42;
-    const stops = (cs.length > 1 ? cs : [cs[0], cs[0]]).map((c, j, all) => `rgba(${c},${a}) ${Math.round(j / (all.length - 1) * 100)}%`);
-    root.style.setProperty('--fld-tint', `linear-gradient(125deg, ${stops.join(', ')})`);
-  }
-  root.addEventListener('click', e => {
-    if (open && e.target.closest('.fld-tile-in')) return;   // the lightbox has it
-    setOpen(!open);
-  });
-  root.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(!open); } });
-  root.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') { hover = true; layout(); } });
-  root.addEventListener('pointerleave', () => { hover = false; hi = null; layout(); });
-
-  // The tab shapes are drawn to the real size of each plate.
-  const shape = (el, make) => new ResizeObserver(() => {
-    const w = el.offsetWidth, hh = el.offsetHeight;
-    if (!w) return;
-    const d = make(w, hh);
-    el.style.clipPath = `path('${d}')`;
-    el.querySelector('path').setAttribute('d', d);
-  }).observe(el);
-  shape(back, (w, hh) => fldPathR(w, hh, 24, 24, Math.round(w * .4), 46));
-  shape(front, (w, hh) => fldPathL(w, hh, 24, 24, Math.round(w * .42), 46));
-
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const loadVideos = () => fan.querySelectorAll('video[data-lazy-src]').forEach(v => {
-    v.preload = 'metadata'; v.src = v.dataset.lazySrc; v.removeAttribute('data-lazy-src');
-  });
-  new IntersectionObserver(([en], io) => {
-    if (!en.isIntersecting) return;
-    shown = true; root.classList.add('is-shown'); loadVideos(); layout(); io.disconnect();
-  }, { threshold: reduced ? 0 : .3 }).observe(root);
-  layout();
-  return wrap;
-}
-
 function buildProjectListItem(card) {
   const media = listMediaFor(card.key, card.thumb);
 
@@ -13602,21 +13255,6 @@ function renderHomeSections(sections) {
     else { PROJECTS[card.key].name = card.name; PROJECTS[card.key].sub = card.sub||''; }
   }));
 
-  if (homeView === 'folders') {
-    const allCards = sections.flatMap(sec => sec.cards || []);
-    const grid = document.createElement('div');
-    grid.className = 'fld-grid';
-    getProjectsListKeys().forEach(key => {
-      const card = allCards.find(c => c.key === key);
-      if (!card) return;
-      const media = listMediaFor(card.key, card.thumb);
-      if (media.length) grid.appendChild(buildProjectFolder(card, media));
-    });
-    container.appendChild(grid);
-    requestAnimationFrame(() => { container.style.opacity = '1'; setHomeView(homeView); });
-    return;
-  }
-
   if (useList) {
     /* No heading. This view used to open with a "Brand" title, from when
        the switch above it was a pair of small pills and the page needed
@@ -14783,8 +14421,6 @@ function _updateHomeEditUI() {
   // The Projects list has its own editing — three inline fields, saved by
   // saveProjectsListEdits — and none of the card drag/rename/delete wiring
   // below applies to it, so it takes this branch and stops here.
-  // The folders are a preview with no editing of their own.
-  if (homeView === 'folders') return;
   if (homeView === 'list') {
     // The rows' Avatar Group mounts carry .edit-on themselves — see
     // buildProjectListItem for why that class rather than this view's own.
@@ -14983,7 +14619,7 @@ function saveHomeEdits() {
   // three cards under one synthetic heading, so running this there would
   // save that as the entire site structure and lose the rest. That view
   // saves through saveProjectsListEdits() instead.
-  if (homeView !== 'grid') return;   // the list and the folders save nothing here
+  if (homeView !== 'grid') return;   // the list saves nothing here
   if (!_cachedSettings) _cachedSettings = {};
   if (!_cachedSettings.profile) _cachedSettings.profile = {};
 
@@ -21967,7 +21603,7 @@ void main () {
   // pointer-events:none (the tilt and the overlay buttons are driven from the
   // wrapper), so the click never actually lands on the media node and a
   // selector aimed at it matched nothing at all.
-  const HOST = '#block-list .media-inner, .pli-tile, .fld.is-open .fld-tile-in';
+  const HOST = '#block-list .media-inner, .pli-tile';
   // Everything layered over the media that has its own job — mute, resize,
   // link, duplicate, delete, the drag handle. A click on any of those is not
   // a request to enlarge.
