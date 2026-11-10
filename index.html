@@ -5628,6 +5628,25 @@
 </head>
 <body>
 <script>
+  /* A fresh upload is committed to GitHub straight away, but /media is served
+     from GitHub Pages, which takes one to several minutes to rebuild — and
+     every further upload restarts that build. Until it lands the file 404s
+     there, so the thumb that was just changed didn't change. Any /media
+     image or video that fails to load is fetched once from the repo itself
+     (raw.githubusercontent.com has it the moment the commit does). Caught on
+     the way down so a thumb's own onerror (drop to the gradient) only runs
+     if the repo copy fails too. */
+  document.addEventListener('error', function (e) {
+    var el = e.target;
+    if (!el || (el.tagName !== 'IMG' && el.tagName !== 'VIDEO' && el.tagName !== 'SOURCE') || el.dataset.ghRaw) return;
+    var src = el.getAttribute('src') || '';
+    var m = src.match(/^(?:https?:\/\/[^\/]*imahdavi\.space|https?:\/\/localhost(?::\d+)?)?\/media\/(.+)$/);
+    if (!m) return;
+    el.dataset.ghRaw = '1';
+    e.stopPropagation();
+    el.src = 'https://raw.githubusercontent.com/Imahdavi/Portfolio/main/media/' + m[1];
+  }, true);
+
   /* Restored here, inline and before anything renders — doing it from the
      main script at the bottom would paint the white page first and flash
      on every load for anyone who reads the site dark. */
