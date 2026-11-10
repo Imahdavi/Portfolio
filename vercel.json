@@ -10,6 +10,10 @@
       "destination": "https://portfolio-api.alireza-mahdavi.workers.dev/api/settings"
     },
     {
+      "source": "/api/analytics",
+      "destination": "https://portfolio-api.alireza-mahdavi.workers.dev/api/analytics"
+    },
+    {
       "source": "/project/:key",
       "destination": "/index.html"
     },

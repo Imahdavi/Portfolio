@@ -8280,7 +8280,9 @@ const API_URL = 'https://portfolio-api.alireza-mahdavi.workers.dev';
 /* Public reads on the live site go through the site's own domain (vercel.json
    rewrites /api/* to the Worker): from some networks workers.dev stalls on
    larger responses (the projects list hangs part-way), while the site's own
-   domain loads. Writes and admin calls still go straight to the Worker. */
+   domain loads. Saves of boards and settings and the analytics read go this way too;
+   only uploads (large bodies) and the small public calls go straight to
+   the Worker. */
 const API_READ = /(^|\.)imahdavi\.space$/.test(location.hostname) ? '' : API_URL;
 
 /* Every write (and the analytics read) must carry the admin key, which the
@@ -9606,7 +9608,7 @@ async function loadAnalytics(hours, btn) {
 
   // Always pull the full history so we can tell new vs returning visitors
   // (a visitor's *first ever* visit may predate the selected range).
-  const url = `${API_URL}/api/analytics?limit=20000`;
+  const url = `${API_READ}/api/analytics?limit=20000`;
   let all;
   try {
     const res = await fetch(url, { headers: adminHeaders() });
@@ -9977,12 +9979,20 @@ async function saveProject(key) {
   // the row it just saved, so a board left off here comes back as the default
   // grid and its bento coordinates go unread.
   if (proj.layout) data.layout = proj.layout;
-  const res = await fetch(`${API_URL}/api/projects`, {
-    method: 'POST',
-    headers: adminHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ key, data })
-  });
-  adminRefused(res);
+  // Through the site's own domain like the reads (see API_READ): straight
+  // to workers.dev, a larger board's save could stall part-way and be lost
+  // without a word. A save that fails now says so.
+  let res = null;
+  try {
+    res = await fetch(`${API_READ}/api/projects`, {
+      method: 'POST',
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ key, data })
+    });
+  } catch (e) {}
+  if (adminRefused(res)) return;
+  if ((!res || !res.ok) && typeof showToast === 'function')
+    showToast({ type: 'error', title: 'Not saved — check the connection and try again' });
 }
 
 let _cachedSettings = null;
@@ -10058,7 +10068,7 @@ async function saveSettings() {
      the backend is flaky and locking the admin out on a dropped request
      would be worse than the race this guards against. */
   try {
-    const cur = await fetch(`${API_URL}/api/settings`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null);
+    const cur = await fetch(`${API_READ}/api/settings`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null);
     const serverAt = cur && cur[0] && cur[0].data && cur[0].data.savedAt;
     if (serverAt && _settingsLoadedAt && serverAt > _settingsLoadedAt) {
       console.warn('Settings changed elsewhere since this page loaded — not saving.');
@@ -10075,7 +10085,7 @@ async function saveSettings() {
     // Stamp the write so other tabs can tell their copy has been superseded.
     _cachedSettings.savedAt = Date.now();
     _settingsLoadedAt = _cachedSettings.savedAt;
-    const res = await fetch(`${API_URL}/api/settings`, {
+    const res = await fetch(`${API_READ}/api/settings`, {
       method: 'POST',
       headers: adminHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ data: _cachedSettings })
