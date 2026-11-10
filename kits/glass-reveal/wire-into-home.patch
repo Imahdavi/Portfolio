@@ -1,0 +1,116 @@
+diff --git a/index.html b/index.html
+index 13ea968..7538898 100644
+--- a/index.html
++++ b/index.html
+@@ -1615,6 +1615,7 @@
+       opacity: .72;
+       transform: scale(.97);
+     }
++    #glassRevealBtn[aria-pressed="true"] .efc-note { color:#16a34a; font-weight:600; }
+     .card-grid:has(.proj-card:hover) .proj-card:hover {
+       transform: translateY(-2px) scale(1.04) rotate(1.2deg);
+     }
+@@ -5825,6 +5826,12 @@ one keyframe at a time</div>
+           <span class="efc-note">Headings and body</span>
+         </button>
+ 
++        <button type="button" class="efc-tile" id="glassRevealBtn" onclick="toggleGlassReveal()" aria-pressed="false">
++          <span class="efc-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="5"/><path d="M8 9.5c1-1.5 2.5-2 4-2"/></svg></span>
++          <span class="efc-name">Glass reveal</span>
++          <span class="efc-note" id="glassRevealNote">Off</span>
++        </button>
++
+         <div class="efc-tile efc-wide site-width-ctrl" id="siteWidthCtrl">
+           <span class="efc-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg></span>
+           <span class="efc-text"><span class="efc-name site-width-lbl">Site width</span><span class="efc-note">How wide the column runs</span></span>
+@@ -10445,6 +10452,7 @@ async function loadSettings() {
+     // Its logo list lives partly in settings, which have only just arrived.
+     if (window.rebuildBrandSphere) window.rebuildBrandSphere();
+     if (window.renderExperience) window.renderExperience();
++    applyGlassReveal();
+ 
+   } catch(e) {
+     // The fetch already succeeded (or came from cache) by this point, so this
+@@ -13693,7 +13701,23 @@ function renderHomeSections(sections) {
+       if (card.listOnly) return;
+       const el = document.createElement('div');
+       el.className = 'proj-card';
+-      el.onclick = () => openProject(card.key);
++      // Opened through the glass reveal (glass-reveal.js) where there is a
++      // thumb to reveal: the mark lands in glass, the glass lets go, and the
++      // board opens under the last of it.
++      el.onclick = () => {
++        if (!glassRevealOn() || !card.thumb || !window.GlassReveal || (typeof editMode !== 'undefined' && editMode)) { openProject(card.key); return; }
++        const dark = document.body.classList.contains('dark');
++        const m = getComputedStyle(document.body).backgroundColor.match(/\d+/g) || [255, 255, 255];
++        const bg = '#' + m.slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join('');
++        GlassReveal.play(card.thumb, { el: el.querySelector('.proj-thumb'), dark, background: bg, speed: 3.4, until: 1,
++          // The glass fills the thumb and the picture ends at the thumb's own
++          // size (after the timeline's 0.955 settle), so handing back to the
++          // card is seamless. Optics pushed up: a full-bleed picture shows
++          // the bending only where the rim pulls it in.
++          settings: { logoScale: 1 / 0.955, finalScale: 1, startZoom: 1.5, drift: 0, shadow: 0, ripple: 0, halo: 0, focus: 0, swell: 0, soft: 0, sheen: 0.6,
++                      opticalDepth: 1.8, dispersion: 2.6, colorBleed: 2.2, bevelWidth: 0.2, cornerPull: 2.6 } }).then(() => openProject(card.key));
++      };
++      el.addEventListener('pointerenter', () => { if (glassRevealOn() && card.thumb && window.GlassReveal) GlassReveal.preload(card.thumb).catch(() => {}); }, { once: true });
+       const thumbBg = card.thumb ? '' : ' style="background:linear-gradient(135deg,var(--thumb-a),var(--thumb-b))"';
+       // Same gradient the no-thumb case uses, reapplied if the image itself
+       // fails to load (backend down, or the thumb was deleted) so the card
+@@ -13942,6 +13966,24 @@ document.addEventListener('DOMContentLoaded', () => {
+ /* ─── Project detail ───────────────────────────────────── */
+ let activeKey = null;
+ 
++/* The glass reveal on Home's boards is a site setting, switched from home
++   edit. On (body.glass-on), a board opens through the glass and fires no
++   web; the hover blur and tilt stay either way. */
++function glassRevealOn() { return !!((typeof _cachedSettings !== 'undefined' && _cachedSettings) || {}).glassReveal; }
++function applyGlassReveal() {
++  const on = glassRevealOn();
++  document.body.classList.toggle('glass-on', on);
++  const b = document.getElementById('glassRevealBtn'), n = document.getElementById('glassRevealNote');
++  if (b) b.setAttribute('aria-pressed', String(on));
++  if (n) n.textContent = on ? 'On' : 'Off';
++}
++function toggleGlassReveal() {
++  if (!_cachedSettings) _cachedSettings = {};
++  _cachedSettings.glassReveal = !glassRevealOn();
++  applyGlassReveal();
++  saveSettings();
++}
++
+ async function openProject(key) {
+   if (editMode && current === 'view-home') return;
+   activeKey = key;
+@@ -18917,13 +18959,15 @@ function webInk(a) {
+      the work every time you clicked anywhere. The grid is a wall of
+      cards with gaps you clearly click past; this is a page you read. */
+   const NO_SHOOT = 'button,a,input,label,.nav-btn,.social-dock,.pli-media-strip,.projects-list';
++  // With the glass reveal on, a board's click belongs to the glass.
++  const noShoot = el => el.closest(NO_SHOOT) || (document.body.classList.contains('glass-on') && el.closest('.proj-card, .glass-reveal'));
+ 
+   let _tx=0,_ty=0,_lastTouch=0;
+   document.addEventListener('touchstart',e=>{
+     const t=e.touches[0]; _tx=t.clientX; _ty=t.clientY;
+   },{passive:true});
+   document.addEventListener('touchend',e=>{
+-    if(e.target.closest(NO_SHOOT)) return;
++    if(noShoot(e.target)) return;
+     const t=e.changedTouches[0];
+     const dx=t.clientX-_tx, dy=t.clientY-_ty;
+     if(dx*dx+dy*dy>12*12) return; // was a scroll, not a tap
+@@ -18932,7 +18976,7 @@ function webInk(a) {
+   },{passive:true});
+   document.addEventListener('click',e=>{
+     if(Date.now()-_lastTouch<600) return; // suppress ghost click after touch
+-    if(e.target.closest(NO_SHOOT)) return;
++    if(noShoot(e.target)) return;
+     tryShoot(e.clientX,e.clientY);
+   });
+ })();
+@@ -22096,5 +22140,6 @@ void main () {
+ </script>
+ 
+ <div id="toast-viewport" role="region" aria-live="polite" aria-label="Notifications"></div>
++<script src="/glass-reveal.js" defer></script>
+ </body>
+ </html>
