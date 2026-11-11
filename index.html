@@ -12988,14 +12988,28 @@ function rollProjectsList(rows) {
   const repaint = () => view.dispatchEvent(new Event('scroll'));
   // The wheel names the brand it is going to; the observer only follows
   // a scroll that wasn't a step (a drag of the scrollbar, say).
-  const go = (top, i) => { busy = Date.now() + 750; if (i != null) mark(i); view.scrollTo({ top: Math.max(0, top), behavior: 'smooth' }); };
+  // Its own glide rather than scrollTo's smooth, which starts slowly and
+  // takes its time: this one is moving on the next frame and done in 420ms.
+  let anim = 0;
+  const go = (top, i) => {
+    if (i != null) mark(i);
+    const from = view.scrollTop, to = Math.max(0, Math.min(top, view.scrollHeight - view.clientHeight));
+    const t0 = performance.now(), D = 420;
+    busy = Date.now() + D + 30;
+    cancelAnimationFrame(anim);
+    const tick = now => {
+      const k = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - k, 3);
+      view.scrollTop = from + (to - from) * e;
+      if (k < 1) anim = requestAnimationFrame(tick);
+    };
+    anim = requestAnimationFrame(tick);
+  };
   const step = down => {
-    if (Date.now() < busy) return true;
     if (down) {
       // Not yet settled on the brand it's at (the page opens with the first
       // one below the middle): centre that one before moving on.
       const ai = view.scrollTop < centre(rows[0]) - 8 ? 0 : Math.max(cur, 0);
-      if (centre(rows[ai]) - view.scrollTop > 8) { go(centre(rows[ai]), ai); return true; }
+      if (centre(rows[ai]) - view.scrollTop > 60) { go(centre(rows[ai]), ai); return true; }
       if (rows[cur + 1]) { go(centre(rows[cur + 1]), cur + 1); return true; }
       return false;   // past the last brand: the page scrolls on as usual
     }
@@ -13005,16 +13019,28 @@ function rollProjectsList(rows) {
   };
   const active = () => list.isConnected && homeView === 'list' && !(typeof editMode !== 'undefined' && editMode)
                        && !list.classList.contains('pli-compact') && current === 'view-home';
+  /* One step per gesture. A trackpad keeps sending a decaying stream of
+     wheel events for a second after the fingers lift; those belong to the
+     step already taken and are swallowed. A gap in the stream, or a
+     stronger push than the last event, is a new gesture and steps at once
+     — no waiting out a fixed lock. */
+  let lastWheel = 0, lastMag = 0, spent = false;
   const onWheel = e => {
-    if (!active() || Math.abs(e.deltaY) < 4 || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-    if (e.target.closest && e.target.closest('.pli-media-strip')) { if (Math.abs(e.deltaX) > 0) return; }
-    if (step(e.deltaY > 0)) e.preventDefault();
+    if (!active() || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    const now = Date.now(), mag = Math.abs(e.deltaY);
+    const fresh = now - lastWheel > 90 || mag > lastMag * 1.6 + 4;
+    lastWheel = now; lastMag = mag;
+    if (fresh) spent = false;
+    if (spent || now < busy) { e.preventDefault(); return; }
+    if (mag < 2) return;
+    if (step(e.deltaY > 0)) { spent = true; e.preventDefault(); }
   };
   const onKey = e => {
     if (!active() || e.target.closest('input,textarea,[contenteditable="true"]')) return;
     const down = e.key === 'ArrowDown' || e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey);
     const up = e.key === 'ArrowUp' || e.key === 'PageUp' || (e.key === ' ' && e.shiftKey);
-    if ((down || up) && step(down)) e.preventDefault();
+    if (!(down || up)) return;
+    if (Date.now() < busy || step(down)) e.preventDefault();
   };
   view.addEventListener('wheel', onWheel, { passive: false });
   document.addEventListener('keydown', onKey);
