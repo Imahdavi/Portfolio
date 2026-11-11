@@ -777,19 +777,25 @@
       .projects-list.pli-compact .pli-title-row,
       .projects-list.pli-compact .pli-category { margin-left:0; }
     }
-    /* Brand rolls: one brand per screen, the scroll snapping from one to
-       the next, and the one in view lit while the rest sit back (marked
-       .pli-current by setupProjectsListReveal). Off while editing or
+    /* Brand rolls: one brand at a time in the middle of the screen, the
+       one before and after it small and faded either side. On a desktop
+       the wheel steps it (rollProjectsList): the first turn draws that
+       brand's date line, the next moves on to the next brand. A touch
+       screen snaps from brand to brand instead. Off while editing or
        reordering, where the whole list has to be reachable at once. */
-    #view-home:not(.home-edit):has(.projects-list:not(.pli-compact)) { scroll-snap-type:y mandatory; }
-    #view-home:not(.home-edit) .profile-header-wrap { scroll-snap-align:start; }
-    #view-home:not(.home-edit) .projects-list:not(.pli-compact) .proj-list-item {
-      min-height:calc(100svh - 120px); box-sizing:border-box; align-items:center;
-      scroll-snap-align:center; scroll-snap-stop:always;
+    @media (pointer:coarse) {
+      #view-home:not(.home-edit):has(.projects-list.pli-rolling) { scroll-snap-type:y mandatory; }
+      #view-home:not(.home-edit) .profile-header-wrap { scroll-snap-align:start; }
+      #view-home:not(.home-edit) .projects-list.pli-rolling .proj-list-item { scroll-snap-align:center; scroll-snap-stop:always; }
+    }
+    #view-home:not(.home-edit) .projects-list.pli-rolling .proj-list-item {
+      min-height:50svh; box-sizing:border-box; align-items:center;
       border-bottom-color:transparent;
       transition:opacity .55s ease, transform .7s cubic-bezier(.22,1,.36,1);
     }
-    #view-home:not(.home-edit) .projects-list.pli-rolling .proj-list-item:not(.pli-current) { opacity:.12; transform:translateY(24px) scale(.97); }
+    #view-home:not(.home-edit) .projects-list.pli-rolling .proj-list-item.pli-before { opacity:.3; transform:scale(.84); transform-origin:50% 100%; }
+    #view-home:not(.home-edit) .projects-list.pli-rolling .proj-list-item.pli-after { opacity:.3; transform:scale(.84); transform-origin:50% 0; }
+    .projects-list.pli-rolling .pl-seg-fill { transition:stroke-dashoffset .8s cubic-bezier(.22,1,.36,1); }
     @media (prefers-reduced-motion: reduce) {
       #view-home:not(.home-edit) .projects-list .proj-list-item { transition:none; transform:none; }
     }
@@ -12883,7 +12889,8 @@ function initBrandTimeline(list) {
       shape(s, r.height);
       // Fills to wherever the scroll has reached, and empties again going
       // back up. pathLength is 1, so the offset is what's left to draw.
-      const p = Math.max(0, Math.min(1, (mark - r.top) / r.height));
+      // While Brand rolls, each line is drawn by the wheel, not the scroll.
+      const p = (s.row._plFill != null && !(typeof editMode !== 'undefined' && editMode)) ? s.row._plFill : Math.max(0, Math.min(1, (mark - r.top) / r.height));
       s.fill.style.strokeDashoffset = (1 - p).toFixed(3);
     });
   };
@@ -12930,25 +12937,81 @@ function initBrandTimeline(list) {
   };
 }
 
-/* Marks the row nearest the middle of the screen as .pli-current — the one
-   the Brand roll shows lit (see the .pli-rolling rules). */
-let _pliRollObs = null;
+/* Brand's roll (see the .pli-rolling rules). The row nearest the middle of
+   the screen is .pli-current, the ones above and below it .pli-before and
+   .pli-after. On a desktop the wheel and the arrow keys step it: arriving
+   at a brand its date line is empty, the first step down draws it, the
+   next goes on to the next brand. */
+let _pliRollObs = null, _pliRollOff = null;
 function rollProjectsList(rows) {
   if (_pliRollObs) { _pliRollObs.disconnect(); _pliRollObs = null; }
+  if (_pliRollOff) { _pliRollOff(); _pliRollOff = null; }
   const list = rows[0] && rows[0].closest('.projects-list');
-  if (!list || !('IntersectionObserver' in window)) return;
-  const seen = new Map();
-  const pick = () => {
-    let best = null, bestR = 0;
-    seen.forEach((r, el) => { if (r > bestR) { bestR = r; best = el; } });
-    rows.forEach(el => el.classList.toggle('pli-current', el === best));
+  const view = document.getElementById('view-home');
+  if (!list || !view || !('IntersectionObserver' in window)) return;
+  list.classList.add('pli-rolling');
+  let cur = -1;
+  const mark = i => {
+    cur = i;
+    rows.forEach((el, j) => {
+      el.classList.toggle('pli-current', j === i);
+      el.classList.toggle('pli-before', i >= 0 && j < i);
+      el.classList.toggle('pli-after', j > i);
+    });
   };
+  const seen = new Map();
   _pliRollObs = new IntersectionObserver(entries => {
     entries.forEach(e => seen.set(e.target, e.isIntersecting ? e.intersectionRatio : 0));
-    pick();
-  }, { root: document.getElementById('view-home'), rootMargin: '-30% 0px -30% 0px', threshold: [0, .25, .5, .75, 1] });
+    let best = -1, bestR = 0;
+    rows.forEach((el, j) => { const r = seen.get(el) || 0; if (r > bestR) { bestR = r; best = j; } });
+    if (best >= 0 && best !== cur) mark(best);
+  }, { root: view, rootMargin: '-35% 0px -35% 0px', threshold: [0, .25, .5, .75, 1] });
   rows.forEach(el => _pliRollObs.observe(el));
-  list.classList.add('pli-rolling');
+
+  if (matchMedia('(pointer:coarse)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  rows.forEach(el => { el._plFill = 0; });
+  const repaint = () => view.dispatchEvent(new Event('scroll'));
+  const centre = el => {
+    const r = el.getBoundingClientRect(), v = view.getBoundingClientRect();
+    return view.scrollTop + (r.top - v.top) + r.height / 2 - view.clientHeight / 2;
+  };
+  let busy = 0;
+  const go = top => { busy = Date.now() + 750; view.scrollTo({ top: Math.max(0, top), behavior: 'smooth' }); };
+  const step = down => {
+    if (Date.now() < busy) return true;
+    const first = rows[0];
+    if (down) {
+      if (view.scrollTop < centre(first) - 8) { go(centre(first)); return true; }
+      const row = rows[cur];
+      if (row && row._plFill < 1) { row._plFill = 1; busy = Date.now() + 650; repaint(); return true; }
+      if (rows[cur + 1]) { go(centre(rows[cur + 1])); return true; }
+      return false;   // past the last brand: the page scrolls on as usual
+    }
+    if (cur > 0) { go(centre(rows[cur - 1])); return true; }
+    if (view.scrollTop > 0) { go(0); return true; }
+    return false;
+  };
+  const active = () => list.isConnected && homeView === 'list' && !(typeof editMode !== 'undefined' && editMode)
+                       && !list.classList.contains('pli-compact') && current === 'view-home';
+  const onWheel = e => {
+    if (!active() || Math.abs(e.deltaY) < 4 || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    if (e.target.closest && e.target.closest('.pli-media-strip')) { if (Math.abs(e.deltaX) > 0) return; }
+    if (step(e.deltaY > 0)) e.preventDefault();
+  };
+  const onKey = e => {
+    if (!active() || e.target.closest('input,textarea,[contenteditable="true"]')) return;
+    const down = e.key === 'ArrowDown' || e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey);
+    const up = e.key === 'ArrowUp' || e.key === 'PageUp' || (e.key === ' ' && e.shiftKey);
+    if ((down || up) && step(down)) e.preventDefault();
+  };
+  view.addEventListener('wheel', onWheel, { passive: false });
+  document.addEventListener('keydown', onKey);
+  _pliRollOff = () => {
+    view.removeEventListener('wheel', onWheel);
+    document.removeEventListener('keydown', onKey);
+    rows.forEach(el => { delete el._plFill; });
+  };
+  repaint();
 }
 
 function setupProjectsListReveal() {
