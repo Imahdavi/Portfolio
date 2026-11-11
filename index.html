@@ -12819,34 +12819,40 @@ function initBrandTimeline(list) {
      can be empty, and the media changes the row's height as it lands. */
   const GAP = 8;   // clear space between the line and the text it meets
   const INK = 18;
+  /* Measured from the layout (offsets within the row), not from boxes on
+     screen: Brand's roll scales the rows either side of the current one,
+     and a line placed from a scaled box landed in the wrong spot and
+     jumped back as the row grew to full size. */
+  const rel = (el, row) => {
+    let x = 0, y = 0;
+    for (let n = el; n && n !== row; n = n.offsetParent) { x += n.offsetLeft; y += n.offsetTop; }
+    return { x, y, w: el.offsetWidth, h: el.offsetHeight };
+  };
   const place = info => {
     const { row, a } = info;
-    const rr = row.getBoundingClientRect();
-    // The CSS position (left:-17px) is only the reference the text is pulled
-    // to; taken from the row, not the line, since the line is moved below.
-    const lineX = rr.left - 17 + 1;
     const body = row.querySelector('.pli-body');
     if (!body) return;
-    // INK: how far left of that reference the text starts.
-    const shift = Math.round(body.getBoundingClientRect().left - lineX + INK);
+    // The CSS position (left:-17px) is only the reference the text is pulled
+    // to (taken from the row, not the line, since the line is moved below);
+    // INK is how far left of that reference the text starts.
+    const shift = Math.round(rel(body, row).x + 17 - 1 + INK);
     if (info.shift !== shift) { info.shift = shift; row.style.setProperty('--pl-shift', shift + 'px'); }
 
     const cat = row.querySelector('.pli-category');
     const head = (cat && cat.textContent.trim()) ? cat : row.querySelector('.pli-title-row');
     const yr = row.querySelector('.pli-year');
-    const top = head ? head.getBoundingClientRect().bottom - rr.top + GAP + 4 : 20;
-    const bottom = rr.height - 20;
+    const top = head ? (h => h.y + h.h)(rel(head, row)) + GAP + 4 : 20;
+    const bottom = row.offsetHeight - 20;
     let aEnd = bottom;
-    if (yr && yr.getBoundingClientRect().height) {
-      const yrr = yr.getBoundingClientRect();
-      aEnd = yrr.top - rr.top - GAP;
+    if (yr && yr.offsetHeight) {
+      aEnd = rel(yr, row).y - GAP;
       // Centred on the first part of the date — the start year — not the
       // whole range: "2025 – Present" and "2026" are different lengths, but
       // the year always is four digits, so the line sits in the same place
       // in every row.
       const from = yr.querySelector('.pli-year-from');
-      const fr = (from && from.getBoundingClientRect().width) ? from.getBoundingClientRect() : yrr;
-      a.seg.style.left = (fr.left + fr.width / 2 - rr.left - 1).toFixed(1) + 'px';
+      const fr = rel(from && from.offsetWidth ? from : yr, row);
+      a.seg.style.left = (fr.x + fr.w / 2 - 1).toFixed(1) + 'px';
     }
     const set = (s, t, e) => { const h = Math.max(0, e - t); s.seg.style.top = t + 'px'; s.seg.style.height = h + 'px'; s.seg.style.display = h > 1 ? '' : 'none'; };
     set(a, top, aEnd);
@@ -12866,8 +12872,8 @@ function initBrandTimeline(list) {
   if (reduced) {
     rowsInfo.forEach(place);
     segs.forEach(s => {
-      const r = s.seg.getBoundingClientRect();
-      if (r.height) shape(s, r.height);
+      const sh = parseFloat(s.seg.style.height) || 0;   // an <svg> has no offsetHeight; place() set this
+      if (sh) shape(s, sh);
       s.fill.style.strokeDashoffset = '0';
     });
     wide.addEventListener('change', onWidth, { once: true });
@@ -12883,8 +12889,9 @@ function initBrandTimeline(list) {
     rowsInfo.forEach(place);
     segs.forEach(s => {
       const r = s.seg.getBoundingClientRect();
-      if (!r.height) return;
-      shape(s, r.height);
+      const sh = parseFloat(s.seg.style.height) || 0;   // an <svg> has no offsetHeight; place() set this
+      if (!sh || s.seg.style.display === 'none') return;
+      shape(s, sh);
       // Fills to wherever the scroll has reached, and empties again going
       // back up. pathLength is 1, so the offset is what's left to draw.
       // While Brand rolls, every line is shown whole rather than following the scroll.
