@@ -12963,7 +12963,7 @@ function rollProjectsList(rows) {
       el.classList.toggle('pli-after', j > i);
     });
   };
-  let busy = 0;
+  let busy = 0, gliding = false;
   // Measured from the layout, not the box on screen: the rows either side
   // are scaled down, and a scaled box would put their middles in the
   // wrong place (it made the first step skip the first brand).
@@ -12976,7 +12976,7 @@ function rollProjectsList(rows) {
   };
   let raf = 0;
   const onScroll = () => {
-    if (raf || Date.now() < busy) return;
+    if (raf || Date.now() < busy || gliding) return;
     raf = requestAnimationFrame(() => { raf = 0; const n = nearest(); if (n !== cur) mark(n); });
   };
   view.addEventListener('scroll', onScroll, { passive: true });
@@ -13002,8 +13002,9 @@ function rollProjectsList(rows) {
     const tick = now => {
       const k = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - k, 3);
       view.scrollTop = from + (to - from) * e;
-      if (k < 1) anim = requestAnimationFrame(tick);
+      if (k < 1) anim = requestAnimationFrame(tick); else gliding = false;
     };
+    gliding = true;
     anim = requestAnimationFrame(tick);
   };
   const step = down => {
