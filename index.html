@@ -791,6 +791,10 @@
       padding-block:2vh; align-items:center;
       border-bottom-color:transparent;
       transition:opacity .55s ease, transform .7s cubic-bezier(.22,1,.36,1);
+      /* Each row scales as a whole layer. Repainted frame by frame instead,
+         the hairline beside it (a stroke too thin for one device pixel)
+         snapped between pixel rows as it shrank and grew, and twitched. */
+      will-change:transform, opacity;
     }
     #view-home:not(.home-edit) .projects-list.pli-rolling .proj-list-item.pli-before { opacity:.3; transform:scale(.84); transform-origin:50% 100%; }
     #view-home:not(.home-edit) .projects-list.pli-rolling .proj-list-item.pli-after { opacity:.3; transform:scale(.84); transform-origin:50% 0; }
