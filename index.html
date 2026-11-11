@@ -4814,6 +4814,12 @@
     /* Black and white until hovered, then in colour. */
     .star-me-photo { filter:grayscale(1); transition:filter .5s ease; }
     .star-me:hover .star-me-photo { filter:none; }
+    .star-me-edit { display:none; position:absolute; left:50%; bottom:10px; transform:translateX(-50%); z-index:2; gap:6px; }
+    #sg-exp.exp-edit-on ~ .star-me .star-me-edit { display:flex; }
+    .star-me-edit button { font:500 12px/1 var(--font-body); padding:7px 12px; border-radius:99px; cursor:pointer;
+      border:1px solid rgba(0,0,0,.14); background:rgba(255,255,255,.92); color:#2a2a2a; box-shadow:0 2px 8px rgba(0,0,0,.12); }
+    .star-me-edit button:hover { background:#fff; border-color:rgba(0,0,0,.28); }
+    body.dark .star-me-edit button { background:var(--d-surface); color:var(--d-text); border-color:var(--d-line-2); }
     body.dark .star-me { --star-me:rgba(255,255,255,.1); }
     .dcard-photo { width:min(11rem, 50vw); aspect-ratio:1; padding:12px; box-sizing:border-box;
       border:2px solid rgba(0,0,0,.08); border-radius:14px; background:rgba(244,243,241,.7); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
@@ -6143,7 +6149,32 @@ one keyframe at a time</div>
          on a spring, when hovered. -->
     <div class="star-me" aria-label="Me">
       <svg class="star-me-shape" viewBox="0 0 166 107" aria-hidden="true"><path d="M163,53.5 C112,60 92,72 83,107 C74,72 54,60 3,53.5 C54,47 74,35 83,0 C92,35 112,47 163,53.5Z"/></svg>
-      <img class="star-me-photo" src="/me-cutout.png" alt="Alireza Mahdavi" loading="lazy" decoding="async">
+      <img class="star-me-photo" id="starMePhoto" src="/me-cutout.png" alt="Alireza Mahdavi" loading="lazy" decoding="async">
+      <!-- Edit mode: change the photo (best a cut-out PNG, background clear), or go back to the bundled one. -->
+      <div class="star-me-edit">
+        <button type="button" id="starMeChange">Change photo</button>
+        <button type="button" id="starMeReset" title="Back to the original photo">Reset</button>
+      </div>
+      <script>
+      (function () {
+        const DEFAULT = '/me-cutout.png';
+        const img = document.getElementById('starMePhoto');
+        const show = src => { img.src = src || DEFAULT; };
+        // Settings arrive after the page; take the saved photo when they do.
+        window.starMeApply = src => show(typeof src === 'string' && src ? src : '');
+        const set = src => {
+          if (typeof _cachedSettings === 'undefined') return;
+          if (!_cachedSettings) _cachedSettings = {};
+          if (src) _cachedSettings.meCutout = src; else delete _cachedSettings.meCutout;
+          show(src);
+          if (typeof saveSettings === 'function') saveSettings();
+        };
+        document.getElementById('starMeChange').addEventListener('click', () => {
+          if (typeof avgOpenImagePicker === 'function') avgOpenImagePicker(src => { if (src) set(src); });
+        });
+        document.getElementById('starMeReset').addEventListener('click', () => set(''));
+      })();
+      </script>
     </div>
     <!-- Edit mode: drag to set the gap between the note and the timeline. -->
     <div class="section-gap-handle" id="xtlTopHandle" title="Drag to adjust spacing before this section">
@@ -10620,6 +10651,8 @@ async function loadSettings() {
     }
     // The Who am I? note: its words and marker colour, if they were edited.
     if (window.hwNoteApply) window.hwNoteApply(s.whoAmI);
+    // The photo on the star, if another was picked in edit mode.
+    if (window.starMeApply) window.starMeApply(s.meCutout);
     if (s.toolsLabel) {
       const toolsLabel = document.querySelector('.tools-label');
       if (toolsLabel) toolsLabel.textContent = s.toolsLabel;
