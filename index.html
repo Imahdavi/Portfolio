@@ -779,8 +779,7 @@
     }
     /* Brand rolls: one brand at a time in the middle of the screen, the
        one before and after it small and faded either side. On a desktop
-       the wheel steps it (rollProjectsList): the first turn draws that
-       brand's date line, the next moves on to the next brand. A touch
+       the wheel steps it from brand to brand (rollProjectsList). A touch
        screen snaps from brand to brand instead. Off while editing or
        reordering, where the whole list has to be reachable at once. */
     @media (pointer:coarse) {
@@ -789,13 +788,12 @@
       #view-home:not(.home-edit) .projects-list.pli-rolling .proj-list-item { scroll-snap-align:center; scroll-snap-stop:always; }
     }
     #view-home:not(.home-edit) .projects-list.pli-rolling .proj-list-item {
-      min-height:50svh; box-sizing:border-box; align-items:center;
+      padding-block:2vh; align-items:center;
       border-bottom-color:transparent;
       transition:opacity .55s ease, transform .7s cubic-bezier(.22,1,.36,1);
     }
     #view-home:not(.home-edit) .projects-list.pli-rolling .proj-list-item.pli-before { opacity:.3; transform:scale(.84); transform-origin:50% 100%; }
     #view-home:not(.home-edit) .projects-list.pli-rolling .proj-list-item.pli-after { opacity:.3; transform:scale(.84); transform-origin:50% 0; }
-    .projects-list.pli-rolling .pl-seg-fill { transition:stroke-dashoffset .8s cubic-bezier(.22,1,.36,1); }
     @media (prefers-reduced-motion: reduce) {
       #view-home:not(.home-edit) .projects-list .proj-list-item { transition:none; transform:none; }
     }
@@ -12889,7 +12887,7 @@ function initBrandTimeline(list) {
       shape(s, r.height);
       // Fills to wherever the scroll has reached, and empties again going
       // back up. pathLength is 1, so the offset is what's left to draw.
-      // While Brand rolls, each line is drawn by the wheel, not the scroll.
+      // While Brand rolls, every line is shown whole rather than following the scroll.
       const p = (s.row._plFill != null && !(typeof editMode !== 'undefined' && editMode)) ? s.row._plFill : Math.max(0, Math.min(1, (mark - r.top) / r.height));
       s.fill.style.strokeDashoffset = (1 - p).toFixed(3);
     });
@@ -12939,16 +12937,15 @@ function initBrandTimeline(list) {
 
 /* Brand's roll (see the .pli-rolling rules). The row nearest the middle of
    the screen is .pli-current, the ones above and below it .pli-before and
-   .pli-after. On a desktop the wheel and the arrow keys step it: arriving
-   at a brand its date line is empty, the first step down draws it, the
-   next goes on to the next brand. */
+   .pli-after. On a desktop the wheel and the arrow keys step it one brand
+   at a time, each date line drawn in full. */
 let _pliRollObs = null, _pliRollOff = null;
 function rollProjectsList(rows) {
   if (_pliRollObs) { _pliRollObs.disconnect(); _pliRollObs = null; }
   if (_pliRollOff) { _pliRollOff(); _pliRollOff = null; }
   const list = rows[0] && rows[0].closest('.projects-list');
   const view = document.getElementById('view-home');
-  if (!list || !view || !('IntersectionObserver' in window)) return;
+  if (!list || !view) return;
   list.classList.add('pli-rolling');
   let cur = -1;
   const mark = i => {
@@ -12959,36 +12956,44 @@ function rollProjectsList(rows) {
       el.classList.toggle('pli-after', j > i);
     });
   };
-  const seen = new Map();
-  _pliRollObs = new IntersectionObserver(entries => {
-    entries.forEach(e => seen.set(e.target, e.isIntersecting ? e.intersectionRatio : 0));
-    let best = -1, bestR = 0;
-    rows.forEach((el, j) => { const r = seen.get(el) || 0; if (r > bestR) { bestR = r; best = j; } });
-    if (best >= 0 && best !== cur) mark(best);
-  }, { root: view, rootMargin: '-35% 0px -35% 0px', threshold: [0, .25, .5, .75, 1] });
-  rows.forEach(el => _pliRollObs.observe(el));
+  let busy = 0;
+  // Measured from the layout, not the box on screen: the rows either side
+  // are scaled down, and a scaled box would put their middles in the
+  // wrong place (it made the first step skip the first brand).
+  const midOf = el => { let t = el.offsetHeight / 2; for (let n = el; n && n !== view; n = n.offsetParent) t += n.offsetTop; return t; };
+  const centre = el => midOf(el) - view.clientHeight / 2;
+  const nearest = () => {
+    let best = 0, bestD = Infinity;
+    rows.forEach((el, j) => { const d = Math.abs(centre(el) - view.scrollTop); if (d < bestD) { bestD = d; best = j; } });
+    return best;
+  };
+  let raf = 0;
+  const onScroll = () => {
+    if (raf || Date.now() < busy) return;
+    raf = requestAnimationFrame(() => { raf = 0; const n = nearest(); if (n !== cur) mark(n); });
+  };
+  view.addEventListener('scroll', onScroll, { passive: true });
+  mark(nearest());
+  _pliRollObs = { disconnect() { view.removeEventListener('scroll', onScroll); } };
 
   if (matchMedia('(pointer:coarse)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  rows.forEach(el => { el._plFill = 0; });
+  rows.forEach(el => { el._plFill = 1; });
   const repaint = () => view.dispatchEvent(new Event('scroll'));
-  const centre = el => {
-    const r = el.getBoundingClientRect(), v = view.getBoundingClientRect();
-    return view.scrollTop + (r.top - v.top) + r.height / 2 - view.clientHeight / 2;
-  };
-  let busy = 0;
-  const go = top => { busy = Date.now() + 750; view.scrollTo({ top: Math.max(0, top), behavior: 'smooth' }); };
+  // The wheel names the brand it is going to; the observer only follows
+  // a scroll that wasn't a step (a drag of the scrollbar, say).
+  const go = (top, i) => { busy = Date.now() + 750; if (i != null) mark(i); view.scrollTo({ top: Math.max(0, top), behavior: 'smooth' }); };
   const step = down => {
     if (Date.now() < busy) return true;
-    const first = rows[0];
     if (down) {
-      if (view.scrollTop < centre(first) - 8) { go(centre(first)); return true; }
-      const row = rows[cur];
-      if (row && row._plFill < 1) { row._plFill = 1; busy = Date.now() + 650; repaint(); return true; }
-      if (rows[cur + 1]) { go(centre(rows[cur + 1])); return true; }
+      // Not yet settled on the brand it's at (the page opens with the first
+      // one below the middle): centre that one before moving on.
+      const ai = view.scrollTop < centre(rows[0]) - 8 ? 0 : Math.max(cur, 0);
+      if (centre(rows[ai]) - view.scrollTop > 8) { go(centre(rows[ai]), ai); return true; }
+      if (rows[cur + 1]) { go(centre(rows[cur + 1]), cur + 1); return true; }
       return false;   // past the last brand: the page scrolls on as usual
     }
-    if (cur > 0) { go(centre(rows[cur - 1])); return true; }
-    if (view.scrollTop > 0) { go(0); return true; }
+    if (cur > 0) { go(centre(rows[cur - 1]), cur - 1); return true; }
+    if (view.scrollTop > 0) { go(0, 0); return true; }
     return false;
   };
   const active = () => list.isConnected && homeView === 'list' && !(typeof editMode !== 'undefined' && editMode)
