@@ -12989,13 +12989,15 @@ function rollProjectsList(rows) {
   // The wheel names the brand it is going to; the observer only follows
   // a scroll that wasn't a step (a drag of the scrollbar, say).
   // Its own glide rather than scrollTo's smooth, which starts slowly and
-  // takes its time: this one is moving on the next frame and done in 420ms.
+  // takes its time: this one is moving on the next frame and done in 340ms.
   let anim = 0;
   const go = (top, i) => {
     if (i != null) mark(i);
     const from = view.scrollTop, to = Math.max(0, Math.min(top, view.scrollHeight - view.clientHeight));
-    const t0 = performance.now(), D = 420;
-    busy = Date.now() + D + 30;
+    // A new step may start 180ms in, picking up from wherever this glide
+    // has got to, rather than waiting for it to land.
+    const t0 = performance.now(), D = 340;
+    busy = Date.now() + 180;
     cancelAnimationFrame(anim);
     const tick = now => {
       const k = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - k, 3);
