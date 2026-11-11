@@ -1811,6 +1811,47 @@
        site) so every brand reads at the same visual size regardless of
        its own logo's aspect ratio. */
     .brand-grid { position:relative; width:340px; max-width:88vw; height:320px; margin:0 auto; cursor:grab; }
+    /* Grid + lever layout: the logos lie as a wall of small tiles (after
+       efferd's "logo-cloud-5") until the lever is thrown; the script moves
+       every tile between its place on the wall and its place on the sphere,
+       and the hint only shows once they are a sphere. */
+    .brand-grid-hint { transition:opacity .45s ease, transform .45s ease; }
+    .brand-grid-wrap.bg-flat .brand-grid-hint { opacity:0; transform:translateY(4px); }
+    .brand-grid-wrap.bg-flat .brand-grid { cursor:default; }
+    .brand-grid-wrap.bg-flat .brand-cell { background:transparent; border:1px solid rgba(0,0,0,.08); box-shadow:none; }
+    .brand-grid-wrap.bg-flat .brand-logo { filter:grayscale(1) opacity(.75); }
+    .brand-grid-wrap.bg-flat .brand-cell:hover .brand-logo { filter:none; }
+    body.dark .brand-grid-wrap.bg-flat .brand-cell { background:transparent; border-color:rgba(255,255,255,.1); box-shadow:none; }
+    body.dark .brand-grid-wrap.bg-flat .brand-logo { filter:grayscale(1) invert(1) opacity(.85); }
+    /* The frame round the wall, sized and faded by the script. */
+    .brand-grid::before { display:none; content:''; position:absolute; left:50%; top:50%; width:var(--wall-w, 0px); height:var(--wall-h, 0px);
+      transform:translate(-50%, -50%); border-radius:12px; background:#ececec; opacity:var(--wall-o, 0); pointer-events:none; }
+    body.dark .brand-grid::before { background:rgba(255,255,255,.05); }
+    .brand-cell { transition:background .5s ease, border-color .5s ease; }
+    .brand-lever { display:none; position:relative; width:64px; height:44px; margin:18px auto -4px; scale:.76; padding:0; border:0; background:none; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .brand-grid-wrap.bg-lever .brand-lever { display:block; }
+    .brand-lever:focus-visible { outline:2px solid rgba(0,0,0,.35); outline-offset:4px; border-radius:10px; }
+    .lv-slot { position:absolute; left:8px; right:8px; bottom:6px; height:10px; border-radius:99px;
+      background:linear-gradient(#7d7d7d, #a9a9a9); box-shadow:inset 0 2px 3px rgba(0,0,0,.45), 0 0 0 3px #f1f1f1, 0 3px 7px 2px rgba(0,0,0,.12);
+      transition:background .45s ease; }
+    .lv-slot::after { content:''; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(#4f9a5c, #7cc489);
+      box-shadow:inset 0 2px 3px rgba(0,0,0,.35); opacity:0; transition:opacity .45s ease; }
+    .brand-lever[aria-checked="true"] .lv-slot::after { opacity:1; }
+    .lv-arm { position:absolute; bottom:11px; left:13px; width:0; height:0;
+      transform:rotate(-32deg); transition:left .55s cubic-bezier(.5,1.6,.5,1), transform .55s cubic-bezier(.5,1.6,.5,1); }
+    .brand-lever[aria-checked="true"] .lv-arm { left:51px; transform:rotate(32deg); }
+    .lv-stick { position:absolute; left:-2px; bottom:0; width:4px; height:24px; border-radius:2px;
+      background:linear-gradient(90deg, #8d8d8d, #f4f4f4 45%, #9a9a9a); }
+    .lv-knob { position:absolute; left:-8px; bottom:20px; width:16px; height:16px; border-radius:50%;
+      background:radial-gradient(circle at 34% 30%, #ff9a8f 0 8%, #e2463c 30%, #b4231c 70%, #7d1510 100%); box-shadow:0 2px 4px rgba(0,0,0,.3); }
+    .brand-lever:active .lv-knob { filter:brightness(.92); }
+    body.dark .lv-slot { box-shadow:inset 0 2px 3px rgba(0,0,0,.55), 0 0 0 3px #2a2b2d, 0 3px 7px 2px rgba(0,0,0,.4); }
+    /* Edit mode: which layout the logos use. */
+    .brand-mode-ctl { display:none; align-items:center; justify-content:center; gap:8px; margin:12px auto 0;
+      font:500 12px/1 var(--font-body); color:#8a8178; }
+    .brand-mode-ctl select { font:500 12px var(--font-body); padding:4px 8px; border-radius:8px; border:1px solid rgba(0,0,0,.15); background:#fff; color:#2a2a2a; }
+    #sg-exp.exp-edit-on ~ .brand-grid-wrap .brand-mode-ctl { display:flex; }
+    body.dark .brand-mode-ctl select { background:var(--d-surface); color:var(--d-text); border-color:var(--d-line-2); }
     /* Edit mode: a delete on every logo, and an Add below the sphere. The
        delete sits on the logo's top-right edge in the same dark disc the
        other editors use, red only on approach. The sphere is held still
@@ -4759,6 +4800,21 @@
        the note in both languages so it does not jump when switched. */
     /* ── Me (one card from 21st.dev "Display Cards") ── */
     .dcards { display:flex; justify-content:center; margin:56px auto 36px; }
+    /* Me on the star (after shadcnspace team-01). The star is wider than it
+       is tall, so it lies behind the shoulders; the cut-out stands on its
+       bottom point, the photo's flat foot level with it. */
+    .star-me { position:relative; width:min(420px, 90vw); aspect-ratio:166 / 107; margin:44px auto 36px; }
+    .star-me-shape { position:absolute; left:0; right:0; bottom:0; width:100%; height:auto; overflow:visible; display:block;
+      transform-origin:50% 50%; transition:transform .6s cubic-bezier(.34,1.56,.64,1); }
+    .star-me-shape path { fill:var(--star-me, rgba(0,0,0,.16)); }
+    .star-me-photo { position:absolute; left:50%; bottom:0; height:100%; width:auto; transform:translateX(-50%); display:block;
+      pointer-events:none; user-select:none;
+      -webkit-mask-image:linear-gradient(#000 72%, transparent 97%); mask-image:linear-gradient(#000 72%, transparent 97%); }
+    .star-me:hover .star-me-shape { transform:rotate(-6deg) scale(1.03); }
+    /* Black and white until hovered, then in colour. */
+    .star-me-photo { filter:grayscale(1); transition:filter .5s ease; }
+    .star-me:hover .star-me-photo { filter:none; }
+    body.dark .star-me { --star-me:rgba(255,255,255,.1); }
     .dcard-photo { width:min(11rem, 50vw); aspect-ratio:1; padding:12px; box-sizing:border-box;
       border:2px solid rgba(0,0,0,.08); border-radius:14px; background:rgba(244,243,241,.7); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
       /* Tilted in real perspective rather than skewed, so the face keeps its
@@ -5989,6 +6045,19 @@ one keyframe at a time</div>
         <svg viewBox="0 0 24 8"><line x1="2" y1="2" x2="22" y2="2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="2" y1="6" x2="22" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </div>
       <div class="brand-grid" id="brand-grid"></div>
+      <!-- The lever (after 21st.dev's "lever-switch", @theutkarshmail): a
+           red-knobbed stick in a slot. Thrown, the logo wall gathers itself
+           into the sphere; thrown back, the sphere lays itself out again. -->
+      <button type="button" class="brand-lever" id="brandLever" role="switch" aria-checked="false" aria-label="Turn the logos into a sphere">
+        <span class="lv-slot" aria-hidden="true"></span>
+        <span class="lv-arm" aria-hidden="true"><span class="lv-stick"></span><span class="lv-knob"></span></span>
+      </button>
+      <label class="brand-mode-ctl">Layout
+        <select id="brandModeSelect">
+          <option value="lever">Grid + lever</option>
+          <option value="sphere">Sphere only</option>
+        </select>
+      </label>
       <button type="button" class="brand-add-btn" id="brand-add-btn">+ Add logo</button>
     </div>
 
@@ -6068,11 +6137,13 @@ one keyframe at a time</div>
       <p data-hw="It all started back in high school, when I first came across motion design. I began making content for ~~a page~~ a personal brand of my own — ==pop art and typography==, and the ways they could move.">It all started back in high school, when I first came across motion design. I began making content for a personal brand of my own — pop art and typography, and the ways they could move.</p>
       <p data-hw="Two or three years in, the work I kept making had built up my experience, and little by little I moved into more business-minded projects; since then I’ve had the chance to work with ((brands)) across all kinds of fields, with more than ==four years== of experience in motion design.">Two or three years in, the work I kept making had built up my experience, and little by little I moved into more business-minded projects; since then I’ve had the chance to work with brands across all kinds of fields, with more than four years of experience in motion design.</p>
     </section>
-    <!-- Me — a single card from 21st.dev's "Display Cards": its border, its
-         frosted fill and its skew, holding just my photo, square, and lifting
-         a little when hovered. -->
-    <div class="dcards" aria-label="Me">
-      <div class="dcard dcard-photo"><img src="/media/site/cards/photo.jpg" alt="Alireza Mahdavi" loading="lazy" decoding="async"></div>
+    <!-- Me — after shadcnspace's "team-01": the photo cut out and stood on a
+         flat coloured shape, sharing its bottom edge. The shape is the site's
+         own four-point star, stretched evenly both ways; it turns a little,
+         on a spring, when hovered. -->
+    <div class="star-me" aria-label="Me">
+      <svg class="star-me-shape" viewBox="0 0 166 107" aria-hidden="true"><path d="M163,53.5 C112,60 92,72 83,107 C74,72 54,60 3,53.5 C54,47 74,35 83,0 C92,35 112,47 163,53.5Z"/></svg>
+      <img class="star-me-photo" src="/me-cutout.png" alt="Alireza Mahdavi" loading="lazy" decoding="async">
     </div>
     <!-- Edit mode: drag to set the gap between the note and the timeline. -->
     <div class="section-gap-handle" id="xtlTopHandle" title="Drag to adjust spacing before this section">
@@ -10762,6 +10833,7 @@ function renderWorkExp(items) {
      N and so every point's place on the sphere. */
   function layoutPoints() {
     cells = [...grid.querySelectorAll('.brand-cell')];
+    if (typeof slot !== 'undefined') slot = [];
     const N = cells.length;
     const goldenAngle = Math.PI * (3 - Math.sqrt(5));
     points = cells.map((_, i) => {
@@ -10800,7 +10872,86 @@ function renderWorkExp(items) {
   grid.style.userSelect = 'none';
   grid.style.webkitUserSelect = 'none';
 
+  /* Grid + lever. morph runs 0 (the wall) to 1 (the sphere); each logo
+     follows it a little behind the one before, eased in and out, so the
+     wall gathers into the sphere in a wave rather than all at once. */
+  const wrap = grid.closest('.brand-grid-wrap');
+  const lever = document.getElementById('brandLever');
+  const modeSel = document.getElementById('brandModeSelect');
+  const MORPH_MS = 1150, STAGGER = .45, SPHERE_H = 320, SPHERE_CELL = 58;
+  let leverOn = false, morph = 0, lastFrame = performance.now(), shownMode = '';
+  const brandMode = () => {
+    const m = (typeof _cachedSettings !== 'undefined' && _cachedSettings && _cachedSettings.brandMode) || 'lever';
+    return m === 'sphere' ? 'sphere' : 'lever';
+  };
+  const morphTarget = () => (brandMode() === 'sphere' || leverOn) ? 1 : 0;
+  const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  // The wall: as many columns as fit, every tile the same, rows centred.
+  // The wall (after efferd's "logo-cloud-5"): rows of tiles, rows centred.
+  function wallLayout(N) {
+    const room = (wrap && wrap.clientWidth) || 340;
+    const W = Math.min(440, room * .94), gap = 4;
+    // Four or five across (three or four on a phone), whichever leaves the fullest last row.
+    const lo = W < 380 ? 3 : 4, hi = lo + 1;
+    let cols = hi, best = -1;
+    for (let c = hi; c >= lo; c--) { const last = N % c || c; if (last / c > best) { best = last / c; cols = c; } }
+    const tw = (W - gap * (cols - 1)) / cols, th = Math.round(Math.max(36, tw * .44));
+    const rows = Math.ceil(N / cols), H = rows * th + (rows - 1) * gap;
+    const at = [];
+    for (let i = 0; i < N; i++) {
+      const r = Math.floor(i / cols), inRow = r === rows - 1 ? N - r * cols : cols, c = i - r * cols;
+      const rowW = inRow * tw + (inRow - 1) * gap;
+      at.push({ x: -rowW / 2 + tw / 2 + c * (tw + gap), y: -H / 2 + th / 2 + r * (th + gap), o: 1 });
+    }
+    return { at, tw, th, H, W: cols * tw + (cols - 1) * gap };
+  }
+  /* Which place on the wall each logo takes. Worked out from where the logos
+     are on the sphere at the moment the lever is thrown: the highest ones
+     take the top row, and left to right within each row, so nothing has to
+     cross the whole wall on its way in or out. */
+  var slot = [];   // var: layoutPoints, above, clears it before this line has run
+  function assignSlots() {
+    const N = cells.length;
+    if (!N) { slot = []; return; }
+    const wall = wallLayout(N);
+    const cosY = Math.cos(rotY), sinY = Math.sin(rotY), cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+    const proj = points.map(p => {
+      const rx = p.x * cosY - p.z * sinY, rz1 = p.x * sinY + p.z * cosY;
+      return { x: rx, y: p.y * cosX - rz1 * sinX };
+    });
+    const byY = proj.map((_, i) => i).sort((a, b) => proj[a].y - proj[b].y);
+    const places = wall.at.map((_, k) => k);   // row by row, left to right
+    slot = new Array(N);
+    let k = 0;
+    while (k < N) {
+      const rowY = wall.at[places[k]].y;
+      let end = k; while (end < N && wall.at[places[end]].y === rowY) end++;
+      byY.slice(k, end).sort((a, b) => proj[a].x - proj[b].x).forEach((ci, j) => { slot[ci] = places[k + j]; });
+      k = end;
+    }
+  }
+  function syncMode() {
+    const m = brandMode();
+    if (m === shownMode) return;
+    shownMode = m;
+    wrap.classList.toggle('bg-lever', m === 'lever');
+    if (m === 'sphere') morph = 1;
+    if (modeSel) modeSel.value = m;
+  }
+  if (lever) lever.addEventListener('click', () => {
+    if (morph <= 0 || morph >= 1) assignSlots();
+    leverOn = !leverOn;
+    lever.setAttribute('aria-checked', String(leverOn));
+    lever.setAttribute('aria-label', leverOn ? 'Lay the logos out flat again' : 'Turn the logos into a sphere');
+  });
+  if (modeSel) modeSel.addEventListener('change', () => {
+    if (!_cachedSettings) _cachedSettings = {};
+    _cachedSettings.brandMode = modeSel.value;
+    saveSettings();
+  });
+
   grid.addEventListener('pointerdown', (e) => {
+    if (morph < .999) return;   // the wall does not spin
     dragging = true;
     try { grid.setPointerCapture(e.pointerId); } catch (err) { /* unsupported in some browsers — drag still works without it, just loses the mouse if it leaves the circle */ }
     grid.style.cursor = 'grabbing';
@@ -10845,6 +10996,18 @@ function renderWorkExp(items) {
          carried out from under the pointer on its way there. It can still
          be spun by hand to bring the far side round. */
       const editingSphere = !!document.querySelector('#sg-exp.exp-edit-on');
+      syncMode();
+      const now = performance.now(), dt = Math.min(64, now - lastFrame); lastFrame = now;
+      const goal = morphTarget();
+      if (morph !== goal) morph = goal > morph ? Math.min(goal, morph + dt / MORPH_MS) : Math.max(goal, morph - dt / MORPH_MS);
+      wrap.classList.toggle('bg-flat', morph < .97);
+      const wall = morph < 1 ? wallLayout(cells.length) : null;
+      if (wall) {
+        grid.style.height = (wall.H + (SPHERE_H - wall.H) * ease(morph)).toFixed(1) + 'px';
+        grid.style.setProperty('--wall-w', (wall.W + 8) + 'px');
+        grid.style.setProperty('--wall-h', (wall.H + 8) + 'px');
+        grid.style.setProperty('--wall-o', Math.max(0, 1 - morph * 3).toFixed(3));
+      } else if (grid.style.height) { grid.style.height = ''; grid.style.setProperty('--wall-o', '0'); }
       if (!dragging) {
         rotY += (editingSphere ? 0 : AUTO_SPEED) + velY;
         rotX += velX;
@@ -10863,11 +11026,42 @@ function renderWorkExp(items) {
         const rz = p.y * sinX + rz1 * cosX;
         const X = rx * R, Y = ry * R, Z = rz * R;
         const scale = P / (P + Z);
-        cell.style.transform = `translate(${X.toFixed(1)}px,${Y.toFixed(1)}px) translate(-50%,-50%) scale(${scale.toFixed(3)})`;
-        // The near side (negative Z: drawn larger) sits on top, so the logos
-        // in front are the ones that follow the drag.
-        cell.style.zIndex = Math.round((R - Z) * 10);
-        cell.style.opacity = Math.max(.35, Math.min(1, (scale - .58) / .55));
+        const sOpacity = Math.max(.35, Math.min(1, (scale - .58) / .55));
+        if (!wall) {
+          if (cell.style.width) {
+            cell.style.width = ''; cell.style.height = ''; cell.style.borderRadius = '';
+            cell.querySelectorAll('img').forEach(im => { im.style.width = ''; im.style.height = ''; im.style.maxWidth = ''; });
+          }
+          cell.style.transform = `translate(${X.toFixed(1)}px,${Y.toFixed(1)}px) translate(-50%,-50%) scale(${scale.toFixed(3)})`;
+          // The near side (negative Z: drawn larger) sits on top, so the logos
+          // in front are the ones that follow the drag.
+          cell.style.zIndex = Math.round((R - Z) * 10);
+          cell.style.opacity = sOpacity;
+          return;
+        }
+        // Between the wall and the sphere: this logo's own share of the move.
+        const n = cells.length, lag = n > 1 ? i / (n - 1) : 0;
+        const k = ease(Math.max(0, Math.min(1, (morph * (1 + STAGGER) - lag * STAGGER))));
+        if (slot.length !== cells.length) assignSlots();
+        const g = wall.at[slot[i]], lerp = (a, b) => a + (b - a) * k;
+        const w = lerp(wall.tw, SPHERE_CELL), h = lerp(wall.th, SPHERE_CELL);
+        cell.style.width = w.toFixed(1) + 'px';
+        cell.style.height = h.toFixed(1) + 'px';
+        cell.style.borderRadius = lerp(8, SPHERE_CELL / 2).toFixed(1) + 'px';
+        // On the wall every logo gets about the same area of ink, whatever
+        // its shape, so a wide wordmark and a square badge read the same size.
+        const im = cell.querySelector('img');
+        if (im) {
+          const ar = (im.naturalWidth && im.naturalHeight) ? im.naturalWidth / im.naturalHeight : 2;
+          const fit = (A, maxW, maxH) => { let hh = Math.sqrt(A / ar), ww = ar * hh; const f = Math.min(1, maxW / ww, maxH / hh); return [ww * f, hh * f]; };
+          const [w0, h0] = fit(wall.tw * wall.th * .16, wall.tw * .74, wall.th * .62);
+          const sh = SPHERE_CELL * .56, sw = Math.min(ar * sh, SPHERE_CELL * .72), [w1, h1] = [sw, sw / ar];
+          const iw = lerp(w0, w1).toFixed(1) + 'px', ih = lerp(h0, h1).toFixed(1) + 'px';
+          cell.querySelectorAll('img').forEach(x => { x.style.maxWidth = 'none'; x.style.width = iw; x.style.height = ih; });
+        }
+        cell.style.transform = `translate(${lerp(g.x, X).toFixed(1)}px,${lerp(g.y, Y).toFixed(1)}px) translate(-50%,-50%) scale(${lerp(1, scale).toFixed(3)})`;
+        cell.style.zIndex = k > .5 ? Math.round((R - Z) * 10) : 1;
+        cell.style.opacity = lerp(g.o, sOpacity).toFixed(3);
       });
     } catch (e) {
       console.warn('[brand sphere] frame failed, still rescheduling:', e);
