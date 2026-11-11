@@ -4778,6 +4778,137 @@
     @media (prefers-reduced-motion:reduce) {
       .hw-note [data-ink], .hw-note [data-draw] { animation:none !important; clip-path:none !important; stroke-dashoffset:0 !important; }
     }
+    /* ── Who am I? as an index-card drawer ──
+       21st.dev's "FAQ Drawer" (@cipriantitire, Tactile UI, MIT): the note's
+       paragraphs typed on index cards standing in a drawer, each lifted out
+       (a native <details>) to show its answer. Built by the hw-note script;
+       the marks and the pen still write an answer as its card comes out.
+       Its two faces are served from /fonts like the rest. */
+    @font-face { font-family:'FQ Instrument Sans'; src:url(/fonts/fq-instrument-sans-400.woff2) format('woff2'); font-weight:400; font-style:normal; font-display:swap; }
+    @font-face { font-family:'FQ Instrument Sans'; src:url(/fonts/fq-instrument-sans-700.woff2) format('woff2'); font-weight:700; font-style:normal; font-display:swap; }
+    @font-face { font-family:'FQ Geist Mono'; src:url(/fonts/fq-geist-mono-400.woff2) format('woff2'); font-weight:400; font-style:normal; font-display:swap; }
+    .fq {
+      color-scheme:light;
+      --tui-face:#e6e6e2; --tui-face-hi:#f2f2ef; --tui-face-lo:#cbccc8; --tui-well:#d3d4d0;
+      --tui-ink:#1b1c1e; --tui-ink-2:#4b4d51;
+      --tui-cap:#1e1f21; --tui-cap-hi:#2d2e31; --tui-cap-skirt:#070708; --tui-cap-ink:#efede8; --tui-cap-hl:rgb(255 255 255 / .14);
+      --tui-hl:rgb(255 255 255 / .9); --tui-sh:24 25 28; --tui-sh-a:.24; --tui-grain:.5; --tui-focus:#1b1c1e;
+      --tui-ease:cubic-bezier(.2,.7,.2,1);
+      --tui-well-fill:linear-gradient(to bottom, color-mix(in oklab, var(--tui-well) 86%, rgb(var(--tui-sh))), var(--tui-well) 55%);
+      --tui-raised:inset 0 1px 0 var(--tui-hl), 0 0 0 1px rgb(var(--tui-sh) / calc(var(--tui-sh-a) * .35)), 0 1px 1.5px rgb(var(--tui-sh) / calc(var(--tui-sh-a) * 1.2)), 0 5px 12px -5px rgb(var(--tui-sh) / var(--tui-sh-a));
+      --tui-inset:inset 0 3px 3px -2px rgb(var(--tui-sh) / calc(var(--tui-sh-a) * 2.6)), inset 0 9px 12px -9px rgb(var(--tui-sh) / calc(var(--tui-sh-a) * 1.8)), inset 0 0 0 1px rgb(var(--tui-sh) / calc(var(--tui-sh-a) * .45)), inset 0 -1px 0 color-mix(in oklab, var(--tui-hl) 60%, transparent), 0 1px 0 var(--tui-hl), 0 -1px 0 rgb(var(--tui-sh) / calc(var(--tui-sh-a) * .35));
+      --tui-pressed:inset 0 5px 5px -4px rgb(var(--tui-sh) / calc(var(--tui-sh-a) * 3)), inset 4px 0 4px -4px rgb(var(--tui-sh) / calc(var(--tui-sh-a) * 1.4)), inset -4px 0 4px -4px rgb(var(--tui-sh) / calc(var(--tui-sh-a) * 1.4)), 0 -1px 0 rgb(var(--tui-sh) / calc(var(--tui-sh-a) * 1.3)), 0 1px 0 var(--tui-hl);
+      --tui-noise:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.28 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      --fq-paper:#f3f0e7; --fq-type:#26251f; --fq-type-2:#5d5b53; --fq-rule:rgb(38 37 31 / .13); --fq-rule-2:rgb(38 37 31 / .34);
+      --fq-fibre:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.55' numOctaves='3' seed='9' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .42 0 0 0 0 .35 0 0 0 .1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
+      --fq-drop:rgb(24 25 28 / .3);
+      --fq-sans:'FQ Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+      --fq-type-face:'FQ Geist Mono', ui-monospace, monospace;
+      position:relative; container:fq / inline-size; interpolate-size:allow-keywords;
+      color:var(--tui-ink); font:400 15px/1.55 var(--fq-sans); -webkit-font-smoothing:antialiased; text-align:start;
+    }
+    .fq[data-finish='graphite'] {
+      color-scheme:dark;
+      --tui-face:#1b1c1e; --tui-face-hi:#28292c; --tui-face-lo:#141516; --tui-well:#121315;
+      --tui-ink:#e8e6e1; --tui-ink-2:#a6a7a9;
+      --tui-cap:#e9e7e2; --tui-cap-hi:#f6f4ef; --tui-cap-skirt:#a8a7a3; --tui-cap-ink:#17181a; --tui-cap-hl:rgb(255 255 255 / .8);
+      --tui-hl:rgb(255 255 255 / .11);
+      --tui-well-fill:linear-gradient(to bottom, #070808, var(--tui-well) 45%, #17181a);
+      --tui-sh:0 0 0; --tui-sh-a:.55; --tui-grain:.35; --tui-focus:#e8e6e1; --fq-drop:rgb(0 0 0 / .55);
+    }
+    .fq *, .fq *::before, .fq *::after { box-sizing:border-box; }
+    .fq p { margin:0; }
+    .fq-drawer { position:relative; isolation:isolate; padding:12px 12px 0; border-radius:14px; background:var(--tui-face); box-shadow:var(--tui-raised); }
+    .fq-drawer::before { content:''; position:absolute; inset:0; z-index:-1; border-radius:inherit; pointer-events:none;
+      background:var(--tui-noise), linear-gradient(170deg, rgb(255 255 255 / .06), transparent 40%); opacity:var(--tui-grain); }
+    .fq-tray { display:grid; padding:40px 12px 16px; border-radius:9px 9px 4px 4px; background:var(--tui-well-fill) var(--tui-well); box-shadow:var(--tui-inset); }
+    .fq-card { --shade:calc(var(--depth, 0) * .11); position:relative; margin-inline:calc(var(--depth, 0) * 5px); border-radius:4px 4px 1px 1px;
+      background:linear-gradient(rgb(40 36 26 / var(--shade)), rgb(40 36 26 / var(--shade))), var(--fq-fibre), var(--fq-paper);
+      color:var(--fq-type);
+      box-shadow:inset 0 1px 0 rgb(255 255 255 / .95), inset 0 2px 0 rgb(0 0 0 / .05), 0 -1px 0 rgb(0 0 0 / .1), 0 -7px 10px -5px var(--fq-drop);
+      transition:transform 220ms var(--tui-ease), box-shadow 220ms var(--tui-ease); }
+    .fq-card:first-child { box-shadow:inset 0 1px 0 rgb(255 255 255 / .95), 0 -1px 0 rgb(0 0 0 / .08); }
+    .fq-card:not([open]):hover { transform:translateY(-3px); }
+    .fq-card[open] { z-index:2; margin-top:9px; transform:translateY(-12px);
+      box-shadow:inset 0 1px 0 rgb(255 255 255 / .95), 0 -5px 9px -5px var(--fq-drop), 0 22px 30px -16px var(--fq-drop), 0 2px 3px rgb(0 0 0 / .12); }
+    .fq-edge { display:grid; grid-template-columns:5.2ch minmax(0, 1fr) auto; align-items:baseline; column-gap:12px; padding:16px 18px 22px;
+      list-style:none; cursor:pointer; font:400 15px/22px var(--fq-type-face); border-radius:inherit; -webkit-tap-highlight-color:transparent; }
+    .fq-edge::-webkit-details-marker { display:none; }
+    .fq-edge::marker { content:''; }
+    .fq-edge:focus-visible { outline:2px solid var(--fq-type); outline-offset:-5px; }
+    .fq-no { font-size:11.5px; letter-spacing:.04em; color:var(--fq-type-2); }
+    .fq-q { text-wrap:pretty; }
+    .fq-mark { width:12px; height:12px; align-self:center; position:relative; }
+    .fq-mark::before, .fq-mark::after { content:''; position:absolute; left:1px; right:1px; top:5.25px; height:1.5px; background:var(--fq-type-2); }
+    .fq-mark::after { transform:rotate(90deg); transition:transform 220ms var(--tui-ease); }
+    .fq-card[open] .fq-mark::after { transform:rotate(0deg); }
+    .fq-tab { position:absolute; bottom:100%; inset-inline-start:calc(var(--tab-at, 0) * 100%); height:19px; padding:3px 11px 0; border-radius:5px 5px 0 0;
+      background:linear-gradient(rgb(40 36 26 / var(--shade)), rgb(40 36 26 / var(--shade))), var(--fq-fibre), var(--fq-paper);
+      box-shadow:inset 0 1px 0 rgb(255 255 255 / .95), 0 -4px 7px -4px var(--fq-drop);
+      font:400 10.5px/16px var(--fq-type-face); letter-spacing:.08em; text-transform:uppercase; color:var(--fq-type-2); white-space:nowrap; pointer-events:none; }
+    .fq-card::details-content { block-size:0; overflow:clip; transition:block-size 320ms var(--tui-ease), content-visibility 320ms allow-discrete; }
+    .fq-card[open]::details-content { block-size:auto; }
+    .fq-face { margin:-8px 18px 0; padding:16px 0 22px; padding-inline-start:calc(5.2ch + 12px); border-top:3px double var(--fq-rule-2);
+      font:400 14px/26px var(--fq-type-face);
+      background:repeating-linear-gradient(to bottom, transparent 0 25px, var(--fq-rule) 25px 26px) 0 20px / 100% calc(100% - 42px) no-repeat; }
+    .fq .fq-a { max-width:60ch; }
+    .fq .fq-a + .fq-a { margin-top:26px; }
+    .fq .fq-filed { margin-top:26px; font-size:11px; letter-spacing:.06em; color:var(--fq-type-2); text-align:end; }
+    .fq-front { position:relative; display:grid; justify-items:center; gap:10px; margin:0 -12px; padding:16px 0 18px; border-radius:0 0 14px 14px;
+      background:linear-gradient(to bottom, color-mix(in oklab, var(--tui-face-hi) 70%, var(--tui-face)), var(--tui-face));
+      box-shadow:inset 0 1px 0 var(--tui-hl), inset 0 2px 0 rgb(var(--tui-sh) / calc(var(--tui-sh-a) * .6)), 0 -1px 0 rgb(var(--tui-sh) / calc(var(--tui-sh-a) * .9)); }
+    .fq-holder { display:block; padding:3px; border-radius:3px; background:linear-gradient(var(--tui-face-lo), var(--tui-face-hi));
+      box-shadow:0 0 0 1px rgb(var(--tui-sh) / calc(var(--tui-sh-a) * 1.2)), 0 1px 0 var(--tui-hl), inset 0 1px 1px rgb(0 0 0 / .25); }
+    .fq-holder-card { display:block; min-width:132px; padding:3px 12px 2px; border-radius:1px; background:var(--fq-fibre), var(--fq-paper);
+      box-shadow:inset 0 1px 2px rgb(0 0 0 / .25); font:400 11px/16px var(--fq-type-face); letter-spacing:.08em; text-align:center; text-transform:uppercase; color:var(--fq-type); }
+    .fq-pull { display:block; width:108px; height:22px; border-radius:3px 3px 54px 54px / 3px 3px 22px 22px; background:var(--tui-well-fill) var(--tui-well); box-shadow:var(--tui-inset); }
+    .fq-ask { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:14px 24px; margin-top:28px; padding-inline:4px; }
+    .fq .fq-note { font-size:14.5px; color:var(--tui-ink-2); max-width:44ch; }
+    .fq-key { display:inline-flex; align-items:center; height:44px; padding:0 22px; border-radius:9px; font:700 14px/1 var(--fq-sans); color:var(--tui-cap-ink); text-decoration:none; cursor:pointer;
+      background:radial-gradient(120% 90% at 50% 0%, rgb(255 255 255 / .1), transparent 60%), linear-gradient(var(--tui-cap-hi), var(--tui-cap));
+      box-shadow:inset 0 1px 0 var(--tui-cap-hl), 0 3px 0 var(--tui-cap-skirt), 0 4px 2px rgb(var(--tui-sh) / calc(var(--tui-sh-a) * 1.4)), 0 9px 14px -6px rgb(var(--tui-sh) / var(--tui-sh-a));
+      transition:transform 70ms var(--tui-ease), box-shadow 70ms var(--tui-ease); }
+    .fq-key:active { transform:translateY(3px); box-shadow:var(--tui-pressed); }
+    .fq-key:focus-visible { outline:2px solid var(--tui-focus); outline-offset:3px; }
+    /* Persian: typed in the note's Persian face, on the same ruling. */
+    .hw-note[dir="rtl"] .fq-q, .hw-note[dir="rtl"] .fq-face, .hw-note[dir="rtl"] .fq-note, .hw-note[dir="rtl"] .fq-key,
+    .hw-note[dir="rtl"] .fq-holder-card, .hw-note[dir="rtl"] .fq-tab { font-family:var(--fa-font, 'Hilda'), 'Doran', var(--fq-sans); letter-spacing:0; }
+    .hw-note[dir="rtl"] .fq-q { font-size:17px; }
+    .hw-note[dir="rtl"] .fq-face { font-size:16.5px; }
+    .hw-note[dir="rtl"] .fq-tab { font-size:12px; line-height:15px; }
+    /* The pen writes a card's answer only once that card is out. */
+    .fq-card:not([open]) [data-ink], .fq-card:not([open]) [data-draw] { animation-play-state:paused !important; }
+    .hw-note.hw-editing > .fq { display:none; }
+    /* Smaller than the original, and without its front plate or Ask key:
+       just the tray and its cards. */
+    .hw-note > .fq { max-width:430px; margin-inline:auto; }
+    .hw-note > .fq .fq-drawer { padding-bottom:12px; }
+    .hw-note > .fq .fq-tray { border-radius:9px; padding-top:34px; }
+    /* No card numbers or "Filed under" line: just the question and its answer. */
+    .hw-note > .fq .fq-edge { grid-template-columns:minmax(0, 1fr) auto; }
+    .hw-note > .fq .fq-face { padding-inline-start:0; padding-bottom:16px; background-size:100% calc(100% - 36px); }
+    /* Rings sized for the typed face: a little more room either side than in Caveat. */
+    body.dark .fq .hw-swipe { opacity:1; }   /* paper stays paper */
+    .fq .hw-k-ring { margin:0 .45em; }
+    .fq .hw-ring { top:-.28em; left:-.75em; width:calc(100% + 1.5em); height:calc(100% + .5em); }
+    .fq .hw-k-ring-wide { margin:0 .6em; }
+    .fq .hw-k-ring-wide > .hw-ring { top:-.34em; left:-1em; width:calc(100% + 2em); height:calc(100% + .62em); }
+    @container fq (max-width: 559px) {
+      .fq-drawer { padding:8px 8px 0; }
+      .fq-tray { padding:34px 6px 12px; }
+      .fq-card { margin-inline:calc(var(--depth, 0) * 3px); }
+      .fq-edge { grid-template-columns:minmax(0, 1fr) auto; padding:14px 14px 20px; font-size:14px; line-height:21px; }
+      .fq-no { display:none; }
+      .fq-tab { font-size:9.5px; padding-inline:8px; }
+      .fq-face { margin-inline:14px; padding-inline-start:0; font-size:13.5px; }
+      .fq-front { margin-inline:-8px; }
+      .fq-ask { flex-direction:column; align-items:stretch; }
+      .fq-key { justify-content:center; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .fq-card, .fq-mark::after, .fq-key, .fq-card::details-content { transition:none; }
+      .fq-card:not([open]):hover { transform:none; }
+    }
     /* ── Experience timeline (shadcnui-blocks timeline-01) ── */
     /* The gap above the section and the one under its label are set from
        edit mode by drag handles (xtlTopGap, xtlLabelGap in settings). */
@@ -19302,6 +19433,10 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   const DEFAULT_FA_FONT = 'hilda';
   let faFont = DEFAULT_FA_FONT;
+  // How the note is set (whoAmI.style): the index-card drawer, or the plain
+  // handwritten note it was before. Picked in edit mode.
+  const STYLES = { drawer: 'Drawer', note: 'Note' };
+  let style = 'drawer';
   try { if (localStorage.getItem('hwLang') === 'fa') lang = 'fa'; } catch (e) {}
 
   const parse = src => {
@@ -19333,72 +19468,167 @@ document.addEventListener('DOMContentLoaded', () => {
     return s;
   };
 
-  // Writes the note out from markup, replacing whatever paragraphs are there.
-  function render() {
-    note.querySelectorAll(':scope > p').forEach(p => p.remove());
-    // Persian is wiped on right to left, the way it is written.
-    const rtl = lang === 'fa', W = rtl ? 'hw-write-rtl' : 'hw-write';
-    note.dir = rtl ? 'rtl' : 'ltr';
-    note.lang = lang;
-    const sources = texts[lang].split(/\n\s*\n/).map(s => s.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean);
-    const parsed = sources.map(parse);
+  // The note is set as an index-card drawer (see "Who am I? as an
+  // index-card drawer" in the CSS). A paragraph ending in a question mark is
+  // typed on a card's edge and the paragraphs after it are its answer. A note
+  // with just the one question (as it has always been written) gets a card
+  // per paragraph instead, the later ones under the questions below.
+  const FQ = {
+    en: { tabs: ['Me', 'Start', 'Now', 'More'], qs: ['Who am I?', 'How did it start?', 'And since then?'] },
+    fa: { tabs: ['من', 'شروع', 'حالا', 'بیشتر'], qs: ['من کی‌ام؟', 'از کجا شروع شد؟', 'و از اون موقع؟'] },
+  };
+  const isQ = src => /[?؟]\s*$/.test(plainOf(src));
+  const toCards = (sources, L) => {
+    const qCount = sources.filter(isQ).length;
+    const cards = [];
+    if (qCount <= 1) {
+      let first = true;
+      sources.forEach(s => {
+        if (isQ(s)) { if (first) { cards.push({ q: plainOf(s), a: [] }); first = false; } return; }
+        const last = cards[cards.length - 1];
+        if (last && !last.a.length) last.a.push(s);
+        else cards.push({ q: L.qs[cards.length] || L.qs[L.qs.length - 1], a: [s] });
+      });
+    } else {
+      sources.forEach(s => {
+        if (isQ(s)) cards.push({ q: plainOf(s), a: [] });
+        else if (cards.length) cards[cards.length - 1].a.push(s);
+        else cards.push({ q: L.qs[0], a: [s] });
+      });
+    }
+    return cards.filter(c => c.a.length);
+  };
 
-    // Cost the whole note first, so it can be compressed evenly if writing
-    // it at the natural pace would run past MAX_SPREAD.
+  // Writes one paragraph's tokens into el in ink, starting at cursor (in
+  // characters of pen time); returns where the pen ends up.
+  function ink(el, tokens, perChar, cursor, W) {
+    tokens.forEach(t => {
+      const from = cursor;
+      const words = document.createDocumentFragment();
+      t.parts.forEach(part => {
+        if (/^\s+$/.test(part)) { cursor += part.length; words.append(part); return; }
+        const w = document.createElement('span');
+        w.className = 'hw-w'; w.setAttribute('data-ink', ''); w.setAttribute('aria-hidden', 'true');
+        w.textContent = part;
+        w.style.animation = `${W} ${part.length * perChar}s linear ${cursor * perChar}s both`;
+        cursor += part.length;
+        words.append(w);
+      });
+      if (t.mark === 'plain') { el.append(words); return; }
+
+      // A ring round a long phrase is pulled wider and taller, so its tapering
+      // ends clear the first and last letters instead of cutting them.
+      const k = document.createElement('span'); k.className = 'hw-k' + (t.mark === 'circle' ? ' hw-k-ring' + (t.text.length > 8 ? ' hw-k-ring-wide' : '') : '');
+      if (t.mark === 'mark') {
+        const sw = document.createElement('span');
+        sw.className = 'hw-swipe'; sw.setAttribute('data-ink', ''); sw.setAttribute('aria-hidden', 'true');
+        sw.style.animation = `${W} ${Math.max((cursor - from) * perChar, .4)}s ${EASE} ${from * perChar}s both`;
+        k.append(sw);
+      }
+      const inner = document.createElement('span'); inner.className = 'hw-in'; inner.append(words);
+      k.append(inner);
+      const delay = cursor * perChar, dur = Math.max(OVERLAY * perChar, .55);
+      if (t.mark === 'circle') {
+        // Not an ellipse: it starts low-left and overshoots the closure.
+        const s = svg('hw-ring', '0 0 100 100');
+        s.append(path('M8 54 C6 26 30 8 52 7 C76 6 95 20 95 46 C95 74 72 93 48 93 C24 93 7 78 6 52 C6 34 16 20 34 12', 2, delay, dur));
+        k.append(s); cursor += OVERLAY;
+      } else if (t.mark === 'strike') {
+        // Two passes at slightly different heights, the second trailing.
+        const s = svg('hw-strike', '0 0 100 10');
+        s.append(path('M1 4 C24 2 46 7 68 4 C82 2 92 6 99 4', 1.6, delay, dur * .7));
+        s.append(path('M2 7 C26 5 44 9 66 6 C80 4 92 8 98 6', 1.3, delay + dur * .3, dur * .7, '.8'));
+        k.append(s); cursor += OVERLAY;
+      }
+      el.append(k);
+    });
+    return cursor;
+  }
+
+  // The drawer's metal follows the site's theme; the cards are paper in both.
+  const finish = () => document.body.classList.contains('dark') ? 'graphite' : 'aluminium';
+  new MutationObserver(() => { const fq = note.querySelector(':scope > .fq'); if (fq) fq.dataset.finish = finish(); })
+    .observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+  // The plain note: every paragraph in turn, with one pen for the whole of it.
+  function renderNote(sources, W) {
+    const parsed = sources.map(parse);
     let pending = 0;
     parsed.forEach(tokens => tokens.forEach(t => {
       t.parts.forEach(p => { pending += p.length; });
       if (t.mark === 'circle' || t.mark === 'strike') pending += OVERLAY;
     }));
     const perChar = Math.min(DURATION / AVG_WORD, MAX_SPREAD / Math.max(1, pending));
-
-    let cursor = 0;   // characters of pen time spent so far
+    let cursor = 0;
     const panel = note.querySelector('.hw-edit');
     parsed.forEach((tokens, n) => {
       const el = document.createElement('p');
       el.setAttribute('aria-label', plainOf(sources[n]));
-      tokens.forEach(t => {
-        const from = cursor;
-        const words = document.createDocumentFragment();
-        t.parts.forEach(part => {
-          if (/^\s+$/.test(part)) { cursor += part.length; words.append(part); return; }
-          const w = document.createElement('span');
-          w.className = 'hw-w'; w.setAttribute('data-ink', ''); w.setAttribute('aria-hidden', 'true');
-          w.textContent = part;
-          w.style.animation = `${W} ${part.length * perChar}s linear ${cursor * perChar}s both`;
-          cursor += part.length;
-          words.append(w);
-        });
-        if (t.mark === 'plain') { el.append(words); return; }
-
-        // A ring round a long phrase is pulled wider and taller, so its tapering
-        // ends clear the first and last letters instead of cutting them.
-        const k = document.createElement('span'); k.className = 'hw-k' + (t.mark === 'circle' ? ' hw-k-ring' + (t.text.length > 8 ? ' hw-k-ring-wide' : '') : '');
-        if (t.mark === 'mark') {
-          const sw = document.createElement('span');
-          sw.className = 'hw-swipe'; sw.setAttribute('data-ink', ''); sw.setAttribute('aria-hidden', 'true');
-          sw.style.animation = `${W} ${Math.max((cursor - from) * perChar, .4)}s ${EASE} ${from * perChar}s both`;
-          k.append(sw);
-        }
-        const inner = document.createElement('span'); inner.className = 'hw-in'; inner.append(words);
-        k.append(inner);
-        const delay = cursor * perChar, dur = Math.max(OVERLAY * perChar, .55);
-        if (t.mark === 'circle') {
-          // Not an ellipse: it starts low-left and overshoots the closure.
-          const s = svg('hw-ring', '0 0 100 100');
-          s.append(path('M8 54 C6 26 30 8 52 7 C76 6 95 20 95 46 C95 74 72 93 48 93 C24 93 7 78 6 52 C6 34 16 20 34 12', 2, delay, dur));
-          k.append(s); cursor += OVERLAY;
-        } else if (t.mark === 'strike') {
-          // Two passes at slightly different heights, the second trailing.
-          const s = svg('hw-strike', '0 0 100 10');
-          s.append(path('M1 4 C24 2 46 7 68 4 C82 2 92 6 99 4', 1.6, delay, dur * .7));
-          s.append(path('M2 7 C26 5 44 9 66 6 C80 4 92 8 98 6', 1.3, delay + dur * .3, dur * .7, '.8'));
-          k.append(s); cursor += OVERLAY;
-        }
-        el.append(k);
-      });
+      cursor = ink(el, tokens, perChar, cursor, W);
       note.insertBefore(el, panel);
     });
+  }
+
+  // Writes the note out from markup, replacing whatever is there.
+  function render() {
+    note.querySelectorAll(':scope > p, :scope > .fq').forEach(n => n.remove());
+    // Persian is wiped on right to left, the way it is written.
+    const rtl = lang === 'fa', W = rtl ? 'hw-write-rtl' : 'hw-write';
+    note.dir = rtl ? 'rtl' : 'ltr';
+    note.lang = lang;
+    const L = FQ[lang] || FQ.en;
+    const sources = texts[lang].split(/\n\s*\n/).map(s => s.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean);
+    if (style === 'note') { renderNote(sources, W); return; }
+    const cards = toCards(sources, L);
+    const n = cards.length;
+
+    const fq = document.createElement('div');
+    fq.className = 'fq';
+    fq.dataset.finish = finish();
+    fq.innerHTML =
+      '<div class="fq-drawer"><div class="fq-tray"></div></div>';
+    const tray = fq.querySelector('.fq-tray');
+
+    cards.forEach((c, i) => {
+      const d = document.createElement('details');
+      d.className = 'fq-card';
+      d.setAttribute('name', 'hw-fq');   // one card out at a time
+      if (i === 0) d.open = true;
+      const depth = n <= 1 ? 0 : (n - 1 - i) / (n - 1);
+      d.style.cssText = `--k:${i};--depth:${depth.toFixed(3)};--tab-at:${[0.04, 0.37, 0.7][i % 3]}`;
+      const tab = L.tabs[Math.min(i, L.tabs.length - 1)];
+
+      const sm = document.createElement('summary');
+      sm.className = 'fq-edge';
+      sm.innerHTML = '<span class="fq-tab" aria-hidden="true"></span><span class="fq-q"></span><span class="fq-mark" aria-hidden="true"></span>';
+      sm.querySelector('.fq-tab').textContent = tab;
+      sm.querySelector('.fq-q').textContent = c.q;
+
+      // Each card has its own pen: its answer is costed and written from the
+      // moment the card comes out, compressed if it would run too long.
+      const parsed = c.a.map(parse);
+      let pending = 0;
+      parsed.forEach(tokens => tokens.forEach(t => {
+        t.parts.forEach(p => { pending += p.length; });
+        if (t.mark === 'circle' || t.mark === 'strike') pending += OVERLAY;
+      }));
+      const perChar = Math.min(DURATION / AVG_WORD, MAX_SPREAD / Math.max(1, pending));
+      let cursor = Math.round(.25 / perChar);   // a beat while the card lifts
+
+      const face = document.createElement('div');
+      face.className = 'fq-face';
+      parsed.forEach((tokens, j) => {
+        const el = document.createElement('p');
+        el.className = 'fq-a';
+        el.setAttribute('aria-label', plainOf(c.a[j]));
+        cursor = ink(el, tokens, perChar, cursor, W);
+        face.append(el);
+      });
+
+      d.append(sm, face);
+      tray.append(d);
+    });
+    note.insertBefore(fq, note.querySelector('.hw-edit'));
   }
 
   const paintMarker = () => note.style.setProperty('--hw-marker', marker);
@@ -19420,9 +19650,11 @@ document.addEventListener('DOMContentLoaded', () => {
     texts.fa = pick(saved && saved.textFa, DEFAULT_TEXT_FA);
     marker = (saved && saved.marker) || DEFAULT_MARKER;
     faFont = (saved && FA_FONTS[saved.faFont]) ? saved.faFont : DEFAULT_FA_FONT;
+    const styleBefore = style;
+    style = (saved && STYLES[saved.style]) ? saved.style : 'drawer';
     paintFont();
     paintMarker();
-    if (texts[lang] !== before) render();
+    if (texts[lang] !== before || style !== styleBefore) render();
   };
 
   // The English / Persian switch. Switching while editing keeps what was
@@ -19464,7 +19696,8 @@ document.addEventListener('DOMContentLoaded', () => {
         '</div>' +
         '<textarea class="hw-edit-text" spellcheck="true" aria-label="Who am I? text"></textarea>' +
         '<div class="hw-edit-bar">' +
-          '<span class="hw-edit-hint"><code>==highlight==</code> <code>((circle))</code> <code>~~strike~~</code> · blank line = new paragraph</span>' +
+          '<span class="hw-edit-hint"><code>==highlight==</code> <code>((circle))</code> <code>~~strike~~</code> · blank line = new paragraph · a line ending in ? starts a new card</span>' +
+          '<label class="hw-edit-font">Style <select class="hw-style-select">' + Object.keys(STYLES).map(k => '<option value="' + k + '">' + STYLES[k] + '</option>').join('') + '</select></label>' +
           '<label class="hw-edit-font">Persian font <select class="hw-font-select">' + Object.keys(FA_FONTS).map(k => '<option value="' + k + '">' + FA_FONTS[k].name + '</option>').join('') + '</select></label>' +
           '<span class="hw-edit-marker">Marker <button type="button" class="nav-color-input hw-marker-swatch" title="Marker colour" aria-label="Choose the marker colour"></button></span>' +
         '</div>';
@@ -19523,6 +19756,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const m = k === 'h' ? ['==', '=='] : k === 'o' ? ['((', '))'] : k === 'x' ? ['~~', '~~'] : null;
         if (m) { e.preventDefault(); toggle(m[0], m[1]); }
       });
+      const ssel = panel.querySelector('.hw-style-select');
+      ssel.value = style;
+      ssel.addEventListener('change', () => { style = ssel.value; render(); save(); });
       const fsel = panel.querySelector('.hw-font-select');
       fsel.value = faFont;
       fsel.addEventListener('change', () => { faFont = fsel.value; paintFont(); save(); });
@@ -19549,7 +19785,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function save() {
     if (typeof _cachedSettings === 'undefined') return;
     if (!_cachedSettings) _cachedSettings = {};
-    _cachedSettings.whoAmI = { text: texts.en, textFa: texts.fa, marker, faFont };
+    _cachedSettings.whoAmI = { text: texts.en, textFa: texts.fa, marker, faFont, style };
     if (typeof saveSettings === 'function') saveSettings();
   }
 
