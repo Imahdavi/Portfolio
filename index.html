@@ -10972,7 +10972,8 @@ function renderWorkExp(items) {
     if (modeSel) modeSel.value = m;
   }
   if (lever) lever.addEventListener('click', () => {
-    if (morph <= 0 || morph >= 1) assignSlots();
+    // Only on the way back to the wall: the wall on show must never reshuffle under the eye.
+    if (morph >= 1) assignSlots();
     leverOn = !leverOn;
     lever.setAttribute('aria-checked', String(leverOn));
     lever.setAttribute('aria-label', leverOn ? 'Lay the logos out flat again' : 'Turn the logos into a sphere');
