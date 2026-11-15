@@ -21667,7 +21667,10 @@ void main () {
     const spacing = Math.round(Math.min(Math.max(OPT.spacing, 0), 3));
 
     gl.uniform2f(uniforms.uResolution, canvas.width, canvas.height);
-    gl.uniform1f(uniforms.uGlyphPx, glyphCss * dpr);
+    // Whole device pixels: at 0.85 CSS px a glyph pixel fell between screen
+    // pixels, so which bits of a dot or dash survived depended on where the
+    // media sat — some boards drew visibly smaller, thinner marks than others.
+    gl.uniform1f(uniforms.uGlyphPx, Math.max(1, Math.round(glyphCss * dpr)));
     gl.uniform1f(uniforms.uSpacing, spacing);
     gl.uniform1f(uniforms.uLod, Math.max(0, Math.log2((5 + 2 * spacing) * glyphCss) - 1));
     gl.uniform1uiv(uniforms['uGlyphs[0]'], glyphData);
