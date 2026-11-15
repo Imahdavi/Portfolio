@@ -18545,6 +18545,10 @@ let _pendingThumbCard = null;
 function shrinkThumb(file, maxPx = 800, quality = 0.82) {
   return new Promise(resolve => {
     if (!file || !file.type.startsWith('image/')) { resolve(file); return; }
+    // A canvas would flatten an animated GIF to its first frame and turn a
+    // vector into pixels; a WebP has nothing to gain from a second pass.
+    if (/^image\/(gif|svg\+xml|webp)$/.test(file.type) && file.size < 200 * 1024) { resolve(file); return; }
+    if (/^image\/(gif|svg\+xml)$/.test(file.type)) { resolve(file); return; }
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
@@ -18552,8 +18556,10 @@ function shrinkThumb(file, maxPx = 800, quality = 0.82) {
       try {
         const w = img.naturalWidth, h = img.naturalHeight;
         const scale = Math.min(1, maxPx / Math.max(w, h));
-        // Already small in both pixels and bytes — leave it exactly as it is.
-        if (scale === 1 && file.size < 200 * 1024) { resolve(file); return; }
+        /* A small JPEG or PNG used to be left exactly as it was, which is
+           how 81KB and 56KB .jfif thumbs ended up on the grid. Every one
+           is re-encoded to WebP now; the size check below still hands
+           back the original whenever the WebP is not actually smaller. */
         const c = document.createElement('canvas');
         c.width = Math.max(1, Math.round(w * scale));
         c.height = Math.max(1, Math.round(h * scale));
@@ -18595,7 +18601,9 @@ document.getElementById('thumbInput').addEventListener('change', async function(
     if (!img) { img = document.createElement('img'); thumbEl.insertBefore(img, thumbEl.firstChild); }
     img.src = url;
     img.alt = '';
-    showUploadToast('Saved ✓');
+    // Says what the shrink did, so it is visible that it happened.
+    const kb = n => Math.max(1, Math.round(n / 1024)) + 'KB';
+    showUploadToast(small !== file ? `Saved ✓  ${kb(file.size)} → ${kb(small.size)} WebP` : 'Saved ✓');
     saveHomeEdits();
   } catch(e) {
     thumbEl.style.background = origBg;
