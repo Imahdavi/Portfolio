@@ -17,6 +17,33 @@
        of the self-hosted defaults. -->
   <link id="gfonts-link" rel="stylesheet"/>
   <link rel="preload" as="script" href="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"/>
+  <script>
+    /* The boards and the settings are asked for here, before the page's own
+       1.2MB has finished arriving, instead of after it has all been parsed:
+       on a slow link that is the difference between the two round trips
+       running one after the other and running side by side. fetchBackend
+       picks these up for its first try and falls back to its own request
+       (and retries) if one of them failed. */
+    (function () {
+      var base = /(^|\.)imahdavi\.space$/.test(location.hostname) ? '' : 'https://portfolio-api.alireza-mahdavi.workers.dev';
+      var early = window.__early = {};
+      ['/api/projects', '/api/settings'].forEach(function (path) {
+        try {
+          early[path] = fetch(base + path, { cache: 'no-store' }).then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+          });
+          early[path].catch(function () {});
+        } catch (e) {}
+      });
+    })();
+    /* lottie-web is 300KB and used to stop the page being built until it had
+       arrived. It loads alongside now; anything that needs it before then
+       waits its turn here. */
+    window.whenLottie = function (fn) {
+      if (window.lottie) fn(); else (window._lottieQ = window._lottieQ || []).push(fn);
+    };
+  </script>
   <style>
     /* ─── Self-hosted fonts (see the note in <head>) ─────────────
        Latin and Latin-extended cuts of Google's variable files, so one
@@ -56,7 +83,7 @@
       font-style: normal;
       font-weight: 400;
       font-display: swap;
-      src: url(/fonts/doran-regular.ttf) format('truetype');
+      src: url(/fonts/doran-regular.woff2) format('woff2'), url(/fonts/doran-regular.ttf) format('truetype');
       unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
     }
     @font-face {
@@ -64,7 +91,7 @@
       font-style: normal;
       font-weight: 500;
       font-display: swap;
-      src: url(/fonts/doran-medium.ttf) format('truetype');
+      src: url(/fonts/doran-medium.woff2) format('woff2'), url(/fonts/doran-medium.ttf) format('truetype');
       unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
     }
     @font-face {
@@ -72,7 +99,7 @@
       font-style: normal;
       font-weight: 700;
       font-display: swap;
-      src: url(/fonts/doran-bold.ttf) format('truetype');
+      src: url(/fonts/doran-bold.woff2) format('woff2'), url(/fonts/doran-bold.ttf) format('truetype');
       unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
     }
     /* Ravi: a second Persian face to try for the note. */
@@ -81,7 +108,7 @@
       font-style: normal;
       font-weight: 400;
       font-display: swap;
-      src: url(/fonts/ravi-regular.ttf) format('truetype');
+      src: url(/fonts/ravi-regular.woff2) format('woff2'), url(/fonts/ravi-regular.ttf) format('truetype');
       unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
     }
     @font-face {
@@ -89,7 +116,7 @@
       font-style: normal;
       font-weight: 500;
       font-display: swap;
-      src: url(/fonts/ravi-medium.ttf) format('truetype');
+      src: url(/fonts/ravi-medium.woff2) format('woff2'), url(/fonts/ravi-medium.ttf) format('truetype');
       unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
     }
     @font-face {
@@ -97,7 +124,7 @@
       font-style: normal;
       font-weight: 600;
       font-display: swap;
-      src: url(/fonts/ravi-semibold.ttf) format('truetype');
+      src: url(/fonts/ravi-semibold.woff2) format('woff2'), url(/fonts/ravi-semibold.ttf) format('truetype');
       unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
     }
     @font-face {
@@ -105,7 +132,7 @@
       font-style: normal;
       font-weight: 700;
       font-display: swap;
-      src: url(/fonts/ravi-bold.ttf) format('truetype');
+      src: url(/fonts/ravi-bold.woff2) format('woff2'), url(/fonts/ravi-bold.ttf) format('truetype');
       unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
     }
     /* Hilda: a Persian hand to try for the note. */
@@ -114,7 +141,7 @@
       font-style: normal;
       font-weight: 400;
       font-display: swap;
-      src: url(/fonts/hilda.ttf) format('truetype');
+      src: url(/fonts/hilda.woff2) format('woff2'), url(/fonts/hilda.ttf) format('truetype');
       unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
     }
     /* Pofak: another Persian face to try for the note (Tanin is its own family). */
@@ -123,7 +150,7 @@
       font-style: normal;
       font-weight: 300;
       font-display: swap;
-      src: url(/fonts/pofak-light.ttf) format('truetype');
+      src: url(/fonts/pofak-light.woff2) format('woff2'), url(/fonts/pofak-light.ttf) format('truetype');
       unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
     }
     @font-face {
@@ -131,7 +158,7 @@
       font-style: normal;
       font-weight: 400;
       font-display: swap;
-      src: url(/fonts/pofak-regular.ttf) format('truetype');
+      src: url(/fonts/pofak-regular.woff2) format('woff2'), url(/fonts/pofak-regular.ttf) format('truetype');
       unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
     }
     @font-face {
@@ -139,7 +166,7 @@
       font-style: normal;
       font-weight: 500;
       font-display: swap;
-      src: url(/fonts/pofak-medium.ttf) format('truetype');
+      src: url(/fonts/pofak-medium.woff2) format('woff2'), url(/fonts/pofak-medium.ttf) format('truetype');
       unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
     }
     @font-face {
@@ -147,7 +174,7 @@
       font-style: normal;
       font-weight: 600;
       font-display: swap;
-      src: url(/fonts/pofak-demibold.ttf) format('truetype');
+      src: url(/fonts/pofak-demibold.woff2) format('woff2'), url(/fonts/pofak-demibold.ttf) format('truetype');
       unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
     }
     @font-face {
@@ -155,7 +182,7 @@
       font-style: normal;
       font-weight: 400;
       font-display: swap;
-      src: url(/fonts/pofak-tanin.ttf) format('truetype');
+      src: url(/fonts/pofak-tanin.woff2) format('woff2'), url(/fonts/pofak-tanin.ttf) format('truetype');
       unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
     }
     /* Fira Code latin-ext */
@@ -6943,10 +6970,10 @@ one keyframe at a time</div>
      download straight away. Not "defer": the scripts below call lottie
      while the page is still parsing (the nav's star icon, for one), and a
      deferred script would only arrive after them. -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
-<!-- Thinking Orbs, the media loading state (see attachMediaLoadState). --><script src="/thinking-orbs.js"></script>
-<!-- MorphOrb, the Ticket composer's send animation (see the note send handler). --><script src="/morph-orb.js"></script>
-<!-- The boarding pass, the invoice's second design (see invTicketModel). --><script src="/boarding-pass.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" onload="(window._lottieQ||[]).splice(0).forEach(function(f){try{f()}catch(e){}})"></script>
+<!-- Thinking Orbs, the media loading state (see attachMediaLoadState). --><script async src="/thinking-orbs.js"></script>
+<!-- MorphOrb, the Ticket composer's send animation (see the note send handler). --><script async src="/morph-orb.js"></script>
+<!-- The boarding pass, the invoice's second design (see invTicketModel). --><script async src="/boarding-pass.js" onload="try{renderInvoicePaper()}catch(e){}"></script>
 <script>
 /* ─── Lottie animation data ─────────────────────────────── */
 const LOTTIE_DATA = {
@@ -10295,6 +10322,12 @@ let _settingsLoadedAt = null;
 
 async function fetchBackend(path) {
   let lastErr = null;
+  // The copy asked for from <head>, if it is there and came back good.
+  const early = window.__early && window.__early[path];
+  if (early) {
+    delete window.__early[path];
+    try { return await early; } catch (e) { lastErr = e; }
+  }
   for (let i = 0; i < BACKEND_TRIES; i++) {
     // A hung request is the common failure here, so abort it and retry
     // rather than letting the page sit out the browser's own long timeout.
@@ -13738,7 +13771,9 @@ function setupStripVideos() {
    marker is named "hover-pinch". Guarded on the node, so calling this
    twice cannot stack a second animation on the same element. */
 function mountSectionLottie(mount, path, hoverHost) {
-  if (!mount || typeof lottie === 'undefined' || mount._lottie) return;
+  if (!mount || mount._lottie) return;
+  // Not arrived yet (it loads alongside the page): come back when it has.
+  if (typeof lottie === 'undefined') { whenLottie(() => { if (mount.isConnected) mountSectionLottie(mount, path, hoverHost); }); return; }
   const anim = lottie.loadAnimation({
     container: mount,
     renderer: 'svg',
@@ -13910,11 +13945,20 @@ function renderHomeSections(sections) {
   });
 }
 
+/* When the boards last came down whole. openProject used to fetch all of
+   them again (200KB) before showing a board, so every click waited on a
+   round trip for data that had arrived seconds earlier. A visitor's copy
+   this fresh is used as it is; an admin always gets the refetch, since
+   that is who edits boards from another tab. */
+let _projectsAt = 0;
+const PROJECTS_FRESH_MS = 5 * 60 * 1000;
+
 async function loadProjects() {
   let rows = null;
   try {
     rows = await fetchBackend('/api/projects');
     cacheBackend('projects', rows);
+    _projectsAt = Date.now();
   } catch(e) {
     console.warn('Projects load failed after ' + BACKEND_TRIES + ' tries:', e);
     markBackendDown();
@@ -14137,7 +14181,9 @@ async function openProject(key) {
   prevMain  = current;
   document.getElementById('scroll-top-btn').classList.remove('show');
   trackView(key);
-  try {
+  const fresh = _projectsAt && Date.now() - _projectsAt < PROJECTS_FRESH_MS &&
+    !document.body.classList.contains('is-admin');
+  if (!fresh) try {
     const res  = await fetch(`${API_READ}/api/projects`, { cache: 'no-store' });
     const rows = await res.json();
     const row  = Array.isArray(rows) ? rows.find(r => r.key === key) : null;
@@ -14147,6 +14193,7 @@ async function openProject(key) {
       // meaningful to whichever layout the board was saved in.
       PROJECTS[key].layout = row.data.layout;
     }
+    _projectsAt = Date.now();
   } catch(e) {}
   const p = PROJECTS[key];
   document.getElementById('d-title').textContent = p.name || '';
@@ -15999,7 +16046,9 @@ function makeBlockEl(block, proj) {
       lottieDiv.style.cssText = 'width:100%;height:100%;display:block;';
       inner.appendChild(lottieDiv);
       const data = LOTTIE_DATA[block.content];
-      if (data && typeof lottie !== 'undefined') {
+      // whenLottie: straight away if the library is in, otherwise once it
+      // is — and only if this board is still the one on screen by then.
+      const playLottie = () => {
         if (block._lottieInst) { try { block._lottieInst.destroy(); } catch(e){} }
         block._lottieInst = lottie.loadAnimation({
           container: lottieDiv,
@@ -16008,6 +16057,10 @@ function makeBlockEl(block, proj) {
           autoplay: true,
           animationData: JSON.parse(JSON.stringify(data))
         });
+      };
+      if (data) {
+        if (window.lottie) playLottie();
+        else whenLottie(() => { if (lottieDiv.isConnected) playLottie(); });
       }
       // set default aspect ratio to match native animation size (141:43)
       if (!block._freeAspect && !block.preset) {
@@ -19582,7 +19635,8 @@ document.addEventListener('DOMContentLoaded', () => {
 (function () {
   const el = document.getElementById('nb-exp-star');
   const btn = document.getElementById('nb-exp');
-  if (!el || !btn || typeof lottie === 'undefined') return;
+  if (!el || !btn) return;
+  whenLottie(() => {
 
   const anim = lottie.loadAnimation({
     container: el,
@@ -19593,13 +19647,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   btn.addEventListener('click', () => anim.goToAndPlay(0, true));
+  });
 })();
 
 /* ── Invoice tab's receipt Lottie ── same behaviour as the star. */
 (function () {
   const el = document.getElementById('nb-invoice-icon');
   const btn = document.getElementById('nb-invoice');
-  if (!el || !btn || typeof lottie === 'undefined') return;
+  if (!el || !btn) return;
+  whenLottie(() => {
 
   const anim = lottie.loadAnimation({
     container: el,
@@ -19610,15 +19666,18 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   btn.addEventListener('click', () => anim.goToAndPlay(0, true));
+  });
 })();
 
 // The Contact tab's Iconly ticket, the same way.
 (function () {
   const el = document.getElementById('nb-soon-icon');
   const btn = document.getElementById('nb-soon');
-  if (!el || !btn || typeof lottie === 'undefined') return;
-  const anim = lottie.loadAnimation({ container: el, renderer: 'svg', loop: false, autoplay: true, path: '/contact-icon.json' });
-  btn.addEventListener('click', () => anim.goToAndPlay(0, true));
+  if (!el || !btn) return;
+  whenLottie(() => {
+    const anim = lottie.loadAnimation({ container: el, renderer: 'svg', loop: false, autoplay: true, path: '/contact-icon.json' });
+    btn.addEventListener('click', () => anim.goToAndPlay(0, true));
+  });
 })();
 
 
