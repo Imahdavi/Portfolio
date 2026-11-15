@@ -14195,6 +14195,11 @@ async function openProject(key) {
     }
     _projectsAt = Date.now();
   } catch(e) {}
+  /* Let the click that opened this finish first. With no fetch to wait on,
+     the board would be drawn while that click is still travelling up to
+     the document — where the media viewer asks what is under the pointer,
+     finds one of this board's clips already there, and opens it too. */
+  else await new Promise(r => setTimeout(r, 0));
   const p = PROJECTS[key];
   document.getElementById('d-title').textContent = p.name || '';
   document.getElementById('d-sub').textContent   = p.sub  || '';
