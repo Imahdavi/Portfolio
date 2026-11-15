@@ -21493,7 +21493,14 @@ void main () {
   // a photo or a video frame, brightness itself is the signal.
   float lum = dot(pixel.rgb, vec3(0.299, 0.587, 0.114));
   float amount = clamp((lum - 0.5) * uContrast + 0.5 + uBrightness, 0.0, 1.0);
-  amount = mix(amount, 1.0 - amount, clamp(uInvert, 0.0, 1.0));
+  // A frame that is dark nearly all over (a navy background, a night shot)
+  // gives every cell the blank glyph, so the lens drew nothing at all on
+  // it. The texture's top mip level is the frame's average colour; when
+  // that is dark the density is read the other way round, and the dark
+  // areas fill with characters instead of the bright ones.
+  float avgLum = dot(textureLod(uContent, vec2(0.5), 16.0).rgb, vec3(0.299, 0.587, 0.114));
+  float autoInvert = 1.0 - S(0.16, 0.3, avgLum);
+  amount = mix(amount, 1.0 - amount, clamp(max(uInvert, autoInvert), 0.0, 1.0));
 
   int index = min(int(amount * float(uGlyphCount)), uGlyphCount - 1);
 
