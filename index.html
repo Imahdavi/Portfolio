@@ -3776,7 +3776,10 @@
        for the cursor-tracked rotate + this layer's position, which are the
        source's own math). overlay blend reads as a glass reflection on top
        of real photos/video instead of a flat white wash. */
+    /* Off: it washed a white patch over the media under the cursor, on top
+       of the ascii lens that replaced it. The tilt itself stays. */
     .media-tilt-glare {
+      display:none;
       position:absolute; inset:0; z-index:5; pointer-events:none;
       opacity:0; transition:opacity .25s ease; mix-blend-mode:overlay;
     }
@@ -21501,10 +21504,11 @@ void main () {
   float avgLum = dot(textureLod(uContent, vec2(0.5), 16.0).rgb, vec3(0.299, 0.587, 0.114));
   float autoInvert = 1.0 - S(0.16, 0.3, avgLum);
   amount = mix(amount, 1.0 - amount, clamp(max(uInvert, autoInvert), 0.0, 1.0));
-  // Only the light end of the ramp — dots and dashes — on every frame, so
-  // the lens reads as fine stipple everywhere rather than dense letters
-  // on bright media.
-  amount = 0.1 + amount * 0.32;
+  // Two glyphs only, the short dash and the dot pair next to it, whatever
+  // the media: across the whole ramp a pale frame drew single-pixel dots and
+  // a dark one three-pixel dashes, so the same lens looked a different size
+  // from board to board. Brightness now only picks between those two.
+  amount = 0.22 + amount * 0.12;
 
   int index = min(int(amount * float(uGlyphCount)), uGlyphCount - 1);
 
