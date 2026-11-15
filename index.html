@@ -21501,6 +21501,10 @@ void main () {
   float avgLum = dot(textureLod(uContent, vec2(0.5), 16.0).rgb, vec3(0.299, 0.587, 0.114));
   float autoInvert = 1.0 - S(0.16, 0.3, avgLum);
   amount = mix(amount, 1.0 - amount, clamp(max(uInvert, autoInvert), 0.0, 1.0));
+  // Only the light end of the ramp — dots and dashes — on every frame, so
+  // the lens reads as fine stipple everywhere rather than dense letters
+  // on bright media.
+  amount = 0.1 + amount * 0.32;
 
   int index = min(int(amount * float(uGlyphCount)), uGlyphCount - 1);
 
