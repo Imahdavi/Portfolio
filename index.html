@@ -5385,9 +5385,18 @@
     #xm-btn .xm-fw svg [fill]:not([fill="none"])     { fill:currentColor !important; }
     #xm-btn .xm-fw svg [stroke]:not([stroke="none"]) { stroke:currentColor !important; }
     #xm-btn:focus-visible { outline:2px solid #e8473f; outline-offset:4px; border-radius:50%; }
-    /* Lit: no glow round the tree (on the dark page it blurred the
-       drawing), just its shadow; the ornaments and star show it's on. */
+    /* Lit: a warm glow behind the tree. Not a filter on the tree itself —
+       that blurred the drawing on the dark page — but a soft halo drawn
+       on a layer underneath, breathing slowly, so the tree stays sharp. */
     body.christmas #xm-btn { filter:drop-shadow(0 6px 8px rgba(0,0,0,.4)); }
+    #xm-btn::before {
+      content:''; position:absolute; left:50%; top:50%; width:64px; height:64px; z-index:-1;
+      border-radius:50%; pointer-events:none; opacity:0; transform:translate(-50%,-50%) scale(.6);
+      background:radial-gradient(circle, rgba(255,214,102,.75) 0%, rgba(255,150,60,.42) 36%, rgba(230,50,70,.18) 58%, transparent 72%);
+      transition:opacity .5s ease, transform .6s cubic-bezier(.34,1.56,.64,1);
+    }
+    body.christmas #xm-btn::before { opacity:1; transform:translate(-50%,-50%) scale(1); animation:xmHalo 2.8s ease-in-out infinite; }
+    @keyframes xmHalo { 0%,100% { opacity:.75; transform:translate(-50%,-50%) scale(.92); } 50% { opacity:1; transform:translate(-50%,-50%) scale(1.08); } }
     /* Lit, the ornaments twinkle and the star shines. */
     body.christmas #xm-btn .xm-orns circle { animation:xmTwinkle 2.4s steps(1) infinite; }
     body.christmas #xm-btn .xm-orns circle:nth-child(2n) { animation-delay:-.8s; }
@@ -5438,7 +5447,7 @@
     @keyframes xmWin { 0%,100% { opacity:1; } 40% { opacity:.82; } 43% { opacity:1; } 70% { opacity:.9; } }
     @media (max-width:600px) { #xm-layer .xm-bulb { width:11px; height:20px; margin-left:-5.5px; } }
     @media (prefers-reduced-motion:reduce) {
-      #xm-btn, #xm-btn .xm-orns circle, .xm-perch, #xm-layer .xm-bulb, #xm-layer .xm-bulb .xm-glass, #xm-layer .xm-globe.shake, #xm-layer .xm-globe.nudge, #xm-layer .xm-win { animation:none; }
+      #xm-btn, #xm-btn::before, #xm-btn .xm-orns circle, .xm-perch, #xm-layer .xm-bulb, #xm-layer .xm-bulb .xm-glass, #xm-layer .xm-globe.shake, #xm-layer .xm-globe.nudge, #xm-layer .xm-win { animation:none; }
     }
 
     #bottom-nav {
