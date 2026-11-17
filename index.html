@@ -5505,20 +5505,18 @@
        three wider. Both read as a different size rather than a different
        drawing, which is what made them look out of place. Scaling the
        rendered SVG rather than the box leaves nav spacing untouched. */
-    #nb-exp-star   { --nav-lottie-scale:1.12; }
+    /* The Experience icon is the crown now, drawn at the same size as the
+       Home and Contact files; the 1.12 the old star needed made the crown
+       a size up from its neighbours with the same 1.67px line, which read
+       as a thinner stroke. */
     #nb-invoice-icon { --nav-lottie-scale:1.14; }   /* receipt: 14.8 x 18 -> about 17 x 20.5 */
     /* !important: lottie-web sets its own inline transform (a no-op
        translate3d(0,0,0)) on this svg every frame, which otherwise wins
        over a plain stylesheet rule regardless of selector weight. */
     .nav-lottie-icon svg { transform:scale(var(--nav-lottie-scale)) !important; transform-origin:50% 50%; }
-    /* One line weight across the bar. Each Iconly file is drawn at its own
-       stroke on a 512 board and some are scaled up to match the others'
-       size, so the same "outline" came out anywhere from 1.38 to 1.68px.
-       Measured on screen instead: every stroke is 1.5px whatever the file
-       or its scale. */
-    .nav-lottie-icon svg [stroke]:not([stroke="none"]),
+    /* Spider Sound's animated mute icon on the same 1.67px line. */
     #sound-toggle-btn .sound-mute-lottie svg [stroke]:not([stroke="none"]) {
-      vector-effect:non-scaling-stroke; stroke-width:1.5px !important;
+      vector-effect:non-scaling-stroke; stroke-width:1.67px !important;
     }
 
     /* ── Nav tooltip ── */
