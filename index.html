@@ -632,13 +632,25 @@
        like the Lotties beside it play: the frame traces itself, then the
        stem, the n and the dot follow. Once on load, and again on hover
        (the .sb-redraw class is toggled by the handler with the Lotties). */
-    .social-btn svg.sb-draw { width:20px; height:20px; fill:none; stroke:currentColor; }
-    .sb-draw path[pathLength] { stroke-dasharray:1; stroke-dashoffset:1; animation:sbDraw .7s cubic-bezier(.65,0,.35,1) forwards; animation-delay:calc(var(--d, 0) * .14s); }
-    .sb-draw .sb-dot { opacity:0; transform-box:fill-box; transform-origin:50% 50%; animation:sbDot .35s cubic-bezier(.34,1.56,.64,1) .55s forwards; }
-    .sb-draw.sb-redraw path[pathLength], .sb-draw.sb-redraw .sb-dot { animation:none; }
-    @keyframes sbDraw { to { stroke-dashoffset:0; } }
-    @keyframes sbDot { from { opacity:0; transform:scale(0); } to { opacity:1; transform:scale(1); } }
-    @media (prefers-reduced-motion: reduce) { .sb-draw path[pathLength], .sb-draw .sb-dot { animation:none; stroke-dashoffset:0; opacity:1; } }
+    .social-btn svg.sb-draw { width:20px; height:20px; fill:none; stroke:currentColor; overflow:visible; transform-origin:50% 60%; }
+    /* On load: the frame draws itself while the whole mark swings in from
+       a tilt and settles with an overshoot, the stem and the n follow, and
+       the dot drops in from above and bounces. */
+    .sb-draw { animation:sbSwing .9s cubic-bezier(.34,1.56,.64,1) both; }
+    .sb-draw path[pathLength] { stroke-dasharray:1; stroke-dashoffset:1; animation:sbDraw .6s cubic-bezier(.65,0,.35,1) forwards; animation-delay:calc(.1s + var(--d, 0) * .12s); }
+    .sb-draw .sb-dot { opacity:0; transform-box:fill-box; transform-origin:50% 100%; animation:sbDrop .6s cubic-bezier(.34,1.56,.64,1) .55s forwards; }
+    /* On hover: a quick wiggle, the stem and n redraw, and the dot hops. */
+    .sb-draw.sb-hover { animation:sbWiggle .6s ease-in-out; }
+    .sb-draw.sb-hover path[style*="--d"] { animation:sbRedraw .5s cubic-bezier(.65,0,.35,1) forwards; animation-delay:calc(var(--d, 0) * .07s); }
+    .sb-draw.sb-hover .sb-dot { opacity:1; animation:sbHop .55s cubic-bezier(.34,1.56,.64,1) .1s; }
+    .sb-draw.sb-redraw, .sb-draw.sb-redraw path, .sb-draw.sb-redraw .sb-dot { animation:none !important; }
+    @keyframes sbDraw   { to { stroke-dashoffset:0; } }
+    @keyframes sbRedraw { from { stroke-dashoffset:1; } to { stroke-dashoffset:0; } }
+    @keyframes sbSwing  { from { transform:rotate(-18deg) scale(.6); } to { transform:none; } }
+    @keyframes sbWiggle { 0%,100% { transform:none; } 25% { transform:rotate(-10deg) scale(1.08); } 55% { transform:rotate(7deg); } 80% { transform:rotate(-3deg); } }
+    @keyframes sbDrop   { 0% { opacity:0; transform:translateY(-7px) scale(.4); } 60% { opacity:1; transform:translateY(1px) scale(1.15); } 100% { opacity:1; transform:none; } }
+    @keyframes sbHop    { 0%,100% { transform:none; } 40% { transform:translateY(-4px) scale(1.3); } 70% { transform:translateY(.5px) scale(.9); } }
+    @media (prefers-reduced-motion: reduce) { .sb-draw, .sb-draw path, .sb-draw .sb-dot { animation:none !important; stroke-dashoffset:0; opacity:1; } }
     .social-btn .sb-lottie svg { width:100% !important; height:100% !important; fill:none; transform:none; }
     .social-btn .sb-lottie svg [fill]:not([fill="none"])     { fill:currentColor !important; }
     .social-btn .sb-lottie svg [stroke]:not([stroke="none"]) { stroke:currentColor !important; }
@@ -20256,9 +20268,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const svg = btn && btn.querySelector('.sb-draw');
   if (!svg) return;
   btn.addEventListener('mouseenter', () => {
+    svg.classList.remove('sb-hover');
     svg.classList.add('sb-redraw');
     void svg.getBoundingClientRect();
     svg.classList.remove('sb-redraw');
+    svg.classList.add('sb-hover');
   });
 })();
 
