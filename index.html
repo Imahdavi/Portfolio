@@ -628,6 +628,17 @@
        the attribute lottie wrote, not by the flat-glyph rule above. */
     .social-btn .sb-lottie { position:relative; z-index:1; width:20px; height:20px; display:block; pointer-events:none; transition:transform .3s ease-out; }
     .social-btn:hover .sb-lottie { transform:scale(1.12); }
+    /* LinkedIn: Iconly's line "Linkedin Square" as an inline SVG, drawn on
+       like the Lotties beside it play: the frame traces itself, then the
+       stem, the n and the dot follow. Once on load, and again on hover
+       (the .sb-redraw class is toggled by the handler with the Lotties). */
+    .social-btn svg.sb-draw { width:20px; height:20px; fill:none; stroke:currentColor; }
+    .sb-draw path[pathLength] { stroke-dasharray:1; stroke-dashoffset:1; animation:sbDraw .7s cubic-bezier(.65,0,.35,1) forwards; animation-delay:calc(var(--d, 0) * .14s); }
+    .sb-draw .sb-dot { opacity:0; transform-box:fill-box; transform-origin:50% 50%; animation:sbDot .35s cubic-bezier(.34,1.56,.64,1) .55s forwards; }
+    .sb-draw.sb-redraw path[pathLength], .sb-draw.sb-redraw .sb-dot { animation:none; }
+    @keyframes sbDraw { to { stroke-dashoffset:0; } }
+    @keyframes sbDot { from { opacity:0; transform:scale(0); } to { opacity:1; transform:scale(1); } }
+    @media (prefers-reduced-motion: reduce) { .sb-draw path[pathLength], .sb-draw .sb-dot { animation:none; stroke-dashoffset:0; opacity:1; } }
     .social-btn .sb-lottie svg { width:100% !important; height:100% !important; fill:none; transform:none; }
     .social-btn .sb-lottie svg [fill]:not([fill="none"])     { fill:currentColor !important; }
     .social-btn .sb-lottie svg [stroke]:not([stroke="none"]) { stroke:currentColor !important; }
@@ -6090,7 +6101,12 @@ one keyframe at a time</div>
       <span class="contact-lbl" id="contactLblBefore">Contact me:</span>
       <div class="social-dock">
           <a class="social-btn" id="link-linkedin" href="https://linkedin.com/in/imahdavi" target="_blank" aria-label="LinkedIn"><span class="sb-tip">LinkedIn</span>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M11.1117 0H0.885937C0.396094 0 0 0.386719 0 0.864844V11.1328C0 11.6109 0.396094 12 0.885937 12H11.1117C11.6016 12 12 11.6109 12 11.1352V0.864844C12 0.386719 11.6016 0 11.1117 0ZM3.56016 10.2258H1.77891V4.49766H3.56016V10.2258ZM2.66953 3.71719C2.09766 3.71719 1.63594 3.25547 1.63594 2.68594C1.63594 2.11641 2.09766 1.65469 2.66953 1.65469C3.23906 1.65469 3.70078 2.11641 3.70078 2.68594C3.70078 3.25312 3.23906 3.71719 2.66953 3.71719ZM10.2258 10.2258H8.44687V7.44141C8.44687 6.77813 8.43516 5.92266 7.52109 5.92266C6.59531 5.92266 6.45469 6.64688 6.45469 7.39453V10.2258H4.67813V4.49766H6.38437V5.28047H6.40781C6.64453 4.83047 7.22578 4.35469 8.09063 4.35469C9.89297 4.35469 10.2258 5.54063 10.2258 7.08281V10.2258V10.2258Z"/></svg>
+            <svg class="sb-draw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path pathLength="1" d="M7.78216 3H16.2169C19.165 3 21 5.08119 21 8.02638V15.9736C21 18.9188 19.165 21 16.2159 21H7.78216C4.83405 21 3 18.9188 3 15.9736V8.02638C3 5.08119 4.84281 3 7.78216 3Z"/>
+              <path pathLength="1" style="--d:1" d="M7.88281 10.9922V15.8005"/>
+              <path pathLength="1" style="--d:2" d="M11.1611 15.801V12.4308C11.1611 11.0328 12.2955 9.89844 13.6935 9.89844C15.0927 9.89844 16.2259 11.0328 16.2259 12.4308V15.801"/>
+              <path class="sb-dot" style="--d:1" d="M7.88391 8.30233V8.32904M7.99214 8.30807C7.99214 8.36819 7.94336 8.41693 7.88324 8.41693C7.82312 8.41693 7.77441 8.36819 7.77441 8.30807C7.77441 8.24795 7.82312 8.19922 7.88324 8.19922C7.94336 8.19922 7.99214 8.24795 7.99214 8.30807Z"/>
+            </svg>
           </a>
           <a class="social-btn" id="link-instagram" href="https://instagram.com/imahdvi" target="_blank" aria-label="Instagram"><span class="sb-tip">Instagram</span>
             <span class="sb-lottie" aria-hidden="true"></span>
@@ -20230,6 +20246,19 @@ document.addEventListener('DOMContentLoaded', () => {
   whenLottie(() => {
     const anim = lottie.loadAnimation({ container: el, renderer: 'svg', loop: false, autoplay: true, path: '/media/site/home-icon.json' });
     btn.addEventListener('click', () => anim.goToAndPlay(0, true));
+  });
+})();
+
+// LinkedIn's drawn-on SVG replays the same way: drop the animation for a
+// frame, then let it run again.
+(function () {
+  const btn = document.getElementById('link-linkedin');
+  const svg = btn && btn.querySelector('.sb-draw');
+  if (!svg) return;
+  btn.addEventListener('mouseenter', () => {
+    svg.classList.add('sb-redraw');
+    void svg.getBoundingClientRect();
+    svg.classList.remove('sb-redraw');
   });
 })();
 
