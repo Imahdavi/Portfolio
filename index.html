@@ -5389,10 +5389,17 @@
        that blurred the drawing on the dark page — but a soft halo drawn
        on a layer underneath, breathing slowly, so the tree stays sharp. */
     body.christmas #xm-btn { filter:drop-shadow(0 6px 8px rgba(0,0,0,.4)); }
+    /* The glow takes the colours of what it sits behind: green round the
+       tree, gold at the star on its tip, red at the firework rocket by its
+       shoulder. Three soft spots on one 84px layer centred on the button
+       (positions are the button's own, shifted by the 23px margin). */
     #xm-btn::before {
-      content:''; position:absolute; left:50%; top:50%; width:64px; height:64px; z-index:-1;
-      border-radius:50%; pointer-events:none; opacity:0; transform:translate(-50%,-50%) scale(.6);
-      background:radial-gradient(circle, rgba(255,214,102,.75) 0%, rgba(255,150,60,.42) 36%, rgba(230,50,70,.18) 58%, transparent 72%);
+      content:''; position:absolute; left:50%; top:50%; width:84px; height:84px; z-index:-1;
+      pointer-events:none; opacity:0; transform:translate(-50%,-50%) scale(.6);
+      background:
+        radial-gradient(circle 17px at 42px 26px, rgba(255,214,80,1), rgba(255,200,60,.45) 45%, transparent),
+        radial-gradient(circle 18px at 61px 24px, rgba(255,50,80,.9), rgba(235,40,70,.38) 45%, transparent),
+        radial-gradient(ellipse 30px 34px at 42px 46px, rgba(70,220,120,.8), rgba(60,200,110,.3) 50%, transparent);
       transition:opacity .5s ease, transform .6s cubic-bezier(.34,1.56,.64,1);
     }
     body.christmas #xm-btn::before { opacity:1; transform:translate(-50%,-50%) scale(1); animation:xmHalo 2.8s ease-in-out infinite; }
