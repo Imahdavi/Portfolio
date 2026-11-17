@@ -2734,6 +2734,20 @@
     .home-card-thumb:hover { background:rgba(0,0,0,.5); }
     .home-card-thumb svg { width:22px; height:22px; stroke:#fff; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
     #view-home.home-edit .home-card-thumb { display:flex; }
+    .home-card-bg {
+      display:none; position:absolute; left:8px; bottom:8px; z-index:10;
+      width:28px; height:28px; border-radius:8px; border:none; cursor:pointer;
+      background:rgba(253,251,248,.92); align-items:center; justify-content:center;
+      box-shadow:0 2px 8px rgba(0,0,0,.18); transition:transform .15s;
+    }
+    .home-card-bg:hover { transform:scale(1.1); }
+    .home-card-bg svg { width:16px; height:16px; fill:none; stroke:#1a1714; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+    #view-home.home-edit .home-card-bg { display:flex; }
+    .card-bg-pop {
+      position:fixed; z-index:1000; display:flex; gap:6px; padding:8px 10px;
+      background:rgba(26,23,20,.94); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.3);
+      animation:fadeUp .15s ease both;
+    }
     .proj-card[data-hidden="true"] { display:none; }
     #view-home.home-edit .proj-card[data-hidden="true"] { display:block; opacity:.28; filter:grayscale(.6); }
     #view-home.home-edit .proj-card[data-hidden="true"] .home-card-hide { background:rgba(60,110,230,.7); }
@@ -14447,7 +14461,10 @@ function renderHomeSections(sections) {
       const el = document.createElement('div');
       el.className = 'proj-card';
       el.onclick = () => openProject(card.key);
-      const thumbBg = card.thumb ? '' : ' style="background:linear-gradient(135deg,var(--thumb-a),var(--thumb-b))"';
+      // card.bg: the colour behind a see-through thumbnail (set in edit mode).
+      const thumbBg = card.thumb
+        ? (card.bg && /^(#[0-9a-f]{3,8}|transparent)$/i.test(card.bg) ? ` style="background:${card.bg}"` : '')
+        : ' style="background:linear-gradient(135deg,var(--thumb-a),var(--thumb-b))"';
       // Same gradient the no-thumb case uses, reapplied if the image itself
       // fails to load (backend down, or the thumb was deleted) so the card
       // degrades to a clean placeholder instead of a broken-image icon.
@@ -14456,6 +14473,7 @@ function renderHomeSections(sections) {
       // detached it, which would otherwise throw on p.style.
       const thumbImg = card.thumb ? `<img src="${card.thumb}" alt="${card.name}" onerror="var p=this.parentNode;if(p)p.style.background='linear-gradient(135deg,var(--thumb-a),var(--thumb-b))';this.remove()"/>` : '';
       el.dataset.key = card.key;
+      if (card.bg) el.dataset.bg = card.bg;
       if (card.hidden) el.dataset.hidden = 'true';
       el.innerHTML = `<div class="proj-thumb"${thumbBg}>${thumbImg}</div><div class="proj-title">${card.name}</div><div class="proj-sub">${card.sub||''}</div>`;
       grid.appendChild(el);
@@ -15605,6 +15623,7 @@ function _updateHomeEditUI() {
         document.getElementById('thumbInput').click();
       });
       card.querySelector('.proj-thumb').appendChild(thumbBtn);
+      card.querySelector('.proj-thumb').appendChild(_cardBgButton(card));
     });
     // + add button at end of each section grid
     homeEl.querySelectorAll('.card-grid').forEach(grid => {
@@ -15616,7 +15635,8 @@ function _updateHomeEditUI() {
       grid.appendChild(btn);
     });
   } else {
-    homeEl.querySelectorAll('.home-card-del, .home-card-hide, .home-card-thumb, .card-add-btn').forEach(el => el.remove());
+    homeEl.querySelectorAll('.home-card-del, .home-card-hide, .home-card-thumb, .home-card-bg, .card-add-btn').forEach(el => el.remove());
+    document.querySelectorAll('.card-bg-pop').forEach(el => el.remove());
     saveHomeEdits();
     // Name may have changed while editing — rebuild the big display
     // version from the plain field and replay its reveal.
@@ -15806,6 +15826,7 @@ function saveHomeEdits() {
       const card = { ...(_prevCards[key] || {}), key, name, sub };
       if (thumb) card.thumb = thumb; else delete card.thumb;
       if (hidden) card.hidden = true; else delete card.hidden;
+      if (cardEl.dataset.bg) card.bg = cardEl.dataset.bg; else delete card.bg;
       // It has a tile, so by definition it is not list-only.
       delete card.listOnly;
       cards.push(card);
@@ -19343,6 +19364,68 @@ function shrinkThumb(file, maxPx = 800, quality = 0.82) {
     img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
     img.src = url;
   });
+}
+
+/* The colour behind a card's thumbnail, for PNGs (and the WebPs they become)
+   with see-through parts. Kept on the tile as data-bg until the grid is
+   saved, which writes it to card.bg. */
+const CARD_BG_SWATCHES = [['', 'None'], ['#ffffff', 'White'],
+  ['#f3efe8', 'Cream'], ['#ececec', 'Grey'], ['#000000', 'Black']];
+function _cardBgButton(card) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'home-card-bg';
+  btn.title = 'Background colour';
+  btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18c1.1 0 1.6-.8 1.6-1.6 0-.5-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a5 5 0 005-5C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg>';
+  btn.addEventListener('pointerdown', e => e.stopPropagation());
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = document.querySelector('.card-bg-pop');
+    if (open) { const same = open._card === card; open.remove(); if (same) return; }
+    const thumb = card.querySelector('.proj-thumb');
+    const pop = document.createElement('div');
+    pop.className = 'card-bg-pop';
+    pop._card = card;
+    const apply = (val, save) => {
+      if (val) card.dataset.bg = val; else delete card.dataset.bg;
+      thumb.style.background = val || '';
+      pop.querySelectorAll('.rsz-bg').forEach(s => s.classList.toggle('active',
+        s.classList.contains('rsz-bg-custom') ? !!val && !CARD_BG_SWATCHES.some(([v]) => v === val) : (s.dataset.val || '') === (val || '')));
+      if (save) saveHomeEdits();
+    };
+    CARD_BG_SWATCHES.forEach(([val, label]) => {
+      const s = document.createElement('button');
+      s.type = 'button';
+      s.className = 'rsz-bg' + (val === 'transparent' ? ' is-none' : '');
+      s.dataset.val = val;
+      s.title = label;
+      if (val && val !== 'transparent') s.style.background = val;
+      else if (!val) s.classList.add('is-none');
+      s.onclick = (ev) => { ev.stopPropagation(); apply(val, true); };
+      pop.appendChild(s);
+    });
+    const custom = document.createElement('label');
+    custom.className = 'rsz-bg rsz-bg-custom';
+    custom.title = 'Pick a colour';
+    const picker = document.createElement('input');
+    picker.type = 'color';
+    picker.value = /^#[0-9a-f]{6}$/i.test(card.dataset.bg || '') ? card.dataset.bg : '#3b82f6';
+    picker.addEventListener('input', () => apply(picker.value, false));
+    picker.addEventListener('change', () => apply(picker.value, true));
+    custom.appendChild(picker);
+    pop.appendChild(custom);
+    pop.addEventListener('click', ev => ev.stopPropagation());
+    pop.addEventListener('pointerdown', ev => ev.stopPropagation());
+    document.body.appendChild(pop);
+    apply(card.dataset.bg || '', false);
+    const r = btn.getBoundingClientRect();
+    pop.style.left = Math.max(8, Math.min(innerWidth - pop.offsetWidth - 8, r.left)) + 'px';
+    pop.style.top = (r.bottom + 6 + pop.offsetHeight > innerHeight ? r.top - pop.offsetHeight - 6 : r.bottom + 6) + 'px';
+    setTimeout(() => document.addEventListener('pointerdown', function off(ev) {
+      if (!pop.contains(ev.target)) { pop.remove(); document.removeEventListener('pointerdown', off); }
+    }), 0);
+  });
+  return btn;
 }
 
 document.getElementById('thumbInput').addEventListener('change', async function() {
