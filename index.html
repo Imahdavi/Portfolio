@@ -3992,6 +3992,26 @@
       box-shadow:0 8px 24px rgba(0,0,0,.28);
     }
     .move-menu.open { display:flex; animation:fadeUp .15s ease both; }
+    /* Several blocks at once (see blkSel). */
+    #block-list .blk-selected .media-inner,
+    #block-list .blk-selected:not(:has(.media-inner)) { outline:2px solid #3b82f6; outline-offset:3px; border-radius:12px; }
+    .block-pick .pick-tick { opacity:0; }
+    .blk-selected .block-pick { background:#3b82f6; }
+    .blk-selected .block-pick .pick-tick { opacity:1; }
+    #blk-selbar {
+      position:fixed; left:50%; bottom:92px; z-index:900; display:none; align-items:center; gap:4px;
+      transform:translateX(-50%); padding:6px; border-radius:12px;
+      background:rgba(26,23,20,.94); backdrop-filter:blur(8px); color:#fff;
+      box-shadow:0 10px 30px rgba(0,0,0,.3); font:500 12.5px/1 var(--font-body); white-space:nowrap;
+    }
+    #blk-selbar.open { display:flex; animation:fadeUp .18s ease both; }
+    #blk-selbar .bsb-count { padding:0 10px 0 6px; opacity:.75; }
+    #blk-selbar .bsb-btn { border:0; background:rgba(255,255,255,.08); color:#fff; padding:8px 11px; border-radius:8px; cursor:pointer; font:inherit; }
+    #blk-selbar .bsb-btn:hover { background:rgba(255,255,255,.18); }
+    #blk-selbar .bsb-del:hover { background:#dc2626; }
+    #blk-selbar .bsb-sep { width:1px; height:18px; background:rgba(255,255,255,.15); margin:0 3px; }
+    #blk-selbar .bsb-x { border:0; background:none; color:#fff; opacity:.6; font-size:18px; width:28px; height:28px; cursor:pointer; border-radius:8px; }
+    #blk-selbar .bsb-x:hover { opacity:1; background:rgba(255,255,255,.1); }
     /* flex:none, or the column squeezes every item to fit the 260px cap.
        overflow:hidden (there for the ellipsis) takes away a flex item's
        minimum height, so with many boards each row was crushed below its
@@ -14711,6 +14731,7 @@ async function openProject(key) {
 }
 
 function closeProject() {
+  if (typeof blkSelClear === 'function') blkSelClear();
   teardownScrollReveal();
   document.querySelectorAll('#view-project video').forEach(v => { v.pause(); v.muted = true; });
   const navBtn = document.getElementById(NAV_MAP[prevMain] || 'nb-home');
@@ -15470,6 +15491,7 @@ function updateEditUI() {
       if (ev.key === 'Enter') { ev.preventDefault(); el.blur(); }
     }));
   }
+  if (typeof blkSelSync === 'function') blkSelSync();
 }
 
 /* ─── Home edit mode ────────────────────────────────────── */
@@ -16389,6 +16411,7 @@ function renderBlocks(animate) {
       setupScrollReveal();
     });
   });
+  if (typeof blkSelSync === 'function') blkSelSync();
 }
 
 /* ─── Divider block — Osmo's "Draw Random Underline" squiggle ──
@@ -16986,6 +17009,16 @@ function makeBlockEl(block, proj) {
   del.title = 'Delete section';
   del.onclick = (e) => { e.stopPropagation(); deleteBlock(block.id); };
 
+  // Select, for moving or copying several blocks at once (see blkSel).
+  // Ctrl/Cmd/Shift-click on the block itself does the same.
+  const pick = document.createElement('button');
+  pick.type = 'button';
+  pick.className = 'block-pick blk-bar-btn';
+  pick.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path class="pick-tick" d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>';
+  pick.title = 'Select (Ctrl/Shift-click a block to add it)';
+  pick.onclick = (e) => { e.stopPropagation(); blkSelToggle(block.id); };
+  bar.appendChild(pick);
+
   // Width first where it exists, then the two that make copies, then the
   // one that destroys — behind a rule, so it is never the button you hit
   // by being a few pixels out.
@@ -17018,7 +17051,9 @@ function makeBlockEl(block, proj) {
   // which is the whole point of it feeling like moving an app icon.
   wrap.addEventListener('pointerdown', (e) => {
     if (!editMode) return;
-    if (e.target.closest('button, video, [contenteditable], .resize-corner, .media-mute-btn')) return;
+    if (e.target.closest('button, .blk-bar, .resize-corner, .media-mute-btn')) return;
+    if (e.ctrlKey || e.metaKey || e.shiftKey) { e.preventDefault(); e.stopPropagation(); blkSelToggle(block.id); return; }
+    if (e.target.closest('video, [contenteditable]')) return;
     e.preventDefault();
     startFreeDrag(e, wrap);
   });
@@ -18984,6 +19019,167 @@ document.addEventListener('DOMContentLoaded', initReachMe);
 
 // Kept so existing callers of the old name reach the new menu.
 function openAddHereMenu(anchorBtn, afterId) { openAddBlockMenu(anchorBtn, afterId); }
+
+/* ─── Several blocks at once ───────────────────────────────────────
+   Edit mode: tick blocks with the select button on their toolbar (or
+   Ctrl/Cmd/Shift-click them) and a bar at the bottom moves or copies
+   the lot to another board, in their order on this one, or deletes
+   them. The selection is ids on the open board; it is dropped when the
+   board closes, edit mode ends, or a block in it no longer exists. */
+const _blkSel = new Set();
+
+function blkSelToggle(id) {
+  if (_blkSel.has(id)) _blkSel.delete(id); else _blkSel.add(id);
+  blkSelSync();
+}
+function blkSelClear() { _blkSel.clear(); blkSelSync(); }
+
+function blkSelBar() {
+  let bar = document.getElementById('blk-selbar');
+  if (bar) return bar;
+  bar = document.createElement('div');
+  bar.id = 'blk-selbar';
+  bar.innerHTML =
+    '<span class="bsb-count"></span>' +
+    '<button type="button" class="bsb-btn" data-act="move">Move to board</button>' +
+    '<button type="button" class="bsb-btn" data-act="copy">Copy to board</button>' +
+    '<button type="button" class="bsb-btn" data-act="all">Select all</button>' +
+    '<span class="bsb-sep"></span>' +
+    '<button type="button" class="bsb-btn bsb-del" data-act="del">Delete</button>' +
+    '<button type="button" class="bsb-x" data-act="clear" aria-label="Clear selection">×</button>';
+  bar.addEventListener('pointerdown', e => e.stopPropagation());
+  bar.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-act]');
+    if (!b) return;
+    e.stopPropagation();
+    const act = b.dataset.act;
+    if (act === 'clear') blkSelClear();
+    else if (act === 'all') { (PROJECTS[activeKey]?.blocks || []).forEach(x => _blkSel.add(x.id)); blkSelSync(); }
+    else if (act === 'del') deleteBlocks([..._blkSel]);
+    else openBoardPicker(b, (key) => moveBlocksToProject([..._blkSel], key, act === 'copy'));
+  });
+  document.body.appendChild(bar);
+  return bar;
+}
+
+function blkSelSync() {
+  const proj = PROJECTS[activeKey];
+  const live = new Set((proj?.blocks || []).map(b => b.id));
+  const on = typeof editMode !== 'undefined' && editMode && current === 'view-project';
+  [..._blkSel].forEach(id => { if (!on || !live.has(id)) _blkSel.delete(id); });
+  document.querySelectorAll('#block-list [data-id]').forEach(el =>
+    el.classList.toggle('blk-selected', _blkSel.has(el.dataset.id)));
+  const bar = blkSelBar();
+  const n = _blkSel.size;
+  bar.querySelector('.bsb-count').textContent = n + ' selected';
+  bar.classList.toggle('open', n > 0);
+}
+
+// Boards a block can go to: the Category grid's tiles, in its order.
+function boardTargets() {
+  return ((_cachedSettings && _cachedSettings.sections) || [])
+    .flatMap(sec => sec.cards || [])
+    .filter(c => c && !c.listOnly && !c.hidden && c.key !== activeKey && PROJECTS[c.key])
+    .map(c => c.key);
+}
+
+function openBoardPicker(anchorBtn, onPick) {
+  const menu = getMoveMenu();
+  if (menu.classList.contains('open') && menu._anchor === anchorBtn) { menu.classList.remove('open'); return; }
+  const targets = boardTargets();
+  menu.innerHTML = targets.length ? '' : '<div class="move-empty">No other boards</div>';
+  targets.forEach(k => {
+    const opt = document.createElement('button');
+    opt.type = 'button';
+    opt.className = 'move-opt';
+    opt.textContent = PROJECTS[k].name || k;
+    opt.onclick = () => { menu.classList.remove('open'); onPick(k); };
+    menu.appendChild(opt);
+  });
+  menu.style.visibility = 'hidden';
+  menu.classList.add('open');
+  const r = anchorBtn.getBoundingClientRect();
+  const mh = menu.offsetHeight, mw = menu.offsetWidth;
+  let top = r.top - mh - 8;
+  if (top < 8) top = Math.min(window.innerHeight - mh - 8, r.bottom + 6);
+  const left = Math.max(8, Math.min(window.innerWidth - mw - 8, r.left));
+  menu.style.top = top + 'px';
+  menu.style.left = left + 'px';
+  menu.style.visibility = '';
+  menu._anchor = anchorBtn;
+}
+
+// Moves (or copies) the blocks, keeping the order they have on this board,
+// to the end of the target board. A copy gets fresh ids all the way down.
+function moveBlocksToProject(ids, targetKey, copy) {
+  const srcKey = activeKey;
+  const src = PROJECTS[srcKey], dest = PROJECTS[targetKey];
+  if (!src || !dest || !ids.length) return;
+  const want = new Set(ids);
+  const picked = src.blocks.filter(b => want.has(b.id));
+  if (!picked.length) return;
+  const srcOrder = src.blocks.slice();   // so an undo puts them back where they were
+  if (copy) {
+    picked.forEach(b => dest.blocks.push(_cloneBlockDeep(b)));
+  } else {
+    src.blocks = src.blocks.filter(b => !want.has(b.id));
+    picked.forEach(b => {
+      if (b._lottieInst) { try { b._lottieInst.destroy(); } catch(e){} b._lottieInst = null; }
+      dest.blocks.push(b);
+    });
+    picked.forEach(b => {
+      const el = document.querySelector(`#block-list [data-id="${b.id}"]`);
+      if (el) { el.style.animation = 'fadeUp .2s reverse ease both'; setTimeout(() => el.remove(), 180); }
+    });
+    saveProject(srcKey);
+  }
+  saveProject(targetKey);
+  blkSelClear();
+  const n = picked.length;
+  showToast({ type: 'success', duration: 7000,
+    title: (copy ? 'Copied ' : 'Moved ') + n + ' block' + (n === 1 ? '' : 's'),
+    desc: 'To ' + (dest.name || targetKey),
+    action: copy ? null : { label: 'Undo', onClick: () => {
+      const s = PROJECTS[srcKey], d = PROJECTS[targetKey];
+      if (!s || !d) return;
+      const back = new Set(picked.map(b => b.id));
+      d.blocks = d.blocks.filter(b => !back.has(b.id));
+      const now = new Set(s.blocks.map(b => b.id));
+      s.blocks = srcOrder.filter(b => back.has(b.id) || now.has(b.id))
+        .concat(s.blocks.filter(b => !srcOrder.includes(b)));
+      saveProject(srcKey); saveProject(targetKey);
+      if (activeKey === srcKey) renderBlocks();
+    } } });
+}
+
+function deleteBlocks(ids) {
+  const key = activeKey, proj = PROJECTS[key];
+  if (!proj || !ids.length) return;
+  const want = new Set(ids);
+  const before = proj.blocks.slice();
+  const gone = before.filter(b => want.has(b.id));
+  gone.forEach(b => { if (b._lottieInst) { try { b._lottieInst.destroy(); } catch(e){} delete b._lottieInst; } });
+  proj.blocks = before.filter(b => !want.has(b.id));
+  gone.forEach(b => {
+    const el = document.querySelector(`#block-list [data-id="${b.id}"]`);
+    if (el) { el.style.animation = 'fadeUp .2s reverse ease both'; setTimeout(() => el.remove(), 180); }
+  });
+  saveProject(key);
+  blkSelClear();
+  showToast({ type: 'success', duration: 7000, title: gone.length + ' block' + (gone.length === 1 ? '' : 's') + ' deleted',
+    action: { label: 'Undo', onClick: () => {
+      const p = PROJECTS[key];
+      if (!p) return;
+      const now = new Set(p.blocks.map(b => b.id));
+      p.blocks = before.filter(b => want.has(b.id) || now.has(b.id));
+      saveProject(key);
+      if (activeKey === key) renderBlocks();
+    } } });
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && _blkSel.size) blkSelClear();
+});
 
 function moveBlockToProject(blockId, targetKey) {
   const srcKey = activeKey;
