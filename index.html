@@ -6839,7 +6839,7 @@ one keyframe at a time</div>
   </button>
   <button class="nav-btn" id="nb-soon" onclick="goView('view-soon',this)">
     <span class="nav-tip">Contact</span>
-    <!-- Iconly animated icon (/contact-icon.json), played like the Invoice
+    <!-- Iconly animated icon (/media/site/contact-icon.json), played like the Invoice
          and Experience icons: once on load, again on every tap. -->
     <div class="nav-lottie-icon" id="nb-soon-icon" aria-hidden="true"></div>
   </button>
@@ -20229,7 +20229,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btn = document.getElementById('nb-soon');
   if (!el || !btn) return;
   whenLottie(() => {
-    const anim = lottie.loadAnimation({ container: el, renderer: 'svg', loop: false, autoplay: true, path: '/contact-icon.json' });
+    const anim = lottie.loadAnimation({ container: el, renderer: 'svg', loop: false, autoplay: true, path: '/media/site/contact-icon.json' });
     btn.addEventListener('click', () => anim.goToAndPlay(0, true));
   });
 })();
