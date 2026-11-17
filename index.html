@@ -5511,6 +5511,15 @@
        translate3d(0,0,0)) on this svg every frame, which otherwise wins
        over a plain stylesheet rule regardless of selector weight. */
     .nav-lottie-icon svg { transform:scale(var(--nav-lottie-scale)) !important; transform-origin:50% 50%; }
+    /* One line weight across the bar. Each Iconly file is drawn at its own
+       stroke on a 512 board and some are scaled up to match the others'
+       size, so the same "outline" came out anywhere from 1.38 to 1.68px.
+       Measured on screen instead: every stroke is 1.5px whatever the file
+       or its scale. */
+    .nav-lottie-icon svg [stroke]:not([stroke="none"]),
+    #sound-toggle-btn .sound-mute-lottie svg [stroke]:not([stroke="none"]) {
+      vector-effect:non-scaling-stroke; stroke-width:1.5px !important;
+    }
 
     /* ── Nav tooltip ── */
     .nav-tip {
