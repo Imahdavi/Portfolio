@@ -3208,6 +3208,9 @@
     .tstack-chev { width:16px; height:16px; flex:none; transition:transform .2s; }
     .tstack-chev svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
     .tstack.open .tstack-chev { transform:rotate(180deg); }
+    .tstack-chev.is-lottie svg { fill:none; stroke:none; width:100% !important; height:100% !important; }
+    .tstack-chev.is-lottie svg [fill]:not([fill="none"])     { fill:currentColor !important; }
+    .tstack-chev.is-lottie svg [stroke]:not([stroke="none"]) { stroke:currentColor !important; }
 
     /* Opens on grid-template-rows, not max-height. A max-height run from
        0 to some number large enough for any list reaches the real height
@@ -17555,10 +17558,25 @@ function renderToolStackBlock(block, mount) {
 
   const chev = document.createElement('span');
   chev.className = 'tstack-chev';
+  // Iconly's animated "Down" arrow (media/site/tools-chevron.json), which
+  // plays on hover and on each open or close; the drawn chevron stands in
+  // until lottie-web has arrived, and stays if it never does.
   chev.innerHTML = TSTACK_CHEV;
   head.appendChild(chev);
+  let chevAnim = null;
+  // The stack is built before it is put on the page, so wait for that.
+  const mountChev = (tries = 0) => {
+    if (!chev.isConnected) { if (tries < 60) requestAnimationFrame(() => mountChev(tries + 1)); return; }
+    chev.innerHTML = '';
+    chev.classList.add('is-lottie');
+    chevAnim = lottie.loadAnimation({ container: chev, renderer: 'svg', loop: false, autoplay: false, path: '/media/site/tools-chevron.json' });
+    chevAnim.addEventListener('DOMLoaded', () => chevAnim.goToAndStop(chevAnim.totalFrames - 1, true));
+  };
+  whenLottie(() => mountChev());
+  const playChev = () => { if (chevAnim) chevAnim.goToAndPlay(0, true); };
+  head.addEventListener('mouseenter', playChev);
 
-  head.addEventListener('click', () => root.classList.toggle('open'));
+  head.addEventListener('click', () => { root.classList.toggle('open'); playChev(); });
   root.appendChild(head);
 
   const body = document.createElement('div');
