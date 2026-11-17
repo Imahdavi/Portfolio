@@ -751,6 +751,49 @@
       --vsw-on:#ededed;
     }
     .vsw-opt { display:flex; flex:1 1 auto; height:100%; }
+    .vsw-opt.vsw-admin { display:none; }
+    body.is-admin .vsw-opt.vsw-admin { display:flex; }
+    /* Tabs trial (see _renderHomeTabs): a timeline of boards. */
+    .htab-rail { position:relative; margin:4px -4px 22px; }
+    .htab-bar { display:flex; gap:4px; overflow-x:auto; scrollbar-width:none; padding:4px 4px 14px; scroll-snap-type:x proximity; position:relative; }
+    .htab-bar::-webkit-scrollbar { display:none; }
+    /* The timeline's line, under the tabs. */
+    .htab::before { content:''; position:absolute; left:-2px; right:-2px; bottom:-9px; height:1px; background:rgba(0,0,0,.1); }
+    .htab:first-child::before { left:50%; }
+    .htab:last-child::before { right:50%; }
+    .htab { position:relative; flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:6px; width:76px; padding:6px 4px 10px;
+      border:0; background:none; cursor:pointer; color:#8a8178; font:500 11.5px/1.2 var(--font-body); scroll-snap-align:center; }
+    .htab::after { content:''; position:absolute; bottom:-12px; left:50%; width:7px; height:7px; margin-left:-3.5px; border-radius:50%;
+      background:#d9d3cc; transition:transform .3s cubic-bezier(.34,1.56,.64,1), background .2s; }
+    .htab-th { width:52px; height:52px; border-radius:14px; overflow:hidden; display:flex; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.04); box-shadow:inset 0 0 0 1px rgba(0,0,0,.07); transition:transform .3s cubic-bezier(.34,1.56,.64,1), box-shadow .2s;
+      font:600 18px var(--font-title); color:#8a8178; }
+    .htab-th img { width:100%; height:100%; object-fit:cover; display:block; }
+    .htab-th svg { width:22px; height:22px; }
+    .htab-name { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .htab:hover .htab-th { transform:translateY(-2px); }
+    .htab.on { color:#1a1714; }
+    .htab.on .htab-th { box-shadow:0 0 0 2px #1a1714; transform:translateY(-2px); }
+    .htab.on::after { background:#1a1714; transform:scale(1.35); }
+    body.dark .htab::before { background:var(--d-line-2); }
+    body.dark .htab { color:var(--d-text-3); }
+    body.dark .htab-th { background:var(--d-surface); box-shadow:inset 0 0 0 1px var(--d-line-2); color:var(--d-text-3); }
+    body.dark .htab.on { color:var(--d-text); }
+    body.dark .htab.on .htab-th { box-shadow:0 0 0 2px var(--d-text); }
+    body.dark .htab::after { background:var(--d-line-2); }
+    body.dark .htab.on::after { background:var(--d-text); }
+    .htab-head { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:14px; animation:fadeUp .35s ease both; }
+    .htab-title { font:600 19px/1.25 var(--font-title); }
+    .htab-sub { font:400 12.5px/1.4 var(--font-body); color:#a89e91; margin-top:4px; }
+    .htab-open { flex:none; font:500 12.5px/1 var(--font-body); padding:8px 13px; border-radius:99px; cursor:pointer;
+      border:1px solid rgba(0,0,0,.12); background:transparent; color:inherit; }
+    .htab-open:hover { background:rgba(0,0,0,.05); }
+    body.dark .htab-open { border-color:var(--d-line-2); }
+    .htab-wall { columns:3 160px; column-gap:10px; }
+    .htab-tile { break-inside:avoid; margin-bottom:10px; border-radius:12px; overflow:hidden; cursor:pointer; background:rgba(0,0,0,.04);
+      animation:fadeUp .5s cubic-bezier(.22,1,.36,1) both; animation-delay:calc(var(--i) * 45ms); }
+    .htab-tile img, .htab-tile video { width:100%; height:100%; display:block; object-fit:cover; }
+    .htab-empty { font:400 13px var(--font-body); color:#a89e91; padding:24px 0; }
     /* The source hides the radio outright and lets the label carry the
        click. Kept, with the outline moved onto the chip so the control
        is still keyboard-navigable — display:none would drop it out of
@@ -806,7 +849,7 @@
        A phone has no room for a rail beside the rows, so this starts at
        760px — past any phone, and reached by a narrow desktop window; see
        initBrandTimeline, which also sits it out under reduced motion. */
-    @media (min-width:760px) {
+    @media all {
       #view-home .projects-list.pl-timeline { position:relative; padding-left:48px; }
       .pl-timeline .proj-list-item { position:relative; }
       /* The line, one piece per row (initBrandTimeline sets its top and
@@ -4892,6 +4935,23 @@
     body.dark .hw-edit-bar { color:var(--d-text-3); }
     body.dark .hw-edit-hint code { background:var(--d-raised); }
     .hw-strike { position:absolute; left:0; bottom:.30em; width:100%; height:.34em; overflow:visible; pointer-events:none; }
+    /* Experience bullets in edit mode (see ptsHtml). */
+    .xtl-pts-edit li { position:relative; }
+    .xtl-pt { outline:none; border-bottom:1px dashed rgba(0,0,0,.22); min-width:20px; display:inline; }
+    body.dark .xtl-pt { border-bottom-color:rgba(255,255,255,.25); }
+    .xtl-pt-del { margin-left:6px; width:18px; height:18px; border-radius:50%; border:0; cursor:pointer; vertical-align:middle;
+      background:rgba(220,38,38,.12); color:#dc2626; font:600 13px/18px var(--font-body); padding:0; }
+    .xtl-pt-del:hover { background:#dc2626; color:#fff; }
+    .xtl-pts-edit .xtl-pt-add-li { list-style:none; }
+    .xtl-pts-edit .xtl-pt-add-li::before, .xtl-pts-edit .xtl-pt-add-li::marker { content:none; }
+    .xtl-pt-add, .xtl-pt-reset { font:500 12px/1 var(--font-body); padding:6px 10px; margin:4px 6px 0 0; border-radius:99px; cursor:pointer;
+      border:1px dashed rgba(0,0,0,.25); background:none; color:inherit; opacity:.75; }
+    .xtl-pt-add:hover, .xtl-pt-reset:hover { opacity:1; }
+    /* Who am I? lines come in one after another: a fade and a short rise. */
+    @keyframes hw-line { from { opacity:0; transform:translateY(.5em); filter:blur(4px); } to { opacity:1; transform:none; filter:none; } }
+    .hw-lang[hidden] { display:none !important; }
+    .hw-edit-langs { display:inline-flex; align-items:center; gap:10px; }
+    .hw-edit-langs label { display:inline-flex; align-items:center; gap:4px; cursor:pointer; }
     @keyframes hw-write {
       from { clip-path:inset(-.4em calc(100% + .25em) -.4em -.25em); }
       to   { clip-path:inset(-.4em -.25em -.4em -.25em); }
@@ -6209,6 +6269,12 @@ one keyframe at a time</div>
         <input type="radio" name="home-view" value="list"
                aria-label="Brand timeline" onchange="setHomeView('list')">
         <span><span class="vsw-mark" id="hvtBrandIcon" aria-hidden="true"></span>Brand<i class="vsw-beta">timeline</i></span>
+      </label>
+      <!-- Admin only, a trial: the Category grid with tabs in place of its section headings. -->
+      <label class="vsw-opt vsw-admin">
+        <input type="radio" name="home-view" value="tabs"
+               aria-label="Tabs (test)" onchange="setHomeView('tabs')">
+        <span>Tabs<i class="vsw-beta">test</i></span>
       </label>
     </div>
     <div class="home-edit-hint">✎ Click text to edit &nbsp;·&nbsp; Drag to reorder &nbsp;·&nbsp; × to delete</div>
@@ -13709,7 +13775,7 @@ let _pliRevealObs = null;
    Desktop only: a phone has no room for a rail beside the rows, and the
    media strips already fill the width. Reduced motion gets every piece
    filled and every dot in place, with nothing animating. */
-const PL_MIN_WIDTH = 760;   // a phone never reaches this; a narrow desktop window does
+const PL_MIN_WIDTH = 0;     // every width, phones included
 const PL_MARK = 0.72;      // the scroll's reach, down the viewport
 let _plOff = null;
 
@@ -14438,6 +14504,8 @@ function renderHomeSections(sections) {
     return;
   }
 
+  if (homeView === 'tabs') { _renderHomeTabs(container, sections); return; }
+
   sections.forEach((sec, si) => {
     const label = document.createElement('div');
     label.className = 'sec-label';
@@ -14451,13 +14519,23 @@ function renderHomeSections(sections) {
     const grid = document.createElement('div');
     grid.className = 'card-grid sg';
     (sec.cards || []).forEach(card => {
+      if (card.listOnly) return;
+      grid.appendChild(_homeCardEl(card));
+    });
+    container.appendChild(_makeSecDelBtn(label, grid));
+    container.appendChild(grid);
+  });
+  _homeGridsIn(container);
+}
+
+// One tile of the Category grid; shared by the Tabs trial view.
+function _homeCardEl(card) {
       // Projects added from the Projects list view exist as cards only so the
       // list has somewhere to keep their name/meta — they were never meant to
       // appear as tiles here. hidden:true alone wasn't enough: the grid still
       // rendered them greyed-out in edit mode, so building a list cluttered
       // the home grid with ghost tiles. saveHomeEdits() carries them over
       // explicitly, since it rebuilds sections from this DOM.
-      if (card.listOnly) return;
       const el = document.createElement('div');
       el.className = 'proj-card';
       el.onclick = () => openProject(card.key);
@@ -14476,11 +14554,103 @@ function renderHomeSections(sections) {
       if (card.bg) el.dataset.bg = card.bg;
       if (card.hidden) el.dataset.hidden = 'true';
       el.innerHTML = `<div class="proj-thumb"${thumbBg}>${thumbImg}</div><div class="proj-title">${card.name}</div><div class="proj-sub">${card.sub||''}</div>`;
-      grid.appendChild(el);
+      return el;
+}
+
+/* Tabs (admin-only trial). A strip of tabs laid out like a timeline: All
+   first, then every board, each with its thumbnail. All is the Category
+   grid of every board; a board's tab shows that board's media right here,
+   with a link through to the board itself. Read-only: editing happens in
+   Category, which edit mode switches back to. */
+let _homeTab = 'all';
+function _renderHomeTabs(container, sections) {
+  const cards = sections.flatMap(sec => (sec.cards || []).filter(c => !c.listOnly && !c.hidden));
+  if (_homeTab !== 'all' && !cards.some(c => c.key === _homeTab)) _homeTab = 'all';
+
+  const rail = document.createElement('div');
+  rail.className = 'htab-rail';
+  const bar = document.createElement('div');
+  bar.className = 'htab-bar';
+  bar.setAttribute('role', 'tablist');
+  rail.appendChild(bar);
+  const body = document.createElement('div');
+  body.className = 'htab-body';
+
+  const mk = (id, name, thumb, bg) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'htab';
+    b.dataset.tab = id;
+    b.setAttribute('role', 'tab');
+    const th = document.createElement('span');
+    th.className = 'htab-th';
+    if (id === 'all') th.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>';
+    else if (thumb) { const im = document.createElement('img'); im.src = thumb; im.alt = ''; im.loading = 'lazy'; th.appendChild(im); if (bg) th.style.background = bg; }
+    else th.textContent = (name || '?').charAt(0);
+    const lbl = document.createElement('span');
+    lbl.className = 'htab-name';
+    lbl.textContent = name;
+    b.append(th, lbl);
+    b.addEventListener('click', () => { if (_homeTab === id) return; _homeTab = id; fill(true); });
+    return b;
+  };
+  bar.appendChild(mk('all', 'All'));
+  cards.forEach(c => bar.appendChild(mk(c.key, c.name, c.thumb, c.bg)));
+
+  function fill(scroll) {
+    body.innerHTML = '';
+    bar.querySelectorAll('.htab').forEach(x => { const on = x.dataset.tab === _homeTab; x.classList.toggle('on', on); x.setAttribute('aria-selected', on); });
+    const on = bar.querySelector('.htab.on');
+    if (scroll && on) on.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    if (_homeTab === 'all') {
+      const grid = document.createElement('div');
+      grid.className = 'card-grid sg';
+      cards.forEach(c => grid.appendChild(_homeCardEl(c)));
+      body.appendChild(grid);
+      requestAnimationFrame(() => { grid.classList.remove('run'); void grid.offsetWidth; grid.classList.add('run'); });
+      return;
+    }
+    const card = cards.find(c => c.key === _homeTab);
+    const head = document.createElement('div');
+    head.className = 'htab-head';
+    head.innerHTML = '<div><div class="htab-title"></div><div class="htab-sub"></div></div><button type="button" class="htab-open">Open board →</button>';
+    head.querySelector('.htab-title').textContent = card.name;
+    head.querySelector('.htab-sub').textContent = card.sub || '';
+    head.querySelector('.htab-open').onclick = () => openProject(card.key);
+    body.appendChild(head);
+    const media = listMediaFor(card.key, card.thumb);
+    const wall = document.createElement('div');
+    wall.className = 'htab-wall';
+    if (!media.length) wall.innerHTML = '<div class="htab-empty">Nothing on this board yet.</div>';
+    media.forEach((m, i) => {
+      const tile = document.createElement('div');
+      tile.className = 'htab-tile';
+      tile.style.setProperty('--i', i);
+      if (m.w && m.h) tile.style.aspectRatio = m.w + ' / ' + m.h;
+      let el;
+      if (m.type === 'video') {
+        el = document.createElement('video');
+        el.muted = true; el.loop = true; el.playsInline = true; el.autoplay = true; el.preload = 'metadata';
+        el.src = m.src;
+      } else {
+        el = document.createElement('img');
+        el.loading = 'lazy'; el.alt = ''; el.src = m.src;
+      }
+      tile.appendChild(el);
+      tile.addEventListener('click', () => openProject(card.key));
+      wall.appendChild(tile);
     });
-    container.appendChild(_makeSecDelBtn(label, grid));
-    container.appendChild(grid);
-  });
+    body.appendChild(wall);
+  }
+
+  container.appendChild(rail);
+  container.appendChild(body);
+  fill(false);
+  requestAnimationFrame(() => { const on = bar.querySelector('.htab.on'); if (on) bar.scrollLeft = on.offsetLeft - bar.clientWidth / 2 + on.offsetWidth / 2; });
+  _homeGridsIn(container);
+}
+
+function _homeGridsIn(container) {
   requestAnimationFrame(() => {
     container.querySelectorAll('.sg').forEach(sg => {
       sg.classList.remove('run');
@@ -14950,6 +15120,7 @@ function updateExpEditUI() {
   if (!editMode) toolsSelection.clear();
   renderToolsStack();
   if (window.hwNoteEdit) window.hwNoteEdit(editMode);   // the Who am I? note
+  if (window.renderExperience) window.renderExperience();   // its bullet points turn editable
   if (editMode) {
     _wireExpDelBtns();
   } else {
@@ -15550,6 +15721,9 @@ function _updateHomeEditUI() {
   document.getElementById('editLabel').textContent = editMode ? 'Done' : 'Edit';
   const homeEl = document.getElementById('view-home');
   homeEl.classList.toggle('home-edit', editMode);
+  // The Tabs trial shows part of the grid, and the grid's save rebuilds
+  // every section from what is on screen, so editing happens in Category.
+  if (editMode && homeView === 'tabs') setHomeView('grid');
 
   // The Projects list has its own editing — three inline fields, saved by
   // saveProjectsListEdits — and none of the card drag/rename/delete wiring
@@ -20695,6 +20869,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // visitor). Persian is written right to left in Doran.
   const texts = { en: DEFAULT_TEXT, fa: DEFAULT_TEXT_FA };
   let lang = 'en', marker = DEFAULT_MARKER, dirty = false;
+  // Which languages a visitor can switch between (whoAmI.langs); both by default.
+  let langs = { en: true, fa: true };
   // The Persian faces on offer in edit mode (whoAmI.faFont); Hilda unless picked.
   const FA_FONTS = {
     hilda: { name: 'Hilda', family: "'Hilda'", weight: 400, size: '1.5rem', line: 1.65 },
@@ -20840,8 +21016,48 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  /* The words go in line by line rather than letter by letter: every word
+     on a line fades and rises together, each line a beat after the one
+     above. Lines are found from where the words actually wrapped, so this
+     runs once the text is laid out (and again when a card comes out). */
+  const LINE_GAP = .14, LINE_DUR = .8, LINE_EASE = 'cubic-bezier(.22,1,.36,1)';
+  function lineUp(root, start) {
+    if (!root || !root.offsetParent) return;
+    let line = -1;
+    root.querySelectorAll('p').forEach(p => {
+      let lastTop = null;
+      p.querySelectorAll('.hw-w, .hw-k').forEach(el => {
+        if (el.classList.contains('hw-w') && el.closest('.hw-k')) {
+          el.style.animation = 'none'; el.style.opacity = '1';   // its mark carries it
+          return;
+        }
+        const top = el.offsetTop;
+        if (lastTop === null || Math.abs(top - lastTop) > 4) { line++; lastTop = top; }
+        const at = start + line * LINE_GAP;
+        el.style.opacity = '';
+        el.style.animation = 'none'; void el.offsetWidth;
+        el.style.animation = `hw-line ${LINE_DUR}s ${LINE_EASE} ${at}s both`;
+        el.setAttribute('data-ink', '');
+        // A mark's highlighter, ring or strike is drawn once its line is in.
+        el.querySelectorAll('.hw-swipe').forEach(s => { s.style.animation = 'none'; void s.offsetWidth; s.style.animation = `hw-write .5s ${EASE} ${at + .35}s both`; });
+        el.querySelectorAll('[data-draw]').forEach((d, i) => { d.style.animation = 'none'; void d.getBoundingClientRect(); d.style.animation = `hw-draw .6s ${EASE} ${at + .35 + i * .15}s both`; });
+      });
+    });
+  }
+  const lineUpAll = () => {
+    const fq = note.querySelector(':scope > .fq');
+    if (fq) fq.querySelectorAll('.fq-card[open] .fq-face').forEach(f => lineUp(f, .25));
+    else lineUp(note, 0);
+  };
+  note.addEventListener('toggle', ev => {
+    const d = ev.target;
+    if (d.classList && d.classList.contains('fq-card') && d.open) requestAnimationFrame(() => lineUp(d.querySelector('.fq-face'), .25));
+  }, true);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => requestAnimationFrame(lineUpAll));
+
   // Writes the note out from markup, replacing whatever is there.
   function render() {
+    requestAnimationFrame(() => requestAnimationFrame(lineUpAll));
     note.querySelectorAll(':scope > p, :scope > .fq').forEach(n => n.remove());
     // Persian is wiped on right to left, the way it is written.
     const rtl = lang === 'fa', W = rtl ? 'hw-write-rtl' : 'hw-write';
@@ -20923,10 +21139,24 @@ document.addEventListener('DOMContentLoaded', () => {
     faFont = (saved && FA_FONTS[saved.faFont]) ? saved.faFont : DEFAULT_FA_FONT;
     const styleBefore = style;
     style = (saved && STYLES[saved.style]) ? saved.style : 'drawer';
+    langs = { en: !(saved && saved.langs && saved.langs.en === false), fa: !(saved && saved.langs && saved.langs.fa === false) };
     paintFont();
     paintMarker();
-    if (texts[lang] !== before || style !== styleBefore) render();
+    const langBefore = lang;
+    applyLangs();
+    if (texts[lang] !== before || style !== styleBefore || lang !== langBefore) render();
   };
+  // A language switched off: the switch goes (outside edit mode) and the
+  // note shows the one left.
+  function applyLangs() {
+    const sw = note.querySelector('.hw-lang');
+    const editingNow = !!note.querySelector('.hw-edit');
+    if (sw) sw.hidden = !editingNow && !(langs.en && langs.fa);
+    if (!editingNow && !langs[lang]) {
+      lang = langs.en ? 'en' : 'fa';
+      note.querySelectorAll('input[name="hw-lang"]').forEach(r => { r.checked = r.value === lang; });
+    }
+  }
 
   // The English / Persian switch. Switching while editing keeps what was
   // typed in the box for the language being left.
@@ -20971,6 +21201,7 @@ document.addEventListener('DOMContentLoaded', () => {
           '<label class="hw-edit-font">Style <select class="hw-style-select">' + Object.keys(STYLES).map(k => '<option value="' + k + '">' + STYLES[k] + '</option>').join('') + '</select></label>' +
           '<label class="hw-edit-font">Persian font <select class="hw-font-select">' + Object.keys(FA_FONTS).map(k => '<option value="' + k + '">' + FA_FONTS[k].name + '</option>').join('') + '</select></label>' +
           '<span class="hw-edit-marker">Marker <button type="button" class="nav-color-input hw-marker-swatch" title="Marker colour" aria-label="Choose the marker colour"></button></span>' +
+          '<span class="hw-edit-langs">Show <label><input type="checkbox" data-lang="en"> English</label><label><input type="checkbox" data-lang="fa"> فارسی</label></span>' +
         '</div>';
       note.append(panel);
       note.classList.add('hw-editing');
@@ -21027,6 +21258,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const m = k === 'h' ? ['==', '=='] : k === 'o' ? ['((', '))'] : k === 'x' ? ['~~', '~~'] : null;
         if (m) { e.preventDefault(); toggle(m[0], m[1]); }
       });
+      panel.querySelectorAll('.hw-edit-langs input').forEach(cb => {
+        cb.checked = langs[cb.dataset.lang];
+        cb.addEventListener('change', () => {
+          const next = { ...langs, [cb.dataset.lang]: cb.checked };
+          if (!next.en && !next.fa) { cb.checked = true; return; }   // one has to stay
+          langs = next; save();
+        });
+      });
+      applyLangs();
       const ssel = panel.querySelector('.hw-style-select');
       ssel.value = style;
       ssel.addEventListener('change', () => { style = ssel.value; render(); save(); });
@@ -21049,14 +21289,17 @@ document.addEventListener('DOMContentLoaded', () => {
       panel.remove();
       note.classList.remove('hw-editing');
       if (t && t !== texts[lang]) { texts[lang] = t; dirty = true; }
-      if (dirty) { dirty = false; render(); save(); }
+      const langBefore = lang;
+      applyLangs();
+      if (lang !== langBefore) { try { localStorage.setItem('hwLang', lang); } catch (e) {} }
+      if (dirty || lang !== langBefore) { if (dirty) save(); dirty = false; render(); }
     }
   };
 
   function save() {
     if (typeof _cachedSettings === 'undefined') return;
     if (!_cachedSettings) _cachedSettings = {};
-    _cachedSettings.whoAmI = { text: texts.en, textFa: texts.fa, marker, faFont, style };
+    _cachedSettings.whoAmI = { text: texts.en, textFa: texts.fa, marker, faFont, style, langs };
     if (typeof saveSettings === 'function') saveSettings();
   }
 
@@ -21064,7 +21307,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof _cachedSettings !== 'undefined' && _cachedSettings && _cachedSettings.whoAmI) window.hwNoteApply(_cachedSettings.whoAmI);
   else { paintMarker(); paintFont(); }
 
-  const go = () => note.classList.add('go');
+  const go = () => { lineUpAll(); note.classList.add('go'); };
   if (!('IntersectionObserver' in window)) return go();
   const io = new IntersectionObserver(es => {
     if (es.some(e => e.isIntersecting)) { go(); io.disconnect(); }
@@ -21170,12 +21413,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const st = (l.size ? `max-width:${l.size}%;max-height:${l.size}%;` : '') + (l.nudge ? `transform:translate(${l.nudge});` : '');
     return `<i class="xtl-logo${l.ink ? ' xtl-ink' : ''}" aria-hidden="true"${keyAttr(e.co)}><img src="${l.src}" alt="" loading="lazy" decoding="async"${st ? ` style="${st}"` : ''}></i>`;
   };
+  // Bullet points as edited in edit mode, by company (settings.xpPts).
+  const ptsOf = e => {
+    const o = typeof _cachedSettings !== 'undefined' && _cachedSettings && _cachedSettings.xpPts;
+    return (o && Array.isArray(o[e.co])) ? o[e.co] : e.pts;
+  };
+  const editing = () => typeof editMode !== 'undefined' && editMode;
+  const ptsHtml = e => {
+    const pts = ptsOf(e) || [];
+    if (!editing()) return pts.length ? `<ul class="xtl-pts">${pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : '';
+    return `<ul class="xtl-pts xtl-pts-edit" data-co="${esc(e.co)}">${pts.map(p =>
+      `<li><span class="xtl-pt" contenteditable="true">${esc(p)}</span><button type="button" class="xtl-pt-del" title="Remove this line">×</button></li>`).join('')}` +
+      `<li class="xtl-pt-add-li"><button type="button" class="xtl-pt-add">+ Add line</button>` +
+      (_cachedSettings && _cachedSettings.xpPts && _cachedSettings.xpPts[e.co] ? `<button type="button" class="xtl-pt-reset">Reset</button>` : '') + `</li></ul>`;
+  };
   const item = e => {
     const now = /Present/.test(e.date) && !e.remote;   // the job held now
     return `<li class="xtl-item${now ? ' now' : ''}"><span class="xtl-dot" aria-hidden="true"></span>
       <div class="xtl-co">${mark(e)}<div><h3 class="xtl-title">${e.edu ? esc(e.role) : esc(e.co).replace(/\s*\((Outsourced)\)$/, ' <span class="xtl-out">$1</span>')}</h3><div class="xtl-cat">${esc(e.edu ? e.co : e.role)}</div></div></div>
       <div class="xtl-date">${cal}<span>${esc(e.date)}</span>${e.badge ? `<b class="${e.remote ? 'xtl-remote' : ''}">${esc(e.badge)}</b>` : ''}</div>
-      ${e.pts ? `<ul class="xtl-pts">${e.pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}${clients(e)}</li>`;
+      ${e.edu ? '' : ptsHtml(e)}${clients(e)}</li>`;
   };
 
   /* The brands an agency role reached, after 21st.dev's "Animated File Tree"
@@ -21239,6 +21496,37 @@ document.addEventListener('DOMContentLoaded', () => {
       render();
     });
   }, true);
+
+  // Edit mode: the bullet points are typed in place, removed with their ×,
+  // added with "+ Add line"; Reset goes back to the written-in text.
+  const savePts = ul => {
+    const lines = [...ul.querySelectorAll('.xtl-pt')].map(s => s.textContent.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    if (!_cachedSettings) _cachedSettings = {};
+    _cachedSettings.xpPts = { ...(_cachedSettings.xpPts || {}), [ul.dataset.co]: lines };
+    saveSettings();
+  };
+  w.addEventListener('focusout', ev => {
+    const s = ev.target.closest && ev.target.closest('.xtl-pt');
+    if (s) savePts(s.closest('ul'));
+  });
+  w.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter' && ev.target.closest && ev.target.closest('.xtl-pt')) { ev.preventDefault(); ev.target.blur(); }
+  });
+  w.addEventListener('click', ev => {
+    const b = ev.target.closest('.xtl-pt-del, .xtl-pt-add, .xtl-pt-reset');
+    if (!b) return;
+    ev.preventDefault(); ev.stopPropagation();
+    const ul = b.closest('ul');
+    if (b.classList.contains('xtl-pt-del')) { b.closest('li').remove(); savePts(ul); return; }
+    if (b.classList.contains('xtl-pt-reset')) {
+      const o = { ...(_cachedSettings.xpPts || {}) }; delete o[ul.dataset.co];
+      _cachedSettings.xpPts = o; saveSettings(); render(); return;
+    }
+    const li = document.createElement('li');
+    li.innerHTML = '<span class="xtl-pt" contenteditable="true"></span><button type="button" class="xtl-pt-del" title="Remove this line">×</button>';
+    ul.insertBefore(li, b.closest('li'));
+    li.querySelector('.xtl-pt').focus();
+  });
 
   function render() {
   xclSeq = 0;
